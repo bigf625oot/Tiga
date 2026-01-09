@@ -300,22 +300,10 @@
     <RecordingDetail v-else-if="currentView === 'detail'" :recording="selectedRecording" @back="currentView = 'list'" />
 
     <!-- Metrics View -->
-    <div v-else-if="currentView === 'metrics'" class="flex flex-col items-center justify-center h-full text-center">
-        <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
-        </div>
-        <h2 class="text-xl font-bold text-slate-800 mb-2">指标提取</h2>
-        <p class="text-slate-500 max-w-md">此功能正在开发中，将支持从对话和文档中自动提取关键业务指标数据。</p>
-    </div>
+    <MetricsExtraction v-else-if="currentView === 'metrics'" />
     
     <!-- Search View -->
-    <div v-else-if="currentView === 'search'" class="flex flex-col items-center justify-center h-full text-center">
-        <div class="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-6">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-500"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </div>
-        <h2 class="text-xl font-bold text-slate-800 mb-2">网络检索</h2>
-        <p class="text-slate-500 max-w-md">此功能正在开发中，将支持全网实时信息检索与智能聚合分析。</p>
-    </div>
+    <SearchAgent v-else-if="currentView === 'search'" />
 
     <!-- Recorder Component -->
     <Recorder v-if="showRecorder" @close="showRecorder = false" @finish="handleFinish" />
@@ -332,6 +320,8 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import Recorder from './components/Recorder.vue';
 import RecordingDetail from './components/RecordingDetail.vue';
+import SearchAgent from './components/SearchAgent.vue';
+import MetricsExtraction from './components/MetricsExtraction.vue';
 
 // Setup Axios
 const api = axios.create({

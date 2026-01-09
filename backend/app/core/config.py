@@ -50,6 +50,15 @@ class Settings(BaseSettings):
     ALIYUN_ACCESS_KEY_SECRET: Optional[str] = None
     ALIYUN_APP_KEY: Optional[str] = None
 
+    # Aliyun Search Service (Search Agent)
+    ALIBABA_CLOUD_BEARER_TOKEN: Optional[str] = None
+    ALIBABA_CLOUD_ENDPOINT: str = "cs.cn-beijing.aliyuncs.com"
+    ALIBABA_CLOUD_PROTOCOL: str = "https"
+    
+    # Third Party (Search Agent)
+    TAVILY_API_KEY: Optional[str] = None
+    FIRECRAWL_API_KEY: Optional[str] = None
+
     class Config:
         env_file = ".env"
 
