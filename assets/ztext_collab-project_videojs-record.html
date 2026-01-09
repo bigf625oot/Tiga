@@ -1,0 +1,331 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>用videojs测试浏览器兼容性</title>
+  
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<script src="ztest-jquery.min-1.9.1.js"></script>
+
+</head>
+<body>
+
+<audio id="myAudio" class="video-js vjs-default-skin"></audio>
+<div class="tipsShow" style="display:none;padding-top:20px">
+	<button onclick="playerOpen()">打开录音,请求权限</button>
+	<button onclick="playerClose()">关闭录音,释放资源</button>
+	<span style="margin-left:20px"></span>
+	<button onclick="playerStart()">开始录音</button>
+	<button onclick="playerStop()">结束录音</button>
+</div>
+
+<div style="padding:20px 0 200px">
+<div class="reclog"></div>
+
+<div class="tipsHide" style="font-size:32px;color:#fa0">加载中... 上面如果是空白，代表：加载很慢↑↑↑↑ （也有可能是他们更新了页面，但这个测试html还未及时同步更新）</div>
+<div class="tipsShow" style="display:none">先点击打开录音，再点击开始录音（按钮操作方便些，播放器界面除了好看就是容易误操作）</div>
+
+<div style="padding-top:20px">
+	这个录出来的音频格式完全不可控，可能是webm、wav；但可以注入代码强制修改，录音时日志里面显示的“Initialized recorderType: xxx”决定了录音类型，替换GetRecorderType函数即可：
+	<div style="padding-top:10px">wav：<button onclick="setRecType(1)">改为StereoAudioRecorder录制wav，底层使用ScriptProcessor</button></div>
+	<div style="padding-top:10px">webm：<button onclick="setRecType(2)">改为MediaStreamRecorder录制webm，底层使用MediaRecorder</button></div>
+	<div style="padding-top:10px">未知：<button onclick="setRecType(0)">还原GetRecorderType，录音格式不可控</button></div>
+</div>
+<script>
+var setRecType=function(type){
+	if(!window.GetRecorderType__org){
+		reclog("还没有加载完成，请稍后设置",1);
+		return;
+	}
+	if(type==1){
+		GetRecorderType=function(){ 
+			recorderType="ScriptProcessor-StereoAudioRecorder";
+			return StereoAudioRecorder
+		}
+		reclog("强制使用ScriptProcessor录制wav格式","#0cb");
+	}else if(type==2){
+		GetRecorderType=function(){
+			recorderType="MediaRecorder-MediaStreamRecorder";
+			return MediaStreamRecorder
+		}
+		reclog("强制使用MediaRecorder录制webm格式","#0cb");
+	}else{
+		GetRecorderType=window.GetRecorderType__;
+		reclog("已还原GetRecorderType，录制格式不确定","#0cb");
+	}
+};
+var recorderType="";
+var initRecorderType=function(){
+	$(".tipsHide").hide();
+	$(".tipsShow").show();
+	if(window.GetRecorderType__org)return;
+	window.GetRecorderType__org=GetRecorderType;
+	window.GetRecorderType__=GetRecorderType=function(){
+		var val=GetRecorderType__org.apply(null, arguments);
+		recorderType="未知录音类型";
+		if(val==StereoAudioRecorder){
+			recorderType="ScriptProcessor-StereoAudioRecorder";
+		}
+		if(val==MediaStreamRecorder){
+			recorderType="MediaRecorder-MediaStreamRecorder";
+		}
+		return val;
+	};
+	setRecType(1);
+};
+
+var playerOpen=function(){
+	player.record().getDevice();
+};
+var playerClose=function(){
+	player.record().stopDevice();
+	reclog("已关闭录音");
+};
+var playerStart=function(){
+	player.record().start();
+};
+var playerStop=function(){
+	player.record().stop();
+};
+</script>
+
+<hr>
+
+<div>
+<div style="font-size:32px;color:#0a0">
+	【测试方法】：使用上面的录音功能进行测试看看能否正常录音，播放听听录音内容是否正常。可以多关闭打开几次录音进行测试，在不同设备上进行测试（iOS重灾区）。
+	<div style="color:#fa0">如果ScriptProcessor模式下的录音有问题，请点击“改为MediaStreamRecorder录制webm，底层使用MediaRecorder”按钮，重新录音测试。</div>
+</div>
+
+<br><br>
+【附带测试】：
+<br>
+
+
+<div><audio class="recPlay" style="width:100%"></audio></div>
+
+
+音乐播放测试：
+<button onclick="recplay2(this,'rec-4000ms-8kbps-16000hz.wav')">wav</button>
+<button onclick="recplay2(this,'rec-4000ms-64kbps-16000hz.mp3')">mp3</button>
+<button onclick="recplay2(this,'rec-4000ms-64kbps-16000hz.ogg')">ogg</button>
+<button onclick="recplay2(this,'rec-4000ms-64kbps-16000hz.webm')">webm</button>
+<button onclick="recplay2(this,'rec-4000ms-12.8kbps-8000hz.amr')">amr</button>
+
+Audio对录音的影响测试（<a href="https://github.com/xiangyuecn/Recorder/issues/34">issues#34</a>）；IOS Safari如果未开始过录音并且播放了音乐，然后后续录音将会有问题；再现方法(<a href="ztest_apple_developer_forums_getusermedia.html">test apple developer forums</a>)：刷新页面后首先先播放音乐，然后开始测试录音，会发现波形显示掉帧或者保持直线。另测试浏览器对音频的支持情况。
+</div>
+
+
+<hr>
+
+<div style="padding:20px 0">
+	<div>原始测试地址：<a href="https://collab-project.github.io/videojs-record/demo/audio-only.html" target="_blank">https://collab-project.github.io/videojs-record/demo/audio-only.html</a></div>
+	<div>GitHub：<a href="https://github.com/collab-project/videojs-record" target="_blank">https://github.com/collab-project/videojs-record</a></div>
+</div>
+
+
+<script>
+function reclog(s,color){
+	var now=new Date();
+	var t=("0"+now.getHours()).substr(-2)
+		+":"+("0"+now.getMinutes()).substr(-2)
+		+":"+("0"+now.getSeconds()).substr(-2);
+	var div=document.createElement("div");
+	var elem=document.querySelector(".reclog");
+	elem.insertBefore(div,elem.firstChild);
+	div.innerHTML='<div style="color:'+(!color?"":color==1?"red":color==2?"#0b1":color)+'">['+t+']'+s+'</div>';
+};
+
+var recblob={};
+function recplay(key){
+	var audio=$(".recPlay")[0];
+	audio.controls=true;
+	if(!(audio.ended || audio.paused)){
+		audio.pause();
+	};
+	
+	var o=recblob[key];
+	if(o){
+		o.play=(o.play||0)+1;
+		var logmsg=function(msg){
+			$(".p"+key).html('<span style="color:green">'+o.play+'</span> '+new Date().toLocaleTimeString()+" "+msg);
+		};
+		logmsg("");
+		audio.onerror=function(e){
+			console.log(arguments)
+			logmsg('<span style="color:red">播放失败</span>');
+		};
+		
+		if(o.play2Name){
+			audio.src="audio/"+o.play2Name;
+			audio.play();
+			return;
+		};
+	};
+};
+function recplay2(elem,name){
+	elem=$(elem);
+	var key="recplay2"+elem.html();
+	recblob[key]||(recblob[key]={
+		play2Name:name
+	});
+	if(!$(".p"+key).length){
+		elem.before('<br>');
+		elem.after('<span class="p'+key+'"></span><br>');
+	};
+	
+	recplay(key);
+};
+</script>
+
+
+<script>
+if(/mobile/i.test(navigator.userAgent)){
+	//移动端加载控制台组件
+	var elem=document.createElement("script");
+	elem.setAttribute("type","text/javascript");
+	elem.setAttribute("src","ztest-vconsole.js");
+	document.body.appendChild(elem);
+	elem.onload=function(){
+		new VConsole();
+	};
+};
+</script>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--------照抄页面源码，改改url地址，他这个页面在gh-pages分支，jsdelivr地址要找一下对应的master里的文件--------->
+ 
+<link href="https://unpkg.com/video.js@7.14.3/dist/video-js.min.css" rel="stylesheet">
+<link href="https://unpkg.com/videojs-wavesurfer@3.8.0/dist/css/videojs.wavesurfer.min.css" rel="stylesheet">
+<link href="https://unpkg.com/videojs-record@4.5.0/dist/css/videojs.record.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/collab-project/videojs-record@4.5.0/examples/assets/css/examples.css" rel="stylesheet">
+
+<script src="https://unpkg.com/video.js@7.14.3/dist/video.min.js"></script>
+<script src="https://unpkg.com/recordrtc@5.6.2/RecordRTC.js"></script>
+<script src="https://unpkg.com/webrtc-adapter@8.1.1/out/adapter.js"></script>
+<script src="https://unpkg.com/wavesurfer.js@6.2.0/dist/wavesurfer.min.js"></script>
+<script src="https://unpkg.com/wavesurfer.js@6.2.0/dist/plugin/wavesurfer.microphone.min.js"></script>
+<script src="https://unpkg.com/videojs-wavesurfer@3.8.0/dist/videojs.wavesurfer.min.js"></script>
+
+<script src="https://unpkg.com/videojs-record@4.5.0/dist/videojs.record.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/gh/collab-project/videojs-record@4.5.0/examples/browser-workarounds.js"></script>
+
+
+<style>
+/* change player background color */
+#myAudio {
+    background-color: #9FD6BA;
+}
+</style>
+
+<script>
+var options = {
+    controls: true,
+    bigPlayButton: false,
+    width: 320,
+    height: 180,
+    plugins: {
+        wavesurfer: {
+            backend: 'WebAudio',
+            waveColor: '#36393b',
+            progressColor: 'black',
+            displayMilliseconds: true,
+            debug: true,
+            cursorWidth: 1,
+            hideScrollbar: true,
+            plugins: [
+                // enable microphone plugin
+                WaveSurfer.microphone.create({
+                    bufferSize: 4096,
+                    numberOfInputChannels: 1,
+                    numberOfOutputChannels: 1,
+                    constraints: {
+                        video: false,
+                        audio: true
+                    }
+                })
+            ]
+        },
+        record: {
+            audio: true,
+            video: false,
+            maxLength: 10*60*60,
+            displayMilliseconds: true,
+            debug: true
+        }
+    }
+};
+
+// apply some workarounds for certain browsers
+applyAudioWorkaround();
+
+// create player
+var player = videojs('myAudio', options, function() {
+    // print version information at startup
+    var msg = 'Using video.js ' + videojs.VERSION +
+        ' with videojs-record ' + videojs.getPluginVersion('record') +
+        ', videojs-wavesurfer ' + videojs.getPluginVersion('wavesurfer') +
+        ', wavesurfer.js ' + WaveSurfer.VERSION + ' and recordrtc ' +
+        RecordRTC.version;
+    videojs.log(msg);
+	initRecorderType();
+});
+
+// error handling
+player.on('deviceError', function() {
+    console.log('device error:', player.deviceErrorCode);
+	reclog("deviceError: "+player.deviceErrorCode,1);
+});
+
+player.on('error', function(element, error) {
+    console.error(error);
+	reclog("error: "+(error&&error.message||error),1);
+});
+
+player.on('deviceReady', function() {
+    console.log('deviceReady');
+	reclog("deviceReady 已打开录音",2);
+});
+// user clicked the record button and started recording
+player.on('startRecord', function() {
+    console.log('started recording!');
+	reclog(recorderType+" 录制中...");
+});
+
+// user completed recording and stream is available
+player.on('finishRecord', function() {
+    // the blob object contains the recorded data that
+    // can be downloaded by the user, stored on server etc.
+    console.log('finished recording: ', player.recordedData);
+	
+	var blob=player.recordedData;
+	var name=blob.name
+	if(/webm$/i.test(name)){
+		reclog("已通过MediaRecorder录制了一个webm文件 "+blob.size+"字节，点播放器左下角的播放箭头播放",2);
+	}
+	if(/wav$/i.test(name)){
+		reclog("已通过ScriptProcessor录制了一个wav文件 "+blob.size+"字节，点播放器左下角的播放箭头播放",2);
+	}
+});
+</script>
+
+</body>
+</html>
