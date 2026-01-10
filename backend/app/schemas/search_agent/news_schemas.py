@@ -21,6 +21,7 @@ class CustomNewsSearchRequest(BaseModel):
     result_requirements: str
     time_range: Optional[str] = None
     max_char_limit: int = 500
+    enabled_tiers: List[str] = ["crawler", "tavily", "aliyun"] # Default to all tiers
 
 class NewsItem(BaseModel):
     trigger_keyword: str

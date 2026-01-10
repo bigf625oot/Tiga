@@ -9,11 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.3.4",
     "ant-design-vue": "^4.0.0",
     "axios": "^1.6.0",
     "dayjs": "^1.11.10",
+    "katex": "^0.16.27",
+    "marked": "^17.0.1",
     "pinia": "^2.1.7",
+    "v-network-graph": "^0.9.22",
+    "vue": "^3.3.4",
     "vue-router": "^4.2.5"
   },
   "devDependencies": {

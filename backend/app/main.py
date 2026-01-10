@@ -19,6 +19,8 @@ async def lifespan(app: FastAPI):
     from app.db.base import Base
     # Import models to ensure they are registered
     from app.models.recording import Recording 
+    from app.models.llm_model import LLMModel
+    from app.models.agent import Agent
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

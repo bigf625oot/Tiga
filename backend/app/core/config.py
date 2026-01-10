@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     TAVILY_API_KEY: Optional[str] = None
     FIRECRAWL_API_KEY: Optional[str] = None
 
+    # DeepSeek
+    DEEPSEEK_API_KEY: Optional[str] = None
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+
+    # Graphiti Service
+    GRAPHITI_URL: str = "http://localhost:8000"
+
+
     class Config:
         env_file = ".env"
 

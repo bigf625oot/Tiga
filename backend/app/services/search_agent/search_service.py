@@ -105,10 +105,11 @@ def perform_tavily_search(
         return results
         
     if not settings.TAVILY_API_KEY:
-        print("Tavily API key not configured.")
+        print("[DEBUG] Tavily API key not configured.")
         return results
 
     try:
+        print(f"[DEBUG] Executing Tavily search for: {query}")
         tavily = TavilyClient(api_key=settings.TAVILY_API_KEY)
         
         # 调用Tavily搜索API
@@ -119,8 +120,11 @@ def perform_tavily_search(
             max_results=max_results
         )
         
+        raw_results = response.get('results', [])
+        print(f"[DEBUG] Tavily found {len(raw_results)} raw results")
+        
         # 统一返回格式
-        for res in response.get('results', []):
+        for res in raw_results:
             results.append({
                 "url": res.get('url'),
                 "title": res.get('title'),

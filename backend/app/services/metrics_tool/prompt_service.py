@@ -1,9 +1,38 @@
 from app.services.metrics_tool.templates import COT_TEMPLATE_CN, COT_TEMPLATE_EN, COT_TEMPLATE_CN_LITE
 
-def generate_prompt(name, definition, output_format, language="CN", lite_mode=False, aliases="", extraction_mode="Multi"):
+def generate_prompt(name, definition, output_format, language="CN", lite_mode=False, aliases="", extraction_mode="Multi", advanced_options=None):
     """
     根据用户输入组装最终 Prompt
     """
+    # Build advanced options text
+    advanced_text = ""
+    if advanced_options:
+        details = []
+        if advanced_options.get('related_terms'):
+            details.append(f"- 相关术语: {advanced_options['related_terms']}")
+        if advanced_options.get('technical_features'):
+            details.append(f"- 技术特征: {advanced_options['technical_features']}")
+        if advanced_options.get('formula'):
+            details.append(f"- 计算公式: {advanced_options['formula']}")
+        if advanced_options.get('typical_format'):
+            details.append(f"- 典型格式: {advanced_options['typical_format']}")
+        if advanced_options.get('common_location'):
+            details.append(f"- 常见位置: {advanced_options['common_location']}")
+        if advanced_options.get('doc_scope'):
+            details.append(f"- 文档范围: {advanced_options['doc_scope']}")
+        if advanced_options.get('default_value'):
+            details.append(f"- 默认值: {advanced_options['default_value']}")
+        if advanced_options.get('value_range'):
+            details.append(f"- 取值范围: {advanced_options['value_range']}")
+        if advanced_options.get('reference_range'):
+            details.append(f"- 参考范围值: {advanced_options['reference_range']}")
+            
+        if details:
+            if language == "CN":
+                advanced_text = "\n\n【高级约束条件与元数据】:\n" + "\n".join(details) + "\n"
+            else:
+                advanced_text = "\n\n[Advanced Constraints & Metadata]:\n" + "\n".join(details) + "\n"
+
     # 简单的格式指令映射 (精简指令以节省 token)
     format_map_cn = {
         "JSON": "JSON列表格式 (支持多值): [{\"value\": \"...\", \"unit\": \"...\", \"period\": \"...\", \"source\": \"...\"}, ...]",
@@ -48,7 +77,7 @@ def generate_prompt(name, definition, output_format, language="CN", lite_mode=Fa
     prompt = template.format(
         indicator_name=name,
         aliases_section=aliases_section,
-        definition=definition,
+        definition=definition + advanced_text,
         format_instruction=format_instruction,
         extraction_rule_text=extraction_rule_text
     )
