@@ -80,7 +80,7 @@
         </div>
 
         <!-- Menu Items -->
-        <div class="flex-1 py-6 overflow-y-auto flex flex-col gap-4 transition-all duration-300" :class="isSidebarCollapsed ? 'px-2' : 'px-3'">
+        <div class="flex-1 py-6 flex flex-col gap-4 transition-all duration-300" :class="isSidebarCollapsed ? 'px-2' : 'px-3'">
              <!-- Chat -->
              <div 
                 class="w-full flex items-center gap-3 py-3 rounded-xl transition-all duration-300 cursor-pointer group relative overflow-hidden"

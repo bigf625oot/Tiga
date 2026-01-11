@@ -31,14 +31,10 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
                 logger.warning(f"Document {doc_id} not found in DB")
                 return
 
-            # --- Step 1: Upload to OSS ---
+            # --- Step 1: Upload to OSS (stream from file to avoid memory spike) ---
             oss_key = f"knowledge/{unique_filename}"
             try:
-                # Read from temp file
-                with open(temp_file_path, "rb") as f:
-                    file_content = f.read()
-                
-                oss_url = oss_service.upload_file(oss_key, file_content)
+                oss_url = oss_service.upload_file_path(oss_key, temp_file_path)
                 
                 doc.oss_key = oss_key
                 doc.oss_url = oss_url
@@ -190,5 +186,9 @@ async def get_document_graph(doc_id: int, db: AsyncSession = Depends(get_db)):
          return {"nodes": {}, "edges": {}}
          
     unique_filename = doc.oss_key.split("/")[-1]
-    return await graphiti_client.get_document_graph(unique_filename)
+    try:
+        return await graphiti_client.get_document_graph(unique_filename)
+    except Exception as e:
+        logger.warning(f"Failed to get graph from Graphiti for {unique_filename}: {e}")
+        return {"nodes": {}, "edges": {}}
 

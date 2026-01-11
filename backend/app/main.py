@@ -1,3 +1,10 @@
+import sys
+try:
+    import duckduckgo_search
+    sys.modules['ddgs'] = duckduckgo_search
+except ImportError:
+    pass
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -21,9 +28,19 @@ async def lifespan(app: FastAPI):
     from app.models.recording import Recording 
     from app.models.llm_model import LLMModel
     from app.models.agent import Agent
+    from app.models.user_script import UserScript
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Initialize Knowledge Base with DB Config
+    from app.services.knowledge_base import kb_service
+    from app.db.session import AsyncSessionLocal
+    try:
+        async with AsyncSessionLocal() as db:
+            await kb_service.reload_config(db)
+    except Exception as e:
+        print(f"Failed to initialize Knowledge Base config: {e}")
         
     yield
     # Shutdown: Close connections
@@ -51,4 +68,4 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to Recorder AI API"}
+    return {"message": "Welcome to Taichi AI API"}

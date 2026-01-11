@@ -1,8 +1,9 @@
 fastapi==0.109.0
 uvicorn==0.27.0
-sqlalchemy==2.0.25
+sqlalchemy>=2.0.36
 alembic==1.13.1
-asyncpg==0.29.0
+aiosqlite
+duckduckgo-search
 redis==5.0.1
 boto3==1.34.14
 python-multipart==0.0.6

@@ -46,6 +46,17 @@ class OSSService:
         except Exception as e:
             logger.error(f"Failed to upload to OSS: {e}")
             raise e
+    
+    def upload_file_path(self, key: str, file_path: str) -> str:
+        if not self.enabled:
+            raise Exception("OSS storage is not enabled")
+        try:
+            self.bucket.put_object_from_file(key, file_path)
+            url = f"https://{self.bucket.bucket_name}.{settings.ALIYUN_OSS_ENDPOINT}/{key}"
+            return url
+        except Exception as e:
+            logger.error(f"Failed to upload file from path to OSS: {e}")
+            raise e
 
     def delete_file(self, key: str):
         if not self.enabled:

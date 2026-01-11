@@ -12,27 +12,25 @@ def parse_local_file(file_path: str) -> str:
     text = ""
     
     try:
-        with open(file_path, "rb") as f:
-            content = f.read()
-        file_stream = io.BytesIO(content)
-        
         if filename.endswith('.pdf'):
-            reader = PyPDF2.PdfReader(file_stream)
+            with open(file_path, "rb") as f:
+                reader = PyPDF2.PdfReader(f)
             for page in reader.pages:
                 text += page.extract_text() + "\n"
         elif filename.endswith('.docx'):
-            doc = docx.Document(file_stream)
+            doc = docx.Document(file_path)
             for para in doc.paragraphs:
                 text += para.text + "\n"
         else:
             # Try plain text
             try:
-                text = content.decode('utf-8')
+                with open(file_path, "r", encoding="utf-8") as f:
+                    text = f.read()
             except:
                 try:
-                    text = content.decode('gbk')
+                    with open(file_path, "r", encoding="gbk") as f:
+                        text = f.read()
                 except:
-                    # If not text, return empty or error
                     pass
                     
         return text.strip()

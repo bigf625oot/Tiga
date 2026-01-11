@@ -1,9 +1,15 @@
 import json
 from agno.tools import Toolkit
+import warnings
 try:
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
 except ImportError:
-    DDGS = None
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            from duckduckgo_search import DDGS
+    except ImportError:
+        DDGS = None
 
 class DuckDuckGoTools(Toolkit):
     def __init__(self, **kwargs):
@@ -17,8 +23,10 @@ class DuckDuckGoTools(Toolkit):
         if not DDGS:
             return "DuckDuckGo search library not installed."
         try:
-            with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=max_results))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                with DDGS() as ddgs:
+                    results = list(ddgs.text(query, max_results=max_results))
             return json.dumps(results, indent=2, ensure_ascii=False)
         except Exception as e:
             return f"Error searching: {e}"
@@ -28,8 +36,10 @@ class DuckDuckGoTools(Toolkit):
         if not DDGS:
             return "DuckDuckGo search library not installed."
         try:
-            with DDGS() as ddgs:
-                results = list(ddgs.news(query, max_results=max_results))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                with DDGS() as ddgs:
+                    results = list(ddgs.news(query, max_results=max_results))
             return json.dumps(results, indent=2, ensure_ascii=False)
         except Exception as e:
             return f"Error searching news: {e}"

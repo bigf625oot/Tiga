@@ -31,6 +31,54 @@ Recorder AI 是一个现代化的智能体（Agent）管理与编排平台，旨
 
 ---
 
+## 🏗️ 知识库服务流程 (Sequence Diagram)
+
+系统采用动态配置的知识库服务，支持从数据库加载嵌入模型配置，并在运行时提供高效的文档索引与检索能力。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as 用户 (Frontend)
+    participant API as Backend API
+    participant KBService as KnowledgeBaseService
+    participant DB as 数据库 (SQLite/PG)
+    participant LanceDB as 向量数据库 (LanceDB)
+    participant Embedder as 嵌入模型 (OpenAI/DeepSeek)
+    participant Agent as 智能体 (Agno Agent)
+
+    %% 1. 服务启动与配置加载
+    Note over API, Embedder: 1. 服务启动阶段
+    API->>API: App Startup
+    API->>KBService: reload_config(db)
+    KBService->>DB: 查询活跃的 Embedding 模型
+    DB-->>KBService: 返回模型配置 (API Key, Base URL)
+    KBService->>Embedder: 初始化 OpenAIEmbedder
+    KBService->>LanceDB: 初始化/连接向量表 (Vectors)
+    Note right of KBService: 此时知识库服务就绪
+
+    %% 2. 文档上传与索引
+    Note over User, LanceDB: 2. 文档上传与索引阶段
+    User->>API: 上传文档 (PDF/Text)
+    API->>KBService: index_document(file_path)
+    KBService->>Embedder: 生成文本嵌入 (Embeddings)
+    Embedder-->>KBService: 返回向量数据
+    KBService->>LanceDB: 存储向量与元数据
+    KBService-->>API: 索引完成
+    API-->>User: 上传成功
+
+    %% 3. 智能问答与检索
+    Note over User, Agent: 3. 问答检索阶段
+    User->>API: 发送提问 "xxx?"
+    API->>Agent: 创建/初始化 Agent
+    Agent->>KBService: 关联 Knowledge 对象
+    Agent->>LanceDB: 语义检索 (Search Knowledge)
+    LanceDB-->>Agent: 返回相关文档片段 (Chunks)
+    Agent->>Agent: 构建 Prompt (包含上下文)
+    Agent-->>User: 生成回答 (Stream Response)
+```
+
+---
+
 ## 🛠️ 技术栈
 
 ### 前端 (Frontend)

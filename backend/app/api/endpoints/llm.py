@@ -48,19 +48,28 @@ async def test_llm_connection(request: LLMTestRequest):
 
     try:
         client = AsyncOpenAI(
-            api_key=api_key or "dummy", # Some local servers need a non-empty key
+            api_key=api_key or "dummy",
             base_url=base_url
         )
         
-        response = await client.chat.completions.create(
-            model=request.model_id,
-            messages=[
-                {"role": "user", "content": "Hello, this is a connection test."}
-            ],
-            max_tokens=10
-        )
+        is_embedding = ("embedding" in (request.model_id or "").lower()) or ("open.bigmodel.cn" in (base_url or "").lower())
         
-        return LLMTestResponse(success=True, message=f"连接成功！响应：{response.choices[0].message.content}")
+        if is_embedding:
+            emb = await client.embeddings.create(
+                model=request.model_id,
+                input="今天天气很好"
+            )
+            vec = emb.data[0].embedding if emb and emb.data else []
+            return LLMTestResponse(success=True, message=f"连接成功！向量维度：{len(vec)}")
+        else:
+            response = await client.chat.completions.create(
+                model=request.model_id,
+                messages=[
+                    {"role": "user", "content": "Hello, this is a connection test."}
+                ],
+                max_tokens=10
+            )
+            return LLMTestResponse(success=True, message=f"连接成功！响应：{response.choices[0].message.content}")
     
     except AuthenticationError:
         return LLMTestResponse(success=False, message="认证失败：无效的 API Key")
@@ -76,6 +85,8 @@ async def test_llm_connection(request: LLMTestRequest):
              # Handle common 400 errors like invalid model
             if "Model Not Exist" in str(e) or "model_not_found" in str(e):
                 error_msg = "模型不存在：请检查模型ID是否正确 (400)"
+            elif "1210" in str(e) or "参数有误" in str(e):
+                error_msg = "请求无效：嵌入模型需要使用 Embeddings 接口，请确认 Base URL 与输入参数 (400)"
             else:
                 error_msg = f"请求无效：{e.message} (400)"
         elif e.status_code == 404:

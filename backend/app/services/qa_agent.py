@@ -15,21 +15,21 @@ class QAAgentService:
         # For now, we keep the default init as it uses settings, not DB model directly
         # But _update_model should use the factory
         
-        # Check if OpenAI Key is available for Knowledge Base
-        has_openai_key = settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("sk-")
+        # Use Knowledge service availability to decide search_knowledge
+        has_kb = kb_service.knowledge is not None
         
         self.agent = Agent(
             name="Smart QA Agent",
             model=OpenAIChat(id="gpt-4o", api_key=settings.OPENAI_API_KEY or "dummy"),
-            knowledge=kb_service.knowledge if has_openai_key else None,
-            search_knowledge=has_openai_key,
+            knowledge=kb_service.knowledge if has_kb else None,
+            search_knowledge=has_kb,
             markdown=True,
             add_history_to_context=True,
             description="You are a helpful assistant for the Recorder app. Answer questions based on the knowledge base.",
             instructions=[
-                "Always search the knowledge base first." if has_openai_key else "Use your general knowledge to answer questions.",
-                "If the answer is found in the knowledge base, cite the source." if has_openai_key else "",
-                "If not found, use your general knowledge but mention that it's not in the knowledge base." if has_openai_key else "",
+                "Always search the knowledge base first." if has_kb else "Use your general knowledge to answer questions.",
+                "If the answer is found in the knowledge base, cite the source." if has_kb else "",
+                "If not found, use your general knowledge but mention that it's not in the knowledge base." if has_kb else "",
                 "If you need to search the web, use the `duckduckgo_search` tool.",
                 "If you need to plan a complex task, think step-by-step."
             ],

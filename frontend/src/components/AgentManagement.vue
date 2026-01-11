@@ -267,6 +267,16 @@
                         </div>
                         <div v-show="sections.knowledge" class="space-y-3">
                             <div v-if="knowledgeBases.length === 0" class="text-xs text-slate-400 py-2">暂无可用知识库</div>
+                            <div class="flex items-center justify-between px-3 py-2 border border-slate-200 rounded-lg">
+                                <span class="text-sm text-slate-700">仅检索绑定文档</span>
+                                <button 
+                                    @click="form.knowledge_config.strict_only = !form.knowledge_config.strict_only"
+                                    class="w-10 h-5 rounded-full transition-colors relative"
+                                    :class="form.knowledge_config.strict_only ? 'bg-blue-600' : 'bg-slate-200'"
+                                >
+                                    <span class="absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform" :class="form.knowledge_config.strict_only ? 'translate-x-5' : ''"></span>
+                                </button>
+                            </div>
                             <div v-for="kb in knowledgeBases" :key="kb.id" class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
                                 <input type="checkbox" :value="kb.id" v-model="form.knowledge_config.document_ids" class="rounded text-blue-600 focus:ring-blue-500">
                                 <div class="flex-1">
@@ -274,6 +284,7 @@
                                     <div class="text-xs text-slate-400">{{ formatSize(kb.file_size) }}</div>
                                 </div>
                             </div>
+                            <div class="text-[11px] text-slate-500 px-1">严格模式将只在绑定文档内检索；关闭时可在全局知识库中召回，低置信度结果将按阈值过滤。</div>
                         </div>
                     </div>
 
@@ -334,6 +345,15 @@
                             </button>
                         </div>
                     </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2 text-slate-800 font-medium">
+                                <svg class="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                                用户剧本
+                            </div>
+                        </div>
+                        <UserScriptsEditor v-if="activeAgentId" :agentId="activeAgentId" />
+                    </div>
                 </div>
 
                 <!-- Modal Footer -->
@@ -354,6 +374,7 @@ import { ref, computed, onMounted, h, createVNode } from 'vue';
 import Loading from './common/Loading.vue';
 import { Modal, message } from 'ant-design-vue';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import UserScriptsEditor from './UserScriptsEditor.vue';
 
 // Helper to create simple SVG icons without runtime compiler dependency
 const createIcon = (d) => ({
@@ -468,6 +489,8 @@ const form = ref({
     knowledge_config: { document_ids: [] }
 });
 
+const activeAgentId = computed(() => form.value.id || '');
+
 onMounted(() => {
     fetchAgents();
     fetchModels();
@@ -550,7 +573,7 @@ const openCreateModal = () => {
             filesystem: { enabled: false, base_dir: '/tmp', allow_write: false },
             browser: { enabled: false, headless: true, search_engine: 'duckduckgo' }
         },
-        knowledge_config: { document_ids: [] }
+        knowledge_config: { document_ids: [], strict_only: false }
     };
     showModal.value = true;
 };
@@ -562,7 +585,7 @@ const editAgent = (agent) => {
     if (!form.value.model_config) form.value.model_config = { model_id: '', reasoning: false };
     if (!form.value.tools_config) form.value.tools_config = [];
     if (!form.value.mcp_config) form.value.mcp_config = [];
-    if (!form.value.knowledge_config) form.value.knowledge_config = { document_ids: [] };
+    if (!form.value.knowledge_config) form.value.knowledge_config = { document_ids: [], strict_only: false };
     
     if (!form.value.skills_config) form.value.skills_config = {
         environment: { type: 'local', image: 'python:3.9-slim' },
