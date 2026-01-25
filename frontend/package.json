@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
     "ant-design-vue": "^4.0.0",
     "axios": "^1.6.0",
     "dayjs": "^1.11.10",
+    "element-plus": "^2.13.1",
     "katex": "^0.16.27",
     "marked": "^17.0.1",
     "pinia": "^2.1.7",

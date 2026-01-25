@@ -174,6 +174,39 @@ async def delete_document(doc_id: int, db: AsyncSession = Depends(get_db)):
     
     return {"status": "deleted"}
 
+@router.get("/{doc_id}/content")
+async def get_document_content(doc_id: int, db: AsyncSession = Depends(get_db)):
+    doc = await db.get(KnowledgeDocument, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if not doc.oss_key:
+         raise HTTPException(status_code=400, detail="Document has no file content (no OSS key)")
+
+    temp_path = None
+    try:
+        # Download from OSS to temp file
+        file_ext = os.path.splitext(doc.filename)[1]
+        temp_filename = f"temp_download_{uuid.uuid4()}{file_ext}"
+        temp_path = UPLOAD_DIR / temp_filename
+        
+        oss_service.download_file(doc.oss_key, str(temp_path))
+        
+        # Parse content
+        content = parse_local_file(str(temp_path))
+        
+        return {"content": content, "filename": doc.filename}
+    except Exception as e:
+        logger.error(f"Failed to retrieve content for doc {doc_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve content: {str(e)}")
+    finally:
+        # Cleanup
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
 @router.get("/{doc_id}/graph")
 async def get_document_graph(doc_id: int, db: AsyncSession = Depends(get_db)):
     doc = await db.get(KnowledgeDocument, doc_id)

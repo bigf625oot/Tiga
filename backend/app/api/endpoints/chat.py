@@ -143,12 +143,15 @@ async def chat_session(
     db: AsyncSession = Depends(get_db)
 ):
     # 1. Get Session
+    logger.info(f"[CHAT] Starting chat for session={session_id}")
     result = await db.execute(select(ChatSession).filter(ChatSession.id == session_id))
     session = result.scalars().first()
     if not session:
+        logger.error(f"[CHAT] Session {session_id} not found")
         raise HTTPException(status_code=404, detail="Session not found")
 
     # 2. Save User Message
+    logger.debug(f"[CHAT] User message: {request.message[:50]}...")
     user_msg = ChatMessage(
         session_id=session_id,
         role="user",
@@ -160,20 +163,51 @@ async def chat_session(
     # 3. Get Agent
     agent = None
     agent_obj = None
+    logger.info(f"[CHAT] Session agent_id={session.agent_id}")
     if session.agent_id:
         try:
             agent = await agent_manager.create_agno_agent(db, session.agent_id, session_id)
             agent_res = await db.execute(select(Agent).filter(Agent.id == session.agent_id))
             agent_obj = agent_res.scalars().first()
+            logger.info(f"[CHAT] Loaded agent {session.agent_id} successfully")
         except Exception as e:
-            logger.error(f"Failed to load agent {session.agent_id}: {e}")
+            logger.error(f"[CHAT] Failed to load agent {session.agent_id}: {e}", exc_info=True)
             pass
 
     # If no agent or failed, use default qa_service (global agent)
     # Note: qa_service might need model update
     target_agent_runner = None
+    fallback_agent_runner = None
     
     if agent:
+        # Detect DeepSeek first to handle history requirements
+        deepseek_like = False
+        try:
+            # Check configured model ID string from DB
+            if agent_obj and agent_obj.model_config:
+                mid_conf = (agent_obj.model_config.get("model_id") or "").lower()
+                if "deepseek" in mid_conf or "reasoner" in mid_conf or "r1" in mid_conf:
+                    deepseek_like = True
+            
+            # Check loaded model object
+            if not deepseek_like:
+                model_obj = getattr(agent, "model", None)
+                mid = (getattr(model_obj, "id", "") or "").lower()
+                base = (getattr(model_obj, "base_url", "") or "").lower()
+                deepseek_like = ("deepseek" in base) or ("deepseek" in mid) or ("reasoner" in mid) or ("r1" in mid)
+                
+            # Broader check for other providers
+            if not deepseek_like and model_obj:
+                provider = (getattr(model_obj, "provider", "") or "").lower()
+                if "deepseek" in provider or "aliyun" in provider or "siliconflow" in provider:
+                     # These providers often host DeepSeek R1
+                     deepseek_like = True
+            
+            logger.info(f"[CHAT] DeepSeek detection result: {deepseek_like}")
+        except Exception as e:
+            logger.warning(f"[CHAT] DeepSeek detection error: {e}")
+            pass
+
         # We need to load history into context manually if Agno agent is stateless here
         # Load history
         history_res = await db.execute(
@@ -182,6 +216,7 @@ async def chat_session(
             .order_by(ChatMessage.created_at.asc())
         )
         history_msgs = history_res.scalars().all()
+        logger.debug(f"[CHAT] Loaded {len(history_msgs)} history messages")
         
         agno_history = []
         for idx, msg in enumerate(history_msgs):
@@ -196,48 +231,24 @@ async def chat_session(
                 reasoning_val = ""
                 if msg.meta_data and "reasoning" in msg.meta_data and msg.meta_data["reasoning"]:
                     reasoning_val = msg.meta_data["reasoning"]
-                # If missing reasoning for assistant, drop this assistant message to avoid DeepSeek 400
-                if not reasoning_val:
-                    logger.warning(f"Dropping assistant history at index {idx} due to missing reasoning_content to satisfy DeepSeek Thinking Mode")
-                    continue
-                msg_dict["reasoning_content"] = reasoning_val
+                
+                # DeepSeek Reasoner requires reasoning_content field in history (even if empty)
+                if reasoning_val:
+                    msg_dict["reasoning_content"] = reasoning_val
+                elif deepseek_like:
+                    msg_dict["reasoning_content"] = ""
             
             agno_history.append(msg_dict)
         
-        # Verify assistant messages include reasoning_content (DeepSeek Thinking Mode requirement)
-        try:
-            patched_count = 0
-            assistant_count = 0
-            for i, m in enumerate(agno_history):
-                if m.get("role") == "assistant":
-                    assistant_count += 1
-                    if "reasoning_content" not in m:
-                        m["reasoning_content"] = ""
-                        patched_count += 1
-                        logger.warning(f"Patched missing reasoning_content for assistant message at agno_history index {i}")
-                # Basic type checks
-                if not isinstance(m.get("role"), str) or not isinstance(m.get("content"), (str, type(None))):
-                    logger.warning(f"Invalid message format at agno_history index {i}: role={type(m.get('role'))}, content={type(m.get('content'))}")
-                if m.get("role") == "assistant" and not isinstance(m.get("reasoning_content"), (str, type(None))):
-                    logger.warning(f"Invalid reasoning_content type at agno_history index {i}: {type(m.get('reasoning_content'))}")
-            if assistant_count:
-                logger.info(f"Prepared history messages: assistants={assistant_count}, patched_missing_reasoning={patched_count}")
-        except Exception as ve:
-            logger.warning(f"History messages verification failed: {ve}")
-        
-        deepseek_like = False
-        try:
-            model_obj = getattr(agent, "model", None)
-            mid = (getattr(model_obj, "id", "") or "").lower()
-            base = (getattr(model_obj, "base_url", "") or "").lower()
-            deepseek_like = ("deepseek" in base) or ("deepseek" in mid) or ("reasoner" in mid) or ("r1" in mid)
-        except Exception:
-            pass
+        # (Verification logic removed as it was overly aggressive for history messages)
         
         if deepseek_like:
             target_agent_runner = None
+            logger.info("[CHAT] Using specialized DeepSeek/Tool runner path")
         else:
             target_agent_runner = lambda: agent.run(request.message, stream=True, messages=agno_history)
+            fallback_agent_runner = lambda: [agent.run(request.message, stream=False, messages=agno_history)]
+            logger.info("[CHAT] Using standard Agent runner path")
         
     else:
         # Legacy QA Service / Default Chat
@@ -264,21 +275,16 @@ async def chat_session(
              else:
                  error_msg += " Agent not found."
 
+             logger.error(f"[CHAT] Agent load failure: {error_msg}")
              return StreamingResponse(
                  iter([error_msg]), 
                  media_type="text/plain"
              )
         
-        # If no agent_id, use qa_service but UPDATE it with a valid model first
-        # Try to find a valid model to use for default chat
-        from app.services.agent_manager import has_global_api_key
+        # No agent selected, try to use a default active model safely (No Singleton)
+        logger.info("[CHAT] No agent selected, attempting to use default active model")
         
-        # We need to find a model if:
-        # 1. We want to support custom default models
-        # 2. Global key is missing (fallback)
-        
-        active_model = None
-        # Try to find ANY active model with a valid key
+        # 1. Find active model
         res = await db.execute(
             select(LLMModel)
             .filter(LLMModel.is_active == True, LLMModel.api_key != None, LLMModel.api_key != "")
@@ -287,20 +293,123 @@ async def chat_session(
         active_model = res.scalars().first()
         
         if active_model:
-            # Dynamically update the default QA service to use this model
-            # Note: This changes the global singleton state, which might affect other concurrent requests 
-            # using the default agent. Ideally QAAgentService should be instantiated per request or 
-            # support passing model per run. 
-            # Current `qa_service.chat_stream` supports `llm_model` arg which calls `_update_model`.
-            # `_update_model` modifies `self.agent`. This IS a race condition risk but acceptable for single-user local app.
-            target_agent_runner = lambda: qa_service.chat_stream(request.message, llm_model=active_model)
+            logger.info(f"[CHAT] Found default active model: {active_model.model_id}")
+            
+            # 2. Create Temporary Agent (Local Scope, No Singleton)
+            from agno.agent import Agent as AgnoAgent
+            from app.services.model_factory import ModelFactory
+            
+            try:
+                # Use ModelFactory to create the model instance (handles provider specifics)
+                model_instance = ModelFactory.create_model(active_model)
+                is_reasoning = ModelFactory.should_use_agno_reasoning(active_model)
+                is_native_reasoning = ModelFactory.is_reasoning_model(active_model)
+                
+                # Instantiate a fresh agent for this request
+                temp_agent = AgnoAgent(
+                    name="Default Agent",
+                    model=model_instance,
+                    instructions="You are a helpful assistant.",
+                    markdown=True,
+                    reasoning=is_reasoning,
+                    # show_reasoning=True # Avoid TypeError in some versions
+                )
+                
+                # 3. Detect DeepSeek Logic (Reused)
+                deepseek_like = False
+                active_mid = (active_model.model_id or "").lower()
+                active_base = (active_model.base_url or "").lower()
+                active_provider = (active_model.provider or "").lower()
+                if "deepseek" in active_mid or "reasoner" in active_mid or "r1" in active_mid:
+                    deepseek_like = True
+                elif "deepseek" in active_base or "deepseek" in active_provider:
+                    deepseek_like = True
+                elif "aliyun" in active_provider or "siliconflow" in active_provider:
+                    deepseek_like = True
+                
+                logger.info(f"[CHAT] Default agent DeepSeek detection: {deepseek_like}")
+
+                # 4. Load History Manually
+                history_res = await db.execute(
+                    select(ChatMessage)
+                    .filter(ChatMessage.session_id == session_id)
+                    .order_by(ChatMessage.created_at.asc())
+                )
+                history_msgs = history_res.scalars().all()
+                logger.debug(f"[CHAT] Loaded {len(history_msgs)} history messages for default agent")
+                
+                agno_history = []
+                for idx, msg in enumerate(history_msgs):
+                    if msg.id == user_msg.id:
+                        continue
+                    msg_dict = {"role": msg.role, "content": msg.content}
+                    if msg.role == "assistant":
+                        reasoning_val = ""
+                        if msg.meta_data and "reasoning" in msg.meta_data and msg.meta_data["reasoning"]:
+                            reasoning_val = msg.meta_data["reasoning"]
+                        if reasoning_val:
+                            msg_dict["reasoning_content"] = reasoning_val
+                        elif deepseek_like:
+                            msg_dict["reasoning_content"] = ""
+                    agno_history.append(msg_dict)
+                
+                # 5. Define Runners
+                # Note: AgnoAgent.run() is synchronous or async depending on implementation, 
+                # but typically in this codebase it seems to be treated as sync or wrapped.
+                # However, previous code used `agent.run(stream=True)`.
+                
+                target_agent_runner = lambda: temp_agent.run(request.message, stream=True, messages=agno_history)
+                fallback_agent_runner = lambda: [temp_agent.run(request.message, stream=False, messages=agno_history)]
+                
+                # Set agent_obj to None since we don't have a DB agent
+                agent = temp_agent # For logic below that checks `if agent:` (Wait, logic below checks `if agent:` block which we skipped)
+                # Actually, the logic below `if agent:` block (lines 177-241) was skipped because `agent` was None.
+                # Now we are in `else`. We defined `target_agent_runner`.
+                # We need to ensure `agent` variable is set if we want `event_generator` to use it?
+                # `event_generator` checks `agent_obj` for docs. `agent_obj` is None.
+                # It checks `agent` for nothing specific except passed to KB search? No.
+                
+                # Just setting target_agent_runner is enough for `event_generator` to work.
+                
+            except Exception as e:
+                logger.error(f"[CHAT] Failed to create default agent: {e}", exc_info=True)
+                return StreamingResponse(
+                    iter([f"Error: Failed to initialize default agent: {str(e)}"]), 
+                    media_type="text/plain"
+                )
         else:
-            # If no active model found, check if we have global key
+            # If no active model found, check if we have global key (Fallback to bare OpenAI)
+            from app.services.agent_manager import has_global_api_key
             if has_global_api_key():
-                 target_agent_runner = lambda: qa_service.chat_stream(request.message)
+                 logger.info("[CHAT] No active model found, falling back to global OpenAI key")
+                 # We can use qa_service here as a last resort OR create a fresh OpenAI agent.
+                 # Let's create a fresh one to be consistent.
+                 from agno.agent import Agent as AgnoAgent
+                 from agno.models.openai import OpenAIChat
+                 from app.core.config import settings
+                 
+                 temp_agent = AgnoAgent(
+                    name="Global Default Agent",
+                    model=OpenAIChat(id="gpt-4o", api_key=settings.OPENAI_API_KEY),
+                    instructions="You are a helpful assistant.",
+                    markdown=True
+                 )
+                 
+                 # Default history (no DeepSeek fix needed)
+                 history_res = await db.execute(
+                    select(ChatMessage)
+                    .filter(ChatMessage.session_id == session_id)
+                    .order_by(ChatMessage.created_at.asc())
+                )
+                 history_msgs = history_res.scalars().all()
+                 agno_history = [{"role": m.role, "content": m.content} for m in history_msgs if m.id != user_msg.id]
+                 
+                 target_agent_runner = lambda: temp_agent.run(request.message, stream=True, messages=agno_history)
+                 fallback_agent_runner = lambda: [temp_agent.run(request.message, stream=False, messages=agno_history)]
             else:
+                 logger.warning("[CHAT] No active model and no global key")
                  return StreamingResponse(
-                     iter([f"Error: No active model found. Please configure a model in Settings or add OPENAI_API_KEY to .env."]), 
+                     iter([f"Error: No active model found. Please configure a model in Settings."]), 
                      media_type="text/plain"
                  )
 
@@ -408,7 +517,16 @@ async def chat_session(
                     logger.warning(f"Failed to build structured references: {re}")
             
             if target_agent_runner:
-                stream = target_agent_runner()
+                try:
+                    stream = target_agent_runner()
+                except Exception as e:
+                    err_msg = str(e)
+                    # Check for Aliyun/DeepSeek specific errors (1210: Invalid Param, 1212: SSE not supported)
+                    if ("1212" in err_msg or "SSE" in err_msg or "1210" in err_msg) and fallback_agent_runner:
+                        logger.warning(f"Streaming failed ({err_msg}), attempting fallback to non-streaming.")
+                        stream = fallback_agent_runner()
+                    else:
+                        raise e
             else:
                 try:
                     from app.services.tool_runner import run_reasoning_tool_loop
@@ -464,7 +582,8 @@ async def chat_session(
                         user_prompt=request.message,
                         tools=tools,
                         tool_call_map=tool_map,
-                        enable_thinking=is_deepseek
+                        enable_thinking=is_deepseek,
+                        messages=agno_history # Pass history
                     )
                     final_msg = res["final_message"]
                     rc = getattr(final_msg, "reasoning_content", None) or None
@@ -585,9 +704,22 @@ async def chat_session(
             msg = str(e)
             if "Missing reasoning_content field" in msg:
                 logger.error("DeepSeek Thinking Mode error: assistant message缺少reasoning_content。已在历史构造阶段进行自动补全，请检查本次对话内的工具调用环节是否正确回传reasoning_content。")
+            elif "401" in msg or "authentication" in msg.lower():
+                # Try to extract model info to help user debug
+                model_info = "Unknown"
+                try:
+                    if agent and hasattr(agent, "model"):
+                        m = agent.model
+                        model_info = f"ID={getattr(m, 'id', 'N/A')}, BaseURL={getattr(m, 'base_url', 'N/A')}"
+                    elif active_model:
+                        model_info = f"ID={active_model.model_id}, BaseURL={active_model.base_url}"
+                except:
+                    pass
+                logger.error(f"Authentication failed for model {model_info}: {e}")
+                yield f"Error: Authentication failed (401). Please check API Key for model [{model_info}]. Details: {msg}"
             else:
                 logger.error(f"Chat error: {e}")
-            yield f"Error: {str(e)}"
+                yield f"Error: {str(e)}"
 
     return StreamingResponse(event_generator(), media_type="text/plain")
 

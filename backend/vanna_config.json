@@ -1,0 +1,14 @@
+{
+  "type": "mysql",
+  "host": "mysql-rfam-public.ebi.ac.uk",
+  "port": 4497,
+  "database": "Rfam",
+  "user": "rfamro",
+  "password": "",
+  "path": "",
+  "db_schema": null,
+  "timeout": 30,
+  "charset": "utf8mb4",
+  "ssl_mode": "disable",
+  "pool_size": 5
+}

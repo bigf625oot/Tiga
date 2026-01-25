@@ -127,7 +127,7 @@
                                     @change="handleAgentChange"
                                     class="agent-select-custom"
                                     :bordered="false"
-                                    dropdownClassName="agent-dropdown-custom"
+                                    popupClassName="agent-dropdown-custom"
                                     :listHeight="200"
                                 >
                                     <template #suffixIcon>

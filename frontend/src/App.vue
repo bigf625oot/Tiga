@@ -45,6 +45,13 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
                 <span class="font-medium">指标提取</span>
             </div>
+            <div 
+                class="px-4 py-3 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
+                @click="mobileMenuClick('data_query')"
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span class="font-medium">智能问数</span>
+            </div>
             <div class="h-px bg-slate-100 my-1"></div>
             <div 
                 class="px-4 py-3 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
@@ -141,6 +148,20 @@
                           :class="currentView === 'metrics' ? 'text-blue-400 bg-blue-500/10 border-l-2 border-blue-500' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border-l-2 border-transparent'"
                       >
                           <span class="text-sm font-medium whitespace-nowrap overflow-hidden pl-2">指标提取</span>
+                      </div>
+                      <div 
+                          @click="currentView = 'indicators'"
+                          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 cursor-pointer ml-4 w-[calc(100%-16px)]"
+                          :class="currentView === 'indicators' ? 'text-blue-400 bg-blue-500/10 border-l-2 border-blue-500' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border-l-2 border-transparent'"
+                      >
+                          <span class="text-sm font-medium whitespace-nowrap overflow-hidden pl-2">指标管理</span>
+                      </div>
+                      <div 
+                          @click="currentView = 'data_query'"
+                          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 cursor-pointer ml-4 w-[calc(100%-16px)]"
+                          :class="currentView === 'data_query' ? 'text-blue-400 bg-blue-500/10 border-l-2 border-blue-500' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border-l-2 border-transparent'"
+                      >
+                          <span class="text-sm font-medium whitespace-nowrap overflow-hidden pl-2">智能问数</span>
                       </div>
                  </div>
              </div>
@@ -417,7 +438,13 @@
     <RecordingDetail v-else-if="currentView === 'detail'" :recording="selectedRecording" @back="currentView = 'list'" />
 
     <!-- Metrics View -->
-    <MetricsExtraction v-else-if="currentView === 'metrics'" />
+    <MetricsExtraction v-else-if="currentView === 'metrics'" :prefilled-indicator="prefilledIndicator" />
+
+    <!-- Indicator Management View -->
+    <IndicatorManagement v-else-if="currentView === 'indicators'" @navigate-to-extraction="handleNavigateToExtraction" />
+
+    <!-- Data Query View -->
+    <SmartDataQuery v-else-if="currentView === 'data_query'" />
                 
     <SmartQA v-else-if="currentView === 'chat'" />
 
@@ -456,6 +483,8 @@ import KnowledgeBase from './components/KnowledgeBase.vue';
 import ModelManagement from './components/ModelManagement.vue';
 import AgentManagement from './components/AgentManagement.vue';
 import WorkflowManagement from './components/WorkflowManagement.vue';
+import IndicatorManagement from './components/IndicatorManagement.vue';
+import SmartDataQuery from './components/SmartDataQuery.vue';
 
 // Setup Axios
 const api = axios.create({
@@ -465,6 +494,8 @@ const api = axios.create({
 const getPageTitle = computed(() => {
     switch (currentView.value) {
         case 'metrics': return '指标提取';
+        case 'indicators': return '指标管理';
+        case 'data_query': return '智能问数';
         case 'search': return '网络检索';
         case 'chat': return '智能问答';
         case 'knowledge': return '知识库';
@@ -480,6 +511,8 @@ const getPageTitle = computed(() => {
 const getPageSubtitle = computed(() => {
     switch (currentView.value) {
         case 'metrics': return '自动化数据洞察与分析';
+        case 'indicators': return '统一管理和维护业务指标体系';
+        case 'data_query': return '数据智能查询与分析';
         case 'search': return '全网信息实时搜寻与聚合';
         case 'chat': return '您的专属 AI 智能助手';
         case 'knowledge': return '企业级知识沉淀与管理';
@@ -501,6 +534,7 @@ const files = ref([]);
 const loading = ref(false);
 const fileInput = ref(null);
 const selectedRecording = ref(null);
+const prefilledIndicator = ref(null); // New state to pass indicator data
 
 // Folder Logic
 const currentFolderId = ref(null);
@@ -737,6 +771,11 @@ const formatDuration = (ms) => {
     const min = Math.floor(durationSec / 60);
     const sec = durationSec % 60;
     return (min > 0 ? min + "分" : "") + sec + "秒";
+};
+
+const handleNavigateToExtraction = (indicator) => {
+    prefilledIndicator.value = indicator;
+    currentView.value = 'metrics';
 };
 
 const statusConfig = {

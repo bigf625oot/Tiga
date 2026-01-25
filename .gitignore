@@ -1,13 +1,55 @@
-node_modules
-/assets/demo-asr/NodeJsServer_asr.aliyun.short__local.js
-/assets/demo-vue/copy
-/assets/node-codes/temp
-/assets/node-localServer/upload
-/assets/node-localServer/main__local.js
-/assets/node-localServer/package-lock.json
-/assets/npm-home/npm-files
-/assets/npm-home/version.patch.txt
-/assets/page-i18n/temp_check
-/assets/sonic-java/test.wav
-/assets/sonic-java/Main.class
-/assets/sonic-java/Sonic.class
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Node.js
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Project Specific
+backend/recorder_v5.db
+backend/fix_db.py
+test_vanna.db
+.trae/

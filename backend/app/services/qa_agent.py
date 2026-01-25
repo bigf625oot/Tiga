@@ -76,10 +76,10 @@ class QAAgentService:
         self.agent.reasoning = should_use_agno_reasoning
         self.agent.show_reasoning = is_native_reasoning or should_use_agno_reasoning
 
-    def chat_stream(self, message: str, llm_model=None) -> Generator[Any, None, None]:
+    def chat_stream(self, message: str, llm_model=None, stream: bool = True, messages: list = None) -> Any:
         if llm_model:
             self._update_model(llm_model)
             
-        return self.agent.run(message, stream=True)
+        return self.agent.run(message, stream=stream, messages=messages)
 
 qa_service = QAAgentService.get_instance()

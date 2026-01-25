@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-[1400px] mx-auto p-4 flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)]">
     <!-- Left Panel: Definition & Preview -->
-    <div class="w-full lg:w-1/3 flex flex-col gap-5 h-full pr-2 overflow-y-auto">
+    <div class="w-full lg:w-1/3 flex flex-col gap-5 h-full pr-2 overflow-y-auto hover-scrollbar">
         
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm shrink-0">
             <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -104,6 +104,13 @@
                         选择录音文件
                     </button>
                     <button 
+                        @click="sourceType = 'kb'"
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all"
+                        :class="sourceType === 'kb' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                    >
+                        选择知识库文件
+                    </button>
+                    <button 
                         @click="sourceType = 'upload'"
                         class="px-4 py-2 text-sm font-medium rounded-md transition-all"
                         :class="sourceType === 'upload' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
@@ -174,6 +181,69 @@
                         </div>
                     </div>
                 </div>
+
+                <div v-else-if="sourceType === 'kb'" class="space-y-4">
+                    <label class="block text-sm font-medium text-slate-700">选择知识库文件</label>
+                    <div class="relative">
+                        <!-- Invisible Overlay for closing -->
+                        <div v-if="showKbDropdown" class="fixed inset-0 z-10 cursor-default" @click="showKbDropdown = false"></div>
+                        
+                        <!-- Trigger -->
+                        <div 
+                            @click="showKbDropdown = !showKbDropdown"
+                            class="relative z-20 w-full px-4 py-3 border border-slate-300 rounded-lg bg-white flex items-center justify-between cursor-pointer hover:border-blue-400 transition-all text-sm group"
+                            :class="{'ring-2 ring-blue-100 border-blue-400': showKbDropdown}"
+                        >
+                            <span :class="selectedKbFileId ? 'text-slate-700 font-medium' : 'text-slate-400'">
+                                {{ selectedKbFileName || '-- 请选择知识库文件 --' }}
+                            </span>
+                            
+                            <div class="flex items-center gap-2">
+                                <button 
+                                    v-if="selectedKbFileId" 
+                                    @click.stop="clearKbSelection"
+                                    class="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors z-30"
+                                    title="清除选择"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                                <svg class="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-transform duration-200" :class="{'rotate-180': showKbDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        
+                        <!-- Dropdown Menu -->
+                        <div 
+                            v-if="showKbDropdown" 
+                            class="absolute z-30 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto py-2 animate-fade-in-up origin-top"
+                        >
+                             <div 
+                                @click="clearKbSelection"
+                                class="px-4 py-3 text-sm hover:bg-slate-50 cursor-pointer text-slate-500 border-b border-slate-100 flex items-center gap-2 transition-colors"
+                            >
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                                <span>不选择任何文件</span>
+                            </div>
+                            
+                            <div v-if="kbFiles.length === 0" class="px-4 py-8 text-center flex flex-col items-center text-slate-400">
+                                <span class="text-xs">暂无知识库文件</span>
+                            </div>
+                            
+                            <div 
+                                v-for="file in kbFiles" 
+                                :key="file.id"
+                                @click="selectKbFile(file)"
+                                class="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer flex justify-between items-center group transition-colors border-b border-slate-50 last:border-0"
+                                :class="selectedKbFileId === file.id ? 'bg-blue-50/60' : ''"
+                            >
+                                <div class="flex flex-col overflow-hidden mr-3">
+                                    <span class="truncate font-medium" :class="selectedKbFileId === file.id ? 'text-blue-600' : 'text-slate-700'">{{ file.filename }}</span>
+                                    <span class="text-xs text-slate-400 mt-0.5 font-din">{{ formatDate(file.created_at) }}</span>
+                                </div>
+                                <span class="text-xs px-2 py-1 bg-slate-100 rounded text-slate-500 whitespace-nowrap">{{ (file.file_size / 1024).toFixed(1) }} KB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div v-else class="space-y-4">
                     <label class="block text-sm font-medium text-slate-700">上传本地文档</label>
@@ -220,7 +290,21 @@
             <!-- Step 2: Model Settings -->
             <div v-if="currentStep === 2" class="space-y-6 animate-fade-in">
                 <h3 class="text-lg font-bold text-slate-800">选择大模型</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- Model Source Toggle -->
+                <div class="flex gap-4 mb-4">
+                     <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" v-model="modelSource" value="preset" class="text-blue-600">
+                        <span class="text-sm font-medium">系统预设模型</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" v-model="modelSource" value="custom" class="text-blue-600">
+                        <span class="text-sm font-medium">我的模型管理</span>
+                    </label>
+                </div>
+
+                <!-- Preset Models -->
+                <div v-if="modelSource === 'preset'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div 
                         v-for="model in ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen-long']" 
                         :key="model"
@@ -239,6 +323,36 @@
                                model === 'qwen-max' ? '最强性能，适合复杂逻辑' : 
                                model === 'qwen-turbo' ? '极速响应，成本最低' : '适合超长文本处理' }}
                         </p>
+                    </div>
+                </div>
+                
+                <!-- Custom Models from Management -->
+                <div v-else class="space-y-4">
+                    <div v-if="customModels.length === 0" class="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                        <span class="text-slate-400 text-sm">暂无可用模型，请在“模型管理”中添加</span>
+                    </div>
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div 
+                            v-for="model in customModels" 
+                            :key="model.id"
+                            @click="selectCustomModel(model)"
+                            class="p-4 border rounded-xl cursor-pointer transition-all hover:shadow-md"
+                            :class="form.model === model.model_id ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 hover:border-blue-300'"
+                        >
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-slate-800">{{ model.name }}</span>
+                                    <span class="text-xs text-slate-400 font-mono">{{ model.model_id }}</span>
+                                </div>
+                                <div v-if="form.model === model.model_id" class="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                                    <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-xs px-2 py-0.5 bg-slate-100 rounded text-slate-500">{{ model.provider }}</span>
+                                <span v-if="model.base_url" class="text-xs px-2 py-0.5 bg-green-50 text-green-600 rounded">自定义</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -527,14 +641,25 @@ const api = axios.create({
     baseURL: 'http://localhost:8000/api/v1' 
 });
 
+const props = defineProps({
+    prefilledIndicator: {
+        type: Object,
+        default: null
+    }
+});
+
 const files = ref([]);
+const kbFiles = ref([]);
+const customModels = ref([]); // Store models from backend
+const modelSource = ref('preset'); // 'preset' | 'custom'
 const loadingFiles = ref(false);
 const selectedFileId = ref(null);
+const selectedKbFileId = ref(null);
 const extracting = ref(false);
 const result = ref('');
 
 // Upload related
-const sourceType = ref('recording'); // 'recording' | 'upload'
+const sourceType = ref('recording'); // 'recording' | 'upload' | 'kb'
 const uploading = ref(false);
 const docInput = ref(null);
 
@@ -565,6 +690,7 @@ const advancedOptions = reactive({
 const showAdvancedModal = ref(false);
 const showPromptModal = ref(false);
 const showFileDropdown = ref(false);
+const showKbDropdown = ref(false);
 const showFormatDropdown = ref(false);
 const viewMode = ref('json'); // 'json', 'table', 'tree'
 const currentStep = ref(1);
@@ -577,16 +703,38 @@ const selectedFileName = computed(() => {
     return file ? `${file.filename} (${file.duration}s)` : null;
 });
 
+const selectedKbFileName = computed(() => {
+    if (!selectedKbFileId.value) return null;
+    const file = kbFiles.value.find(f => f.id === selectedKbFileId.value);
+    return file ? file.filename : null;
+});
+
 const selectFile = (file) => {
     selectedFileId.value = file.id;
     handleFileChange();
     showFileDropdown.value = false;
 };
 
+const selectKbFile = (file) => {
+    selectedKbFileId.value = file.id;
+    handleKbFileChange();
+    showKbDropdown.value = false;
+};
+
+const selectCustomModel = (model) => {
+    form.model = model.model_id;
+};
+
 const clearFileSelection = () => {
     selectedFileId.value = null;
     form.text_content = '';
     showFileDropdown.value = false;
+};
+
+const clearKbSelection = () => {
+    selectedKbFileId.value = null;
+    form.text_content = '';
+    showKbDropdown.value = false;
 };
 
 const selectFormat = (format) => {
@@ -651,6 +799,7 @@ const parsedResult = computed(() => {
 watch(sourceType, () => {
     form.text_content = '';
     selectedFileId.value = null;
+    selectedKbFileId.value = null;
     // Reset file input if exists
     if (docInput.value) {
         docInput.value.value = '';
@@ -658,15 +807,39 @@ watch(sourceType, () => {
 });
 
 onMounted(async () => {
+    // Check if we have prefilled indicator data
+    if (props.prefilledIndicator) {
+        form.indicator_name = props.prefilledIndicator.name;
+        form.aliases = props.prefilledIndicator.alias || '';
+        form.definition = props.prefilledIndicator.description || '';
+    }
+
     loadingFiles.value = true;
     try {
         const res = await api.get('/recordings/');
         // Filter only files with successful transcription
         files.value = res.data.filter(f => !f.is_folder && f.asr_status === 'completed');
+        
+        // Fetch KB files
+        const kbRes = await api.get('/knowledge/list');
+        kbFiles.value = kbRes.data;
+
+        // Fetch custom models
+        const modelsRes = await api.get('/llm/models');
+        customModels.value = modelsRes.data.filter(m => m.is_active);
     } catch (e) {
         console.error(e);
     } finally {
         loadingFiles.value = false;
+    }
+});
+
+// Watch for changes in props to support re-entry
+watch(() => props.prefilledIndicator, (newVal) => {
+    if (newVal) {
+        form.indicator_name = newVal.name;
+        form.aliases = newVal.alias || '';
+        form.definition = newVal.description || '';
     }
 });
 
@@ -683,6 +856,21 @@ const handleFileChange = async () => {
         form.text_content = res.data.transcription_text || "无转写内容";
     } catch (e) {
         message.error("获取文件内容失败");
+    }
+};
+
+const handleKbFileChange = async () => {
+    if (!selectedKbFileId.value) {
+        form.text_content = '';
+        return;
+    }
+    
+    try {
+        const res = await api.get(`/knowledge/${selectedKbFileId.value}/content`);
+        form.text_content = res.data.content || "无文本内容";
+    } catch (e) {
+        message.error("获取知识库文件内容失败");
+        console.error(e);
     }
 };
 
@@ -759,3 +947,25 @@ const handleExtract = async () => {
     }
 };
 </script>
+
+<style scoped>
+/* Custom Scrollbar for Hover Effect */
+.hover-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  background-color: transparent;
+}
+
+.hover-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* slate-300 */
+}
+
+.hover-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8; /* slate-400 */
+}
+</style>

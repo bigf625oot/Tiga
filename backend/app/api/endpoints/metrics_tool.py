@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from app.services.metrics_tool.prompt_service import generate_prompt
 from app.services.metrics_tool.extraction_service import run_extraction
 from app.services.document_parser import parse_document
@@ -134,6 +134,36 @@ class ExtractionRequest(BaseModel):
     aliases: str = ""
     extraction_mode: str = "Multi"
     advanced_options: Optional[AdvancedOptions] = None
+
+class BatchPromptRequest(BaseModel):
+    indicators: List[dict] # List of indicator objects (from frontend table)
+    output_format: str = "JSON"
+    language: str = "CN"
+    lite_mode: bool = False
+    extraction_mode: str = "Multi"
+
+@router.post("/batch_generate_prompts")
+async def batch_generate_prompts(request: BatchPromptRequest):
+    results = []
+    for ind in request.indicators:
+        # Construct advanced options from indicator dict
+        adv = ind.get('advanced_options') or {}
+        
+        prompt = generate_prompt(
+            name=ind.get('name', ''),
+            definition=ind.get('description', '') or '',
+            output_format=request.output_format,
+            language=request.language,
+            lite_mode=request.lite_mode,
+            aliases=ind.get('alias', '') or '',
+            extraction_mode=request.extraction_mode,
+            advanced_options=adv
+        )
+        results.append({
+            "indicator_name": ind.get('name'),
+            "prompt": prompt
+        })
+    return results
 
 class ExtractionResponse(BaseModel):
     status: str

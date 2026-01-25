@@ -67,4 +67,13 @@ class OSSService:
             logger.error(f"Failed to delete from OSS: {e}")
             # Don't raise, just log
 
+    def download_file(self, key: str, file_path: str):
+        if not self.enabled:
+            raise Exception("OSS storage is not enabled")
+        try:
+            self.bucket.get_object_to_file(key, file_path)
+        except Exception as e:
+            logger.error(f"Failed to download from OSS: {e}")
+            raise e
+
 oss_service = OSSService()

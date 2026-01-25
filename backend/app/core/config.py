@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # Graphiti Service
     GRAPHITI_URL: str = "http://localhost:8000"
 
+    # Security
+    SECRET_KEY: str = "your-secret-key-here"  # Change this in production!
+
 
     class Config:
         env_file = ".env"

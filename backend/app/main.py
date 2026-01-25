@@ -29,6 +29,8 @@ async def lifespan(app: FastAPI):
     from app.models.llm_model import LLMModel
     from app.models.agent import Agent
     from app.models.user_script import UserScript
+    from app.models.data_source import DataSource
+    from app.models.indicator import Indicator
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

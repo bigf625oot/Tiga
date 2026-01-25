@@ -4,33 +4,92 @@ import asyncio
 from app.core.config import settings
 
 async def _call_llm(final_input: str, model: str, api_key: str):
+    preset_models = ["qwen-plus", "qwen-max", "qwen-turbo", "qwen-long"]
+    
     base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     headers = {
-        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant specialized in information extraction. Extract data precisely."},
-            {"role": "user", "content": final_input}
-        ],
-        "temperature": 0.1
-    }
+    real_model_id = model
     
     try:
+        # If not preset, try to find in DB
+        if model not in preset_models:
+            from app.db.session import AsyncSessionLocal
+            from app.models.llm import LLMModel
+            from sqlalchemy import select
+            
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(LLMModel).filter(LLMModel.model_id == model))
+                db_model = result.scalars().first()
+                
+                if db_model:
+                    real_model_id = db_model.model_id
+                    if db_model.base_url:
+                        base_url = db_model.base_url.rstrip('/')
+                        # Simple heuristic: if url doesn't end with /v1 and doesn't look like full path, append /v1
+                        # But be careful not to break working urls.
+                        # DeepSeek often works with https://api.deepseek.com (which implies /v1/chat/completions or /chat/completions)
+                        # Let's trust the user's base_url mostly, but handle DeepSeek specifically if needed.
+                    elif db_model.provider == "deepseek":
+                         base_url = "https://api.deepseek.com"
+                    
+                    if db_model.api_key:
+                        api_key = db_model.api_key
+
+        headers["Authorization"] = f"Bearer {api_key}"
+        
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant specialized in information extraction. Extract data precisely."},
+            {"role": "user", "content": final_input}
+        ]
+        
+        payload = {
+            "model": real_model_id,
+            "messages": messages,
+            "temperature": 0.1
+        }
+        
+        # DeepSeek R1 handling
+        # R1 (DeepSeek Reasoner) might return 'reasoning_content'.
+        
+        # Construct Endpoint
+        # If base_url already has /chat/completions, use it.
+        if "/chat/completions" in base_url:
+            endpoint = base_url
+        else:
+            # If base_url ends with /v1, append /chat/completions
+            if base_url.endswith("/v1"):
+                endpoint = f"{base_url}/chat/completions"
+            else:
+                # If just host, try appending /chat/completions (standard OAI)
+                endpoint = f"{base_url}/chat/completions"
+                
         async with aiohttp.ClientSession() as session:
-            async with session.post(f"{base_url}/chat/completions", headers=headers, json=payload, timeout=120) as response:
+            async with session.post(endpoint, headers=headers, json=payload, timeout=120) as response:
                 if response.status == 200:
                     result = await response.json()
-                    return result['choices'][0]['message']['content']
+                    choice = result['choices'][0]['message']
+                    content = choice.get('content', '')
+                    
+                    # If content is empty but reasoning_content exists (DeepSeek R1 case)
+                    reasoning = choice.get('reasoning_content', '')
+                    if not content and reasoning:
+                        return f"[Thinking Process]\n{reasoning}\n\n[Answer]\n(Model returned reasoning but no content)"
+                    elif content and reasoning:
+                        # Optionally show reasoning? For extraction, we usually just want the JSON.
+                        # But for debugging, maybe we prepend it if it's not JSON?
+                        # Let's just return content for now as extraction expects JSON.
+                        return content
+                    
+                    return content
                 else:
                     text = await response.text()
-                    print(f"LLM Request failed: {response.status} {text}")
-                    return None
+                    return f"Error: LLM Request failed with status {response.status}. URL: {endpoint}. Details: {text}"
+                    
     except Exception as e:
         print(f"LLM Error: {e}")
-        return None
+        return f"Error: {str(e)}"
 
 def _chunk_text(text, chunk_size=20000, overlap=1000):
     chunks = []
@@ -98,10 +157,15 @@ async def run_extraction(prompt: str, text_content: str, model: str = "qwen-plus
         # If merge resulted in empty list but we had raw text results (maybe parse failed), 
         # fallback to returning concatenated raw text or the first non-empty result
         if merged_content == "[]":
-            valid_results = [r for r in results if r]
+            valid_results = [r for r in results if r and not r.startswith("Error:")]
             if valid_results:
                 # If parsing failed, just join them with newlines
                 return {"status": "success", "content": "\n\n".join(valid_results)}
+            
+            # If all were errors
+            error_results = [r for r in results if r and r.startswith("Error:")]
+            if error_results:
+                 return {"status": "error", "content": error_results[0]}
         
         return {"status": "success", "content": merged_content}
         
@@ -114,7 +178,11 @@ async def run_extraction(prompt: str, text_content: str, model: str = "qwen-plus
             
         content = await _call_llm(final_input, model, real_api_key)
         
+        # Check if content is an error message
+        if content and content.startswith("Error:"):
+             return {"status": "error", "content": content}
+        
         if content:
             return {"status": "success", "content": content}
         else:
-            return {"status": "error", "content": "LLM request failed"}
+            return {"status": "error", "content": "LLM returned empty response"}
