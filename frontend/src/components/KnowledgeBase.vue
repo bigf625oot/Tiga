@@ -133,31 +133,46 @@
                         
                         <!-- Status -->
                         <div class="w-[180px] px-3">
-                            <div class="flex items-center gap-2 px-2 py-1 bg-slate-100 rounded border border-slate-200 w-fit">
+                            <!-- Progress Bar for active states -->
+                            <div v-if="['uploading', 'indexing'].includes(file.status)" class="w-full pr-4">
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-xs text-blue-600 font-medium">
+                                        {{ file.status === 'uploading' ? '上传中' : '解析中' }}
+                                    </span>
+                                    <span class="text-[10px] text-slate-400">进行中</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                     <div class="h-full bg-blue-500 rounded-full w-full relative overflow-hidden">
+                                         <div class="absolute inset-0 bg-white/30 w-full h-full animate-shimmer"></div>
+                                     </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Standard Badge for other states -->
+                            <div v-else class="flex items-center gap-2 px-2 py-1 bg-slate-100 rounded border border-slate-200 w-fit">
                                 <span class="w-2 h-2 rounded-full" 
                                     :class="{
-                                        'bg-blue-500': file.status === 'uploading', 
-                                        'bg-yellow-500': file.status === 'indexing', 
                                         'bg-green-500': file.status === 'indexed',
                                         'bg-red-500': file.status === 'failed'
                                     }"
                                 ></span>
                                 <span class="text-xs">
-                                    {{ 
-                                        file.status === 'uploading' ? '上传中' : 
-                                        file.status === 'indexing' ? '解析中' : 
-                                        file.status === 'indexed' ? '智能解析' : '解析失败' 
-                                    }}
+                                    {{ file.status === 'indexed' ? '智能解析' : '解析失败' }}
                                 </span>
                             </div>
                         </div>
                         
                         <!-- Actions -->
                         <div class="w-[100px] px-3 flex items-center gap-3">
-                            <button @click="viewGraph(file)" class="text-slate-400 hover:text-blue-600" title="查看知识图谱">
+                            <button 
+                                v-if="file.status === 'indexed'"
+                                @click="viewGraph(file)" 
+                                class="text-slate-400 hover:text-blue-600" 
+                                title="查看知识图谱"
+                            >
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
                             </button>
-                            <button @click="deleteFile(file.id)" class="text-slate-400 hover:text-red-600">
+                            <button @click="deleteFile(file.id)" class="text-slate-400 hover:text-red-600" title="删除文件">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                         </div>
@@ -169,15 +184,142 @@
         <!-- Graph Modal -->
         <a-modal
             v-model:open="graphVisible"
-            :title="`知识图谱 - ${currentGraphTitle}`"
-            width="900px"
+            width="95%"
+            :style="{ top: '20px' }"
             :footer="null"
             destroyOnClose
+            class="graph-modal"
         >
-            <div v-if="graphLoading" class="h-[600px] flex items-center justify-center">
-                <Loading />
+            <template #title>
+                <span :title="currentGraphTitle" class="cursor-help">
+                    {{ currentGraphTitle.length > 20 ? currentGraphTitle.slice(0, 20) + '...' : currentGraphTitle }}
+                </span>
+            </template>
+            <div class="flex h-[80vh] overflow-hidden">
+                <!-- Left: Graph -->
+                <div class="flex-1 border-r border-slate-200 pr-4 relative">
+                    <div v-if="graphLoading" class="h-full flex flex-col items-center justify-center p-8 gap-4">
+                        <!-- Skeleton for Graph -->
+                        <div class="w-full h-full bg-slate-50 rounded-xl animate-pulse relative overflow-hidden">
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                                <div class="w-16 h-16 rounded-full bg-slate-200 mb-4"></div>
+                                <div class="w-32 h-4 bg-slate-200 rounded"></div>
+                            </div>
+                            <!-- Random Nodes -->
+                            <div class="absolute top-1/4 left-1/4 w-12 h-12 rounded-full bg-slate-200"></div>
+                            <div class="absolute bottom-1/4 right-1/4 w-10 h-10 rounded-full bg-slate-200"></div>
+                            <div class="absolute top-1/3 right-1/3 w-8 h-8 rounded-full bg-slate-200"></div>
+                        </div>
+                    </div>
+                    <GraphViewer v-else :nodes="graphNodes" :edges="graphEdges" />
+                </div>
+
+                <!-- Right: Chat -->
+                <div class="w-[400px] flex flex-col pl-4 bg-white relative">
+                    
+                    <!-- Messages Area -->
+                    <div class="flex-1 overflow-y-auto space-y-6 pr-2 mb-4 pt-4" ref="chatContainer">
+                        <!-- Empty State -->
+                        <div v-if="chatMessages.length === 0" class="h-full flex flex-col items-center justify-center text-center px-6">
+                            <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                                <svg class="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-base font-medium text-slate-800 mb-2">文档问答助手</h3>
+                            <p class="text-sm text-slate-500 leading-relaxed">
+                                我已阅读完当前文档，您可以问我任何关于文档内容的问题，我会结合知识图谱为您解答。
+                            </p>
+                            <div class="mt-8 grid grid-cols-1 gap-2 w-full">
+                                <div class="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs rounded-lg cursor-pointer transition-colors border border-slate-100 text-left" @click="chatInput = '这份文档主要讲了什么？'; sendChatMessage()">
+                                    这份文档主要讲了什么？
+                                </div>
+                                <div class="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs rounded-lg cursor-pointer transition-colors border border-slate-100 text-left" @click="chatInput = '有哪些关键实体和关系？'; sendChatMessage()">
+                                    有哪些关键实体和关系？
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Messages -->
+                        <div v-for="(msg, index) in chatMessages" :key="index" class="flex flex-col gap-2 group animate-fade-in-up">
+                            <!-- User Message -->
+                            <div v-if="msg.role === 'user'" class="flex justify-end">
+                                <div class="px-4 py-2.5 bg-blue-600 text-white rounded-2xl rounded-tr-sm text-sm shadow-sm max-w-[90%] leading-relaxed">
+                                    {{ msg.content }}
+                                </div>
+                            </div>
+                            
+                            <!-- Assistant Message -->
+                            <div v-else class="flex gap-3">
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
+                                    <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                                <div class="flex flex-col gap-2 max-w-[90%]">
+                                    <div class="p-3 bg-slate-50 text-slate-800 rounded-2xl rounded-tl-sm text-sm leading-relaxed border border-slate-100">
+                                        {{ msg.content }}
+                                    </div>
+                                    
+                                    <!-- Sources -->
+                                    <div v-if="msg.sources && msg.sources.length > 0" class="flex flex-col gap-1 mt-1">
+                                        <div class="text-[10px] text-slate-400 font-medium uppercase tracking-wider pl-1">参考来源</div>
+                                        <div class="flex flex-wrap gap-1.5">
+                                            <div v-for="(src, idx) in msg.sources.slice(0, 3)" :key="idx" 
+                                                class="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] text-slate-500 truncate max-w-[200px] hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-help"
+                                                :title="src.content"
+                                            >
+                                                <span class="font-bold text-blue-500 mr-1">{{ src.source.toUpperCase() }}</span>
+                                                {{ src.content.slice(0, 15) }}...
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Loading State -->
+                        <div v-if="chatLoading" class="flex gap-3">
+                            <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
+                                <svg class="w-4 h-4 text-indigo-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <div class="flex items-center gap-1 p-3 bg-slate-50 rounded-2xl rounded-tl-sm w-fit">
+                                <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                                <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="mt-auto pt-4 border-t border-slate-100 bg-white">
+                        <div class="relative">
+                            <input 
+                                v-model="chatInput" 
+                                @keyup.enter="sendChatMessage"
+                                type="text" 
+                                placeholder="输入问题..." 
+                                class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                                :disabled="chatLoading"
+                            >
+                            <button 
+                                @click="sendChatMessage"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm group"
+                                :disabled="chatLoading || !chatInput.trim()"
+                            >
+                                <svg class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="text-[10px] text-center text-slate-300 mt-2 pb-1">
+                            由混合检索引擎提供支持 (BM25 + Vector + Graph)
+                        </div>
+                    </div>
+                </div>
             </div>
-            <GraphViewer v-else :nodes="graphNodes" :edges="graphEdges" />
         </a-modal>
     </div>
   </div>
@@ -204,13 +346,25 @@ const graphNodes = ref({});
 const graphEdges = ref({});
 const currentGraphTitle = ref('');
 const graphLoading = ref(false);
+const currentDocId = ref(null);
+
+// Chat State
+const chatMessages = ref([]);
+const chatInput = ref('');
+const chatLoading = ref(false);
+const chatContainer = ref(null);
 
 const viewGraph = async (file) => {
     currentGraphTitle.value = file.filename;
+    currentDocId.value = file.id;
     graphVisible.value = true;
     graphLoading.value = true;
     graphNodes.value = {};
     graphEdges.value = {};
+    
+    // Reset Chat
+    chatMessages.value = [];
+    chatInput.value = '';
     
     try {
         const res = await api.get(`/knowledge/${file.id}/graph`);
@@ -225,6 +379,37 @@ const viewGraph = async (file) => {
         // In real prod, maybe show empty state
     } finally {
         graphLoading.value = false;
+    }
+};
+
+const sendChatMessage = async () => {
+    if (!chatInput.value.trim() || !currentDocId.value) return;
+    
+    const query = chatInput.value;
+    chatMessages.value.push({ role: 'user', content: query });
+    chatInput.value = '';
+    chatLoading.value = true;
+    
+    // Auto scroll to bottom
+    setTimeout(() => {
+        if (chatContainer.value) chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+    }, 100);
+    
+    try {
+        const res = await api.post(`/knowledge/${currentDocId.value}/qa`, { query });
+        chatMessages.value.push({ 
+            role: 'assistant', 
+            content: res.data.answer,
+            sources: res.data.sources 
+        });
+    } catch (e) {
+        console.error(e);
+        chatMessages.value.push({ role: 'assistant', content: "Error: " + (e.response?.data?.detail || e.message) });
+    } finally {
+        chatLoading.value = false;
+        setTimeout(() => {
+            if (chatContainer.value) chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+        }, 100);
     }
 };
 
@@ -335,5 +520,35 @@ onUnmounted(stopPolling);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #c9cdd4;
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+    animation: shimmer 1.5s infinite;
+}
+
+:deep(.graph-modal .ant-modal-title) {
+    font-size: 14px;
+    color: #4b5563;
+    cursor: help;
 }
 </style>

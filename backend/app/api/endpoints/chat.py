@@ -131,7 +131,7 @@ class ChatRequest(BaseModel):
     strict_mode: bool = False
     threshold: float = 0.85
     debug: bool = False
-    ab_variant: str | None = None
+    ab_variant: Optional[str] = None
     attachments: Optional[List[int]] = None
 
 from app.models.llm_model import LLMModel

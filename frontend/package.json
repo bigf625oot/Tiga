@@ -11,6 +11,7 @@
   "dependencies": {
     "ant-design-vue": "^4.0.0",
     "axios": "^1.6.0",
+    "d3-force": "^3.0.0",
     "dayjs": "^1.11.10",
     "katex": "^0.16.27",
     "marked": "^17.0.1",
