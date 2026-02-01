@@ -131,7 +131,7 @@ class ChatRequest(BaseModel):
     strict_mode: bool = False
     threshold: float = 0.85
     debug: bool = False
-    ab_variant: str | None = None
+    ab_variant: Optional[str] = None
     attachments: Optional[List[int]] = None
 
 from app.models.llm_model import LLMModel
@@ -462,29 +462,6 @@ async def chat_session(
                         min_score=request.threshold if request.threshold is not None else 0.85,
                         top_k=5
                     )
-                else:
-                    raw = kb_service.vector_db.search(request.message, limit=5)
-                    refs = []
-                    filtered = []
-                    thr = request.threshold if request.threshold is not None else 0.85
-                    for r in raw:
-                        meta = getattr(r, "metadata", {}) if hasattr(r, "metadata") else (r.get("metadata") if isinstance(r, dict) else {})
-                        name = (meta or {}).get("name") or (meta or {}).get("filename") or (getattr(r, "name", None) if hasattr(r, "name") else (r.get("name") if isinstance(r, dict) else None))
-                        score = getattr(r, "score", 0.0) if hasattr(r, "score") else (r.get("score", 0.0) if isinstance(r, dict) else 0.0)
-                        content = getattr(r, "content", None) if hasattr(r, "content") else (r.get("content") if isinstance(r, dict) else None)
-                        if strict_enabled and allowed_names and name and name not in allowed_names:
-                            filtered.append({"title": name, "score": score})
-                            continue
-                        if score is not None and score < thr:
-                            filtered.append({"title": name, "score": score})
-                            continue
-                        refs.append({
-                            "title": name or "",
-                            "url": (meta or {}).get("url"),
-                            "page": (meta or {}).get("page"),
-                            "score": score,
-                            "preview": (content or (meta or {}).get("text") or "")[:200]
-                        })
                 references = refs or []
                 filtered_out = filtered or []
                 logger.info(f"Retrieval strict={strict_enabled} allowed={len(allowed_names)} refs={len(references)} filtered={len(filtered_out)}")

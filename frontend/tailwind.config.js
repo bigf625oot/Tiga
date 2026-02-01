@@ -6,17 +6,29 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        'figma-bg': '#F7F7F7',
+        'figma-gray': '#E8E8E8',
+        'figma-text': '#171717',
+        'figma-notation': '#858B9B',
+        'figma-line': '#E5E6EB',
+        'figma-disable': '#BCC1CD',
+        'figma-heading': '#2A2F3C',
+        'figma-subhead': '#495363',
+        'figma-border': '#F2F3F5',
+        'figma-hover': '#F0F0F0',
+        'figma-avatar-bg': '#E6EFFF',
+      },
       fontFamily: {
         sans: [
-          '-apple-system', 
-          '"system-ui"', 
-          '"Segoe UI"', 
-          '"PingFang SC"', 
-          '"Hiragino Sans GB"', 
-          '"Microsoft YaHei"', 
-          '"Helvetica Neue"', 
-          'Helvetica', 
-          'Arial', 
+          '"PingFang SC"',
+          '"SF Pro SC"',
+          '"SF Pro Display"',
+          '"SF Pro Text"',
+          '"SF Pro Icons"',
+          '"Helvetica Neue"',
+          'Helvetica',
+          'Arial',
           'sans-serif'
         ],
         din: ['"DIN Alternate"', 'DIN', 'sans-serif'],

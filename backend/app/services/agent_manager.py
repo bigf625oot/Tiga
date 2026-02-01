@@ -12,6 +12,8 @@ from app.services.knowledge_base import kb_service
 import json
 import logging
 
+
+
 logger = logging.getLogger(__name__)
 
 from app.services.model_factory import ModelFactory

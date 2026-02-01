@@ -1,166 +1,150 @@
 <template>
-  <div class="h-full flex bg-slate-50 overflow-hidden rounded-2xl shadow-sm border border-slate-200">
-    <!-- Sidebar: Sessions -->
-    <div class="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
-        <div class="p-4 border-b border-slate-100">
-            <button 
-                @click="createNewSession" 
-                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm shadow-blue-200 font-medium text-sm"
-            >
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                <span>新建对话</span>
-            </button>
-        </div>
-        
-        <div class="flex-1 overflow-y-auto p-2 space-y-1">
-            <div v-if="sessions.length === 0" class="text-center text-slate-400 text-xs py-8">
-                暂无历史对话
-            </div>
-            <div 
-                v-for="session in sessions" 
-                :key="session.id"
-                @click="selectSession(session)"
-                class="group px-3 py-3 rounded-xl cursor-pointer flex items-center justify-between transition-all duration-200"
-                :class="currentSessionId === session.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50 text-slate-600'"
-            >
-                <div class="flex items-center gap-3 overflow-hidden">
-                    <svg class="w-4 h-4 flex-shrink-0" :class="currentSessionId === session.id ? 'text-blue-500' : 'text-slate-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-                    <span class="text-sm truncate">{{ session.title || '新对话' }}</span>
-                </div>
-                <button 
-                    @click.stop="deleteSession(session.id)"
-                    class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 rounded transition-opacity"
-                >
-                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
+  <div class="h-full flex bg-slate-50 overflow-hidden shadow-sm relative bg-animated">
     <!-- Main Chat Area -->
     <div class="flex-1 flex flex-col h-full bg-white relative">
         
         <!-- Header (Only show when chatting) -->
-        <div v-if="messages.length > 0" class="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur-sm z-10">
-            <div class="flex items-center gap-3">
+        <div v-if="messages.length > 0" class="px-6 py-3 border-b border-figma-border flex justify-between items-center bg-white/80 backdrop-blur-sm z-10">
+            <div class="flex items-center gap-3 group">
                 <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.0556 4.81815H2.94445C2.51489 4.81815 2.16667 5.19803 2.16667 5.66663V14.1515C2.16667 14.6201 2.51489 15 2.94445 15H13.0556C13.4851 15 13.8333 14.6201 13.8333 14.1515V5.66663C13.8333 5.19803 13.4851 4.81815 13.0556 4.81815Z" stroke="white" stroke-width="1.3"/>
+                        <path d="M8.00001 4.81818V1.92899L5.66667 1" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </div>
                 <div>
-                    <h2 class="font-bold text-slate-800 text-sm">
-                        {{ currentSession?.title || '智能问答助手' }}
+                    <h2 class="font-bold text-figma-text text-[14px] m-0 leading-tight">
+                        {{ currentSession?.title || '新任务' }}
                     </h2>
-                    <div class="flex items-center gap-1 text-xs text-slate-500" v-if="currentAgent">
+                    <div class="flex items-center gap-1 text-[11px] text-figma-notation" v-if="currentAgent">
                         <span>当前智能体:</span>
-                        <span class="font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{{ currentAgent.name }}</span>
-                        <span v-if="localStrictMode" class="ml-2 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">严格检索</span>
+                        <span class="font-medium text-blue-600">{{ currentAgent.name }}</span>
                     </div>
                 </div>
+                <button 
+                    v-if="currentSessionId"
+                    class="p-1 text-figma-disable hover:text-red-500 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                    @click="deleteSession(currentSessionId)"
+                    title="删除对话"
+                >
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
             
-            <!-- Agent Selector -->
-            <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-500">选择智能体:</span>
-                <select 
-                    v-model="selectedAgentId" 
-                    @change="handleAgentChange"
-                    class="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none min-w-[150px]"
-                    :disabled="isLoading || messages.length > 0"
-                >
-                    <option value="">默认问答助手</option>
-                    <option v-for="agent in agents" :key="agent.id" :value="agent.id">
-                        {{ agent.name }}
-                    </option>
-                </select>
-            </div>
+            
         </div>
 
-        <div v-if="messages.length > 0 && userScripts.length" class="px-6 py-3 border-b border-slate-100 bg-white">
-            <div class="max-w-4xl mx-auto">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="text-xs font-medium text-slate-700">用户剧本</div>
-                    <div class="text-[11px] text-slate-400">点击剧本快速填充到输入框</div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <div v-for="s in userScripts" :key="s.id" class="p-3 border rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer"
-                         @click="input = s.content">
-                        <div class="text-sm font-medium text-slate-700 truncate">{{ s.title }}</div>
-                        <div class="text-[11px] text-slate-500 mt-1 line-clamp-3">{{ s.content }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
         <!-- Welcome / Empty State (Design Implementation) -->
-        <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 bg-white">
-             <div class="frame1321317936">
-                <p class="text-heading">今天想说什么</p>
-                <div class="frame367 relative group transition-all focus-within:ring-2 focus-within:ring-blue-100">
-                    <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 mb-2 w-full overflow-x-auto">
-                        <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100 flex-shrink-0">
-                            <component :is="att.type === 'local' ? PaperClipOutlined : FileTextOutlined" />
-                            <span class="max-w-[120px] truncate" :title="att.name">{{ att.name }}</span>
-                            <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
-                        </div>
+        <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center p-4 md:p-8 bg-white overflow-y-auto relative bg-animated">
+             <div class="w-full max-w-[800px] flex flex-col items-center gap-8 md:gap-12">
+                <div class="flex flex-col items-center gap-4">
+                    <!-- Robot Avatar from Figma 114_14502 -->
+                    <div class="w-[94px] h-[94px] flex items-center justify-center mb-2">
+                        <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain" />
                     </div>
-                    <textarea 
-                        v-model="input" 
-                        @keydown.enter.prevent="sendMessage"
-                        class="text2 w-full flex-1 resize-none outline-none bg-transparent placeholder-slate-300" 
-                        placeholder="描述您需要帮助的内容..."
-                    ></textarea>
-                    
-                    <div class="frame374 absolute bottom-3 right-3 left-3 flex justify-between items-center">
-                         <div class="frame1321315582 cursor-pointer hover:bg-slate-50 rounded-lg p-1 transition-colors" @click="openAttachmentModal">
-                            <div class="frame flex items-center gap-2">
-                                <svg class="icons w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                                <p class="text3 text-slate-500 text-xs m-0">附件</p>
-                            </div>
-                         </div>
-                         
-                         <div class="flex items-center gap-4">
-                             <!-- Agent Selector Pill -->
-                             <div class="agent-selector-container">
-                                <svg class="selector-icon w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                                <a-select 
-                                    v-model:value="selectedAgentId" 
-                                    @change="handleAgentChange"
-                                    class="agent-select-custom"
-                                    :bordered="false"
-                                    popupClassName="agent-dropdown-custom"
-                                    :listHeight="200"
-                                >
-                                    <template #suffixIcon>
-                                         <svg class="w-3 h-3 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                    </template>
-                                    <a-select-option value="">默认助手</a-select-option>
-                                    <a-select-option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</a-select-option>
-                                </a-select>
-                             </div>
-                             
-                             <div class="frame1321315581 flex items-center gap-2">
-                                <button @click="sendMessage" class="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-all active:scale-95" :disabled="!input.trim()">
-                                    <svg class="icons3 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"></path></svg>
-                                </button>
-                             </div>
-                         </div>
-                    </div>
+                    <h1 class="text-[24px] md:text-[28px] text-[#2A2F3C] text-center m-0 leading-tight" style="font-family: 'Alibaba PuHuiTi','PingFang SC','Microsoft YaHei',sans-serif; font-weight:115;">让我们创造点厉害的东西！</h1>
                 </div>
-
-                <div class="frame1 mt-8">
-                    <div v-if="userScriptsLoading" class="text-xs text-slate-500">正在加载用户剧本...</div>
-                    <div v-else-if="userScriptsError" class="text-xs text-red-500">{{ userScriptsError }}</div>
-                    <template v-else>
-                        <div 
-                            v-for="s in userScripts" 
-                            :key="s.id" 
-                            class="frame3 cursor-pointer hover:bg-slate-50 transition-colors gap-2" 
-                            @click="sendQuickMessage(s.content)"
-                        >
-                            <svg class="icons4 w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
-                            <p class="text4 m-0">{{ s.title }}</p>
+                
+                <div class="w-full flex flex-col gap-10">
+                    <!-- Input Area (Simplified) -->
+                    <div class="relative flex flex-col">
+                        <div class="flex flex-col gap-2">
+                            <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 mb-2 w-full overflow-x-auto custom-scrollbar pb-1">
+                                <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100 flex-shrink-0">
+                                    <component :is="att.type === 'local' ? PaperClipOutlined : FileTextOutlined" />
+                                    <span class="max-w-[120px] truncate" :title="att.name">{{ att.name }}</span>
+                                    <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
+                                </div>
+                            </div>
+                            <textarea 
+                                v-model="input" 
+                                @keydown="onInputKeydown"
+                                class="textarea-modern pr-10 pb-12"
+                                placeholder="描述您需要帮助的内容..."
+                                :disabled="isLoading"
+                                style="height: 140px;"
+                            ></textarea>
                         </div>
-                    </template>
+                        
+                        <!-- Footer Area (Embedded inside textarea container) -->
+                        <div class="absolute bottom-2 left-2 right-2 flex justify-between items-center h-8">
+                             <!-- Left: Attachment -->
+                             <button @click="openAttachmentModal" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-figma-hover transition-colors text-figma-notation border border-[#F2F3F5]">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M13.8933 7.41333L7.78667 13.52C6.33333 15.0267 3.93333 15.0267 2.48 13.52C1.02667 12.0667 1.02667 9.66667 2.48 8.21333L8.58667 2.10667C9.54667 1.14667 11.1467 1.14667 12.1067 2.10667C13.0667 3.06667 13.0667 4.66667 12.1067 5.62667L6 11.7333C5.52 12.2133 4.72 12.2133 4.24 11.7333C3.76 11.2533 3.76 10.4533 4.24 9.97333L9.81333 4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                             </button>
+                             
+                             <!-- Right: Agent Selector & Send Button -->
+                             <div class="flex items-center gap-3">
+                                 <!-- Agent Selector (Fidelity Implementation) -->
+                                 <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-figma-hover cursor-pointer transition-all group border border-transparent hover:border-figma-border relative" @click="agentSelectOpen = true">
+                                    <!-- Gradient Icon BG -->
+                                    <div class="w-5 h-5 rounded-[6px] flex items-center justify-center overflow-hidden bg-gradient-to-br  flex-shrink-0">
+                                        <img v-if="currentAgent && currentAgent.icon_url" :src="currentAgent.icon_url" alt="" class="w-3 h-3 object-contain" />
+                                        <img v-else src="/tiga.svg" alt="" class="w-4 h-4 object-contain" />
+                                    </div>
+                                    <a-select 
+                                        v-model:value="selectedAgentId" 
+                                        @change="handleAgentChange"
+                                        class="agent-select-figma"
+                                        :bordered="false"
+                                        size="small"
+                                        popupClassName="agent-dropdown-custom"
+                                        v-model:open="agentSelectOpen"
+                                        @update:open="val => agentSelectOpen = val"
+                                        @dropdownVisibleChange="val => agentSelectOpen = val"
+                                        :getPopupContainer="getPopupContainerForSelect"
+                                        :dropdownMatchSelectWidth="false"
+                                    >
+                                        <a-select-option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</a-select-option>
+                                    </a-select>
+                                    <!-- Custom Chevron -->
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#858B9B" stroke-width="2.5" class="ml-1 group-hover:stroke-figma-text transition-colors"><path d="M6 9l6 6 6-6"/></svg>
+                                 </div>
+
+                                 <!-- Send Button (Circle Blue) -->
+                                 <button 
+                                    @click="sendMessage" 
+                                    class="w-8 h-8 flex items-center justify-center rounded-[24px] transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    :class="input.trim() ? 'bg-gradient-to-r from-[#0056E8] to-[#387BFF] text-white shadow-lg shadow-blue-200 hover:brightness-110' : 'bg-[#E5E6EB] text-[#BCC1CD] shadow-none'"
+                                    :disabled="!input.trim() || isLoading"
+                                 >
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M8 13V3M8 3L4 7M8 3L12 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                 </button>
+                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Scripts Section (Frame 1321318130) -->
+                    <div v-if="userScripts.length > 0" class="flex flex-col gap-3 px-1">
+                        <span class="text-[13px] font-medium text-[#495363] px-3">剧本</span>
+                        <div class="flex flex-wrap gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                            <div 
+                                v-for="s in userScripts" 
+                                :key="s.id" 
+                                class="flex items-center gap-2 px-4 py-2 bg-white hover:bg-figma-hover transition-all cursor-pointer rounded-full border border-[#F2F3F5] group shadow-sm flex-shrink-0" 
+                                @click="sendQuickMessage(s.content)"
+                            >
+                                <div class="w-4 h-4 flex items-center justify-center text-[#858B9B] group-hover:text-figma-text">
+                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 2H4.66667C3.19391 2 2 3.19391 2 4.66667V11.3333C2 12.8061 3.19391 14 4.66667 14H11.3333C12.8061 14 14 12.8061 14 11.3333V4.66667C14 3.19391 12.8061 2 11.3333 2H10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M6 1V3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M10 1V3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M5 7H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M5 10H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <span class="text-[12px] text-[#858B9B] group-hover:text-figma-text whitespace-nowrap">{{ s.title }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
              </div>
         </div>
@@ -170,15 +154,15 @@
             <div v-for="(msg, index) in messages" :key="index" 
                  :class="['flex gap-4 max-w-4xl mx-auto', msg.role === 'user' ? 'flex-row-reverse' : '']">
                 <!-- Avatar -->
-                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
-                     :class="msg.role === 'user' ? 'bg-blue-600' : 'bg-white border border-slate-200'">
-                     <span v-if="msg.role === 'user'" class="text-white text-xs font-bold">Me</span>
-                     <svg v-else class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden"
+                     :class="msg.role === 'user' ? 'bg-blue-600 border-2 border-white' : 'border border-slate-200'">
+                     <img v-if="msg.role === 'user'" src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="user avatar" class="w-full h-full object-cover" />
+                     <img v-else-if="currentAgent && currentAgent.icon_url" :src="currentAgent.icon_url" alt="agent avatar" class="w-full h-full object-cover" />
+                     <img v-else src="/tiga.svg" alt="agent avatar" class="w-full h-full object-cover" />
                 </div>
                 
                 <!-- Content -->
-                <div :class="['rounded-2xl px-5 py-3.5 shadow-sm text-sm leading-relaxed max-w-[85%]', 
-                              msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-sm']">
+                <div :class="[msg.role === 'user' ? 'bubble-user' : 'bubble-assistant']">
                     <div v-if="msg.role === 'assistant'">
                         <!-- Thinking Block -->
                         <div v-if="msg.reasoning || (msg.meta_data && msg.meta_data.reasoning)" 
@@ -214,12 +198,7 @@
                             <ReferencesTable v-if="viewMode==='table'" :items="structuredRefs(msg)" :loading="false" />
                             <ReferencesCards v-else :items="structuredRefs(msg)" :loading="false" :mode="cardsLayout" />
                         </div>
-                        <div v-if="localDebugMode && msg.meta_data && msg.meta_data.filtered_out && msg.meta_data.filtered_out.length" class="mt-2 p-2 bg-slate-100 text-[11px] text-slate-500 rounded">
-                            <div class="mb-1">已过滤结果</div>
-                            <ul class="space-y-1">
-                                <li v-for="(f, fidx) in msg.meta_data.filtered_out" :key="fidx">{{ f.title }} · {{ f.score }}</li>
-                            </ul>
-                        </div>
+                        
                     </div>
                     <div v-else>{{ msg.content }}</div>
                 </div>
@@ -239,47 +218,28 @@
         </div>
 
         <!-- Input Area (Bottom - Only show when chatting) -->
-        <div class="p-4 bg-white border-t border-slate-100 z-10" v-if="currentSessionId && messages.length > 0">
+        <div class="p-4 bg-white z-10" v-if="currentSessionId && messages.length > 0">
             <div class="max-w-4xl mx-auto relative">
-                <div class="mb-2 flex items-center gap-3 text-[11px] text-slate-600">
-                    <label class="flex items-center gap-2">
-                        <input type="checkbox" v-model="localStrictMode" />
-                        <span>仅检索绑定文档</span>
-                    </label>
-                    <label class="flex items-center gap-1">
-                        <span>噪声阈值</span>
-                        <input type="number" v-model.number="localThreshold" step="0.01" min="0" max="1" class="w-16 bg-slate-50 border border-slate-200 rounded px-2 py-0.5" />
-                    </label>
-                    <label class="flex items-center gap-2">
-                        <input type="checkbox" v-model="localDebugMode" />
-                        <span>调试模式</span>
-                    </label>
-                    <label class="flex items-center gap-1">
-                        <span>A/B</span>
-                        <select v-model="localABVariant" class="bg-slate-50 border border-slate-200 rounded px-2 py-0.5">
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                        </select>
-                    </label>
+                <div class="relative">
+                  <textarea 
+                    v-model="input" 
+                    @keydown="onInputKeydown"
+                    rows="1"
+                    placeholder="输入您的问题，按 Enter 发送..." 
+                    class="textarea-modern pr-10"
+                    :disabled="isLoading"
+                    style="min-height: 52px; max-height: 120px;"
+                    @input="adjustHeight"
+                  ></textarea>
+                  <button 
+                    @click="sendMessage"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-200"
+                    :class="input.trim() && !isLoading ? 'text-blue-600 hover:text-blue-700' : 'text-slate-400 cursor-not-allowed'"
+                    :disabled="isLoading || !input.trim()"
+                  >
+                      <svg class="w-5 h-5 mx-auto transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                  </button>
                 </div>
-                <textarea 
-                  v-model="input" 
-                  @keydown.enter.prevent="sendMessage"
-                  rows="1"
-                  placeholder="输入您的问题，按 Enter 发送..." 
-                  class="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none resize-none text-sm text-slate-700 placeholder-slate-400 transition-all shadow-inner"
-                  :disabled="isLoading"
-                  style="min-height: 52px; max-height: 120px;"
-                  @input="adjustHeight"
-                ></textarea>
-                <button 
-                  @click="sendMessage"
-                  class="absolute right-2 bottom-2 p-2 rounded-lg transition-all duration-200"
-                  :class="input.trim() && !isLoading ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'"
-                  :disabled="isLoading || !input.trim()"
-                >
-                    <svg class="w-5 h-5 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                </button>
             </div>
             <p class="text-center text-[10px] text-slate-400 mt-2">内容由 AI 生成，仅供参考</p>
         </div>
@@ -352,6 +312,14 @@
 
 <script setup>
 import { ref, nextTick, onMounted, computed, watch, createVNode } from 'vue';
+
+const props = defineProps({
+    sessionId: {
+        type: String,
+        default: null
+    }
+});
+const emit = defineEmits(['refresh-sessions']);
 import { marked } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -362,26 +330,56 @@ import { ExclamationCircleOutlined, PaperClipOutlined, FileTextOutlined, DeleteO
 
 const input = ref('');
 const messages = ref([]);
-const sessions = ref([]);
+const currentSession = ref(null);
 const agents = ref([]);
-const currentSessionId = ref(null);
+const currentSessionId = ref(props.sessionId);
 const selectedAgentId = ref('');
+const agentSelectOpen = ref(false);
 const isLoading = ref(false);
 const isStreaming = ref(false);
 const messagesContainer = ref(null);
 
-const currentSession = computed(() => sessions.value.find(s => s.id === currentSessionId.value));
 const currentAgent = computed(() => agents.value.find(a => a.id === selectedAgentId.value));
+
+const getPopupContainerForSelect = () => {
+    if (typeof window !== 'undefined' && window.document && window.document.body) {
+        return window.document.body;
+    }
+    return undefined;
+};
+
+const getDefaultAgentId = (list) => {
+    let saved = '';
+    try {
+        saved = localStorage.getItem('defaultAgentId') || '';
+    } catch {}
+    if (saved && list.some(a => a.id === saved)) return saved;
+    const generic = list.find(a => a.name && (a.name === '通用' || a.name.includes('通用')));
+    if (generic) return generic.id;
+    return list.length ? list[0].id : '';
+};
 
 onMounted(() => {
     fetchAgents();
-    fetchSessions();
+    if (currentSessionId.value) {
+        fetchSessionDetails(currentSessionId.value);
+    }
     fetchUserScripts(selectedAgentId.value);
+    nextTick(() => {
+        const ta = document.querySelector('textarea');
+        if (ta) ta.focus();
+    });
 });
-const localStrictMode = ref(false);
-const localThreshold = ref(0.85);
-const localDebugMode = ref(false);
-const localABVariant = ref('A');
+
+watch(() => props.sessionId, (newId) => {
+    currentSessionId.value = newId;
+    if (newId) {
+        fetchSessionDetails(newId);
+    } else {
+        currentSession.value = null;
+        messages.value = [];
+    }
+});
 const viewMode = ref('table');
 const cardsLayout = ref('grid');
 const structuredRefs = (msg) => {
@@ -419,13 +417,25 @@ const fetchUserScripts = async (aid) => {
         userScriptsLoading.value = false;
     }
 };
-watch(selectedAgentId, (nv) => fetchUserScripts(nv));
+watch(selectedAgentId, (nv) => {
+    fetchUserScripts(nv);
+    try {
+        if (nv) localStorage.setItem('defaultAgentId', nv);
+    } catch {}
+});
 
 const adjustHeight = (e) => {
     e.target.style.height = 'auto';
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
 };
 
+const onInputKeydown = (e) => {
+    if (e.key === 'Enter') {
+        if (e.shiftKey) return;
+        e.preventDefault();
+        sendMessage();
+    }
+};
 const sendQuickMessage = (text) => {
     input.value = text;
     sendMessage();
@@ -544,39 +554,31 @@ const fetchAgents = async () => {
     try {
         const res = await fetch('/api/v1/agents/');
         if (res.ok) {
-            agents.value = await res.json();
+            const data = await res.json();
+            agents.value = data;
+            if (!selectedAgentId.value && data.length > 0) {
+                const did = getDefaultAgentId(data);
+                selectedAgentId.value = did;
+                fetchUserScripts(did);
+            }
         }
     } catch (e) {
         console.error("Failed to fetch agents", e);
     }
 };
 
-const fetchSessions = async () => {
+const fetchSessionDetails = async (id) => {
     try {
-        const res = await fetch('/api/v1/chat/sessions');
-        if (res.ok) {
-            sessions.value = await res.json();
-            // Select first session if exists and none selected
-            if (sessions.value.length > 0 && !currentSessionId.value) {
-                selectSession(sessions.value[0]);
-            }
-        }
-    } catch (e) {
-        console.error("Failed to fetch sessions", e);
-    }
-};
-
-const selectSession = async (session) => {
-    currentSessionId.value = session.id;
-    selectedAgentId.value = session.agent_id || '';
-    
-    // Fetch details (messages)
-    try {
-        const res = await fetch(`/api/v1/chat/sessions/${session.id}`);
+        const res = await fetch(`/api/v1/chat/sessions/${id}`);
         if (res.ok) {
             const data = await res.json();
+            currentSession.value = data;
+            selectedAgentId.value = data.agent_id || '';
             messages.value = data.messages || [];
             scrollToBottom();
+            if (!selectedAgentId.value && agents.value.length > 0) {
+                selectedAgentId.value = getDefaultAgentId(agents.value);
+            }
             
             // Render Amis charts if any
             nextTick(() => {
@@ -592,25 +594,7 @@ const selectSession = async (session) => {
     }
 };
 
-const createNewSession = async () => {
-    try {
-        const res = await fetch('/api/v1/chat/sessions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                title: '新对话',
-                agent_id: selectedAgentId.value || null 
-            })
-        });
-        if (res.ok) {
-            const newSession = await res.json();
-            sessions.value.unshift(newSession);
-            selectSession(newSession);
-        }
-    } catch (e) {
-        console.error("Failed to create session", e);
-    }
-};
+// No createNewSession here, handled by App.vue
 
 const deleteSession = (id) => {
     Modal.confirm({
@@ -625,17 +609,11 @@ const deleteSession = (id) => {
                     method: 'DELETE'
                 });
                 if (res.ok) {
-                    sessions.value = sessions.value.filter(s => s.id !== id);
+                    emit('refresh-sessions'); // Notify App.vue
                     if (currentSessionId.value === id) {
                         currentSessionId.value = null;
+                        currentSession.value = null;
                         messages.value = [];
-                        // If there are other sessions, select the first one
-                        if (sessions.value.length > 0) {
-                            selectSession(sessions.value[0]);
-                        } else {
-                            // Reset agent selection if no sessions left
-                            selectedAgentId.value = '';
-                        }
                     }
                 }
             } catch (e) {
@@ -657,9 +635,9 @@ const handleAgentChange = async () => {
             });
             if (!res.ok) throw new Error(res.statusText);
             
-            // Update local session list if needed (though agent_id isn't displayed in list usually)
-            const sess = sessions.value.find(s => s.id === currentSessionId.value);
-            if (sess) sess.agent_id = selectedAgentId.value;
+            if (currentSession.value) {
+                currentSession.value.agent_id = selectedAgentId.value;
+            }
         } catch (e) {
             console.error("Failed to update session agent", e);
         }
@@ -702,6 +680,16 @@ const sendMessage = async () => {
         }
     }
     
+    // Push user message to UI immediately
+    const userMsg = input.value;
+    input.value = '';
+    selectedAttachments.value = []; // Clear attachments UI
+    const textarea = document.querySelector('textarea');
+    if (textarea) textarea.style.height = 'auto';
+    messages.value.push({ role: 'user', content: userMsg });
+    isStreaming.value = false;
+    scrollToBottom();
+    
     // Auto-create session if none exists
     if (!currentSessionId.value) {
         try {
@@ -709,34 +697,25 @@ const sendMessage = async () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    title: input.value.slice(0, 20) || '新对话',
+                    title: (userMsg && userMsg.slice(0, 20)) || '新对话',
                     agent_id: selectedAgentId.value || null 
                 })
             });
             if (res.ok) {
                 const newSession = await res.json();
-                sessions.value.unshift(newSession);
+                emit('refresh-sessions');
                 currentSessionId.value = newSession.id;
+                currentSession.value = newSession;
             } else {
                 throw new Error("Failed to create session");
             }
         } catch (e) {
             console.error(e);
+            messages.value.push({ role: 'assistant', content: "Error: 会话创建失败" });
             isLoading.value = false;
             return;
         }
     }
-    
-    const userMsg = input.value;
-    input.value = '';
-    selectedAttachments.value = []; // Clear attachments UI
-    const textarea = document.querySelector('textarea');
-    if (textarea) textarea.style.height = 'auto';
-
-    messages.value.push({ role: 'user', content: userMsg });
-    isStreaming.value = false;
-    
-    scrollToBottom();
     
     try {
         const response = await fetch(`/api/v1/chat/sessions/${currentSessionId.value}/chat`, {
@@ -744,10 +723,6 @@ const sendMessage = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 message: userMsg, 
-                strict_mode: localStrictMode.value, 
-                threshold: localThreshold.value, 
-                debug: localDebugMode.value, 
-                ab_variant: localABVariant.value,
                 attachments: attachmentIds 
             })
         });
@@ -816,13 +791,47 @@ const scrollToBottom = () => {
 
 const renderMarkdown = (text) => {
     try {
-        let html = marked.parse(text || '');
+        let inputText = (text || '').trim();
+        
+        // [Cleanup] Remove raw document references like doc#3:xxxx...
+        inputText = inputText.replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '');
+        
+        // [Cleanup] Remove the trailing "References" or "Sources" section aggressively
+        const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|引用|引用文献|Reference Document List)(:|\：)?(\*\*)?\s*(\n+|$)/gi;
+        inputText = inputText.split(refHeaderPattern)[0];
+
+        // [Cleanup] Also remove any trailing lines that look like [n] or [n] something
+        let lines = inputText.split('\n');
+        while (lines.length > 0 && (/^\s*\[\d+\]\s*.*$/.test(lines[lines.length - 1]) || !lines[lines.length - 1].trim())) {
+            lines.pop();
+        }
+        inputText = lines.join('\n');
+
+        // [Cleanup] Trim multiple newlines
+        inputText = inputText.replace(/\n{3,}/g, '\n\n');
+
+        // [Fix] Handle cases where bold text at the start of a line (possibly indented) 
+        // is followed by a colon, which can break some Markdown parsers (like marked).
+        inputText = inputText.replace(/^(\s*)\*\*([^*]+)\*\*([:：])/gm, '$1**$2** $3');
+
+        // [Feature] Support in-text entity citations: [[Entity: Name]]
+        inputText = inputText.replace(/\[\[Entity:\s*(.*?)\]\]/g, '<span class="entity-citation" data-entity="$1">$1</span>');
+
+        // [Fix] Handle multi-layered brackets like [[[1]]], [[ [1] ]], or [[Source: 1]]
+        // Consolidate all citation patterns into a single unified format [n]
+        inputText = inputText.replace(/\[+[\s\t]*(?:Source:[\s\t]*)?(\d+)[\s\t]*\]+/gi, '[$1]');
+
+        // Final rendering of citations [n] as superscripts
+        inputText = inputText.replace(/\[(\d+)\]/g, '<sup class="chunk-citation" data-id="$1">[$1]</sup>');
+
+        let html = marked.parse(inputText);
         html = html.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, open, formula) => {
             try { return katex.renderToString(formula, { displayMode: true }); } catch { return match; }
         });
         html = html.replace(/\\\(([\s\S]*?)\\\)/g, (match, formula) => {
             try { return katex.renderToString(formula, { displayMode: false }); } catch { return match; }
         });
+        html = html.replace(/<p>\s*<\/p>/g, '');
         return html;
     } catch (e) {
         return text;
@@ -852,75 +861,19 @@ const renderAmis = (index, content) => {
 </script>
 
 <style scoped>
-/* Frame 1321317936 Styles */
-.frame1321317936 {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 800px;
-  row-gap: 24px;
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
 }
-
-.text-heading {
-  padding: 24px 0;
-  width: 100%;
-  text-align: center;
-  line-height: 36px;
-  color: #2a2f3c;
-  font-family: "PingFang SC", sans-serif;
-  font-size: 28px;
-  font-weight: 500;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-.frame367 {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  align-self: stretch;
-  justify-content: space-between;
-  border: 1px solid #e5e6eb;
-  border-radius: 16px;
-  box-shadow: 0px 4px 24px 0px #bfcded33;
-  background: #ffffff;
-  padding: 16px;
-  height: 140px;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e5e6eb;
+  border-radius: 10px;
 }
-
-.text2 {
-  font-size: 15px;
-  line-height: 1.6;
-  color: #1e293b;
-}
-
-.frame1 {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.frame3 {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* column-gap: 8px; */
-  border-radius: 100px;
-  padding: 8px 16px;
-  background: #f8fafc;
-  border: 1px solid transparent;
-}
-.frame3:hover {
-    border-color: #e2e8f0;
-    background: #f1f5f9;
-}
-
-.text4 {
-  line-height: 18px;
-  color: #2a2f3c;
-  font-size: 12px;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #bcc1cd;
 }
 
 .markdown-body {
@@ -952,55 +905,210 @@ const renderAmis = (index, content) => {
 .markdown-body pre { background: #f1f5f9; padding: 12px 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; border: 1px solid #e2e8f0; }
 .markdown-body code { font-family: monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
 
-/* Agent Select Styles */
-.agent-selector-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 9999px;
-    padding: 2px 4px;
-    transition: all 0.3s ease;
-}
-.agent-selector-container:hover {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-.selector-icon {
-    margin-left: 8px;
-    pointer-events: none;
-    z-index: 1;
-}
-.agent-select-custom {
-    width: 100px;
-}
-.agent-select-custom :deep(.ant-select-selector) {
-    padding-left: 8px !important;
-    height: 32px !important;
-    display: flex;
-    align-items: center;
-    background-color: transparent !important;
-}
-.agent-select-custom :deep(.ant-select-selection-item) {
-    font-size: 12px;
+/* Citations Styling */
+:deep(.entity-citation) {
+    color: #2563eb;
+    background-color: #eff6ff;
+    padding: 0px 4px;
+    border-radius: 4px;
+    border-bottom: 1px dashed #3b82f6;
+    cursor: pointer;
     font-weight: 500;
+    transition: all 0.2s;
+}
+:deep(.entity-citation:hover) {
+    background-color: #dbeafe;
+    border-bottom-style: solid;
+}
+
+:deep(.chunk-citation) {
+    color: #6366f1;
+    font-weight: bold;
+    cursor: help;
+    margin-left: 2px;
+    padding: 0 2px;
+}
+:deep(.chunk-citation:hover) {
+    text-decoration: underline;
+}
+
+/* Agent Select Figma Styles */
+:deep(.agent-select-figma .ant-select-selector) {
+    padding: 0 !important;
+    height: 24px !important;
+    line-height: 24px !important;
+}
+:deep(.agent-select-figma .ant-select-selection-item) {
+    font-size: 12px !important;
+    color: #000000 !important;
+    font-weight: 400 !important;
+    padding-inline-end: 4px !important;
+}
+:deep(.agent-select-figma .ant-select-arrow) {
+    display: none !important;
+}
+
+.bubble-user {
+    max-width: 85%;
+    padding: 10px 12px;
+    border-radius: 14px 14px 4px 14px;
+    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.18);
+    font-size: 12px;
+    line-height: 1.6;
+}
+.bubble-assistant {
+    max-width: 85%;
+    padding: 10px 12px;
+    border-radius: 14px 14px 14px 4px;
+    background: #ffffff;
+    border: 1px solid #e6eaf2;
     color: #334155;
-    line-height: 32px;
+    box-shadow: 0 6px 18px rgba(191, 205, 237, 0.25);
+    font-size: 12px;
+    line-height: 1.6;
+}
+/* Ensure markdown spacing doesn't inflate bubble height */
+.bubble-assistant .markdown-body,
+.bubble-user .markdown-body {
+    font-size: inherit;
+    line-height: inherit;
+}
+.bubble-assistant .markdown-body p,
+.bubble-user .markdown-body p {
+    margin: 0;
+}
+.bubble-assistant .markdown-body p:empty,
+.bubble-user .markdown-body p:empty {
+    display: none;
+}
+
+.absolute.w-\[7px\].h-\[3px\].bg-blue-500.rounded-full {
+    display: none !important;
+}
+.bg-animated::before {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(0,86,232,0.40), transparent 60%),
+      radial-gradient(circle at 80% 30%, rgba(56,123,255,0.38), transparent 55%),
+      radial-gradient(circle at 30% 80%, rgba(16,185,129,0.26), transparent 55%);
+    filter: blur(24px);
+    animation: none;
+    display: none;
+    pointer-events: none;
+    z-index: 0;
+    transform: translate3d(0,0,0);
+}
+@keyframes bgFloat {
+    0% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-6px) rotate(180deg); }
+    100% { transform: translateY(0) rotate(360deg); }
+}
+
+/* Hollow Tiga word in background */
+.bg-animated::after {
+    content: "Tiga";
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    font-family: 'Alibaba PuHuiTi','PingFang SC','Microsoft YaHei',sans-serif;
+    font-weight: 700;
+    font-size: clamp(140px, 26vw, 380px);
+    letter-spacing: 0.06em;
+    color: transparent;
+    -webkit-text-stroke: 0.8px rgba(0,86,232,0.18);
+    text-stroke: 0.8px rgba(0,86,232,0.18);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+}
+ 
+.textarea-modern {
+    width: 100%;
+    padding: 12px 14px;
+    background: #ffffff;
+    border: 1px solid #E6EAF2;
+    border-radius: 14px;
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.6;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.textarea-modern::placeholder {
+    color: #9AA4B2;
+}
+.textarea-modern:focus {
+    outline: none;
+    border-color: #60A5FA;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+.textarea-modern:disabled {
+    background: #F7F7FA;
+    color: #A0AEC0;
+    cursor: not-allowed;
 }
 </style>
 <style>
 /* Global Dropdown Styles */
 .agent-dropdown-custom .ant-select-item {
-    font-size: 12px;
+    font-size: 13px;
     padding: 8px 12px;
-    border-radius: 6px;
-    margin: 2px 4px;
 }
 .agent-dropdown-custom .ant-select-item-option-selected {
-    background-color: #eff6ff !important;
-    color: #2563eb !important;
+    background-color: #F2F3F5 !important;
+    color: #171717 !important;
     font-weight: 500;
+}
+</style>
+<style>
+/* Alibaba PuHuiTi Webfont (CDN) */
+@font-face {
+    font-family: 'Alibaba PuHuiTi';
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light/AlibabaPuHuiTi-2-45-Light.woff2') format('woff2'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light/AlibabaPuHuiTi-2-45-Light.woff') format('woff'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light/AlibabaPuHuiTi-2-45-Light.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Alibaba PuHuiTi';
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-55-Regular/AlibabaPuHuiTi-2-55-Regular.woff2') format('woff2'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-55-Regular/AlibabaPuHuiTi-2-55-Regular.woff') format('woff'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-55-Regular/AlibabaPuHuiTi-2-55-Regular.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Alibaba PuHuiTi';
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-65-Medium/AlibabaPuHuiTi-2-65-Medium.woff2') format('woff2'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-65-Medium/AlibabaPuHuiTi-2-65-Medium.woff') format('woff'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-65-Medium/AlibabaPuHuiTi-2-65-Medium.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Alibaba PuHuiTi';
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-75-SemiBold/AlibabaPuHuiTi-2-75-SemiBold.woff2') format('woff2'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-75-SemiBold/AlibabaPuHuiTi-2-75-SemiBold.woff') format('woff'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-75-SemiBold/AlibabaPuHuiTi-2-75-SemiBold.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Alibaba PuHuiTi';
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-85-Bold/AlibabaPuHuiTi-2-85-Bold.woff2') format('woff2'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-85-Bold/AlibabaPuHuiTi-2-85-Bold.woff') format('woff'),
+         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-85-Bold/AlibabaPuHuiTi-2-85-Bold.ttf') format('truetype');
 }
 </style>

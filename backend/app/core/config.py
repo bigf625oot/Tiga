@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Recorder AI"
+    PROJECT_NAME: str = "Taichi Agent"
     API_V1_STR: str = "/api/v1"
     
     # Database
@@ -68,6 +68,41 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "your-secret-key-here"  # Change this in production!
+
+    # Retrieval Config
+    RETRIEVAL_BACKEND: str = "local"
+    VECTOR_BACKEND: str = "lancedb"
+    GRAPH_BACKEND: str = "local"
+    GRAPH_LANG: str = "zh"
+    GRAPH_CACHE_TTL: int = 30
+    RERANK_ENABLED: bool = False
+    RERANK_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    MONITOR_ENABLED: bool = True
+    # Chunking
+    CHUNK_STRATEGY: str = "semantic"
+    CHUNK_SIZE: int = 1200
+    CHUNK_OVERLAP: int = 120
+    CHUNK_PREVIEW_LEN: int = 400
+    CHUNK_TOKENIZER: Optional[str] = None
+    CONTEXT_TOKENS_LIMIT: int = 6000
+    GRAPH_EXTRACT_MAX_TOKENS: int = 4096
+    CHUNK_EXTRACT_MAX: int = 100
+    KG_MAX_ITEMS: int = 200
+    OCR_ENABLED: bool = False
+    QA_SYSTEM_PROMPT: str = ""
+    QA_SYSTEM_PROMPT_FILE: str = "backend/prompts/qa_system.md"
+    # Qdrant
+    QDRANT_URL: Optional[str] = None
+    QDRANT_API_KEY: Optional[str] = None
+    QDRANT_COLLECTION: str = "kb_chunks"
+    # Milvus
+    MILVUS_HOST: Optional[str] = None
+    MILVUS_PORT: Optional[int] = None
+    MILVUS_COLLECTION: str = "kb_chunks"
+    # Neo4j
+    NEO4J_URI: Optional[str] = None
+    NEO4J_USER: Optional[str] = None
+    NEO4J_PASSWORD: Optional[str] = None
 
 
     class Config:

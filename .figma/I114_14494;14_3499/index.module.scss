@@ -1,0 +1,95 @@
+* {
+  box-sizing: border-box;
+}
+
+.frame374 {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  column-gap: 8px;
+  width: 768px;
+  height: 24px;
+
+  .frame {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    column-gap: 4px;
+    opacity: 0.8;
+    border-radius: 10px;
+    padding: 4px 12px;
+    width: 24px;
+
+    .icons {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      overflow: hidden;
+    }
+  }
+
+  .frame1321315582 {
+    display: flex;
+    flex-grow: 1;
+    align-items: center;
+    column-gap: 8px;
+  }
+
+  .frame1321318053 {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-end;
+    column-gap: 4px;
+    width: 129px;
+
+    .frame1321318051 {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      border-radius: 6px;
+      padding: 3px;
+      overflow: hidden;
+      background-image: linear-gradient(
+        140.57deg,
+        #ff9ba2 17.28%,
+        #f56a79 91.19%
+      );
+
+      .frame2 {
+        width: 10px;
+        height: 10px;
+      }
+    }
+
+    .text {
+      flex-shrink: 0;
+      line-height: 18px;
+      letter-spacing: 0;
+      color: #000000;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", SimHei, Arial, Helvetica, sans-serif;
+      font-size: 12px;
+    }
+
+    .frame3 {
+      flex-shrink: 0;
+      border-radius: 3px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .frame1321315581 {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    column-gap: 8px;
+
+    .icons2 {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "name": "recorder-ai-frontend",
+  "name": "taichi-agent-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,6 +12,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "ant-design-vue": "^4.0.0",
     "axios": "^1.6.0",
+    "d3-force": "^3.0.0",
     "dayjs": "^1.11.10",
     "element-plus": "^2.13.1",
     "katex": "^0.16.27",

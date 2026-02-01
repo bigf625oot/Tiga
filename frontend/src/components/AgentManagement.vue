@@ -82,17 +82,17 @@
                                 <div class="flex items-center gap-3">
                                     <div 
                                         v-if="agent.is_template"
-                                        class="w-[46px] h-[46px] rounded-[20px] flex items-center justify-center shadow-sm text-white"
-                                        :style="{ background: agent.gradient }"
+                                        class="w-[46px] h-[46px] rounded-[20px] flex items-center justify-center shadow-sm border border-slate-100 bg-transparent overflow-hidden"
                                     >
-                                        <component :is="agent.iconComponent || agent.icon" class="w-6 h-6" />
+                                        <img src="/tiga.svg" class="w-8 h-8 object-contain" />
                                     </div>
                                     <div 
                                         v-else
                                         class="w-[46px] h-[46px] rounded-[20px] flex items-center justify-center shadow-sm border border-slate-100 bg-white overflow-hidden"
                                     >
                                         <img v-if="isBase64Icon(agent.icon)" :src="agent.icon" class="w-full h-full object-cover" />
-                                        <component v-else :is="agent.iconComponent || agent.icon" class="w-6 h-6 text-slate-700" />
+                                        <component v-else-if="agent.iconComponent || agent.icon" :is="agent.iconComponent || agent.icon" class="w-8 h-8 text-slate-700" />
+                                        <img v-else src="/tiga.svg" class="w-8 h-8 object-contain" />
                                     </div>
                                     <span class="font-medium text-[#171717]">{{ agent.name }}</span>
                                 </div>
@@ -153,6 +153,7 @@
                                         @click="triggerIconUpload"
                                     >
                                         <img v-if="isBase64Icon(form.icon)" :src="form.icon" class="w-full h-full object-cover" />
+                                        <img v-else-if="!form.icon" src="/tiga.svg" class="w-8 h-8 object-contain" />
                                         <component v-else :is="getIconComponent(form.icon)" class="w-8 h-8 text-slate-400" />
                                         
                                         <!-- Hover Overlay -->

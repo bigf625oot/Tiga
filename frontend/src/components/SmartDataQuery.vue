@@ -386,7 +386,39 @@ const scrollToBottom = () => {
 };
 
 const renderMarkdown = (text) => {
-    return marked.parse(text || '');
+    try {
+        let inputText = (text || '').trim();
+        
+        // [Cleanup] Remove raw document references like doc#3:xxxx...
+        inputText = inputText.replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '');
+        
+        // [Cleanup] Remove the trailing "References" or "Sources" section aggressively
+        const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|引用|引用文献|Reference Document List)(:|\：)?(\*\*)?\s*(\n+|$)/gi;
+        inputText = inputText.split(refHeaderPattern)[0];
+
+        // [Cleanup] Also remove any trailing lines that look like [n] or [n] something
+        let lines = inputText.split('\n');
+        while (lines.length > 0 && (/^\s*\[\d+\]\s*.*$/.test(lines[lines.length - 1]) || !lines[lines.length - 1].trim())) {
+            lines.pop();
+        }
+        inputText = lines.join('\n');
+
+        // [Cleanup] Trim multiple newlines
+        inputText = inputText.replace(/\n{3,}/g, '\n\n');
+
+        // [Fix] Handle cases where bold text at the start of a line (possibly indented) 
+        // is followed by a colon, which can break some Markdown parsers (like marked).
+        inputText = inputText.replace(/^(\s*)\*\*([^*]+)\*\*([:：])/gm, '$1**$2** $3');
+
+        // [Fix] Handle multi-layered brackets like [[[1]]], [[ [1] ]], or [[Source: 1]]
+        // Consolidate all citation patterns into a single unified format [n]
+        inputText = inputText.replace(/\[+[\s\t]*(?:Source:[\s\t]*)?(\d+)[\s\t]*\]+/gi, '[$1]');
+
+        return marked.parse(inputText);
+    } catch (e) {
+        console.error('Markdown parse error:', e);
+        return text || '';
+    }
 };
 
 onMounted(() => {

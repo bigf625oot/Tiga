@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Enum
+from sqlalchemy import Column, String, Integer, DateTime, Enum, Text, JSON
 from datetime import datetime
 import enum
 from app.db.base import Base
@@ -22,3 +22,13 @@ class KnowledgeDocument(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     error_message = Column(String, nullable=True)
+
+class KnowledgeChat(Base):
+    __tablename__ = "knowledge_chats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    doc_id = Column(Integer, index=True)
+    role = Column(String) # 'user' or 'assistant'
+    content = Column(Text)
+    sources = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

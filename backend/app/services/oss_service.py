@@ -18,14 +18,15 @@ class OSSService:
                 return
 
             try:
+                # Ensure keys are stripped
                 auth = oss2.Auth(
-                    access_key_id, 
-                    access_key_secret
+                    access_key_id.strip(), 
+                    access_key_secret.strip()
                 )
                 self.bucket = oss2.Bucket(
                     auth, 
-                    settings.ALIYUN_OSS_ENDPOINT, 
-                    settings.ALIYUN_OSS_BUCKET or settings.S3_BUCKET_NAME
+                    settings.ALIYUN_OSS_ENDPOINT.strip(), 
+                    (settings.ALIYUN_OSS_BUCKET or settings.S3_BUCKET_NAME).strip()
                 )
             except Exception as e:
                 logger.error(f"Failed to initialize OSS service: {e}")
@@ -75,5 +76,15 @@ class OSSService:
         except Exception as e:
             logger.error(f"Failed to download from OSS: {e}")
             raise e
+
+    def get_object_to_string(self, key: str) -> str:
+        if not self.enabled:
+            return ""
+        try:
+            result = self.bucket.get_object(key)
+            return result.read().decode('utf-8')
+        except Exception as e:
+            logger.error(f"Failed to read from OSS: {e}")
+            return ""
 
 oss_service = OSSService()
