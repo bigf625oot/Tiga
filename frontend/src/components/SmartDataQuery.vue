@@ -106,14 +106,6 @@
                 <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-blue-600" :disabled="testing">
                     保存配置并连接
                 </a-button>
-                
-                <a-button @click="exportDataset" :loading="exporting" class="w-full h-10 font-medium" :disabled="connecting || testing">
-                    导出数据集并更新图谱
-                </a-button>
-                
-                <a-button @click="viewGraphStats" :loading="statsLoading" class="w-full h-10 font-medium" :disabled="connecting || testing">
-                    查看图谱统计
-                </a-button>
             </div>
         </a-form>
         
@@ -121,19 +113,6 @@
         <div v-if="testResult" class="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
             <component :is="testResult.success ? 'CheckCircleOutlined' : 'CloseCircleOutlined'" class="mt-0.5" />
             <span class="break-all">{{ testResult.message }}</span>
-        </div>
-        
-        <div v-if="statsResult" class="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-            <div class="font-medium mb-2">图谱统计</div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>节点：{{ statsResult.nodes }}</div>
-                <div>边：{{ statsResult.edges }}</div>
-                <div>表：{{ statsResult.db_tables }}</div>
-                <div>列：{{ statsResult.db_columns }}</div>
-                <div>has_column：{{ statsResult.has_column_edges }}</div>
-                <div>fk：{{ statsResult.fk_edges }}</div>
-            </div>
-            <div class="mt-2 break-all text-slate-500">路径：{{ statsResult.path }}</div>
         </div>
         
         <div class="mt-8 p-4 bg-blue-50 text-blue-700 text-xs rounded-xl border border-blue-100 leading-relaxed">
@@ -239,9 +218,6 @@ const config = ref({
 const showAdvanced = ref(false);
 const testing = ref(false);
 const connecting = ref(false);
-const exporting = ref(false);
-const statsLoading = ref(false);
-const statsResult = ref(null);
 const testResult = ref(null);
 const input = ref('');
 const messages = ref([]);
@@ -357,43 +333,6 @@ const saveAndConnect = async () => {
         message.error(e.message);
     } finally {
         connecting.value = false;
-    }
-};
-
-const exportDataset = async () => {
-    exporting.value = true;
-    try {
-        const res = await fetch('/api/v1/data_query/export', { method: 'POST' });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || '导出失败');
-        }
-        const data = await res.json();
-        const idx = data.index || {};
-        const cnt = Array.isArray(idx.tables) ? idx.tables.length : 0;
-        message.success(`导出完成，表数：${cnt}，图谱已更新`);
-    } catch (e) {
-        message.error(e.message || '导出失败');
-    } finally {
-        exporting.value = false;
-    }
-};
-
-const viewGraphStats = async () => {
-    statsLoading.value = true;
-    try {
-        const res = await fetch('/api/v1/data_query/export/stats');
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || '统计失败');
-        }
-        const data = await res.json();
-        statsResult.value = data;
-        message.success('已获取图谱统计');
-    } catch (e) {
-        message.error(e.message || '统计失败');
-    } finally {
-        statsLoading.value = false;
     }
 };
 
@@ -534,7 +473,7 @@ onMounted(() => {
     border: 1px solid #e2e8f0;
 }
 .markdown-body :deep(code) {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Hack', monospace;
     font-size: 12px;
 }
 </style>

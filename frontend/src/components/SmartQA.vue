@@ -836,7 +836,7 @@ const renderMarkdown = (text, isAssistant = false) => {
         inputText = inputText.replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '');
         
         // [Cleanup] Remove the trailing "References" or "Sources" section aggressively
-        const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|引用|引用文献|Reference Document List)(:|\：)?(\*\*)?\s*(\n+|$)/gi;
+        const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|知识来源|引用|引用文献|Reference Document List)(:|\：)?(\*\*)?\s*(\n+|$)/gi;
         inputText = inputText.split(refHeaderPattern)[0];
 
         // [Cleanup] Also remove any trailing lines that look like [n] or [n] something

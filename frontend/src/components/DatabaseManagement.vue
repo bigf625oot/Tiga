@@ -73,9 +73,6 @@
                    <div class="w-[80px] px-3 text-slate-500">{{ currentConfig.port || '-' }}</div>
                    <div class="w-[120px] px-3 text-slate-500">{{ currentConfig.user || '-' }}</div>
                    <div class="w-[220px] px-3 flex justify-end items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <a-button type="link" size="small" @click="handleViewTables" :loading="exporting" class="!px-0 !h-auto !text-blue-600">查看表</a-button>
-                      <a-button type="link" size="small" @click="handleBuildDataset" :loading="exporting" class="!px-0 !h-auto !text-blue-600">构建数据集</a-button>
-                      <div class="h-3 w-px bg-slate-300"></div>
                       <a-button type="text" size="small" @click="editConfig" class="!px-0 !h-auto !text-slate-500 hover:!text-blue-600">编辑</a-button>
                       <a-button type="text" size="small" danger class="!px-0 !h-auto">删除</a-button>
                    </div>
@@ -194,14 +191,6 @@
                     <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-blue-600" :disabled="testing">
                         保存配置并连接
                     </a-button>
-                    
-                    <a-button @click="exportDataset" :loading="exporting" class="w-full h-10 font-medium" :disabled="connecting || testing">
-                        导出数据集并更新图谱
-                    </a-button>
-                    
-                    <a-button @click="viewGraphStats" :loading="statsLoading" class="w-full h-10 font-medium" :disabled="connecting || testing">
-                        查看图谱统计
-                    </a-button>
                 </div>
             </a-form>
 
@@ -209,29 +198,6 @@
             <div v-if="testResult" class="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
                 <span class="mt-0.5 text-lg leading-none">{{ testResult.success ? '✓' : '✗' }}</span>
                 <span class="break-all">{{ testResult.message }}</span>
-            </div>
-        </div>
-    </a-modal>
-
-    <!-- Tables Modal -->
-    <a-modal
-        v-model:open="showTablesModal"
-        title="数据库表列表"
-        :footer="null"
-        width="600px"
-    >
-        <div class="py-2">
-            <div v-if="tablesList.length === 0" class="text-center py-8 text-slate-400">
-                暂无数据表或未导出
-            </div>
-            <div v-else class="max-h-[400px] overflow-y-auto custom-scrollbar border border-slate-200 rounded-lg">
-                <div v-for="(table, index) in tablesList" :key="index" class="px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center font-bold text-xs">T</div>
-                        <span class="text-slate-700 font-medium">{{ table }}</span>
-                    </div>
-                    <!-- Future: Add view details button if backend supports schema details -->
-                </div>
             </div>
         </div>
     </a-modal>
@@ -247,8 +213,6 @@ const showCreateModal = ref(false);
 const isEdit = ref(false);
 const loading = ref(false);
 const currentConfig = ref({}); // Stores the fetched config
-const tablesList = ref([]);
-const showTablesModal = ref(false);
 
 // Form State
 const formRef = ref();
@@ -270,8 +234,6 @@ const showAdvanced = ref(false);
 const testing = ref(false);
 const connecting = ref(false);
 const exporting = ref(false);
-const statsLoading = ref(false);
-const statsResult = ref(null);
 const testResult = ref(null);
 
 const rules = {
@@ -324,7 +286,6 @@ const openCreateModal = () => {
         ssl_mode: 'disable'
     };
     testResult.value = null;
-    statsResult.value = null;
     showCreateModal.value = true;
 };
 
@@ -332,7 +293,6 @@ const editConfig = () => {
     isEdit.value = true;
     configForm.value = { ...currentConfig.value };
     testResult.value = null;
-    statsResult.value = null;
     showCreateModal.value = true;
 };
 
@@ -413,82 +373,6 @@ const saveAndConnect = async () => {
         message.error(e.message);
     } finally {
         connecting.value = false;
-    }
-};
-
-const handleViewTables = async () => {
-    exporting.value = true;
-    try {
-        const res = await fetch('/api/v1/data_query/export', { method: 'POST' });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || '获取表列表失败');
-        }
-        const data = await res.json();
-        const idx = data.index || {};
-        if (Array.isArray(idx.tables)) {
-            tablesList.value = idx.tables;
-            showTablesModal.value = true;
-        } else {
-            message.warning("未找到表信息");
-        }
-    } catch (e) {
-        message.error(e.message || '操作失败');
-    } finally {
-        exporting.value = false;
-    }
-};
-
-const handleBuildDataset = async () => {
-    exporting.value = true;
-    try {
-        const res = await fetch('/api/v1/data_query/export', { method: 'POST' });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || '构建失败');
-        }
-        message.success('数据集构建成功，图谱已更新');
-    } catch (e) {
-        message.error(e.message || '构建失败');
-    } finally {
-        exporting.value = false;
-    }
-};
-
-const exportDataset = async () => {
-    exporting.value = true;
-    try {
-        const res = await fetch('/api/v1/data_query/export', { method: 'POST' });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || '导出失败');
-        }
-        const data = await res.json();
-        const idx = data.index || {};
-        const cnt = Array.isArray(idx.tables) ? idx.tables.length : 0;
-        message.success(`导出完成，表数：${cnt}，图谱已更新`);
-    } catch (e) {
-        message.error(e.message || '导出失败');
-    } finally {
-        exporting.value = false;
-    }
-};
-
-const viewGraphStats = async () => {
-    statsLoading.value = true;
-    try {
-        const res = await fetch('/api/v1/data_query/export/stats');
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || '统计失败');
-        }
-        const data = await res.json();
-        statsResult.value = data;
-        message.success('已获取图谱统计');
-    } catch (e) {
-        message.error(e.message || '统计失败');
-    } finally {
-        statsLoading.value = false;
     }
 };
 

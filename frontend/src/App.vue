@@ -215,7 +215,7 @@
                             <path d="M6 7.33333L7.33333 8.66667L10.3333 5.66667M6.6 12.8L7.57333 14.0978C7.71808 14.2908 7.79045 14.3873 7.87918 14.4218C7.95689 14.452 8.04311 14.452 8.12082 14.4218C8.20955 14.3873 8.28192 14.2908 8.42667 14.0978L9.4 12.8C9.59543 12.5394 9.69315 12.4091 9.81234 12.3097C9.97126 12.177 10.1589 12.0832 10.3603 12.0357C10.5114 12 10.6743 12 11 12C11.9319 12 12.3978 12 12.7654 11.8478C13.2554 11.6448 13.6448 11.2554 13.8478 10.7654C14 10.3978 14 9.93188 14 9V5.2C14 4.0799 14 3.51984 13.782 3.09202C13.5903 2.71569 13.2843 2.40973 12.908 2.21799C12.4802 2 11.9201 2 10.8 2H5.2C4.0799 2 3.51984 2 3.09202 2.21799C2.71569 2.40973 2.40973 2.71569 2.21799 3.09202C2 3.51984 2 4.07989 2 5.2V9C2 9.93188 2 10.3978 2.15224 10.7654C2.35523 11.2554 2.74458 11.6448 3.23463 11.8478C3.60218 12 4.06812 12 5 12C5.32572 12 5.48858 12 5.63967 12.0357C5.84113 12.0832 6.02874 12.177 6.18766 12.3097C6.30685 12.4091 6.40457 12.5394 6.6 12.8Z" stroke="#2A2F3C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <span class="text-[14px] leading-none" :class="sidebarTab === 'task' ? 'text-figma-text font-medium' : 'text-figma-notation'">任务</span>
+                    <span class="text-[12px] leading-none" :class="sidebarTab === 'task' ? 'text-figma-text font-medium' : 'text-figma-notation'">任务</span>
                 </div>
 
                 <!-- Agent Tab -->
@@ -241,7 +241,7 @@
                             </defs>
                         </svg>
                     </div>
-                    <span class="text-[14px] leading-none" :class="sidebarTab === 'agent' ? 'text-figma-text font-medium' : 'text-figma-notation'">智能体</span>
+                    <span class="text-[12px] leading-none" :class="sidebarTab === 'agent' ? 'text-figma-text font-medium' : 'text-figma-notation'">智能体</span>
                 </div>
 
                 <!-- Knowledge Tab -->
@@ -259,7 +259,7 @@
                             <path d="M9 6V5" stroke="#333333" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <span class="text-[14px] leading-none whitespace-nowrap" :class="sidebarTab === 'knowledge' ? 'text-figma-text font-medium' : 'text-figma-notation'">知识中心</span>
+                    <span class="text-[12px] leading-none whitespace-nowrap" :class="sidebarTab === 'knowledge' ? 'text-figma-text font-medium' : 'text-figma-notation'">知识中心</span>
                 </div>
             </div>
             <div v-else class="flex flex-col items-center gap-6 pt-2">
@@ -631,6 +631,25 @@
                         </div>
                         <span v-if="!isSidebarCollapsed" class="text-[14px] leading-none transition-colors" :class="currentView === 'media_library' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">音视频库</span>
                     </div>
+
+                    <!-- Graph Export -->
+                    <div 
+                        @click="currentView = 'graph_export'"
+                        class="group transition-all cursor-pointer flex items-center rounded-lg h-[38px]"
+                        :class="[
+                            currentView === 'graph_export' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
+                            isSidebarCollapsed ? 'w-10 justify-center' : 'px-2 mx-1 gap-2'
+                        ]"
+                    >
+                        <div class="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 10V12.6667C14 13.403 13.403 14 12.6667 14H3.33333C2.59695 14 2 13.403 2 12.6667V10" :stroke="currentView === 'graph_export' ? '#171717' : '#858B9B'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M8 10V2" :stroke="currentView === 'graph_export' ? '#171717' : '#858B9B'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M5.33334 4.66667L8.00001 2L10.6667 4.66667" :stroke="currentView === 'graph_export' ? '#171717' : '#858B9B'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <span v-if="!isSidebarCollapsed" class="text-[14px] leading-none transition-colors" :class="currentView === 'graph_export' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">图谱导入</span>
+                    </div>
                 </div>
              </template>
 
@@ -879,6 +898,8 @@
 
     <MediaLibrary v-else-if="currentView === 'media_library'" />
 
+    <GraphExportConfig v-else-if="currentView === 'graph_export'" />
+
     <ModelManagement v-else-if="currentView === 'model'" />
     
     <!-- Search View -->
@@ -965,6 +986,7 @@ import IndicatorManagement from './components/IndicatorManagement.vue';
 import SmartDataQuery from './components/SmartDataQuery.vue';
 import DatabaseManagement from './components/DatabaseManagement.vue';
 import MediaLibrary from './components/MediaLibrary.vue';
+import GraphExportConfig from './components/GraphExportConfig.vue';
 
 // Setup Axios
 const api = axios.create({
@@ -980,6 +1002,7 @@ const getPageTitle = computed(() => {
         case 'chat': return '智能问答';
         case 'knowledge': return '知识库';
         case 'knowledge_graph': return '知识图谱';
+        case 'graph_export': return '图谱导入';
         case 'database': return '数据库';
         case 'media_library': return '音视频库';
         case 'model': return '模型管理';
@@ -1000,6 +1023,7 @@ const getPageSubtitle = computed(() => {
         case 'chat': return '您的专属 AI 智能助手';
         case 'knowledge': return '企业级知识沉淀与管理';
         case 'knowledge_graph': return '可视化展示知识关联';
+        case 'graph_export': return '结构化数据导入图谱';
         case 'database': return '统一数据存储与管理';
         case 'media_library': return '音视频资源集中管理';
         case 'model': return '配置和管理大语言模型';

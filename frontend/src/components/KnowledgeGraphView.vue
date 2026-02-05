@@ -137,7 +137,17 @@
                             </svg>
                         </div>
                         <div class="flex flex-col gap-2 max-w-[90%]">
+                            <!-- Loading State within Bubble -->
+                            <div v-if="!msg.content" class="p-3 bg-slate-50 rounded-2xl rounded-tl-sm border border-slate-100 w-fit">
+                                <div class="flex items-center gap-1">
+                                    <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                                    <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                    <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                                </div>
+                            </div>
+
                             <div 
+                                v-else
                                 class="p-3 bg-slate-50 text-slate-800 rounded-2xl rounded-tl-sm text-sm leading-relaxed border border-slate-100 markdown-content"
                                 v-html="renderMarkdown(msg.content, msg.sources && msg.sources.length > 0)"
                                 @click="handleCitationClick($event, msg)"
@@ -212,7 +222,7 @@
                 </div>
                 
                 <!-- Loading State -->
-                <div v-if="chatLoading" class="flex gap-3">
+                <div v-if="chatLoading && (chatMessages.length === 0 || chatMessages[chatMessages.length - 1].role !== 'assistant')" class="flex gap-3">
                     <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
                         <svg class="w-4 h-4 text-indigo-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -545,21 +555,13 @@ const sendChatMessage = async () => {
     chatInput.value = '';
     chatLoading.value = true;
     
-    // Create placeholder for assistant message
-    const assistantMsg = { 
-        role: 'assistant', 
-        content: '', 
-        sources: [] 
-    };
-    chatMessages.value.push(assistantMsg);
-    
     setTimeout(() => {
         if (chatContainer.value) chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
     }, 100);
     
     try {
         // Construct history (simplified)
-        const history = chatMessages.value.slice(0, -2).map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`);
+        const history = chatMessages.value.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`);
         
         // Prepare payload
         const payload = { 
@@ -586,6 +588,14 @@ const sendChatMessage = async () => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        // Create placeholder for assistant message only after successful response
+        const assistantMsg = { 
+            role: 'assistant', 
+            content: '', 
+            sources: [] 
+        };
+        chatMessages.value.push(assistantMsg);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -617,7 +627,18 @@ const sendChatMessage = async () => {
         
     } catch (e) {
         console.error(e);
-        assistantMsg.content += `\n[Error: ${e.message}]`;
+        // If we haven't pushed an assistant message yet, push an error message
+        if (chatMessages.value.length === 0 || chatMessages.value[chatMessages.value.length - 1].role === 'user') {
+             chatMessages.value.push({ 
+                role: 'assistant', 
+                content: `[Error: ${e.message}]`,
+                sources: []
+            });
+        } else {
+             // Append error to existing message
+             const lastMsg = chatMessages.value[chatMessages.value.length - 1];
+             lastMsg.content += `\n[Error: ${e.message}]`;
+        }
     } finally {
         chatLoading.value = false;
         setTimeout(() => {
@@ -653,35 +674,49 @@ const renderMarkdown = (content, hasStructuredSources = false) => {
     try {
         let inputText = (content || '').trim();
         
-        // 1. Handle <think> tags
-        const thinkMatch = inputText.match(/<think>([\s\S]*?)<\/think>/);
+        // 1. Handle <think> tags (Partial or Complete)
         let thinkHtml = '';
-        if (thinkMatch) {
-            const thinkContent = thinkMatch[1];
-            // Render think content as markdown too
-            const parsedThink = marked.parse(thinkContent);
-            thinkHtml = `
-            <details class="mb-3 bg-amber-50/50 rounded-lg border border-amber-100 overflow-hidden group" ${inputText.includes('</think>') ? '' : 'open'}>
-                <summary class="px-3 py-1.5 text-xs font-medium text-amber-600/70 cursor-pointer hover:bg-amber-50 flex items-center gap-2 select-none transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-                    思考过程
-                </summary>
-                <div class="px-3 py-2 text-xs text-slate-600 border-t border-amber-100/50 bg-white/50 leading-relaxed">
-                    ${parsedThink}
-                </div>
-            </details>`;
+        const thinkStart = inputText.indexOf('<think>');
+        if (thinkStart !== -1) {
+            const thinkEnd = inputText.indexOf('</think>');
+            let thinkContent = '';
+            let isPartial = false;
             
-            // Remove think block from main text to render answer separately
-            inputText = inputText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+            if (thinkEnd !== -1) {
+                // Complete block
+                thinkContent = inputText.substring(thinkStart + 7, thinkEnd);
+                // Remove think block from main text
+                inputText = inputText.substring(0, thinkStart) + inputText.substring(thinkEnd + 8);
+            } else {
+                // Partial block (Streaming)
+                thinkContent = inputText.substring(thinkStart + 7);
+                // In partial mode, we only show the think block, main text is likely empty or before think
+                inputText = inputText.substring(0, thinkStart); 
+                isPartial = true;
+            }
+
+            if (thinkContent || isPartial) {
+                const parsedThink = marked.parse(thinkContent || '正在检索思考中...'); // Show placeholder if empty
+                thinkHtml = `
+                <details class="mb-3 bg-amber-50/50 rounded-lg border border-amber-100 overflow-hidden group" ${isPartial ? 'open' : ''}>
+                    <summary class="px-3 py-1.5 text-xs font-medium text-amber-600/70 cursor-pointer hover:bg-amber-50 flex items-center gap-2 select-none transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        思考过程
+                    </summary>
+                    <div class="px-3 py-2 text-xs text-slate-600 border-t border-amber-100/50 bg-white/50 leading-relaxed">
+                        ${parsedThink}
+                    </div>
+                </details>`;
+            }
         }
 
         inputText = inputText.replace(/^(\s*)\*\*([^*]+)\*\*([:：])/gm, '$1**$2** $3');
         inputText = inputText.replace(/\[\[Entity:\s*(.*?)\]\]/g, '<span class="entity-citation" data-entity="$1">$1</span>');
         inputText = inputText.replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '');
         
-        // Clean up sources format if needed
+        // [Cleanup] Clean up sources format if needed
         if (hasStructuredSources) {
-            const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|引用|引用文献|Reference Document List)(:|\：)?(?:\*\*)?\s*(\n+|$)/gi;
+            const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|知识来源|引用|引用文献|Reference Document List)(:|\：)?(?:\*\*)?\s*(\n+|$)/gi;
             inputText = inputText.split(refHeaderPattern)[0];
         }
         

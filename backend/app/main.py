@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
     from app.models.user_script import UserScript
     from app.models.data_source import DataSource
     from app.models.indicator import Indicator
+    from app.models.graph_export import GraphExportConfig
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

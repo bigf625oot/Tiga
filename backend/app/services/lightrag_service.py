@@ -454,49 +454,43 @@ class LightRAGService:
                     response = resp.choices[0].message.content if (resp and resp.choices) else ""
 
                     # [Feature] Post-process response to append sources
-                    if response and captured_context_map:
-                        try:
-                            import re
-                            # Find all citations like [1], [2]
-                            citations = re.findall(r"\[(\d+)\]", response)
-                            unique_idxs = sorted(list(set(citations)), key=lambda x: int(x))
-                            
-                            if unique_idxs:
-                                append_lines = ["\n\n**知识来源：**"]
-                                used_sources = set()
-                                
-                                # Check mode: Local (filter_doc_id set) or Global
-                                rv = runtime_vars_ctx.get()
-                                is_local_mode = (rv or {}).get("filter_doc_id") is not None
-                                
-                                for idx in unique_idxs:
-                                    if idx in captured_context_map:
-                                        info = captured_context_map[idx]
-                                        if is_local_mode:
-                                            # Local mode: Show chunk preview
-                                            append_lines.append(f"- [{idx}] {info['preview']}")
-                                        else:
-                                            # Global mode: Show document filename (deduplicated)
-                                            src = info['source']
-                                            # Clean up doc#id prefix if present for display
-                                            if "doc#" in src:
-                                                 # Try to extract filename part: doc#1:filename.txt -> filename.txt
-                                                 if ":" in src:
-                                                     src = src.split(":", 1)[1]
-                                            
-                                            # Avoid duplicate lines for same source in global mode
-                                            # But we need to keep the index mapping [n] -> Source
-                                            # Or we can group: [1][3] -> Source A
-                                            # Simple approach: List all cited indices mapping to sources
-                                            # " - [1] 每日新闻.docx"
-                                            # If [1] and [3] are same doc, show both lines? Or merge?
-                                            # User request: "全部文档的情况下知识来源于文档"
-                                            # Let's show: "- [1] 文档A"
-                                            append_lines.append(f"- [{idx}] {src}")
-                                
-                                response += "\n" + "\n".join(append_lines)
-                        except Exception as e:
-                            logger.warning(f"Failed to append sources: {e}")
+                    # [Fix] Disabled in llm_model_func to prevent double source appending in QA stream
+                    # The QA service handles source extraction and display explicitly.
+                    # if response and captured_context_map:
+                    #     try:
+                    #         import re
+                    #         # Find all citations like [1], [2]
+                    #         citations = re.findall(r"\[(\d+)\]", response)
+                    #         unique_idxs = sorted(list(set(citations)), key=lambda x: int(x))
+                    #         
+                    #         if unique_idxs:
+                    #             append_lines = ["\n\n**知识来源：**"]
+                    #             used_sources = set()
+                    #             
+                    #             # Check mode: Local (filter_doc_id set) or Global
+                    #             rv = runtime_vars_ctx.get()
+                    #             is_local_mode = (rv or {}).get("filter_doc_id") is not None
+                    #             
+                    #             for idx in unique_idxs:
+                    #                 if idx in captured_context_map:
+                    #                     info = captured_context_map[idx]
+                    #                     if is_local_mode:
+                    #                         # Local mode: Show chunk preview
+                    #                         append_lines.append(f"- [{idx}] {info['preview']}")
+                    #                     else:
+                    #                         # Global mode: Show document filename (deduplicated)
+                    #                         src = info['source']
+                    #                         # Clean up doc#id prefix if present for display
+                    #                         if "doc#" in src:
+                    #                              # Try to extract filename part: doc#1:filename.txt -> filename.txt
+                    #                              if ":" in src:
+                    #                                  src = src.split(":", 1)[1]
+                    #                         
+                    #                         append_lines.append(f"- [{idx}] {src}")
+                    #             
+                    #             response += "\n" + "\n".join(append_lines)
+                    #     except Exception as e:
+                    #         logger.warning(f"Failed to append sources: {e}")
 
                 except Exception as e:
                     logger.error(f"LLM 调用失败: {e}")
@@ -1103,6 +1097,25 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                                 "score": score,
                                 "file_path": fp
                             })
+                    else:
+                        # [Fix] Fallback: Check if content contains the marker
+                        # Since we prepend metadata to content, this is a reliable fallback
+                        preview = ""
+                        try:
+                            preview = (getattr(r, "text", None) or getattr(r, "content", None) or "")
+                        except: pass
+                        
+                        if not preview and cid and cid in self._chunks_cache:
+                            preview = self._chunks_cache[cid]
+                        
+                        if preview and marker in preview:
+                             score = float(getattr(r, "score", 0.0) or 0.0)
+                             candidates.append({
+                                "id": cid,
+                                "content": preview,
+                                "score": score,
+                                "file_path": f"doc#{doc_id}:Unknown" # Construct a dummy path
+                            })
                             
                 # Sort by score
                 candidates.sort(key=lambda x: x["score"], reverse=True)
@@ -1161,13 +1174,28 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
             if doc:
                 fname = (doc.filename or "").strip()
                 oss_name = Path(doc.oss_key).name if getattr(doc, "oss_key", None) else ""
-                marker = f"doc#{doc.id}" if getattr(doc, "id", None) else ""
+                # [Fix] Add colon to ensure exact prefix match (e.g. doc#1: vs doc#10:)
+                marker = f"doc#{doc.id}:" if getattr(doc, "id", None) else ""
                 keep = set()
                 for node_id, data in G.nodes(data=True):
                     attrs = data or {}
                     fp = str(attrs.get("file_path") or attrs.get("FILE_PATH") or "")
                     sid = str(attrs.get("source_id") or attrs.get("SOURCE_ID") or "")
-                    if (fname and fname in fp) or (oss_name and oss_name in fp) or (marker and (marker in sid or marker in fp)):
+                    
+                    # [Fix] Strict filtering by doc marker (doc#ID)
+                    # We avoid loose filename matching which causes cross-document pollution
+                    is_match = False
+                    if marker:
+                         if marker in sid or marker in fp:
+                             is_match = True
+                    
+                    # Fallback only if marker is missing (should not happen for valid docs)
+                    # And only if strict matching wasn't attempted
+                    if not is_match and not marker and fname:
+                        if fname in fp or (oss_name and oss_name in fp):
+                            is_match = True
+                            
+                    if is_match:
                         keep.add(node_id)
                 G = G.subgraph(keep) if keep else nx.Graph()  # empty if none
             
@@ -1409,6 +1437,36 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                 return items
         except Exception as e:
             logger.warning(f"LightRAG chunk search failed: {e}")
+        return []
+
+    def search_entities(self, query: str, top_k: int = 20) -> List[Dict[str, Any]]:
+        """
+        Perform semantic search on entities vector database.
+        """
+        if not self.rag:
+            self._init_rag()
+        if not self.rag:
+            return []
+        try:
+            storage = getattr(self.rag, "entities_vdb", None)
+            if hasattr(storage, "search"):
+                res = storage.search(query, top_k=top_k)
+                items = []
+                for r in res or []:
+                    entity_name = ""
+                    score = 0.0
+                    try:
+                        # LightRAG entity vdb usually stores entity_name in "entity_name" or "id"
+                        entity_name = (getattr(r, "entity_name", None) or getattr(r, "id", None) or getattr(r, "__id__", None) or "")
+                        score = float(getattr(r, "score", 0.0) or 0.0)
+                    except Exception:
+                        pass
+                    
+                    if entity_name:
+                        items.append({"entity_name": entity_name, "score": score})
+                return items
+        except Exception as e:
+            logger.warning(f"LightRAG entity search failed: {e}")
         return []
 
     async def rebuild_store(self, db: AsyncSession, exclude_filenames: Optional[List[str]] = None, include_filenames: Optional[List[str]] = None, clear_existing: bool = True):

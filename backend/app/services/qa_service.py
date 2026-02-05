@@ -92,6 +92,8 @@ class QAService:
             edges = graph_data.get("edges") or {}
             q = (query or "").strip()
             results = []
+            
+            # 1. Keyword Search
             for node_id, node in nodes.items():
                 name = str(node.get("name") or "")
                 attrs = node.get("attributes") or {}
@@ -104,7 +106,27 @@ class QAService:
                         score += 2
                 if score > 0:
                     content = f"实体: {name}\n属性: {attrs}\n"
-                    results.append({"content": content, "score": float(score), "source": "graph"})
+                    results.append({"content": content, "score": float(score), "source": "graph_keyword", "id": node_id})
+            
+            # 2. Semantic Entity Search (Vector)
+            # Find semantically similar entities in global store, then filter by current doc graph
+            try:
+                vec_entities = lightrag_service.search_entities(q, top_k=20)
+                for ve in vec_entities:
+                    ename = ve.get("entity_name")
+                    # Check if this entity exists in current doc's graph
+                    if ename and ename in nodes:
+                        # Avoid duplicates from keyword search
+                        if not any(r.get("id") == ename for r in results):
+                            node = nodes[ename]
+                            attrs = node.get("attributes") or {}
+                            # Base score 6 + vector score (usually 0-1)
+                            v_score = 6.0 + ve.get("score", 0)
+                            content = f"实体: {ename}\n属性: {attrs}\n"
+                            results.append({"content": content, "score": v_score, "source": "graph_vector", "id": ename})
+            except Exception as e:
+                logger.warning(f"Graph vector search failed: {e}")
+
             for edge_id, edge in edges.items():
                 label = str(edge.get("label") or "")
                 s = 0
@@ -112,8 +134,33 @@ class QAService:
                     s += 4
                 if s > 0:
                     content = f"关系: {label} ({edge.get('source')} -> {edge.get('target')})\n"
-                    results.append({"content": content, "score": float(s), "source": "graph"})
+                    results.append({"content": content, "score": float(s), "source": "graph_edge"})
+            
             results.sort(key=lambda x: x["score"], reverse=True)
+            
+            # 3. [Fallback] If no keyword/vector match, return top degree nodes (important entities)
+            # This handles generic queries like "Summarize this document" where no keywords match
+            if not results and nodes:
+                # Calculate degree for each node based on edges
+                node_degrees = {nid: 0 for nid in nodes}
+                for edge in edges.values():
+                    s, t = edge.get("source"), edge.get("target")
+                    if s in node_degrees: node_degrees[s] += 1
+                    if t in node_degrees: node_degrees[t] += 1
+                
+                # Sort nodes by degree
+                sorted_nodes = sorted(node_degrees.items(), key=lambda x: x[1], reverse=True)
+                
+                # Take top K nodes
+                for nid, degree in sorted_nodes[:top_k]:
+                    node = nodes[nid]
+                    name = str(node.get("name") or "")
+                    attrs = node.get("attributes") or {}
+                    content = f"核心实体: {name}\n属性: {attrs}\n(重要性: {degree})"
+                    results.append({"content": content, "score": 1.0, "source": "graph_rank"})
+                
+                logger.info(f"[QA][GRAPH][{trace_id}] fallback to top {len(results)} nodes by degree")
+
             out = results[:top_k]
             logger.info(f"[QA][GRAPH][{trace_id}] doc {doc_id} qlen={len(q)} nodes={len(nodes)} edges={len(edges)} hits={len(out)}")
             return out
@@ -204,6 +251,24 @@ class QAService:
                 # Use the new search_doc_chunks method which uses file_path map for reliable filtering
                 raw_chunks = lightrag_service.search_doc_chunks(doc_id, query, top_k=15)
                 
+                # [Fallback] If vector search fails (e.g. generic query or empty index), read file head
+                if not raw_chunks:
+                    yield "向量检索未命中，尝试读取文档前文...\n"
+                    try:
+                        doc_obj = await session.get(KnowledgeDocument, doc_id)
+                        if doc_obj:
+                            import asyncio
+                            content = await asyncio.to_thread(self._read_document_content, doc_obj)
+                            if content:
+                                # Use first 8000 chars as context (approx 2-3k tokens)
+                                raw_chunks.append({
+                                    "content": content[:8000],
+                                    "file_path": f"doc#{doc_id}:{doc_obj.filename or 'Document'}",
+                                    "score": 100.0
+                                })
+                    except Exception as e:
+                        logger.warning(f"Fallback read failed: {e}")
+
                 if raw_chunks:
                     yield f"找到 {len(raw_chunks)} 个相关文档片段：\n"
                     for i, c in enumerate(raw_chunks):
@@ -251,12 +316,14 @@ class QAService:
             
             if scope == "doc":
                 # Manual Context Construction
-                ctx_str = "Reference Document List\n"
-                for i, c in enumerate(context_chunks):
-                    # Add Source line so llm_model_func can parse citations
-                    # Note: file_path usually contains doc#ID:Filename
-                    src = c.get('file_path') or f"doc#{doc_id}"
-                    ctx_str += f"[{i+1}] Source: {src}\n{c['content']}\n\n"
+                ctx_str = ""
+                if context_chunks:
+                    ctx_str += "Reference Document List\n"
+                    for i, c in enumerate(context_chunks):
+                        # Add Source line so llm_model_func can parse citations
+                        # Note: file_path usually contains doc#ID:Filename
+                        src = c.get('file_path') or f"doc#{doc_id}"
+                        ctx_str += f"[{i+1}] Source: {src}\n{c['content']}\n\n"
                 
                 if context_entities:
                     ctx_str += "####### Knowledge Graph Data (Entity)\n"

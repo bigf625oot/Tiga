@@ -11,7 +11,6 @@ import json
 import logging
 import time
 from sqlalchemy import text
-from .tools.export_dataset import export_database_to_json, update_graphml_from_dataset, get_db_graph_stats
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -107,23 +106,6 @@ class SmartDataQueryService:
         
         # Reset state
         self.last_run_df = None
-
-    def export_dataset_and_update_graph(self, schema: Optional[str] = None) -> Dict[str, Any]:
-        """
-        导出当前连接数据库的所有表到 JSON，并增量更新图谱。
-        返回索引与图谱路径。
-        """
-        logger.info(f"Export dataset and update graph invoked, schema={schema}")
-        if not self.sql_runner:
-            raise RuntimeError("请先连接数据库")
-        index = export_database_to_json(engine=self.sql_runner.engine, schema=schema)
-        logger.info(f"Dataset export finished, tables={len(index.get('tables', []))}")
-        gpath = update_graphml_from_dataset(index)
-        logger.info(f"GraphML updated at {gpath}")
-        return {"index": index, "graphml_path": str(gpath)}
-
-    def get_db_graph_stats(self) -> Dict[str, Any]:
-        return get_db_graph_stats()
 
     def test_connection(self, config: DbConnectionConfig) -> bool:
         """

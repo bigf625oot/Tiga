@@ -1,5 +1,4 @@
 import { createApp } from 'vue'
-import './style.css'
 import App from './App.vue'
 import Antd from 'ant-design-vue';
 import 'ant-design-vue/dist/reset.css';
@@ -8,6 +7,7 @@ import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import VNetworkGraph from "v-network-graph"
 import "v-network-graph/lib/style.css"
+import './style.css'
 
 const app = createApp(App);
 app.use(Antd);
