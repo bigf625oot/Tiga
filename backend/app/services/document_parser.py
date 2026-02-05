@@ -12,6 +12,29 @@ import base64
 
 logger = logging.getLogger(__name__)
 
+def is_text_valid(text: str) -> bool:
+    """
+    检查文本是否有效（不是乱码）。
+    简单的启发式规则：
+    1. 文本长度如果大于 100，但有效字符比例过低（Private Use Area 或其他生僻区块）。
+    """
+    if not text:
+        return False
+        
+    total_len = len(text)
+    if total_len < 50: # 太短不检测
+        return True
+        
+    # 统计私用区字符 (E000-F8FF)
+    private_use_count = sum(1 for c in text if '\ue000' <= c <= '\uf8ff')
+    
+    # 如果私用区字符占比超过 10%，视为乱码
+    if private_use_count / total_len > 0.1:
+        logger.warning(f"检测到大量私用区字符 ({private_use_count}/{total_len})，判定为乱码")
+        return False
+        
+    return True
+
 def parse_local_file(file_path: str) -> str:
     """
     Parse a local file and return text content.
@@ -34,8 +57,12 @@ def parse_local_file(file_path: str) -> str:
                         p = doc.load_page(i)
                         parts.append(p.get_text("text") or "")
                     text = "\n".join(parts)
-                    parsed = True
-                    logger.info(f"PyMuPDF parsed successfully. Pages: {doc.page_count}")
+                    if is_text_valid(text):
+                        parsed = True
+                        logger.info(f"PyMuPDF parsed successfully. Pages: {doc.page_count}")
+                    else:
+                        logger.warning("PyMuPDF parsed text invalid (garbled), falling back...")
+                        text = ""
                 finally:
                     doc.close()
             except Exception as e1:
@@ -49,8 +76,12 @@ def parse_local_file(file_path: str) -> str:
                         for page in pdf.pages:
                             parts.append(page.extract_text() or "")
                     text = "\n".join(parts)
-                    parsed = True
-                    logger.info(f"pdfplumber parsed successfully. Pages: {len(parts)}")
+                    if is_text_valid(text):
+                        parsed = True
+                        logger.info(f"pdfplumber parsed successfully. Pages: {len(parts)}")
+                    else:
+                        logger.warning("pdfplumber parsed text invalid (garbled), falling back...")
+                        text = ""
                 except Exception as e2:
                     logger.warning(f"pdfplumber parse failed: {e2}")
             # 3) pypdf
@@ -65,13 +96,17 @@ def parse_local_file(file_path: str) -> str:
                             except Exception:
                                 parts.append("")
                         text = "\n".join(parts)
-                    parsed = True
-                    logger.info(f"pypdf parsed successfully. Pages: {len(parts)}")
+                    if is_text_valid(text):
+                        parsed = True
+                        logger.info(f"pypdf parsed successfully. Pages: {len(parts)}")
+                    else:
+                        logger.warning("pypdf parsed text invalid (garbled), falling back...")
+                        text = ""
                 except Exception as e3:
                     logger.warning(f"pypdf parse failed: {e3}")
-            if not parsed:
-                raise RuntimeError("PDF parsing failed on all strategies")
-            if settings and getattr(settings, "OCR_ENABLED", False) and not (text or "").strip():
+            
+            # OCR Fallback
+            if not parsed or (settings and getattr(settings, "OCR_ENABLED", False) and not (text or "").strip()):
                 try:
                     import fitz, pytesseract
                     doc = fitz.open(file_path)
@@ -114,7 +149,6 @@ def parse_local_file(file_path: str) -> str:
         return text
     except Exception as e:
         logger.error(f"Error parsing local file {file_path}: {e}")
-        print(f"Error parsing local file {file_path}: {e}")
         return ""
 
 def sanitize_text(text: str) -> str:
@@ -157,7 +191,11 @@ async def parse_document(file: UploadFile) -> str:
                         p = doc.load_page(i)
                         parts.append(p.get_text("text") or "")
                     text = "\n".join(parts)
-                    parsed = True
+                    if is_text_valid(text):
+                        parsed = True
+                    else:
+                        logger.warning("PyMuPDF bytes parsed text invalid, fallback...")
+                        text = ""
                 finally:
                     doc.close()
             except Exception as e1:
@@ -171,7 +209,11 @@ async def parse_document(file: UploadFile) -> str:
                         for page in pdf.pages:
                             parts.append(page.extract_text() or "")
                     text = "\n".join(parts)
-                    parsed = True
+                    if is_text_valid(text):
+                        parsed = True
+                    else:
+                        logger.warning("pdfplumber bytes parsed text invalid, fallback...")
+                        text = ""
                 except Exception as e2:
                     logger.warning(f"pdfplumber bytes parse failed: {e2}")
             # 3) pypdf
@@ -183,10 +225,16 @@ async def parse_document(file: UploadFile) -> str:
                             text += (page.extract_text() or "") + "\n"
                         except Exception:
                             text += "\n"
-                    parsed = True
+                    if is_text_valid(text):
+                        parsed = True
+                    else:
+                        logger.warning("pypdf bytes parsed text invalid, fallback...")
+                        text = ""
                 except Exception as e3:
                     logger.warning(f"pypdf bytes parse failed: {e3}")
-            if not text.strip():
+            
+            # OCR Fallback
+            if not parsed or (settings and getattr(settings, "OCR_ENABLED", False) and not text.strip()):
                 if settings and getattr(settings, "OCR_ENABLED", False):
                     try:
                         import fitz, pytesseract
@@ -236,5 +284,5 @@ async def parse_document(file: UploadFile) -> str:
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-        print(f"Error parsing document: {e}")
+        logger.error(f"Error parsing document: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to parse document: {str(e)}")

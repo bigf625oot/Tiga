@@ -27,7 +27,7 @@
                 </button>
             </div>
 
-            <div class="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">任务</div>
+            <div class="px-4 py-1 text-xs font-bold text-slate-400 uppercase tracking-widest">任务</div>
             <div 
                 class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
                 @click="mobileMenuClick('chat')"
@@ -44,7 +44,7 @@
             </div>
 
             <div class="h-px bg-slate-100 my-2"></div>
-            <div class="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">智能体应用</div>
+            <div class="px-4 py-1 text-xs font-bold text-slate-400 uppercase tracking-widest">智能体应用</div>
             <div 
                 class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
                 @click="mobileMenuClick('search')"
@@ -77,12 +77,12 @@
                 class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
                 @click="mobileMenuClick('data_query')"
             >
-                <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xs">📈</div>
+                <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-sm">📈</div>
                 <span class="text-sm font-semibold">智能问数</span>
             </div>
 
             <div class="h-px bg-slate-100 my-2"></div>
-            <div class="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">智能体平台</div>
+            <div class="px-4 py-1 text-xs font-bold text-slate-400 uppercase tracking-widest">智能体平台</div>
             <div 
                 class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
                 @click="mobileMenuClick('agent')"
@@ -106,13 +106,34 @@
             </div>
 
             <div class="h-px bg-slate-100 my-2"></div>
-            <div class="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">知识中心</div>
+            <div class="px-4 py-1 text-xs font-bold text-slate-400 uppercase tracking-widest">知识中心</div>
+            <div 
+                class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
+                @click="mobileMenuClick('knowledge_graph')"
+            >
+                <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center text-xs">🕸️</div>
+                <span class="text-sm font-semibold">知识图谱</span>
+            </div>
             <div 
                 class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
                 @click="mobileMenuClick('knowledge')"
             >
                 <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center text-xs">📚</div>
                 <span class="text-sm font-semibold">知识库</span>
+            </div>
+            <div 
+                class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
+                @click="mobileMenuClick('database')"
+            >
+                <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center text-xs">🗄️</div>
+                <span class="text-sm font-semibold">数据库</span>
+            </div>
+            <div 
+                class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
+                @click="mobileMenuClick('media_library')"
+            >
+                <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center text-xs">🎬</div>
+                <span class="text-sm font-semibold">音视频库</span>
             </div>
         </div>
     </div>
@@ -145,7 +166,7 @@
                 </svg>
             </div>
             <!-- Sidebar Toggle -->
-            <button @click="isSidebarCollapsed = !isSidebarCollapsed" class="p-1.5 rounded-lg hover:bg-figma-hover text-figma-notation transition-colors flex-shrink-0">
+            <button @click="isSidebarCollapsed = !isSidebarCollapsed" class="p-1.5 rounded-lg hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10 text-figma-notation transition-colors flex-shrink-0">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M7.77782 3.33325V16.6666M6.88893 3.33325H13.1112C14.3557 3.33325 14.978 3.33325 15.4534 3.57546C15.8715 3.78851 16.2114 4.12847 16.4245 4.54661C16.6667 5.02197 16.6667 5.64425 16.6667 6.88881V13.111C16.6667 14.3556 16.6667 14.9779 16.4245 15.4532C16.2114 15.8714 15.8715 16.2113 15.4534 16.4244C14.978 16.6666 14.3557 16.6666 13.1112 16.6666H6.88893C5.64437 16.6666 5.02209 16.6666 4.54673 16.4244C4.12859 16.2113 3.78863 15.8714 3.57558 15.4532C3.33337 14.9779 3.33337 14.3556 3.33337 13.111V6.88881C3.33337 5.64425 3.33337 5.02197 3.57558 4.54661C3.78863 4.12847 4.12859 3.78851 4.54673 3.57546C5.02209 3.33325 5.64437 3.33325 6.88893 3.33325Z" stroke="#495363" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -157,7 +178,7 @@
             <button 
                 v-if="!isSidebarCollapsed"
                 @click="createNewChat"
-                class="w-full flex items-center gap-2 py-2 bg-figma-gray hover:bg-[#DCDCDC] text-figma-text rounded-lg transition-all duration-200 group px-2 h-[38px]"
+                class="w-full flex items-center gap-2 py-2 bg-figma-gray hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10 text-figma-text rounded-lg transition-all duration-200 group px-2 h-[38px]"
             >
                 <div class="w-4 h-4 flex items-center justify-center flex-shrink-0">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -165,12 +186,12 @@
                         <path d="M8.005 3.005L8.005 13.005" stroke="#171717" stroke-width="1.3" stroke-linecap="round"/>
                     </svg>
                 </div>
-                <span class="text-sm font-medium">新任务</span>
+                <span class="text-[14px] font-medium">新任务</span>
             </button>
             <div v-else class="flex justify-center">
                 <button 
                     @click="createNewChat"
-                    class="w-10 h-10 bg-figma-gray hover:bg-[#DCDCDC] text-figma-text rounded-xl flex items-center justify-center transition-all duration-200"
+                    class="w-10 h-10 bg-figma-gray hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10 text-figma-text rounded-xl flex items-center justify-center transition-all duration-200"
                 >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M3 8H13" stroke="#171717" stroke-width="1.5" stroke-linecap="round"/>
@@ -187,21 +208,21 @@
                 <div 
                     @click="sidebarTab = 'task'; currentView = 'chat'"
                     class="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-[14px] cursor-pointer transition-all duration-200 gap-1.5"
-                    :class="sidebarTab === 'task' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-figma-hover'"
+                    :class="sidebarTab === 'task' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                 >
                     <div class="w-4 h-4 flex items-center justify-center">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 7.33333L7.33333 8.66667L10.3333 5.66667M6.6 12.8L7.57333 14.0978C7.71808 14.2908 7.79045 14.3873 7.87918 14.4218C7.95689 14.452 8.04311 14.452 8.12082 14.4218C8.20955 14.3873 8.28192 14.2908 8.42667 14.0978L9.4 12.8C9.59543 12.5394 9.69315 12.4091 9.81234 12.3097C9.97126 12.177 10.1589 12.0832 10.3603 12.0357C10.5114 12 10.6743 12 11 12C11.9319 12 12.3978 12 12.7654 11.8478C13.2554 11.6448 13.6448 11.2554 13.8478 10.7654C14 10.3978 14 9.93188 14 9V5.2C14 4.0799 14 3.51984 13.782 3.09202C13.5903 2.71569 13.2843 2.40973 12.908 2.21799C12.4802 2 11.9201 2 10.8 2H5.2C4.0799 2 3.51984 2 3.09202 2.21799C2.71569 2.40973 2.40973 2.71569 2.21799 3.09202C2 3.51984 2 4.07989 2 5.2V9C2 9.93188 2 10.3978 2.15224 10.7654C2.35523 11.2554 2.74458 11.6448 3.23463 11.8478C3.60218 12 4.06812 12 5 12C5.32572 12 5.48858 12 5.63967 12.0357C5.84113 12.0832 6.02874 12.177 6.18766 12.3097C6.30685 12.4091 6.40457 12.5394 6.6 12.8Z" stroke="#2A2F3C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <span class="text-[12px] leading-none" :class="sidebarTab === 'task' ? 'text-figma-text font-medium' : 'text-figma-notation'">任务</span>
+                    <span class="text-[14px] leading-none" :class="sidebarTab === 'task' ? 'text-figma-text font-medium' : 'text-figma-notation'">任务</span>
                 </div>
 
                 <!-- Agent Tab -->
                 <div 
                     @click="sidebarTab = 'agent'"
                     class="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-[14px] cursor-pointer transition-all duration-200 gap-1.5"
-                    :class="sidebarTab === 'agent' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-figma-hover'"
+                    :class="sidebarTab === 'agent' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                 >
                     <div class="w-4 h-4 flex items-center justify-center">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -220,14 +241,14 @@
                             </defs>
                         </svg>
                     </div>
-                    <span class="text-[12px] leading-none" :class="sidebarTab === 'agent' ? 'text-figma-text font-medium' : 'text-figma-notation'">智能体</span>
+                    <span class="text-[14px] leading-none" :class="sidebarTab === 'agent' ? 'text-figma-text font-medium' : 'text-figma-notation'">智能体</span>
                 </div>
 
                 <!-- Knowledge Tab -->
                 <div 
                     @click="sidebarTab = 'knowledge'; currentView = 'knowledge'"
                     class="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-[14px] cursor-pointer transition-all duration-200 gap-1.5"
-                    :class="sidebarTab === 'knowledge' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-figma-hover'"
+                    :class="sidebarTab === 'knowledge' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                 >
                     <div class="w-4 h-4 flex items-center justify-center">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -238,7 +259,7 @@
                             <path d="M9 6V5" stroke="#333333" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <span class="text-[12px] leading-none whitespace-nowrap" :class="sidebarTab === 'knowledge' ? 'text-figma-text font-medium' : 'text-figma-notation'">知识中心</span>
+                    <span class="text-[14px] leading-none whitespace-nowrap" :class="sidebarTab === 'knowledge' ? 'text-figma-text font-medium' : 'text-figma-notation'">知识中心</span>
                 </div>
             </div>
             <div v-else class="flex flex-col items-center gap-6 pt-2">
@@ -246,7 +267,7 @@
                 <div 
                     @click="sidebarTab = 'task'; currentView = 'chat'"
                     class="w-10 h-10 flex items-center justify-center cursor-pointer rounded-xl transition-colors"
-                    :class="sidebarTab === 'task' ? 'bg-white border border-figma-line shadow-sm text-figma-text' : 'text-figma-notation hover:bg-figma-hover'"
+                    :class="sidebarTab === 'task' ? 'bg-white border border-figma-line shadow-sm text-figma-text' : 'text-figma-notation hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                 >
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M6 7.33333L7.33333 8.66667L10.3333 5.66667M6.6 12.8L7.57333 14.0978C7.71808 14.2908 7.79045 14.3873 7.87918 14.4218C7.95689 14.452 8.04311 14.452 8.12082 14.4218C8.20955 14.3873 8.28192 14.2908 8.42667 14.0978L9.4 12.8C9.59543 12.5394 9.69315 12.4091 9.81234 12.3097C9.97126 12.177 10.1589 12.0832 10.3603 12.0357C10.5114 12 10.6743 12 11 12C11.9319 12 12.3978 12 12.7654 11.8478C13.2554 11.6448 13.6448 11.2554 13.8478 10.7654C14 10.3978 14 9.93188 14 9V5.2C14 4.0799 14 3.51984 13.782 3.09202C13.5903 2.71569 13.2843 2.40973 12.908 2.21799C12.4802 2 11.9201 2 10.8 2H5.2C4.0799 2 3.51984 2 3.09202 2.21799C2.71569 2.40973 2.40973 2.71569 2.21799 3.09202C2 3.51984 2 4.07989 2 5.2V9C2 9.93188 2 10.3978 2.15224 10.7654C2.35523 11.2554 2.74458 11.6448 3.23463 11.8478C3.60218 12 4.06812 12 5 12C5.32572 12 5.48858 12 5.63967 12.0357C5.84113 12.0832 6.02874 12.177 6.18766 12.3097C6.30685 12.4091 6.40457 12.5394 6.6 12.8Z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -256,7 +277,7 @@
                 <div 
                     @click="sidebarTab = 'agent'"
                     class="w-10 h-10 flex items-center justify-center cursor-pointer rounded-xl transition-colors"
-                    :class="sidebarTab === 'agent' ? 'bg-white border border-figma-line shadow-sm text-figma-text' : 'text-figma-notation hover:bg-figma-hover'"
+                    :class="sidebarTab === 'agent' ? 'bg-white border border-figma-line shadow-sm text-figma-text' : 'text-figma-notation hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                 >
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <g clip-path="url(#clip0_30_4444_collapsed)">
@@ -278,7 +299,7 @@
                 <div 
                     @click="sidebarTab = 'knowledge'; currentView = 'knowledge'"
                     class="w-10 h-10 flex items-center justify-center cursor-pointer rounded-xl transition-colors"
-                    :class="sidebarTab === 'knowledge' ? 'bg-white border border-figma-line shadow-sm text-figma-text' : 'text-figma-notation hover:bg-figma-hover'"
+                    :class="sidebarTab === 'knowledge' ? 'bg-white border border-figma-line shadow-sm text-figma-text' : 'text-figma-notation hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                 >
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M10.6667 2H7.33334V14H10.6667V2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
@@ -296,14 +317,14 @@
              <!-- Task Tab Content -->
              <template v-if="sidebarTab === 'task'">
                 <div v-if="!isSidebarCollapsed" class="flex flex-col gap-0.5">
-                    <div v-if="sessions.length === 0" class="px-4 py-8 text-center text-slate-300 italic text-sm">暂无任务记录</div>
+                    <div v-if="sessions.length === 0" class="px-4 py-8 text-center text-slate-300 italic text-[14px]">暂无任务记录</div>
                     <div 
                         v-for="session in topSessions" 
                         :key="session.id"
                         @click="selectSession(session.id)"
                         class="group transition-all cursor-pointer relative rounded-lg"
                         :class="[
-                            currentSessionId === session.id && currentView === 'chat' ? 'bg-figma-hover' : 'hover:bg-figma-hover/50',
+                            currentSessionId === session.id && currentView === 'chat' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                             'px-2 py-1.5 mx-1'
                         ]"
                     >
@@ -316,8 +337,8 @@
                             </div>
 
                             <div class="flex flex-col overflow-hidden flex-1 min-w-0">
-                                <span class="text-[13px] leading-tight text-figma-notation truncate group-hover:text-figma-text transition-colors" :class="currentSessionId === session.id && currentView === 'chat' ? 'text-figma-text font-medium' : ''">{{ session.title || '新对话' }}</span>
-                                <span class="text-[11px] text-figma-disable mt-0.5">{{ formatDate(session.updated_at).split(' ')[0] }}</span>
+                                <span class="text-[14px] leading-tight text-figma-notation truncate group-hover:text-figma-text transition-colors" :class="currentSessionId === session.id && currentView === 'chat' ? 'text-figma-text font-medium' : ''">{{ session.title || '新对话' }}</span>
+                                <span class="text-xs text-figma-disable mt-0.5">{{ formatDate(session.updated_at).split(' ')[0] }}</span>
                             </div>
                             
                             <button 
@@ -333,14 +354,14 @@
                     <div 
                         v-if="sessions.length > 5" 
                         @click="allSessionsModalVisible = true"
-                        class="mx-1 px-2 py-2.5 flex items-center gap-1 cursor-pointer hover:bg-figma-hover/50 rounded-lg transition-colors mt-1"
+                        class="mx-1 px-2 py-2.5 flex items-center gap-1 cursor-pointer hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5 rounded-lg transition-colors mt-1"
                     >
                         <div class="w-3 h-3 flex items-center justify-center ml-0.5">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M2 4H14M2 8H14M2 12H14" stroke="#2A2F3C" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
                         </div>
-                        <span class="text-[13px] text-figma-heading font-medium">查看更多</span>
+                        <span class="text-[14px] text-figma-heading font-medium">查看更多</span>
                     </div>
                 </div>
                 
@@ -351,7 +372,7 @@
                         :key="session.id"
                         @click="selectSession(session.id)"
                         class="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 relative group"
-                        :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-figma-hover'"
+                        :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                         :title="session.title"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="currentSessionId === session.id && currentView === 'chat' ? 'text-figma-text' : 'text-figma-notation'"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -367,7 +388,7 @@
                         @click="currentView = 'agent'"
                         class="group transition-all cursor-pointer flex items-center rounded-lg h-[38px] flex-shrink-0"
                         :class="[
-                            currentView === 'agent' ? 'bg-figma-bg' : 'hover:bg-figma-hover/50',
+                            currentView === 'agent' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                             isSidebarCollapsed ? 'w-10 justify-center' : 'px-2 mx-1 gap-2'
                         ]"
                     >
@@ -401,7 +422,7 @@
                             @click="currentView = 'search'"
                             class="h-[38px] flex items-center rounded-lg transition-all cursor-pointer mt-0.5"
                             :class="[
-                                currentView === 'search' ? 'bg-figma-gray' : 'hover:bg-figma-hover/50',
+                                currentView === 'search' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                                 isSidebarCollapsed ? 'w-10 justify-center' : 'px-3 ml-6'
                             ]"
                         >
@@ -413,7 +434,7 @@
                         <div class="flex flex-col">
                             <div 
                                 @click="isDocProcessingExpanded = !isDocProcessingExpanded"
-                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-figma-hover/30 rounded-lg group flex-shrink-0"
+                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5 rounded-lg group flex-shrink-0"
                                 v-if="!isSidebarCollapsed"
                             >
                                 <span class="text-[14px] text-figma-notation group-hover:text-figma-text transition-colors ml-6">文档处理</span>
@@ -431,7 +452,7 @@
                                     @click="currentView = item.view"
                                     class="h-[38px] flex items-center rounded-lg transition-all cursor-pointer"
                                     :class="[
-                                        currentView === item.view ? 'bg-figma-gray' : 'hover:bg-figma-hover/50',
+                                        currentView === item.view ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                                         isSidebarCollapsed ? 'w-10 justify-center' : 'px-2'
                                     ]"
                                 >
@@ -445,7 +466,7 @@
                         <div class="flex flex-col mt-1">
                             <div 
                                 @click="isContentCreationExpanded = !isContentCreationExpanded"
-                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-figma-hover/30 rounded-lg group flex-shrink-0"
+                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5 rounded-lg group flex-shrink-0"
                                 v-if="!isSidebarCollapsed"
                             >
                                 <span class="text-[14px] text-figma-notation group-hover:text-figma-text transition-colors ml-6">内容创作</span>
@@ -461,7 +482,7 @@
                                     @click="currentView = item.view"
                                     class="h-[38px] flex items-center rounded-lg transition-all cursor-pointer"
                                     :class="[
-                                        (currentView === item.view || (item.view === 'list' && currentView === 'detail')) ? 'bg-figma-gray' : 'hover:bg-figma-hover/50',
+                                        (currentView === item.view || (item.view === 'list' && currentView === 'detail')) ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                                         isSidebarCollapsed ? 'w-10 justify-center' : 'px-2'
                                     ]"
                                 >
@@ -475,7 +496,7 @@
                         <div class="flex flex-col mt-1">
                             <div 
                                 @click="isDataAnalyticsExpanded = !isDataAnalyticsExpanded"
-                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-figma-hover/30 rounded-lg group flex-shrink-0"
+                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5 rounded-lg group flex-shrink-0"
                                 v-if="!isSidebarCollapsed"
                             >
                                 <span class="text-[14px] text-figma-notation group-hover:text-figma-text transition-colors ml-6">智能问数</span>
@@ -487,7 +508,7 @@
                                     @click="currentView = 'data_query'"
                                     class="h-[38px] flex items-center rounded-lg transition-all cursor-pointer"
                                     :class="[
-                                        currentView === 'data_query' ? 'bg-figma-gray' : 'hover:bg-figma-hover/50',
+                                        currentView === 'data_query' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                                         isSidebarCollapsed ? 'w-10 justify-center' : 'px-2'
                                     ]"
                                 >
@@ -501,7 +522,7 @@
                         <div class="flex flex-col mt-1">
                             <div 
                                 @click="isPlatformManagementExpanded = !isPlatformManagementExpanded"
-                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-figma-hover/30 rounded-lg group flex-shrink-0"
+                                class="px-3 h-[38px] flex items-center justify-between cursor-pointer hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5 rounded-lg group flex-shrink-0"
                                 v-if="!isSidebarCollapsed"
                             >
                                 <span class="text-[14px] text-figma-notation group-hover:text-figma-text transition-colors ml-6">基础配置</span>
@@ -516,7 +537,7 @@
                                     @click="currentView = item.view"
                                     class="h-[38px] flex items-center rounded-lg transition-all cursor-pointer"
                                     :class="[
-                                        currentView === item.view ? 'bg-figma-gray' : 'hover:bg-figma-hover/50',
+                                        currentView === item.view ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                                         isSidebarCollapsed ? 'w-10 justify-center' : 'px-2'
                                     ]"
                                 >
@@ -532,11 +553,33 @@
              <!-- Knowledge Tab Content -->
              <template v-else-if="sidebarTab === 'knowledge'">
                 <div class="flex flex-col gap-1" :class="isSidebarCollapsed ? 'items-center' : ''">
+                    <!-- Knowledge Graph -->
+                    <div 
+                        @click="currentView = 'knowledge_graph'"
+                        class="group transition-all cursor-pointer flex items-center rounded-lg h-[38px]"
+                        :class="[
+                            currentView === 'knowledge_graph' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
+                            isSidebarCollapsed ? 'w-10 justify-center' : 'px-2 mx-1 gap-2'
+                        ]"
+                    >
+                        <div class="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="4" cy="4" r="2" :stroke="currentView === 'knowledge_graph' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <circle cx="12" cy="5" r="2" :stroke="currentView === 'knowledge_graph' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <circle cx="8" cy="12" r="2" :stroke="currentView === 'knowledge_graph' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <path d="M5.5 5L10.5 5.5" :stroke="currentView === 'knowledge_graph' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <path d="M5 5.5L7 10.5" :stroke="currentView === 'knowledge_graph' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <path d="M11 6L9 10.5" :stroke="currentView === 'knowledge_graph' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                            </svg>
+                        </div>
+                        <span v-if="!isSidebarCollapsed" class="text-[14px] leading-none transition-colors" :class="currentView === 'knowledge_graph' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">知识图谱</span>
+                    </div>
+
                     <div 
                         @click="currentView = 'knowledge'"
                         class="group transition-all cursor-pointer flex items-center rounded-lg h-[38px]"
                         :class="[
-                            currentView === 'knowledge' ? 'bg-figma-bg' : 'hover:bg-figma-hover/50',
+                            currentView === 'knowledge' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
                             isSidebarCollapsed ? 'w-10 justify-center' : 'px-2 mx-1 gap-2'
                         ]"
                     >
@@ -551,6 +594,43 @@
                         </div>
                         <span v-if="!isSidebarCollapsed" class="text-[14px] leading-none transition-colors" :class="currentView === 'knowledge' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">知识库</span>
                     </div>
+
+                    <!-- Database -->
+                    <div 
+                        @click="currentView = 'database'"
+                        class="group transition-all cursor-pointer flex items-center rounded-lg h-[38px]"
+                        :class="[
+                            currentView === 'database' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
+                            isSidebarCollapsed ? 'w-10 justify-center' : 'px-2 mx-1 gap-2'
+                        ]"
+                    >
+                        <div class="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <ellipse cx="8" cy="4" rx="6" ry="2" :stroke="currentView === 'database' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <path d="M2 4V12C2 13.1046 4.68629 14 8 14C11.3137 14 14 13.1046 14 12V4" :stroke="currentView === 'database' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <path d="M2 8C2 9.10457 4.68629 10 8 10C11.3137 10 14 9.10457 14 8" :stroke="currentView === 'database' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                            </svg>
+                        </div>
+                        <span v-if="!isSidebarCollapsed" class="text-[14px] leading-none transition-colors" :class="currentView === 'database' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">数据库</span>
+                    </div>
+
+                    <!-- Audio/Video Library -->
+                    <div 
+                        @click="currentView = 'media_library'"
+                        class="group transition-all cursor-pointer flex items-center rounded-lg h-[38px]"
+                        :class="[
+                            currentView === 'media_library' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
+                            isSidebarCollapsed ? 'w-10 justify-center' : 'px-2 mx-1 gap-2'
+                        ]"
+                    >
+                        <div class="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="3" width="12" height="10" rx="2" :stroke="currentView === 'media_library' ? '#171717' : '#858B9B'" stroke-width="1.3"/>
+                                <path d="M7 6L10 8L7 10V6Z" :fill="currentView === 'media_library' ? '#171717' : '#858B9B'"/>
+                            </svg>
+                        </div>
+                        <span v-if="!isSidebarCollapsed" class="text-[14px] leading-none transition-colors" :class="currentView === 'media_library' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">音视频库</span>
+                    </div>
                 </div>
              </template>
 
@@ -560,7 +640,7 @@
         <div class="mt-auto border-t border-figma-line p-3">
             <div 
                 class="flex items-center transition-all duration-300"
-                :class="isSidebarCollapsed ? 'justify-center' : 'px-2 py-2 rounded-xl hover:bg-figma-hover cursor-pointer group gap-3'"
+                :class="isSidebarCollapsed ? 'justify-center' : 'px-2 py-2 rounded-xl hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10 cursor-pointer group gap-3'"
             >
                 <!-- Avatar -->
                 <div 
@@ -571,17 +651,22 @@
                 </div>
                 
                 <!-- Info -->
-                <div v-if="!isSidebarCollapsed" class="flex flex-col overflow-hidden flex-1">
-                    <span class="text-[13px] font-bold text-figma-text truncate">管理员</span>
-                    <span class="text-[11px] text-figma-notation truncate">数字化转型研发部</span>
+                <div v-if="!isSidebarCollapsed" class="flex flex-col overflow-hidden flex-1 gap-[5px]">
+                    <span class="text-[14px] font-bold text-figma-text truncate">管理员</span>
+                    <span class="text-xs text-figma-notation truncate">数字化转型研发部</span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 overflow-y-auto bg-slate-50">
-      <div class="max-w-[1200px] mx-auto px-10 py-12" :class="currentView === 'chat' ? 'h-full flex flex-col !p-0 !max-w-none' : ''">
+    <div class="flex-1 overflow-y-auto bg-white">
+      <div class="max-w-[1200px] mx-auto px-10 py-12" :class="{
+        'h-full flex flex-col !p-0 !max-w-none': currentView === 'chat',
+        'h-full flex flex-col': currentView === 'knowledge',
+        'h-full flex flex-col !p-4 !max-w-none': false,
+        'h-full flex flex-col !p-0 !max-w-none': currentView === 'media_library' || currentView === 'database' || currentView === 'knowledge_graph' || currentView === 'knowledge'
+      }">
         <!-- Main Content Area -->
         <div v-if="currentView === 'list'" class="flex-1">
         <div class="grid grid-cols-2 gap-6 mb-12 max-w-[840px]">
@@ -631,7 +716,7 @@
             </div>
 
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="grid grid-cols-12 gap-4 px-6 py-3.5 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <div class="grid grid-cols-12 gap-4 px-6 py-3.5 bg-slate-50 border-b border-slate-200 text-sm font-bold text-slate-500 uppercase tracking-wider">
                     <div class="col-span-4 pl-2">文件名称</div>
                     <div class="col-span-1 text-center">时长</div>
                     <div class="col-span-3 text-center">处理流水线 (上传-转写-摘要)</div>
@@ -647,7 +732,7 @@
                     <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="opacity-50"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                     </div>
-                    <span class="text-xs font-medium text-slate-400">暂无文件</span>
+                    <span class="text-sm font-medium text-slate-400">暂无文件</span>
                 </div>
                 
                 <div v-else class="divide-y divide-slate-50">
@@ -708,7 +793,7 @@
                         </div>
                         
                         <!-- Time -->
-                        <div class="col-span-2 text-center text-xs text-slate-400 font-din">{{ formatDate(file.created_at) }}</div>
+                        <div class="col-span-2 text-center text-sm text-slate-400 font-din">{{ formatDate(file.created_at) }}</div>
                         
                         <!-- Actions -->
                         <div class="col-span-2 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -788,6 +873,12 @@
 
     <KnowledgeBase v-else-if="currentView === 'knowledge'" />
 
+    <KnowledgeGraphView v-else-if="currentView === 'knowledge_graph'" initial-scope="global" />
+
+    <DatabaseManagement v-else-if="currentView === 'database'" />
+
+    <MediaLibrary v-else-if="currentView === 'media_library'" />
+
     <ModelManagement v-else-if="currentView === 'model'" />
     
     <!-- Search View -->
@@ -837,7 +928,7 @@
                         <span class="text-sm font-medium truncate">{{ session.title || '新对话' }}</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="text-[11px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">{{ formatDate(session.updated_at) }}</span>
+                        <span class="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">{{ formatDate(session.updated_at) }}</span>
                         <button 
                             @click.stop="deleteSession(session.id)"
                             class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
@@ -866,11 +957,14 @@ import SearchAgent from './components/SearchAgent.vue';
 import MetricsExtraction from './components/MetricsExtraction.vue';
 import SmartQA from './components/SmartQA.vue';
 import KnowledgeBase from './components/KnowledgeBase.vue';
+import KnowledgeGraphView from './components/KnowledgeGraphView.vue';
 import ModelManagement from './components/ModelManagement.vue';
 import AgentManagement from './components/AgentManagement.vue';
 import WorkflowManagement from './components/WorkflowManagement.vue';
 import IndicatorManagement from './components/IndicatorManagement.vue';
 import SmartDataQuery from './components/SmartDataQuery.vue';
+import DatabaseManagement from './components/DatabaseManagement.vue';
+import MediaLibrary from './components/MediaLibrary.vue';
 
 // Setup Axios
 const api = axios.create({
@@ -885,6 +979,9 @@ const getPageTitle = computed(() => {
         case 'search': return '智能爬取';
         case 'chat': return '智能问答';
         case 'knowledge': return '知识库';
+        case 'knowledge_graph': return '知识图谱';
+        case 'database': return '数据库';
+        case 'media_library': return '音视频库';
         case 'model': return '模型管理';
         case 'agent': return '智能体管理';
         case 'workflow': return '工作流集成';
@@ -902,6 +999,9 @@ const getPageSubtitle = computed(() => {
         case 'search': return '自动化智能网页数据爬取与分析';
         case 'chat': return '您的专属 AI 智能助手';
         case 'knowledge': return '企业级知识沉淀与管理';
+        case 'knowledge_graph': return '可视化展示知识关联';
+        case 'database': return '统一数据存储与管理';
+        case 'media_library': return '音视频资源集中管理';
         case 'model': return '配置和管理大语言模型';
         case 'agent': return '基于 Agno 框架构建和管理智能体';
         case 'workflow': return '集成 N8N 流程引擎实现自动化工作流';

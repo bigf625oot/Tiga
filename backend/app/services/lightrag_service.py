@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional
 import asyncio
 import numpy as np
 import time
+import contextvars
 
 from lightrag import LightRAG, QueryParam
 from lightrag.llm.openai import openai_embed
@@ -21,12 +22,18 @@ from pathlib import Path
 from app.models.knowledge import KnowledgeDocument
 from app.services.oss_service import oss_service
 from app.services.document_parser import parse_local_file
+import inspect
 
 logger = logging.getLogger(__name__)
 
+# ContextVars for request-scoped state
+runtime_vars_ctx = contextvars.ContextVar("runtime_vars", default=None)
+last_context_ctx = contextvars.ContextVar("last_context", default=None)
+
 # 数据存储目录
-# Fix: Use relative path "data" instead of "backend/data" to avoid double nesting when running from backend dir
-DATA_DIR = Path("data")
+# Fix: Use absolute path relative to backend directory to avoid CWD dependency
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = BACKEND_DIR / "data"
 LIGHTRAG_DIR = DATA_DIR / "lightrag_store"
 LIGHTRAG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -34,10 +41,9 @@ class LightRAGService:
     _instance = None
     rag: Optional[LightRAG] = None
     _trans_cache: Dict[str, str] = {}
-    _runtime_vars: Dict[str, Any] | None = None
-    _last_context: Dict[str, Any] | None = None
     _dim_meta_file: Path = LIGHTRAG_DIR / "vector_dim.meta"
     _chunks_cache: Dict[str, str] = {}
+    _chunks_doc_map: Dict[str, str] = {} # chunk_id -> file_path
     _chunks_mtime: float = 0
 
     def __init__(self):
@@ -124,103 +130,312 @@ class LightRAGService:
 
             # 2. 定义 LLM 函数
             async def llm_model_func(prompt, system_prompt=None, history_messages=None, **kwargs) -> str:
-                if history_messages is None:
-                    history_messages = []
+                try:
+                    if history_messages is None:
+                        history_messages = []
+                    
+                    # [Optimization] Capture retrieval context from LightRAG system prompt
+                    if system_prompt and "---Context---" in system_prompt:
+                        try:
+                            # Create a new context dict for this call
+                            current_ctx = {"raw": system_prompt.split("---Context---")[-1]}
+                            
+                            # 尝试提取具体的实体和 Chunk 列表以供 UI 展示
+                            if "---Context---" in system_prompt:
+                                context_block = system_prompt.split("---Context---")[-1]
+                                current_ctx["raw"] = context_block
+                                
+                                # Extract Chunks
+                                if "Reference Document List" in context_block:
+                                    # Split by KG header if present, or take all
+                                    chunks_block = context_block.split("Reference Document List")[-1]
+                                    if "####### Knowledge Graph Data" in chunks_block:
+                                        chunks_block = chunks_block.split("####### Knowledge Graph Data")[0]
+                                    current_ctx["chunks"] = chunks_block.strip()
+                                else:
+                                    # Fallback: Assume everything before KG data is chunks
+                                    chunks_block = context_block
+                                    if "####### Knowledge Graph Data" in chunks_block:
+                                        chunks_block = chunks_block.split("####### Knowledge Graph Data")[0]
+                                    # Also check for "Context:" header just in case
+                                    if "Context:" in chunks_block[:20]:
+                                        chunks_block = chunks_block.split("Context:", 1)[-1]
+                                    current_ctx["chunks"] = chunks_block.strip()
+                                
+                                # Extract KG
+                                if "Knowledge Graph Data (Entity)" in context_block:
+                                    kg_block = context_block.split("Knowledge Graph Data (Entity)")[-1]
+                                    if "```json" in kg_block:
+                                        kg_part = kg_block.split("```json")[-1].split("```")[0]
+                                        current_ctx["entities"] = kg_part.strip()
+                            else:
+                                # Fallback for legacy prompts or unexpected formats
+                                if "Reference Document List" in system_prompt:
+                                    # Be careful not to match the prompt instruction itself
+                                    parts = system_prompt.split("Reference Document List")
+                                    # The last part is likely the context if it exists
+                                    if len(parts) > 1:
+                                        potential_ctx = parts[-1]
+                                        # Heuristic: context usually doesn't contain "---Instructions---"
+                                        if "---Instructions---" not in potential_ctx:
+                                            current_ctx["chunks"] = potential_ctx.split("---")[0].strip()
+                            
+                            # Set context var
+                            last_context_ctx.set(current_ctx)
+                        except Exception:
+                            pass
                 
-                # [Optimization] Capture retrieval context from LightRAG system prompt
-                if system_prompt and "---Context---" in system_prompt:
-                    try:
-                        self._last_context = {"raw": system_prompt.split("---Context---")[-1]}
-                        # 尝试提取具体的实体和 Chunk 列表以供 UI 展示
-                        if "Reference Document List" in system_prompt:
-                            ref_list_part = system_prompt.split("Reference Document List")[-1].split("---")[0]
-                            self._last_context["chunks"] = ref_list_part.strip()
-                        if "Knowledge Graph Data (Entity)" in system_prompt:
-                            kg_part = system_prompt.split("Knowledge Graph Data (Entity)")[-1].split("```json")[-1].split("```")[0]
-                            self._last_context["entities"] = kg_part.strip()
-                    except Exception:
-                        pass
+                    # Check if context is in prompt instead of system_prompt
+                    if not system_prompt and prompt and "---Context---" in prompt:
+                         logger.info("[Debug] Context found in user prompt, switching target.")
+                         system_prompt = prompt
+                         pass
+                except Exception:
+                    pass
 
                 # [Feature] Dynamic Retrieval Scope Filtering
                 # If filter_doc_id is set, we strip out any context not belonging to that doc.
                 try:
-                    rv = getattr(self, "_runtime_vars", None)
+                    rv = runtime_vars_ctx.get()
                     filter_doc_id = (rv or {}).get("filter_doc_id")
-                    if filter_doc_id and system_prompt and "---Context---" in system_prompt:
+                    logger.info(f"[Debug] filter_doc_id: {filter_doc_id}, system_prompt_len: {len(system_prompt) if system_prompt else 0}")
+                    if prompt:
+                         logger.info(f"[Debug] prompt_preview: {prompt[:200]}")
+                    
+                    target_prompt = system_prompt
+                    is_system = True
+                    if not target_prompt and prompt and "---Context---" in prompt:
+                        target_prompt = prompt
+                        is_system = False
+                    
+                    if filter_doc_id and target_prompt and "---Context---" in target_prompt:
                         import re
                         marker = f"doc#{filter_doc_id}"
-                        parts = system_prompt.split("---Context---")
+                        parts = target_prompt.split("---Context---")
                         base_prompt = parts[0]
                         context_part = parts[1]
                         
+                        # Split context into chunks part and KG part to safely filter both
+                        kg_header = "####### Knowledge Graph Data (Entity)"
+                        kg_split = context_part.split(kg_header)
+                        chunks_part = kg_split[0]
+                        kg_part = kg_header + kg_split[1] if len(kg_split) > 1 else ""
+                        
                         # 1. Filter Chunks in "Reference Document List"
-                        # Each chunk starts with [n]
-                        if "Reference Document List" in context_part:
-                            chunk_sections = re.split(r"(\[\d+\])", context_part)
-                            # chunk_sections[0] is everything before the first [n]
-                            new_context = chunk_sections[0]
+                        if "Reference Document List" in chunks_part:
+                            chunk_sections = re.split(r"(\[\d+\])", chunks_part)
+                            new_chunks_part = chunk_sections[0]
+                            kept_chunks = 0
+                            total_chunks = 0
                             for i in range(1, len(chunk_sections), 2):
                                 marker_tag = chunk_sections[i]
                                 chunk_body = chunk_sections[i+1]
+                                total_chunks += 1
                                 # Check if this chunk belongs to our doc
                                 if marker in chunk_body:
-                                    new_context += marker_tag + chunk_body
-                            context_part = new_context
+                                    new_chunks_part += marker_tag + chunk_body
+                                    kept_chunks += 1
+                                else:
+                                    # Log skipped chunk title for debug
+                                    title_preview = chunk_body.strip().split('\n')[0][:50]
+                                    logger.debug(f"[Debug] Skipped chunk: {title_preview}")
+                            
+                            chunks_part = new_chunks_part
+                            logger.info(f"[Debug] Filtered chunks: kept {kept_chunks}/{total_chunks} for marker {marker}")
 
                         # 2. Filter Entities in "Knowledge Graph Data (Entity)"
-                        if "Knowledge Graph Data (Entity)" in context_part:
+                        if kg_part:
+                            entities_kept = False
                             try:
-                                # Extract the JSON block
-                                kg_match = re.search(r"(####### Knowledge Graph Data \(Entity\)\s+```json\s+)([\s\S]*?)(\s+```)", context_part)
-                                if kg_match:
-                                    prefix = kg_match.group(1)
-                                    json_str = kg_match.group(2)
-                                    suffix = kg_match.group(3)
-                                    
-                                    entities = json.loads(json_str)
-                                    if isinstance(entities, list):
-                                        # Keep entities if source_id contains our marker
-                                        filtered_entities = [
-                                            ent for ent in entities 
-                                            if marker in str(ent.get("source_id", "")) or marker in str(ent.get("SOURCE_ID", ""))
-                                        ]
-                                        new_kg_json = json.dumps(filtered_entities, ensure_ascii=False, indent=2)
-                                        context_part = context_part.replace(json_str, new_kg_json)
+                                # [Robustness] Try to find JSON list within the block
+                                json_start = kg_part.find("[")
+                                json_end = kg_part.rfind("]")
+                                if json_start != -1 and json_end != -1:
+                                    json_str = kg_part[json_start:json_end+1]
+                                    try:
+                                        entities = json.loads(json_str)
+                                        if isinstance(entities, list):
+                                            filtered_entities = []
+                                            for ent in entities:
+                                                # Check source_id. LightRAG might store it as string or list?
+                                                # Usually "doc_id" or "source_id"
+                                                sid = str(ent.get("source_id", ""))
+                                                if marker in sid:
+                                                    filtered_entities.append(ent)
+                                            
+                                            # Reconstruct KG part
+                                            new_kg_json = json.dumps(filtered_entities, ensure_ascii=False, indent=2)
+                                            kg_part = "####### Knowledge Graph Data (Entity)\n\n```json\n" + new_kg_json + "\n```"
+                                            entities_kept = True
+                                            logger.info(f"[Debug] Filtered entities: kept {len(filtered_entities)}/{len(entities)} for {marker}")
+                                    except json.JSONDecodeError:
+                                        logger.warning("[Debug] Failed to decode entities JSON")
                             except Exception as e:
                                 logger.warning(f"Failed to filter entities in context: {e}")
                                 
-                        system_prompt = base_prompt + "---Context---\n" + context_part
+                            # [Strict] If parsing failed or no entities match, drop the whole KG part to prevent leakage
+                            if not entities_kept:
+                                logger.info("[Debug] Dropping all entities (strict mode or parsing failed).")
+                                kg_part = ""
+                                
+                        context_part = chunks_part + "\n\n" + kg_part
+                        
+                        # [Update] Sync _last_context with filtered result so UI sources are accurate
+                        try:
+                            # Update existing context var
+                            current_ctx = last_context_ctx.get() or {}
+                            if "Reference Document List" in chunks_part:
+                                ref_list_part = chunks_part.split("Reference Document List")[-1].split("---")[0]
+                                current_ctx["chunks"] = ref_list_part.strip()
+                            if kg_part and "```json" in kg_part:
+                                kg_json = kg_part.split("```json")[-1].split("```")[0]
+                                current_ctx["entities"] = kg_json.strip()
+                            last_context_ctx.set(current_ctx)
+                        except Exception:
+                            pass
+ 
+                        target_prompt = base_prompt + "---Context---\n" + context_part
                         # [Refinement] Add a strict document scope reminder
-                        system_prompt += f"\n\n注意：你当前处于“当前文档”检索模式，必须仅基于 doc#{filter_doc_id} 的内容回答，严禁引用其他文档或你的预训练知识。"
+                        target_prompt += f"\n\n注意：你当前处于“当前文档”检索模式，必须仅基于 doc#{filter_doc_id} 的内容回答，严禁引用其他文档或你的预训练知识。"
                         logger.info(f"Filtered context to doc#{filter_doc_id}")
+                        
+                        if is_system:
+                            system_prompt = target_prompt
+                        else:
+                            prompt = target_prompt
                 except Exception as e:
                     logger.error(f"Context filtering failed: {e}")
 
+                # [Feature] Source Reference Appending
+                # We need to capture the context to map [n] to sources later
+                captured_context_map = {} # {index: {source, content}}
+                
                 try:
                     from app.core.config import settings as _s
-                    if not system_prompt:
-                        fp = getattr(_s, "QA_SYSTEM_PROMPT_FILE", "backend/prompts/qa_system.md")
-                        p = Path(fp)
-                        if p.exists():
-                            system_prompt = p.read_text(encoding="utf-8").strip()
-                        else:
-                            system_prompt = getattr(_s, "QA_SYSTEM_PROMPT", None)
-                except Exception:
-                    pass
-                # 变量注入
-                try:
-                    from datetime import datetime
-                    now = datetime.now().strftime("%Y-%m-%d")
-                    rv = getattr(self, "_runtime_vars", None)
-                    kv = (rv or {}).get("knowledge", "")
-                    hist = (rv or {}).get("history", "")
-                    if kv and len(kv) > 6000:
-                        kv = kv[:6000]
-                    if hist and len(hist) > 2000:
-                        hist = hist[:2000]
-                    if system_prompt:
-                        system_prompt = system_prompt.replace("{current_date}", now).replace("{knowledge}", kv).replace("{history}", hist)
-                except Exception:
+                    
+                    # 1. Extract context from the current system_prompt
+                    retrieved_context = ""
+                    if system_prompt and "---Context---" in system_prompt:
+                        retrieved_context = system_prompt.split("---Context---")[-1].strip()
+                        
+                        # Parse Reference Document List for Source Mapping
+                        if "Reference Document List" in retrieved_context:
+                            try:
+                                import re
+                                # Extract blocks like [1] ... [2] ...
+                                ref_section = retrieved_context.split("Reference Document List")[-1]
+                                if "####### Knowledge Graph Data" in ref_section:
+                                    ref_section = ref_section.split("####### Knowledge Graph Data")[0]
+                                
+                                # Regex to find [n] and content until next [n+1]
+                                chunks = re.split(r"(\[\d+\])", ref_section)
+                                for i in range(1, len(chunks), 2):
+                                    idx_str = chunks[i].strip("[]") # "1"
+                                    content = chunks[i+1].strip()
+                                    
+                                    # Extract Source: filename from content
+                                    # Typical content: "Source: filename\nContent..."
+                                    source_name = "Unknown"
+                                    if "Source: " in content:
+                                        # Extract until newline
+                                        source_line = content.split("Source: ")[1].split("\n")[0].strip()
+                                        source_name = source_line
+                                    
+                                    captured_context_map[idx_str] = {
+                                        "source": source_name,
+                                        "preview": content[:100].replace("\n", " ") + "..."
+                                    }
+                            except Exception as e:
+                                logger.warning(f"Failed to parse context for sources: {e}")
+
+                    # 2. Load the custom system prompt template
+                    qa_prompt_file = getattr(_s, "QA_SYSTEM_PROMPT_FILE", "backend/prompts/qa_system.md")
+                    custom_prompt_template = None
+                    p = Path(qa_prompt_file)
+                    if p.exists():
+                        custom_prompt_template = p.read_text(encoding="utf-8").strip()
+                    else:
+                        custom_prompt_template = getattr(_s, "QA_SYSTEM_PROMPT", None)
+                    
+                    # 3. If we have a custom template, we use it to construct the final system prompt
+                    if custom_prompt_template:
+                        from datetime import datetime
+                        now = datetime.now().strftime("%Y-%m-%d")
+                        
+                        rv = runtime_vars_ctx.get() or {}
+                        
+                        # Knowledge: Prioritize retrieved context, fallback to runtime var
+                        kv = retrieved_context if retrieved_context else rv.get("knowledge", "")
+                        
+                        # History: Prioritize runtime var (usually set by API), fallback to history_messages
+                        hist_str = rv.get("history", "")
+                        if not hist_str and history_messages:
+                            # Simple formatting
+                            if isinstance(history_messages, list):
+                                lines = []
+                                for m in history_messages:
+                                    if isinstance(m, dict):
+                                        lines.append(f"{m.get('role', 'user')}: {m.get('content', '')}")
+                                    else:
+                                        lines.append(str(m))
+                                hist_str = "\n".join(lines)
+                        
+                        # Apply limits (Increased from 6000/2000 to 50000/10000)
+                        # 3 documents can easily exceed 6000 chars.
+                        if kv and len(kv) > 50000:
+                            kv = kv[:50000] + "...(truncated)"
+                        if hist_str and len(hist_str) > 10000:
+                            hist_str = hist_str[-10000:] # Keep recent history
+                            
+                        # [Feature] Inject Document Statistics (Count & Names) from Metadata
+                        # User Request: Use existing kv_store_doc_status.json instead of counting chunks
+                        doc_stats_str = ""
+                        try:
+                            doc_status_path = LIGHTRAG_DIR / "kv_store_doc_status.json"
+                            if doc_status_path.exists():
+                                try:
+                                    with open(doc_status_path, "r", encoding="utf-8") as f:
+                                        status_data = json.load(f)
+                                    
+                                    # Extract valid docs (status='processed')
+                                    valid_docs = []
+                                    for k, v in status_data.items():
+                                        if v.get("status") == "processed":
+                                            fp = v.get("file_path", "Unknown")
+                                            # Cleanup: doc#1:filename.txt -> filename.txt
+                                            if "doc#" in fp and ":" in fp:
+                                                fp = fp.split(":", 1)[1]
+                                            valid_docs.append(fp)
+                                    
+                                    # Sort for consistency
+                                    valid_docs.sort()
+                                    
+                                    if valid_docs:
+                                        doc_stats_str = f"【系统统计信息】\n知识库现有 {len(valid_docs)} 篇已处理文档：\n"
+                                        for i, name in enumerate(valid_docs):
+                                            doc_stats_str += f"{i+1}. {name}\n"
+                                        doc_stats_str += "\n"
+                                        
+                                except Exception as e:
+                                    logger.warning(f"Failed to read doc status json: {e}")
+                        except Exception as e:
+                            logger.warning(f"Failed to generate doc stats from metadata: {e}")
+
+                        # Replace placeholders
+                        # Prepend doc_stats to knowledge
+                        final_knowledge = doc_stats_str + kv
+                        
+                        system_prompt = custom_prompt_template.replace("{current_date}", now) \
+                                                              .replace("{knowledge}", final_knowledge) \
+                                                              .replace("{history}", hist_str)
+                        
+                        logger.info(f"Applied custom QA prompt from {qa_prompt_file}. Knowledge len: {len(final_knowledge)}, History len: {len(hist_str)}")
+                    
+                    # If no custom template, we keep the original system_prompt (which has context)
+                    
+                except Exception as e:
+                    logger.error(f"Failed to apply custom QA prompt: {e}")
+                    # Fallback: keep original system_prompt
                     pass
                 # 构造消息并使用用户配置的 LLMModel（基于 base_url 的 OpenAI 兼容接口）
                 try:
@@ -237,6 +452,56 @@ class LightRAGService:
                     logger.info(f"Calling LLM: {model_name} via base_url={base_url or 'default'}")
                     resp = await client.chat.completions.create(model=model_name, messages=messages, temperature=0)
                     response = resp.choices[0].message.content if (resp and resp.choices) else ""
+
+                    # [Feature] Post-process response to append sources
+                    if response and captured_context_map:
+                        try:
+                            import re
+                            # Find all citations like [1], [2]
+                            citations = re.findall(r"\[(\d+)\]", response)
+                            unique_idxs = sorted(list(set(citations)), key=lambda x: int(x))
+                            
+                            if unique_idxs:
+                                append_lines = ["\n\n**知识来源：**"]
+                                used_sources = set()
+                                
+                                # Check mode: Local (filter_doc_id set) or Global
+                                rv = runtime_vars_ctx.get()
+                                is_local_mode = (rv or {}).get("filter_doc_id") is not None
+                                
+                                for idx in unique_idxs:
+                                    if idx in captured_context_map:
+                                        info = captured_context_map[idx]
+                                        if is_local_mode:
+                                            # Local mode: Show chunk preview
+                                            append_lines.append(f"- [{idx}] {info['preview']}")
+                                        else:
+                                            # Global mode: Show document filename (deduplicated)
+                                            src = info['source']
+                                            # Clean up doc#id prefix if present for display
+                                            if "doc#" in src:
+                                                 # Try to extract filename part: doc#1:filename.txt -> filename.txt
+                                                 if ":" in src:
+                                                     src = src.split(":", 1)[1]
+                                            
+                                            # Avoid duplicate lines for same source in global mode
+                                            # But we need to keep the index mapping [n] -> Source
+                                            # Or we can group: [1][3] -> Source A
+                                            # Simple approach: List all cited indices mapping to sources
+                                            # " - [1] 每日新闻.docx"
+                                            # If [1] and [3] are same doc, show both lines? Or merge?
+                                            # User request: "全部文档的情况下知识来源于文档"
+                                            # Let's show: "- [1] 文档A"
+                                            append_lines.append(f"- [{idx}] {src}")
+                                
+                                response += "\n" + "\n".join(append_lines)
+                        except Exception as e:
+                            logger.warning(f"Failed to append sources: {e}")
+
+                except Exception as e:
+                    logger.error(f"LLM 调用失败: {e}")
+                    response = ""
+
                 except Exception as e:
                     logger.error(f"LLM 调用失败: {e}")
                     response = ""
@@ -344,14 +609,13 @@ class LightRAGService:
             try:
                 import lightrag.prompt as _lp
                 
-                # 1. 增强系统提示词，特别强调翻译实体为中文，并包含文档实体提取逻辑
-                _lp.PROMPTS["entity_extraction_system_prompt"] = _lp.PROMPTS["entity_extraction_system_prompt"].replace(
-                    "Retain proper nouns in their original language",
-                    "Translate proper nouns and all entities to Chinese whenever possible to ensure a consistent Chinese Knowledge Graph"
-                )
-                # 显式添加中文指令，并要求提取“文档”作为核心实体
-                if "Simplified Chinese" not in _lp.PROMPTS["entity_extraction_system_prompt"]:
-                    _lp.PROMPTS["entity_extraction_system_prompt"] += """
+                if "entity_extraction_system_prompt" in _lp.PROMPTS:
+                    _lp.PROMPTS["entity_extraction_system_prompt"] = _lp.PROMPTS["entity_extraction_system_prompt"].replace(
+                        "Retain proper nouns in their original language",
+                        "Translate proper nouns and all entities to Chinese whenever possible to ensure a consistent Chinese Knowledge Graph"
+                    )
+                    if "Simplified Chinese" not in _lp.PROMPTS["entity_extraction_system_prompt"]:
+                        _lp.PROMPTS["entity_extraction_system_prompt"] += """
 
 注意：
 1. 请务必使用简体中文输出所有实体名称、类型和描述。
@@ -363,32 +627,29 @@ class LightRAGService:
    - 提取文件中的日期信息、作者、来源等作为其实体描述的一部分。
    - **建立联系**：将文中提取的所有其他实体与该“文档”实体建立联系（如“提及于”、“来源自”）。
 5. 保持术语的一致性。
+6. **英文规范**：对于必须保留英文的专有名词（如 OpenAI, AI, Transformer），请务必使用**标准的大写/混合大小写格式**，严禁使用全小写（如禁止使用 openai, ai），以确保跨文档的实体能正确关联。
 """
 
-                # 2. 增强 RAG 响应提示词，强制要求正文引用 (In-text citations)，并严禁末尾引用区
-                _lp.PROMPTS["rag_response"] = _lp.PROMPTS["rag_response"].replace(
-                    "Track the reference_id of the document chunk which directly support the facts presented in the response.",
-                    "Track the reference_id of the document chunk and the names of entities which directly support the facts presented in the response."
-                ).replace(
-                    "Generate a references section at the end of the response.",
-                    "Generate in-text citations using [[Source: n]] for chunks and [[Entity: Name]] for entities. DO NOT generate a references section at the end of the response."
-                )
-                
-                # 显式要求引用格式
-                if "正文引用" not in _lp.PROMPTS["rag_response"]:
-                    _lp.PROMPTS["rag_response"] = _lp.PROMPTS["rag_response"].replace(
-                        "---Instructions---",
-                        """---Instructions---
+                if "rag_response" in _lp.PROMPTS:
+                    # Reset to base and apply our custom strict prompt
+                    _lp.PROMPTS["rag_response"] = """
+---Role---
+You are a helpful, rigorous, and intelligent assistant. You must answer the user's question based strictly on the provided context (documents and entities).
 
-0. 强制引用规则：
-  - **正文引用**：在回答的每一段话中，必须在所引用的事实后方标注来源。
-  - **Chunk 引用**：使用 `[[Source: n]]` 格式（例如：事实内容[[Source: 1]]），其中 n 对应 `Reference Document List` 中的 ID。
-  - **实体引用**：当提到知识图谱中的核心实体时，使用 `[[Entity: 实体名]]` 格式（例如：[[Entity: 电能计量]]）。
-  - **严禁仅在结尾列出引用**，必须在正文事实发生处即时标注。
-  - **严禁生成末尾引用区**：严禁在回答末尾输出任何形式的 'References'、'Sources'、'参考来源'、'引用列表' 或对应的列表内容。"""
-                    )
+---Instructions---
+1. **Language**: You must answer in **Chinese** (Simplified Chinese).
+2. **In-text Citations (MANDATORY)**: 
+   - You MUST cite the source for every fact you state.
+   - Use the format `[n]` immediately after the sentence or clause, where `n` matches the index in the "Reference Document List".
+   - Example: "智能工厂建设加速[1]，产值提升了20%[2]。"
+   - DO NOT use `[Source: n]`, `(Source: n)`, or `doc#id`. Only use `[n]`.
+3. **No Reference List**: DO NOT generate a list of references at the end. The `[n]` markers in the text are sufficient.
+4. **Scope**: Answer ONLY based on the provided context. If the information is not in the context, say "根据已知文档无法回答该问题".
 
-                logger.info("Enhanced LightRAG prompts for Chinese and In-text Citations")
+---Context---
+{context_data}
+"""
+                    logger.info("Replaced LightRAG rag_response prompt with strict Chinese citation version")
             except Exception as e:
                 logger.warning(f"Failed to enhance prompts: {e}")
 
@@ -582,97 +843,50 @@ class LightRAGService:
         # 2. [关键修复] 异步存储初始化
         await self._ensure_storages_initialized()
 
-    def set_runtime_vars(self, knowledge: str = "", history: List[str] | None = None, filter_doc_id: int | None = None):
-        self._runtime_vars = {
+    def set_runtime_vars(self, knowledge: str = "", history: Optional[List[str]] = None, filter_doc_id: Optional[int] = None):
+        runtime_vars_ctx.set({
             "knowledge": knowledge or "",
             "history": "\n".join(history or []) if history else "",
             "filter_doc_id": filter_doc_id
-        }
+        })
 
     def clear_runtime_vars(self):
-        self._runtime_vars = None
+        runtime_vars_ctx.set(None)
 
-    def get_last_context(self) -> Dict[str, Any] | None:
-        return self._last_context
+    def get_last_context(self) -> Optional[Dict[str, Any]]:
+        return last_context_ctx.get()
 
     def clear_last_context(self):
-        self._last_context = None
+        last_context_ctx.set(None)
 
     def insert_text(self, text: str, description: str = None):
         """
-        向知识库插入文本。
+        [Sync Wrapper] 向知识库插入文本。
+        注意：此方法仅应在同步环境（如脚本、CLI）中使用。
+        如果在异步环境（如 FastAPI 路由）中，请务必使用 insert_text_async。
         """
-        logger.info(f"LightRAG insert_text called. Description: {description}, Text length: {len(text)}")
-        if not self.rag:
-            logger.warning("LightRAG insert_text called before initialization, trying default init...")
-            self._init_rag()
-        
-        if self.rag:
-            # [Optimization] Prepend filename/description to text to ensure entity extractor can see it
-            # This helps in creating the "Document" entity with correct attributes.
-            if description:
-                text_with_meta = f"--- Document Metadata ---\nSource: {description}\n------------------------\n\n{text}"
-            else:
-                text_with_meta = text
-
-            # 增加简单的重试机制
-            retries = 3
-            import time
-            last_exception = None
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
             
-            for i in range(retries):
-                try:
-                    logger.info(f"Attempting to insert text into LightRAG (Attempt {i+1}/{retries})...")
-                    self.rag.insert(text_with_meta, file_paths=description if description else None)
-                    
-                    # [CRITICAL FIX] 显式触发持久化
-                    # LightRAG 的 insert/ainsert 管道在某些版本中可能不会自动调用 _insert_done 落盘
-                    # 导致 graphml 文件不生成。我们需要手动触发它。
-                    # 由于 _insert_done 是 async 的，我们需要在事件循环中运行它
-                    try:
-                        import asyncio
-                        # 获取当前线程的 loop，如果没有则创建
-                        try:
-                            loop = asyncio.get_event_loop()
-                        except RuntimeError:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            
-                        if loop.is_running():
-                            # 如果已经在运行（极少见，因为 insert 是 sync 的），这比较麻烦
-                            # 但通常 insert 会开启 loop 运行完后退出，或者如果是嵌套调用...
-                            # 简单起见，我们假设 insert 已经完成了 async 任务
-                            # 这里我们创建一个 task
-                            future = asyncio.run_coroutine_threadsafe(self.rag._insert_done(), loop)
-                            future.result() # 等待完成
-                        else:
-                            loop.run_until_complete(self.rag._insert_done())
-                            
-                        logger.info("已强制触发 LightRAG 数据持久化 (_insert_done)")
-                    except Exception as save_err:
-                        logger.warning(f"强制持久化失败 (但这可能不影响内存中的数据): {save_err}")
-                    
-                    logger.info(f"文本插入成功 (Desc: {description})")
-                    return
-                except Exception as e:
-                    last_exception = e
-                    logger.warning(f"文本插入失败 (尝试 {i+1}/{retries}): {e}")
-                    # 检查是否是 API 相关的错误，如果是，等待后重试
-                    # 简单的指数退避
-                    time.sleep(2 * (i + 1))
+        if loop and loop.is_running():
+            logger.error("Attempted to call sync insert_text from a running event loop.")
+            raise RuntimeError("Cannot call sync insert_text from within a running event loop. Use await insert_text_async instead.")
             
-            # 如果重试耗尽，抛出异常
-            logger.error(f"文本插入最终失败 (Desc: {description})，重试 {retries} 次: {last_exception}")
-            raise last_exception
-        else:
-            logger.error("LightRAG initialization failed, cannot insert text.")
-            raise RuntimeError("LightRAG not initialized")
+        return asyncio.run(self.insert_text_async(text, description))
 
     async def insert_text_async(self, text: str, description: str = None):
-        logger.info(f"LightRAG insert_text_async called. Description: {description}, Text length: {len(text)}")
+        logger.info(f"[LightRAG] insert_text_async called. Description: {description}, Text length: {len(text)}")
         if not self.rag:
             raise RuntimeError("LightRAG not initialized")
         
+        # Log expected chunks (approximate)
+        chunk_size = self.rag.chunk_token_size
+        est_chunks = len(text) // (chunk_size * 2) 
+        logger.info(f"[LightRAG] Async Estimated chunks: ~{est_chunks if est_chunks > 0 else 1}")
+
         # [Optimization] Prepend filename/description to text
         if description:
             text_with_meta = f"--- Document Metadata ---\nSource: {description}\n------------------------\n\n{text}"
@@ -686,22 +900,30 @@ class LightRAGService:
                 await self.rag.ainsert(text_with_meta, file_paths=description if description else None)
                 try:
                     await self.rag._insert_done()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"LightRAG _insert_done failed in async insert: {e}")
                 logger.info(f"文本异步插入成功 (Desc: {description})")
                 return
             except Exception as e:
                 last_exception = e
-                logger.warning(f"异步文本插入失败 (尝试 {i+1}/{retries}): {e}")
+                try:
+                    msg = str(e)
+                    if "history_messages" in msg:
+                        pass
+                    else:
+                        logger.warning(f"异步文本插入失败 (尝试 {i+1}/{retries}): {e}")
+                except Exception:
+                    logger.warning(f"异步文本插入失败 (尝试 {i+1}/{retries}): {e}")
                 import asyncio as _asyncio
                 await _asyncio.sleep(2 * (i + 1))
         logger.error(f"文本异步插入最终失败 (Desc: {description})，重试 {retries} 次: {last_exception}")
         raise last_exception
 
-    def query(self, query: str, mode: str = "mix") -> str:
+    def query(self, query: str, mode: str = "mix", top_k: int = 60) -> str:
         """
         执行查询。
         :param mode: "naive", "local", "global", "hybrid", "mix"
+        :param top_k: Number of chunks/entities to retrieve (default 60, typical limit to avoid context overflow)
         """
         if not self.rag:
              logger.warning("LightRAG query called before initialization, trying default init...")
@@ -714,8 +936,24 @@ class LightRAGService:
                 # 如果我们在 async 上下文中，直接调用同步 query 可能会有问题
                 # 不过 LightRAG 的 query 实现通常是同步阻塞的 (run_until_complete)
                 
-                param = QueryParam(mode=mode, enable_rerank=getattr(settings, "RERANK_ENABLED", False))
-                logger.info(f"LightRAG query: {query} (mode={mode}, rerank={getattr(settings, 'RERANK_ENABLED', False)})")
+                try:
+                    sig = inspect.signature(QueryParam)
+                    kwargs = {"mode": mode}
+                    
+                    # [Feature] Configurable Top-K and Reranking
+                    kwargs["top_k"] = top_k
+                    
+                    rerank_enabled = getattr(settings, "RERANK_ENABLED", False)
+                    if "enable_rerank" in sig.parameters:
+                        kwargs["enable_rerank"] = rerank_enabled
+                    elif "rerank" in sig.parameters:
+                        kwargs["rerank"] = rerank_enabled
+                    param = QueryParam(**kwargs)
+                except Exception:
+                    # Fallback if QueryParam signature changes
+                    param = QueryParam(mode=mode)
+                
+                logger.info(f"LightRAG query: {query} (mode={mode}, top_k={top_k}, rerank={getattr(settings, 'RERANK_ENABLED', False)})")
                 
                 # [FIXED] 确保 storage initialized
                 # 虽然 insert 时初始化了，但 query 时可能也需要
@@ -732,7 +970,24 @@ class LightRAGService:
                 return f"查询出错: {str(e)}"
         return "服务未初始化"
 
-    async def query_async(self, query: str, mode: str = "mix", filter_doc_id: int | None = None) -> str:
+    async def call_llm(self, prompt: str, system_prompt: str = None, history_messages: List[Dict] = None) -> str:
+        """
+        Directly call the configured LLM function.
+        Useful for manual QA pipelines where context is pre-constructed.
+        """
+        if not self.rag:
+            return "服务未初始化"
+        try:
+            # Reuse the internal LLM function which handles API calls, logging, and some post-processing
+            if hasattr(self.rag, "llm_model_func"):
+                return await self.rag.llm_model_func(prompt, system_prompt=system_prompt, history_messages=history_messages)
+            else:
+                return "LLM function not available"
+        except Exception as e:
+            logger.error(f"LLM call failed: {e}")
+            return f"LLM Error: {str(e)}"
+
+    async def query_async(self, query: str, mode: str = "mix", filter_doc_id: Optional[int] = None, top_k: int = 60) -> str:
         if not self.rag:
             return "服务未初始化"
         try:
@@ -743,8 +998,22 @@ class LightRAGService:
                 # Use "local" mode for single document focus to avoid global hallucination/noise
                 mode = "local"
             
-            param = QueryParam(mode=mode, enable_rerank=getattr(settings, "RERANK_ENABLED", False))
-            logger.info(f"LightRAG aquery: {query} (mode={mode}, filter_doc={filter_doc_id}, rerank={getattr(settings, 'RERANK_ENABLED', False)})")
+            try:
+                sig = inspect.signature(QueryParam)
+                kwargs = {"mode": mode}
+                
+                # [Feature] Configurable Top-K and Reranking
+                kwargs["top_k"] = top_k
+                
+                rerank_enabled = getattr(settings, "RERANK_ENABLED", False)
+                if "enable_rerank" in sig.parameters:
+                    kwargs["enable_rerank"] = rerank_enabled
+                elif "rerank" in sig.parameters:
+                    kwargs["rerank"] = rerank_enabled
+                param = QueryParam(**kwargs)
+            except Exception:
+                param = QueryParam(mode=mode)
+            logger.info(f"LightRAG aquery: {query} (mode={mode}, filter_doc={filter_doc_id}, top_k={top_k}, rerank={getattr(settings, 'RERANK_ENABLED', False)})")
             result = await self.rag.aquery(query, param=param)
             self.clear_runtime_vars()
             return result
@@ -764,15 +1033,85 @@ class LightRAGService:
                     data = json.load(f)
                     # LightRAG kv_store format is often { "key": { "content": "..." } }
                     new_cache = {}
+                    new_doc_map = {}
                     for k, v in data.items():
-                        if isinstance(v, dict) and "content" in v:
-                            new_cache[k] = v["content"]
+                        if isinstance(v, dict):
+                            if "content" in v:
+                                new_cache[k] = v["content"]
+                            if "file_path" in v:
+                                new_doc_map[k] = v["file_path"]
                         elif isinstance(v, str):
                             new_cache[k] = v
                     self._chunks_cache = new_cache
+                    self._chunks_doc_map = new_doc_map
                     self._chunks_mtime = mtime
             except Exception as e:
                 logger.warning(f"Failed to load chunks cache: {e}")
+
+    def search_doc_chunks(self, doc_id: int, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Search chunks restricted to a specific document ID.
+        Uses manual filtering after vector search.
+        """
+        if not self.rag:
+            self._init_rag()
+        if not self.rag:
+            return []
+            
+        # Ensure cache is loaded
+        self._load_chunks_cache()
+        
+        # Use colon to prevent partial matching (e.g. doc#1 matching doc#10)
+        marker = f"doc#{doc_id}:"
+        candidates = []
+        
+        try:
+            storage = getattr(self.rag, "chunks_vdb", None)
+            if hasattr(storage, "search"):
+                # Retrieve more candidates to allow for filtering
+                # Rule of thumb: top_k * 10 or at least 50
+                fetch_k = max(50, top_k * 10)
+                res = storage.search(query, top_k=fetch_k)
+                
+                for r in res or []:
+                    # Get ID
+                    cid = getattr(r, "id", None) or getattr(r, "__id__", None)
+                    if not cid:
+                        # Try to find ID from result dict if it's a dict
+                        if isinstance(r, dict):
+                            cid = r.get("id") or r.get("__id__")
+                    
+                    # If ID found, check metadata map
+                    if cid and cid in self._chunks_doc_map:
+                        fp = self._chunks_doc_map[cid]
+                        # Check if file_path contains doc#{doc_id}
+                        if marker in fp:
+                            # Valid chunk
+                            preview = ""
+                            try:
+                                preview = (getattr(r, "text", None) or getattr(r, "content", None) or "")
+                            except: pass
+                            
+                            # Fallback to cache if preview empty
+                            if not preview and cid in self._chunks_cache:
+                                preview = self._chunks_cache[cid]
+                                
+                            score = float(getattr(r, "score", 0.0) or 0.0)
+                            candidates.append({
+                                "id": cid,
+                                "content": preview,
+                                "score": score,
+                                "file_path": fp
+                            })
+                            
+                # Sort by score
+                candidates.sort(key=lambda x: x["score"], reverse=True)
+                return candidates[:top_k]
+                
+        except Exception as e:
+            logger.warning(f"LightRAG doc chunk search failed: {e}")
+            
+        return []
 
     def get_graph_data(self, doc: Optional[KnowledgeDocument] = None) -> Dict[str, Any]:
         import networkx as nx
@@ -826,9 +1165,9 @@ class LightRAGService:
                 keep = set()
                 for node_id, data in G.nodes(data=True):
                     attrs = data or {}
-                    fp = str(attrs.get("file_path") or "")
-                    sid = str(attrs.get("source_id") or "")
-                    if (fname and fname in fp) or (oss_name and oss_name in fp) or (marker and marker in sid):
+                    fp = str(attrs.get("file_path") or attrs.get("FILE_PATH") or "")
+                    sid = str(attrs.get("source_id") or attrs.get("SOURCE_ID") or "")
+                    if (fname and fname in fp) or (oss_name and oss_name in fp) or (marker and (marker in sid or marker in fp)):
                         keep.add(node_id)
                 G = G.subgraph(keep) if keep else nx.Graph()  # empty if none
             
@@ -937,6 +1276,7 @@ class LightRAGService:
                 logger.warning(f"Optional translation failed: {te}")
             
             out = {"nodes": nodes, "edges": edges}
+            logger.info(f"[LightRAG] Graph loaded. Nodes: {len(nodes)}, Edges: {len(edges)}")
             self._graph_cache = out
             self._graph_cache_meta = {"mtime": mtime, "ts": now, "lang": lang, "doc_id": getattr(doc, "id", None) if doc else None, "v": 2}
             return out
@@ -1071,19 +1411,30 @@ class LightRAGService:
             logger.warning(f"LightRAG chunk search failed: {e}")
         return []
 
-    async def rebuild_store(self, db: AsyncSession, exclude_filenames: Optional[List[str]] = None):
+    async def rebuild_store(self, db: AsyncSession, exclude_filenames: Optional[List[str]] = None, include_filenames: Optional[List[str]] = None, clear_existing: bool = True):
         await self.ensure_initialized(db)
         try:
             import shutil
-            if os.path.exists(self.working_dir):
-                shutil.rmtree(self.working_dir, ignore_errors=True)
-            os.makedirs(self.working_dir, exist_ok=True)
+            if clear_existing:
+                if os.path.exists(self.working_dir):
+                    logger.info(f"Clearing working directory: {self.working_dir}")
+                    # Use the backup method
+                    self._backup_and_clear_dir(Path(self.working_dir))
+                else:
+                    os.makedirs(self.working_dir, exist_ok=True)
+            
             self.rag = None
             await self.ensure_initialized(db)
             res = await db.execute(select(KnowledgeDocument).order_by(KnowledgeDocument.created_at.asc()))
             docs = res.scalars().all()
-            for d in docs:
+            logger.info(f"Found {len(docs)} documents to rebuild.")
+            
+            for i, d in enumerate(docs):
+                logger.info(f"Processing document {i+1}/{len(docs)}: {d.filename} (ID: {d.id})")
+                if include_filenames and d.filename not in include_filenames:
+                    continue
                 if exclude_filenames and d.filename and d.filename in exclude_filenames:
+                    logger.info(f"Skipping excluded file: {d.filename}")
                     continue
                 temp_path = None
                 text = ""
@@ -1100,7 +1451,8 @@ class LightRAGService:
                         if candidate.exists():
                             text = parse_local_file(str(candidate))
                     if text:
-                        self.insert_text(text, description=f"doc#{d.id}:{d.filename}")
+                        # self.insert_text(text, description=f"doc#{d.id}:{d.filename}")
+                        await self.insert_text_async(text, description=f"doc#{d.id}:{d.filename}")
                 except Exception as e:
                     logger.warning(f"Rebuild insert failed for {d.id}: {e}")
                 finally:

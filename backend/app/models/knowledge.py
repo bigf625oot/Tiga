@@ -31,4 +31,5 @@ class KnowledgeChat(Base):
     role = Column(String) # 'user' or 'assistant'
     content = Column(Text)
     sources = Column(JSON, nullable=True)
+    session_id = Column(String, index=True, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

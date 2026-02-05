@@ -1,15 +1,15 @@
+
 <template>
-  <div class="h-full flex flex-col bg-white rounded-2xl  overflow-hidden frame664">
-    <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col p-6 gap-4">
-        
-        <!-- Header / Tabs -->
-        <div class="flex flex-col gap-6">
-            <div class="flex items-center gap-2">
-              <h2 class="text-xl font-bold text-[#171717]">知识库</h2>
-            </div>
-            
-            <div class="flex items-center gap-8 pb-0">
+  <div class="h-full flex flex-col bg-white">
+    <!-- Header -->
+    <div class="px-10 pt-12 pb-6">
+      <div class="flex flex-col gap-6">
+        <div>
+          <h2 class="text-4xl font-bold text-[#1D1D1F] tracking-tight mb-2">知识库</h2>
+          <p class="text-[#86868B] text-lg font-medium">企业级知识沉淀与管理。</p>
+        </div>
+
+        <div class="flex items-center gap-8 pb-0">
                 <div 
                     class="cursor-pointer pb-2 text-base font-medium transition-colors relative"
                     :class="activeTab === 'shared' ? 'text-[#0056e8]' : 'text-[#858b9b]'"
@@ -26,14 +26,19 @@
                     个人
                     <div v-if="activeTab === 'personal'" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0056e8]"></div>
                 </div>
-            </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-hidden px-10 pb-10 bg-white">
+      <div class="h-full flex flex-col">
 
         <!-- Toolbar -->
-        <div class="flex justify-between items-center mt-2">
+        <div class="flex justify-between items-center mb-4">
             <!-- Left: Search and File Count/Title -->
             <div class="flex items-center gap-4 flex-1">
-                 <span class="text-base font-medium text-[#2a2f3c]">全部文件</span>
+                 <span class="text-base font-medium text-[#2a2f3c] cursor-pointer hover:text-blue-600 transition-colors" @click="viewGlobalGraph" title="查看全局知识图谱">全部文件</span>
                  <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white w-[330px]">
                      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                      <input type="text" placeholder="请输入名称或关键词进行搜索" class="flex-1 text-sm outline-none text-[#2a2f3c] placeholder-[#bcc1cd]">
@@ -89,7 +94,7 @@
             <Loading v-if="loading" type="skeleton-list" />
             <div v-else class="min-w-full">
                 <!-- Table Header -->
-                <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded px-3 text-xs font-medium text-[#2a2f3c]">
+                <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded px-3 text-[14px] font-medium text-[#2a2f3c]">
                     <div class="flex-1 flex items-center gap-2 relative">
                         <span>文件名称</span>
                         <div class="flex flex-col gap-0.5">
@@ -118,20 +123,20 @@
 
                 <!-- Table Body -->
                 <div class="flex flex-col">
-                    <div v-if="files.length === 0 && !uploading" class="py-12 flex flex-col items-center justify-center text-slate-400 text-sm">
+                    <div v-if="files.length === 0 && !uploading" class="py-12 flex flex-col items-center justify-center text-slate-400 text-[14px]">
                         暂无文件
                     </div>
                     
                     <div 
                         v-for="file in files" 
                         :key="file.id" 
-                        class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 px-3 text-sm text-[#2a2f3c]"
+                        class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 px-3 text-[14px] text-[#2a2f3c]"
                     >
                         <!-- Name -->
                         <div class="flex-1 flex items-center gap-2 overflow-hidden">
-                             <!-- File Icon Placeholder -->
-                             <div class="w-6 h-6 flex items-center justify-center bg-white rounded">
-                                 <svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                             <!-- File Icon -->
+                             <div class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                                 <img :src="getFileIcon(file.filename)" class="w-full h-full object-contain" alt="icon" />
                              </div>
                              <span class="truncate">{{ file.filename }}</span>
                         </div>
@@ -220,165 +225,8 @@
                   </span>
                 </div>
             </template>
-            <div class="flex h-[80vh] overflow-hidden">
-                <!-- Left: Graph -->
-                <div class="flex-1 border-r border-slate-200 pr-4 relative">
-                    <div v-if="graphLoading" class="h-full flex flex-col items-center justify-center p-8 gap-4">
-                        <!-- Skeleton for Graph -->
-                        <div class="w-full h-full bg-slate-50 rounded-xl animate-pulse relative overflow-hidden">
-                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                                <div class="w-16 h-16 rounded-full bg-slate-200 mb-4"></div>
-                                <div class="w-32 h-4 bg-slate-200 rounded"></div>
-                            </div>
-                            <!-- Random Nodes -->
-                            <div class="absolute top-1/4 left-1/4 w-12 h-12 rounded-full bg-slate-200"></div>
-                            <div class="absolute bottom-1/4 right-1/4 w-10 h-10 rounded-full bg-slate-200"></div>
-                            <div class="absolute top-1/3 right-1/3 w-8 h-8 rounded-full bg-slate-200"></div>
-                        </div>
-                    </div>
-                    <div v-else class="h-full">
-                        <div v-if="graphReason" class="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-xs">
-                            {{ graphReason }}
-                        </div>
-                        <GraphViewer ref="graphViewerRef" :nodes="graphNodes" :edges="graphEdges" :hiddenTypes="hiddenTypes" :colorMap="colorMap" :reload="reloadGraph" :scope="graphScope" :switchScope="switchGraphScope" />
-                    </div>
-                </div>
-
-                <!-- Right: Chat -->
-                <div class="w-[400px] flex flex-col pl-4 bg-white relative">
-                    
-                    <!-- Header for Chat -->
-                    <div class="py-3 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
-                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <span class="w-1 h-4 bg-blue-600 rounded-full"></span>
-                            知识问答
-                        </h3>
-                        <button 
-                            v-if="chatMessages.length > 0"
-                            @click="confirmClearChatHistory" 
-                            class="text-xs text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-red-50"
-                            title="清理问答记录"
-                        >
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            清理记录
-                        </button>
-                    </div>
-
-                    <!-- Messages Area -->
-                    <div class="flex-1 overflow-y-auto space-y-6 pr-2 mb-4 pt-4" ref="chatContainer">
-                        <!-- Empty State -->
-                        <div v-if="chatMessages.length === 0" class="h-full flex flex-col items-center justify-center text-center px-6">
-                            <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                                <svg class="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                </svg>
-                            </div>
-                            <h3 class="text-base font-medium text-slate-800 mb-2">文档问答助手</h3>
-                            <p class="text-sm text-slate-500 leading-relaxed">
-                                我已阅读完当前文档，您可以问我任何关于文档内容的问题，我会结合知识图谱为您解答。
-                            </p>
-                            <div class="mt-8 grid grid-cols-1 gap-2 w-full">
-                                <div class="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs rounded-lg cursor-pointer transition-colors border border-slate-100 text-left" @click="chatInput = '这份文档主要讲了什么？'; sendChatMessage()">
-                                    这份文档主要讲了什么？
-                                </div>
-                                <div class="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs rounded-lg cursor-pointer transition-colors border border-slate-100 text-left" @click="chatInput = '有哪些关键实体和关系？'; sendChatMessage()">
-                                    有哪些关键实体和关系？
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Messages -->
-                        <div v-for="(msg, index) in chatMessages" :key="index" class="flex flex-col gap-2 group animate-fade-in-up">
-                            <!-- User Message -->
-                            <div v-if="msg.role === 'user'" class="flex justify-end">
-                                <div class="px-4 py-2.5 bg-blue-600 text-white rounded-2xl rounded-tr-sm text-sm shadow-sm max-w-[90%] leading-relaxed">
-                                    {{ msg.content }}
-                                </div>
-                            </div>
-                            
-                            <!-- Assistant Message -->
-                            <div v-else class="flex gap-3">
-                                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
-                                    <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                </div>
-                                <div class="flex flex-col gap-2 max-w-[90%]">
-                                    <div 
-                                        class="p-3 bg-slate-50 text-slate-800 rounded-2xl rounded-tl-sm text-sm leading-relaxed border border-slate-100 markdown-content"
-                                        v-html="renderMarkdown(msg.content)"
-                                        @click="handleCitationClick($event, msg)"
-                                    >
-                                    </div>
-                                    
-                                    <!-- Sources -->
-                                    <div v-if="msg.sources && msg.sources.length > 0" class="flex flex-col gap-1 mt-1">
-                                        <div class="text-[10px] text-slate-400 font-medium pl-1">参考来源</div>
-                                        <div class="flex flex-wrap gap-1.5">
-                                            <div 
-                                                v-for="(src, idx) in msg.sources.slice(0, 5)" 
-                                                :key="idx"
-                                                @click="locateCitationInGraph(msg, idx)"
-                                                class="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] text-slate-600 truncate max-w-[260px] hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer"
-                                                :title="src.content"
-                                            >
-                                                <span class="mr-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-bold font-din">
-                                                    {{ idx + 1 }}
-                                                </span>
-                                                <span class="mr-1 px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-100">
-                                                    {{ sourceLabel(src.source) }}
-                                                </span>
-                                                <span class="font-medium text-slate-700">
-                                                    {{ (src.title || src.content || '').replace(/实体: |属性: |关系: /g, '').replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '').trim().slice(0, 50) }}{{ (src.title || src.content || '').length > 50 ? '...' : '' }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Loading State -->
-                        <div v-if="chatLoading" class="flex gap-3">
-                            <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
-                                <svg class="w-4 h-4 text-indigo-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                            </div>
-                            <div class="flex items-center gap-1 p-3 bg-slate-50 rounded-2xl rounded-tl-sm w-fit">
-                                <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
-                                <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                                <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Input Area -->
-                    <div class="mt-auto pt-4 border-t border-slate-100 bg-white">
-                        <div class="relative">
-                            <input 
-                                v-model="chatInput" 
-                                @keyup.enter="sendChatMessage"
-                                type="text" 
-                                placeholder="输入问题..." 
-                                class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
-                                :disabled="chatLoading"
-                            >
-                            <button 
-                                @click="sendChatMessage"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm group"
-                                :disabled="chatLoading || !chatInput.trim()"
-                            >
-                                <svg class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="text-[10px] text-center text-slate-300 mt-2 pb-1">
-                            由混合检索引擎提供支持 (BM25 + Vector + Graph)
-                        </div>
-                    </div>
-                </div>
+            <div class="h-[80vh]">
+                <KnowledgeGraphView :doc-id="currentDocId" :initial-scope="currentDocId ? 'doc' : 'global'" />
             </div>
         </a-modal>
 
@@ -401,6 +249,7 @@
                 />
             </div>
         </a-modal>
+      </div>
     </div>
   </div>
 </template>
@@ -412,103 +261,7 @@ import { message, Modal } from 'ant-design-vue';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { marked } from 'marked';
 import Loading from './common/Loading.vue';
-import GraphViewer from './common/GraphViewer.vue';
-
-// Markdown rendering configuration
-const renderer = new marked.Renderer();
-// Disable default text citation handling to avoid double processing
-renderer.text = ({ text }) => text;
-
-marked.use({
-    renderer: renderer,
-    breaks: true,
-    gfm: true
-});
-
-const renderMarkdown = (content) => {
-    if (!content) return '';
-    try {
-        let inputText = (content || '').trim();
-        
-        // [Fix] Handle cases where bold text at the start of a line (possibly indented) 
-        // is followed by a colon, which can break some Markdown parsers (like marked).
-        inputText = inputText.replace(/^(\s*)\*\*([^*]+)\*\*([:：])/gm, '$1**$2** $3');
-
-        // [Feature] Support in-text entity citations: [[Entity: Name]]
-        inputText = inputText.replace(/\[\[Entity:\s*(.*?)\]\]/g, '<span class="entity-citation" data-entity="$1">$1</span>');
-
-        // [Cleanup] Remove raw document references like doc#3:xxxx...
-        inputText = inputText.replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '');
-        
-        // [Cleanup] Remove the trailing "References" or "Sources" section aggressively
-        // We split the text by the reference header and only keep the first part.
-        const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|引用|引用文献|Reference Document List)(:|\：)?(?:\*\*)?\s*(\n+|$)/gi;
-        inputText = inputText.split(refHeaderPattern)[0];
-
-        // [Cleanup] Also remove any trailing lines that look like [n] or [n] something
-        let lines = inputText.split('\n');
-        while (lines.length > 0 && (/^\s*\[\d+\]\s*.*$/.test(lines[lines.length - 1]) || !lines[lines.length - 1].trim())) {
-            lines.pop();
-        }
-        inputText = lines.join('\n');
-
-        // [Fix] Handle multi-layered brackets like [[[1]]], [[ [1] ]], or [[Source: 1]]
-        // Consolidate all citation patterns into a single unified format [n]
-        // This regex handles multiple brackets and optional spaces around the number and "Source:" prefix
-        inputText = inputText.replace(/\[+[\s\t]*(?:Source:[\s\t]*)?(\d+)[\s\t]*\]+/gi, '[$1]');
-
-        // [Cleanup] Trim multiple newlines
-        inputText = inputText.replace(/\n{3,}/g, '\n\n').trim();
-
-        // Final rendering of citations [n]
-        inputText = inputText.replace(/\[(\d+)\]/g, (match, num) => {
-            return `<span class="citation-icon" data-idx="${parseInt(num)-1}" title="点击在图谱中定位">${match}</span>`;
-        });
-
-        return marked.parse(inputText);
-    } catch (e) {
-        console.error('Markdown parse error:', e);
-        return content;
-    }
-};
-
-const handleCitationClick = (e, msg) => {
-    const target = e.target;
-    if (target && target.classList.contains('citation-icon')) {
-        const idx = parseInt(target.getAttribute('data-idx') || '-1');
-        if (idx >= 0) {
-            locateCitationInGraph(msg, idx);
-        }
-    }
-};
-
-const locateCitationInGraph = (msg, sourceIdx) => {
-    // Get the source from the provided message
-    if (!msg || !msg.sources || !msg.sources[sourceIdx]) return;
-    
-    const source = msg.sources[sourceIdx];
-    const content = source.content || '';
-    
-    // Find nodes in the graph that are mentioned in this source chunk
-    if (!graphNodes.value) return;
-    const matchingNodeIds = Object.keys(graphNodes.value).filter(id => {
-        const node = graphNodes.value[id];
-        const name = node.name || id;
-        return content.includes(name);
-    });
-    
-    if (matchingNodeIds.length > 0) {
-        // Pick the first match or use some heuristic
-        const targetNodeId = matchingNodeIds[0];
-        if (graphViewerRef.value) {
-            graphViewerRef.value.focusNode(targetNodeId);
-        }
-    } else {
-        message.info('未在当前可见图谱中找到相关实体');
-    }
-};
-
-const graphViewerRef = ref(null);
+import KnowledgeGraphView from './KnowledgeGraphView.vue';
 
 const files = ref([]);
 const uploading = ref(false);
@@ -548,242 +301,19 @@ const cleaningVector = ref(false);
 
 // Graph State
 const graphVisible = ref(false);
-const graphNodes = ref({});
-const graphEdges = ref({});
 const currentGraphTitle = ref('');
-const graphLoading = ref(false);
 const currentDocId = ref(null);
-const graphReason = ref('');
-const graphScope = ref('doc');
-const hiddenTypes = ref([]);
-const colorMap = ref({});
-const colorChips = ref([]);
-const baseColorMap = {
-  "人": "#4F81BD",
-  "组织": "#9F4C7C",
-  "事件": "#C0504D",
-  "文档": "#9BBB59",
-  "资产": "#8064A2"
-};
-const knownTypeOrder = ["人","组织","事件","文档","资产"];
 
-// Chat State
-const chatMessages = ref([]);
-const chatInput = ref('');
-const chatLoading = ref(false);
-const chatContainer = ref(null);
-
-const fetchChatHistory = async (docId) => {
-    try {
-        const res = await api.get(`/knowledge/${docId}/qa/history`);
-        chatMessages.value = res.data;
-        // Scroll to bottom after loading history
-        setTimeout(() => {
-            if (chatContainer.value) chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
-        }, 100);
-    } catch (e) {
-        console.error('Failed to fetch chat history:', e);
-    }
-};
-
-const confirmClearChatHistory = () => {
-    if (!currentDocId.value || chatMessages.value.length === 0) return;
-    
-    Modal.confirm({
-        title: '确定要清空问答记录吗？',
-        icon: createVNode(ExclamationCircleOutlined),
-        content: '清理后将无法找回此文档的历史问答，请谨慎操作。',
-        okText: '确认清理',
-        cancelText: '取消',
-        onOk: async () => {
-            try {
-                await api.delete(`/knowledge/${currentDocId.value}/qa/history`);
-                chatMessages.value = [];
-                message.success('记录已清空');
-            } catch (e) {
-                message.error('清理失败：' + (e.response?.data?.detail || e.message));
-            }
-        }
-    });
-};
-
-const viewGraph = async (file) => {
+const viewGraph = (file) => {
     currentGraphTitle.value = file.filename;
     currentDocId.value = file.id;
     graphVisible.value = true;
-    graphLoading.value = true;
-    graphNodes.value = {};
-    graphEdges.value = {};
-    graphReason.value = '';
-    
-    // Reset Chat and load history
-    chatMessages.value = [];
-    chatInput.value = '';
-    fetchChatHistory(file.id);
-    
-    try {
-        const url = graphScope.value === 'global' ? `/knowledge/graph` : `/knowledge/${file.id}/graph`;
-        const res = await api.get(url);
-        if (res.data) {
-            graphNodes.value = res.data.nodes || {};
-            graphEdges.value = res.data.edges || {};
-            graphReason.value = mapGraphReason(res.data.reason || '');
-            assignTypesFromAttributes();
-            rebuildFilterFromGraph();
-            const nid = Object.keys(graphNodes.value).length;
-            const eid = Object.keys(graphEdges.value).length;
-            const trace = (res.config || {}).__trace;
-            console.info('[KB][GRAPH]', trace?.id, file.id, graphScope.value, { nodes: nid, edges: eid, reason: graphReason.value });
-        }
-    } catch (e) {
-        console.error(e);
-        message.error("获取图谱数据失败: " + (e.response?.data?.detail || e.message));
-        // Mock data for demo if failed (optional, but good for user experience during dev)
-        // In real prod, maybe show empty state
-    } finally {
-        graphLoading.value = false;
-    }
 };
 
-const switchGraphScope = async (scope) => {
-    if (graphScope.value === scope) return;
-    graphScope.value = scope;
-};
-
-const typeGuess = (n) => {
-  const t = (n.type || '').toLowerCase();
-  if (t.includes('person') || t.includes('user')) return '人';
-  if (t.includes('org') || t.includes('company') || t.includes('team')) return '组织';
-  if (t.includes('event') || t.includes('incident')) return '事件';
-  if (t.includes('doc') || t.includes('file') || t.includes('page')) return '文档';
-  if (t.includes('asset') || t.includes('resource')) return '资产';
-  return '文档';
-}
-const assignTypesFromAttributes = () => {
-  Object.keys(graphNodes.value || {}).forEach(id => {
-    const n = graphNodes.value[id];
-    if (!n.type) n.type = typeGuess(n);
-  });
-}
-const rebuildFilterFromGraph = () => {
-  const typesPresent = new Set();
-  Object.values(graphNodes.value || {}).forEach(n => {
-    const t = n.type || typeGuess(n);
-    if (t) typesPresent.add(t);
-  });
-  const ordered = Array.from(typesPresent).sort((a,b) => {
-    const ia = knownTypeOrder.indexOf(a);
-    const ib = knownTypeOrder.indexOf(b);
-    if (ia !== -1 && ib !== -1) return ia - ib;
-    if (ia !== -1) return -1;
-    if (ib !== -1) return 1;
-    return a.localeCompare(b, 'zh-CN');
-  });
-  const cmap = {};
-  const chips = [];
-  ordered.forEach(t => {
-    const col = baseColorMap[t] || "#6b7280";
-    cmap[t] = col;
-    chips.push({ key: t, label: t, bg: col, fg: "#fff" });
-  });
-  colorMap.value = cmap;
-  colorChips.value = chips;
-  hiddenTypes.value = hiddenTypes.value.filter(t => typesPresent.has(t));
-}
-const toggleType = (key) => {
-  const i = hiddenTypes.value.indexOf(key);
-  if (i >= 0) hiddenTypes.value.splice(i, 1);
-  else hiddenTypes.value.push(key);
-}
-const resetFilter = () => {
-  hiddenTypes.value = [];
-}
-
-// Ensure scope toggle always refreshes graph when modal is open
-watch(graphScope, async (scope) => {
-  if (!graphVisible.value || !currentDocId.value) return;
-  graphLoading.value = true;
-  graphNodes.value = {};
-  graphEdges.value = {};
-  graphReason.value = '';
-  try {
-    const url = scope === 'global' ? `/knowledge/graph` : `/knowledge/${currentDocId.value}/graph`;
-    const res = await api.get(url);
-    if (res.data) {
-      graphNodes.value = res.data.nodes || {};
-      graphEdges.value = res.data.edges || {};
-      graphReason.value = mapGraphReason(res.data.reason || '');
-      assignTypesFromAttributes();
-      rebuildFilterFromGraph();
-    }
-  } catch (e) {
-    message.error("获取图谱数据失败: " + (e.response?.data?.detail || e.message));
-  } finally {
-    graphLoading.value = false;
-  }
-})
-const reloadGraph = async () => {
-  if (!currentDocId.value) return;
-  graphLoading.value = true;
-  graphNodes.value = {};
-  graphEdges.value = {};
-  graphReason.value = '';
-  try {
-    const url = graphScope.value === 'global' ? `/knowledge/graph` : `/knowledge/${currentDocId.value}/graph`;
-    const res = await api.get(url);
-    if (res.data) {
-      graphNodes.value = res.data.nodes || {};
-      graphEdges.value = res.data.edges || {};
-      graphReason.value = mapGraphReason(res.data.reason || '');
-      assignTypesFromAttributes();
-      rebuildFilterFromGraph();
-    }
-  } catch (e) {
-    message.error("获取图谱数据失败: " + (e.response?.data?.detail || e.message));
-  } finally {
-    graphLoading.value = false;
-  }
-};
-const sendChatMessage = async () => {
-    if (!chatInput.value.trim() || !currentDocId.value) return;
-    
-    const query = chatInput.value;
-    chatMessages.value.push({ role: 'user', content: query });
-    chatInput.value = '';
-    chatLoading.value = true;
-    
-    // Auto scroll to bottom
-    setTimeout(() => {
-        if (chatContainer.value) chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
-    }, 100);
-    
-    try {
-        const history = chatMessages.value.slice(0, -1).map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`);
-        const res = await api.post(`/knowledge/${currentDocId.value}/qa`, { 
-            query, 
-            history,
-            scope: graphScope.value // Use the current graph scope (doc or global)
-        });
-        chatMessages.value.push({ 
-            role: 'assistant', 
-            content: res.data.answer,
-            sources: res.data.sources 
-        });
-        const trace = (res.config || {}).__trace;
-        const ansLen = (res.data?.answer || '').length;
-        const srcLen = (res.data?.sources || []).length;
-        console.info('[KB][QA]', trace?.id, currentDocId.value, { queryLen: query.length, answerLen: ansLen, sources: srcLen });
-    } catch (e) {
-        console.error(e);
-        const trace = (e.config || {}).__trace;
-        console.error('[KB][QA][ERR]', trace?.id, currentDocId.value, e.response?.status, e.message, e.response?.data);
-        chatMessages.value.push({ role: 'assistant', content: "Error: " + (e.response?.data?.detail || e.message) });
-    } finally {
-        chatLoading.value = false;
-        setTimeout(() => {
-            if (chatContainer.value) chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
-        }, 100);
-    }
+const viewGlobalGraph = () => {
+    currentGraphTitle.value = "全局知识图谱";
+    currentDocId.value = null; // null means global scope
+    graphVisible.value = true;
 };
 
 const fetchFiles = async () => {
@@ -953,27 +483,18 @@ const formatDate = (dateStr) => {
     return d.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
 };
 
+const getFileIcon = (filename) => {
+    if (!filename) return '/default.svg';
+    const ext = filename.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return '/PDF.svg';
+    if (ext === 'doc' || ext === 'docx') return '/docx .svg'; // Note: filename in public is 'docx .svg'
+    if (ext === 'txt') return '/txt.svg';
+    // Add more mappings if needed
+    return '/default.svg';
+};
+
 onMounted(fetchFiles);
 onUnmounted(stopPolling);
-
-const mapGraphReason = (reason) => {
-    if (!reason) return '';
-    if (reason === 'document_not_found') return '未找到文档或文档已被删除';
-    if (reason === 'empty_content_or_not_available') return '文档内容为空或不可获取，无法生成图谱';
-    if (reason === 'no_significant_cooccurrence') return '未检测到足够的词共现关系，无法生成图谱';
-    if (reason === 'fallback_disabled') return '图谱生成已禁用';
-    if (reason.startsWith('error:')) return '系统错误：' + reason.replace('error:', '');
-    return '图谱不可用';
-};
-
-const sourceLabel = (type) => {
-    switch (type) {
-        case 'graph': return '图谱';
-        case 'vector': return '文档'; // Changed from '向量' to '文档' for better user understanding
-        case 'bm25': return '文本';
-        default: return '来源';
-    }
-};
 </script>
 
 <style scoped>

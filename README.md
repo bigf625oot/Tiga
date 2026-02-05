@@ -1,213 +1,159 @@
-# Taichi Agent - 智能体编排与知识管理平台
+# Taichi Agent - 智能体编排与数据智能平台
 
-Taichi Agent 是一个现代化的智能体（Agent）管理与编排平台，旨在帮助开发者和企业轻松构建、管理和部署基于 LLM 的 AI 智能体。
+Taichi Agent 是一个企业级 AI 智能体（Agent）管理与编排平台，旨在帮助开发者和企业快速构建基于 LLM 的智能应用。
 
-本项目采用了前后端分离架构，集成了 **Agno (原 Phidata)** 智能体框架、**DeepSeek/OpenAI** 模型，并提供可插拔的 **LangChain 风格混合检索管线**（BM25 + 向量 + 图谱 + 重排）；可选接入 **Neo4j** 图数据库与 **N8N** 工作流工具，提供一站式的智能体解决方案。
-
----
-
-## ✨ 核心特性
-
-*   **🤖 智能体管理 (Agent Management)**
-    *   可视化创建、编辑和管理 AI 智能体。
-    *   支持多种角色（Persona）配置和系统提示词（System Prompt）定制。
-    *   基于 **Agno** 框架，具备强大的工具调用（Function Calling）能力。
-
-*   **🧠 增强型知识库 (Knowledge Base)**
-    *   **混合检索管线**：BM25 关键词检索 + 向量相似度检索 + 图谱检索，支持 **CrossEncoder** 重排
-    *   **向量后端可插**：默认 LanceDB；可切换 **Qdrant** 或 **Milvus**（私有化部署）
-    *   **图谱后端可插**：默认本地分词共现图；可切换 **Neo4j**，并通过大模型进行实体与关系抽取入库
-    *   **模型管理集成**：嵌入与生成模型从数据库动态加载，支持 DeepSeek / OpenAI / 私有兼容接口
-    *   **可视化**：知识图谱前端展示，并在不可用时返回明确原因（不伪造数据）
-
-*   **🔄 工作流编排 (Workflow Automation)**
-    *   集成 **N8N** 自动化平台，允许智能体触发复杂的工作流。
-    *   通过 Webhook 实现 Agent 与 N8N 的无缝连接，扩展 Agent 的执行边界（如发送邮件、操作 CRM、数据抓取等）。
-
-*   **💬 智能问答 (Smart QA)**
-    *   提供类似 ChatGPT 的对话界面。
-    *   支持多模态交互（文本/图片/文件）。
-    *   实时流式响应（Streaming Response）。
+本项目采用前沿的 **Agno (原 Phidata)** 框架，融合了 **LightRAG** 知识图谱检索、**Vanna** Text-to-SQL 数据分析以及 **MCP (Model Context Protocol)** 协议，提供从非结构化文档问答到结构化数据分析的全栈解决方案。
 
 ---
 
-## 🏗️ 知识库服务流程 (Sequence Diagram)
+## ✨ 核心特性 (Core Features)
 
-系统采用动态配置的知识库服务，支持从数据库加载嵌入模型配置，并提供可插拔的混合检索与图谱生成能力。
+### 1. 🤖 强大的智能体编排
+*   **多模态 Agent**: 基于 **Agno** 框架，支持 OpenAI、DeepSeek 等主流模型。
+*   **角色与工具**: 可视化配置 Agent 角色 (Persona)、系统提示词 (System Prompt) 及工具 (Tools)。
+*   **MCP 协议支持**: 率先支持 **Model Context Protocol (MCP)**，实现跨应用上下文与工具共享。
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant User as 用户 (Frontend)
-    participant API as Backend API
-    participant KBService as KnowledgeBaseService
-    participant DB as 数据库 (SQLite/PG)
-    participant VDB as 向量库 (LanceDB/Qdrant/Milvus)
-    participant Neo4j as 图数据库 (可选)
-    participant Embedder as 嵌入模型 (OpenAI/DeepSeek/私有)
-    participant Pipeline as 检索管线 (LangChain 风格)
+### 2. 🧠 增强型混合检索 (Hybrid RAG)
+*   **LightRAG 集成**: 内置 **LightRAG (HKU)**，实现基于图谱的高精度检索，有效解决复杂实体关系问答。
+*   **混合检索管线**: 结合 **BM25 关键词** + **向量语义** + **知识图谱** 三路召回，并通过 CrossEncoder 重排。
+*   **灵活后端**:
+    *   **向量库**: 默认 LanceDB (嵌入式)，支持 Qdrant, Milvus (生产环境)。
+    *   **图数据库**: 默认 NetworkX (本地)，支持 Neo4j (企业级)。
 
-    %% 1. 启动与模型加载
-    API->>KBService: reload_config(db)
-    KBService->>DB: 查询活跃的嵌入模型
-    DB-->>KBService: 返回模型配置
-    KBService->>Embedder: 初始化嵌入器
-    KBService->>VDB: 初始化/连接向量集合
+### 3. 📊 数据智能与 BI (Data Intelligence)
+*   **Text-to-SQL**: 集成 **Vanna.ai**，支持自然语言查询 SQL 数据库 (MySQL, PG, SQLite)。
+*   **数据源管理**: 统一管理数据库连接、API 数据源。
+*   **指标与看板**: 自定义业务指标 (Indicators)，支持自动生成可视化图表。
 
-    %% 2. 上传与索引
-    User->>API: 上传文档
-    API->>KBService: index_document(file_path)
-    KBService->>Embedder: 生成嵌入
-    KBService->>VDB: 写入向量与元数据
-    alt GRAPH_BACKEND = neo4j
-        API->>Embedder: 获取文本
-        API->>API: 调用 LLM 抽取实体与关系
-        API->>Neo4j: Upsert 节点与边
-    else GRAPH_BACKEND = local
-        API->>API: 生成分词共现图
-    end
-    API-->>User: 索引完成
-
-    %% 3. 问答与混合检索
-    User->>API: 发送提问
-    API->>Pipeline: BM25 + Vector + Graph 检索
-    Pipeline->>Pipeline: CrossEncoder 重排
-    Pipeline-->>API: Top-N 上下文
-    API-->>User: 基于上下文生成回答（按模型管理配置）
-```
+### 4. 🔄 自动化与扩展
+*   **N8N 工作流**: 无缝集成 N8N，支持 Agent 触发复杂业务流程 (Webhook)。
+*   **用户脚本 (User Scripts)**: 支持挂载自定义 Python 脚本，灵活扩展 Agent 能力。
+*   **多存储支持**: 兼容 AWS S3 及 Aliyun OSS 对象存储。
 
 ---
 
-## 🛠️ 技术栈
+## 🛠️ 技术栈 (Tech Stack)
 
-### 前端 (Frontend)
-*   **框架**: Vue 3 + Vite
-*   **UI 组件库**: Ant Design Vue 4.0
-*   **样式**: Tailwind CSS 3.3
-*   **可视化**: v-network-graph (知识图谱展示)
-*   **状态管理**: Pinia
-
-### 后端 (Backend)
-*   **框架**: FastAPI (Python 3.10+)
-*   **Agent 框架**: Agno (Phidata)
-*   **编排**: LangChain 风格检索管线
-*   **向量库**: LanceDB（默认）、Qdrant（可选）、Milvus（可选）
-*   **图数据库**: Neo4j（可选，默认本地分词共现）
-*   **重排**: sentence-transformers CrossEncoder / 可扩展 ColBERT
-*   **数据库**: PostgreSQL/SQLite（业务数据）
-*   **缓存/队列**: Redis
-*   **ORM**: SQLAlchemy + AsyncPG
+| 模块 | 技术组件 |
+| :--- | :--- |
+| **Backend** | **FastAPI**, **Agno**, **LightRAG**, **Vanna**, SQLAlchemy, Celery/APScheduler |
+| **Frontend** | **Vue 3**, **Vite**, **Element Plus**, TailwindCSS, Pinia |
+| **Vector DB** | LanceDB (Default), Qdrant, Milvus |
+| **Graph DB** | NetworkX (Local), Neo4j |
+| **Storage** | Local FS, S3, Aliyun OSS |
 
 ---
 
-## 🚀 快速开始
+## 💻 环境配置与启动
 
-### 1. 环境准备
-确保您的开发环境已安装以下工具：
-*   **Python 3.10+**
-*   **Node.js 18+**
-*   **Docker** (用于运行 Graphiti, N8N, Redis 等服务)
-*   **PostgreSQL** (或使用 SQLite 开发)
+为了确保在不同操作系统上顺利运行，请仔细阅读以下环境配置差异：
 
-### 2. 后端配置与启动
+### 1. Python 虚拟环境
 
-进入后端目录并创建虚拟环境：
+*   **macOS / Linux**:
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+*   **Windows (PowerShell)**:
+    ```powershell
+    python -m venv venv
+    .\venv\Scripts\activate
+    ```
+    > **注意**: 如遇权限错误，请执行 `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`。
+
+### 2. 依赖安装注意事项
+
+*   **Windows 用户**:
+    *   安装 `lancedb`, `numpy` 等库通常需要 **Microsoft Visual C++ 14.0+ Build Tools**。
+    *   请确保安装了 "Desktop development with C++" 工作负载。
+*   **macOS 用户**:
+    *   建议安装 `xcode-select --install`。
+
+---
+
+## 🚀 快速开始 (Quick Start)
+
+### 1. 启动后端 (Backend)
+
 ```bash
 cd backend
-python3 -m venv venv
+
+# 1. 激活虚拟环境
 source venv/bin/activate  # macOS/Linux
-# venv\Scripts\activate   # Windows
-```
+# .\venv\Scripts\activate # Windows
 
-安装依赖：
-```bash
+# 2. 安装依赖
 pip install -r requirements.txt
-```
 
-配置环境变量：
-在 `backend` 目录下创建 `.env` 文件，参考以下配置：
+# 3. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填入 API Key 和数据库配置
 
-```ini
-# --- 基础配置 ---
-PROJECT_NAME="Taichi Agent"
-USE_SQLITE=True
-# POSTGRES_SERVER=localhost
-
-# --- 模型服务 (DeepSeek / OpenAI) ---
-OPENAI_API_KEY=sk-xxxx
-DEEPSEEK_API_KEY=sk-xxxx
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-
-# --- 检索后端选择 ---
-VECTOR_BACKEND=lancedb    # lancedb | qdrant | milvus
-GRAPH_BACKEND=local       # local | neo4j
-RERANK_ENABLED=True
-RERANK_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
-
-# --- Qdrant ---
-QDRANT_URL=http://localhost:6333
-# QDRANT_API_KEY=xxxx
-QDRANT_COLLECTION=kb_chunks
-
-# --- Milvus ---
-MILVUS_HOST=127.0.0.1
-MILVUS_PORT=19530
-MILVUS_COLLECTION=kb_chunks
-
-# --- Neo4j ---
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=password
-```
-
-启动后端服务：
-```bash
+# 4. 启动服务
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 3. 前端配置与启动
+### 2. 启动前端 (Frontend)
 
-进入前端目录：
 ```bash
 cd frontend
-npm install
-```
 
-启动开发服务器：
-```bash
+# 1. 安装依赖
+npm install
+
+# 2. 启动开发服务器
 npm run dev
 ```
-访问浏览器：`http://localhost:5173`
+访问: `http://localhost:5173`
 
-### 4. 启动外部服务 (Neo4j & N8N， 可选)
+### 3. (可选) Docker 服务依赖
+如果使用高级组件 (Qdrant, Neo4j)，请使用 Docker 启动：
 
-为了完整体验知识图谱和工作流功能，建议使用 Docker 启动相关服务。
-
-**启动 Neo4j (图数据库):**
 ```bash
+# Neo4j (Graph DB)
 docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
-```
-启用 `.env` 中 `GRAPH_BACKEND=neo4j` 后，系统会在索引后台任务中通过大模型抽取实体/关系并写入 Neo4j。
 
-**启动 N8N (工作流):**
-```bash
-docker run -it --rm --name n8n -p 5678:5678 -v ~/.n8n:/home/node/.n8n n8nio/n8n
+# Qdrant (Vector DB)
+docker run -d --name qdrant -p 6333:6333 qdrant/qdrant
 ```
 
 ---
 
-## 📖 使用指南
+## 🔍 系统自检 (Health Checks)
 
-1.  **模型配置**: 进入「模型管理」，添加/激活嵌入与生成模型（DeepSeek / OpenAI）
-2.  **后端选择**: 在 `.env` 配置向量与图谱后端（如 Qdrant/Milvus/Neo4j）
-3.  **知识库上传**: 在「知识库」页面上传文档；系统按后端写入向量；若启用 Neo4j，将通过大模型抽取实体/关系并入库
-4.  **图谱查看**: 在前端图谱弹窗查看；若不可用会显示明确原因
-5.  **开始对话**: 在「智能问答」界面提问；系统使用混合检索 + 重排输出 Top-N 上下文并生成回答
+系统启动时会自动执行 **混合检查 (Mixed Check)**，确保 RAG 组件正常：
+
+1.  **Vector Check**: 验证 LanceDB/Qdrant 读写权限及集合状态。
+2.  **Graph Check**: 验证 LightRAG 本地索引或 Neo4j 连通性。
+3.  **Model Check**: 发送 Probe Token 验证 LLM/Embedding API Key 有效性。
 
 ---
+全流程服务的日志增强，涵盖了 文档解析、分块处理、图谱生成、异步任务 以及 OSS 服务 。
 
+主要修改如下：
+
+1. 文档解析服务 ( backend/app/services/document_parser.py )
+   
+   - 将所有的 print 语句替换为规范的 logger 调用。
+   - 增加了详细的解析日志，包括使用的解析器（PyMuPDF/pdfplumber/OCR等）、解析页数/段落数、以及具体的失败原因。
+2. LightRAG 服务 ( backend/app/services/lightrag_service.py )
+   
+   - 分块 (Chunking) : 在 insert_text 和 insert_text_async 中增加了基于字符数的 分块数量估算日志 ( Estimated chunks: ~N )，让您能直观看到文本被切分的大致规模。
+   - 图谱 (Graph) : 在 get_graph_data 中增加了 图谱节点和边数量 的统计日志 ( Graph loaded. Nodes: X, Edges: Y )。
+   - 异步插入 : 完善了异步插入流程的日志，清晰记录开始、重试和完成状态。
+3. 知识库服务 ( backend/app/services/knowledge_base.py )
+   
+   - Fallback 图谱提取 : 在 _extract_subgraph 中增加了 LLM 提取图谱的详细日志，包括提取到的 节点和边数量 。
+4. 知识库 API ( backend/app/api/endpoints/knowledge.py )
+   
+   - 异步分块处理 : 在 background_upload_and_index 中增加了大文件分块的汇总日志 ( Chunking result: N parts )。
+   - 增量索引 : 在 background_incremental_index 循环中增加了 每一块 (Chunk) 处理进度的详细日志 ( [Async Incremental] Processing chunk i/N ... )。
+5. OSS 服务 ( backend/app/services/oss_service.py )
+   
+   - 增加了文件 上传、下载、删除成功 的 Info 级别日志（此前只有错误日志），确保文件流转全链路可追踪。
 ## 🤝 贡献
-欢迎提交 Issue 和 Pull Request 来改进本项目！
+欢迎提交 PR 或 Issue！
 
 ## 📄 许可证
 MIT License

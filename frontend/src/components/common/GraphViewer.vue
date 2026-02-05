@@ -45,7 +45,8 @@
       class="graph"
       :nodes="styledNodes"
       :edges="filteredEdges"
-      :style="{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: 'center center' }"
+      v-model:zoom-level="scale"
+      v-model:view-point="viewPoint"
       :layouts="layouts"
       :configs="configs"
       :event-handlers="eventHandlers"
@@ -144,7 +145,7 @@
       </div>
     </div>
     <!-- Toolbar -->
-    <div class="graph-toolbar" role="toolbar" aria-label="Graph tools">
+    <div class="graph-toolbar" role="toolbar" aria-label="Graph tools" v-if="showToolbar">
       <button class="tool-btn" @click="showTools = !showTools" aria-label="切换工具栏" title="切换工具栏">
         <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6h16v2H4V6zm0 5h10v2H4v-2zm0 5h16v2H4v-2z"/></svg>
       </button>
@@ -165,7 +166,7 @@
       </button>
       <span v-show="showTools" class="zoom-indicator" :aria-label="`缩放比例 ${Math.round(scale*100)}%`">{{ Math.round(scale*100) }}%</span>
       <button
-        v-show="showTools"
+        v-show="showTools && showScopeToggle"
         class="px-2 py-0.5 text-[11px] transition-all ml-1"
         :class="props.scope === 'doc' ? 'bg-blue-600 text-white' : 'text-[#2a2f3c]'"
         @click="props.switchScope && props.switchScope('doc')"
@@ -173,7 +174,7 @@
         title="当前文档"
       >当前文档</button>
       <button
-        v-show="showTools"
+        v-show="showTools && showScopeToggle"
         class="px-2 py-0.5 text-[11px] transition-all"
         :class="props.scope === 'global' ? 'bg-blue-600 text-white' : 'text-[#2a2f3c]'"
         @click="props.switchScope && props.switchScope('global')"
@@ -197,7 +198,9 @@ const props = defineProps({
   colorMap: { type: Object, default: () => ({}) },
   reload: { type: Function, default: null },
   scope: { type: String, default: null },
-  switchScope: { type: Function, default: null }
+  switchScope: { type: Function, default: null },
+  showScopeToggle: { type: Boolean, default: true },
+  showToolbar: { type: Boolean, default: true }
 })
 
 const graph = ref(null)
@@ -210,11 +213,8 @@ const layouts = ref({
 const selectedNodeId = ref(null)
 const fullscreen = ref(false)
 const scale = ref(1)
+const viewPoint = reactive({ x: 0, y: 0 })
 const showTools = ref(true)
-const pan = reactive({ x: 0, y: 0 })
-const isPanning = ref(false)
-const lastPos = reactive({ x: 0, y: 0 })
-const spacePressed = ref(false)
 
 const selectedNodeData = computed(() => {
   if (!selectedNodeId.value || !props.nodes || !props.nodes[selectedNodeId.value]) return null
@@ -384,19 +384,6 @@ const exitFullscreen = () => { fullscreen.value = false; try { document.body.sty
 // zoom
 const zoomIn = () => { scale.value = Math.min(3, scale.value + 0.25) }
 const zoomOut = () => { scale.value = Math.max(0.25, scale.value - 0.25) }
-const onWheel = (e) => { 
-  e.preventDefault()
-  const rect = containerEl.value?.getBoundingClientRect?.()
-  const mx = e.clientX - (rect?.left ?? 0)
-  const my = e.clientY - (rect?.top ?? 0)
-  const oldScale = scale.value
-  const zoomStep = 0.25
-  const newScale = e.deltaY < 0 ? Math.min(3, oldScale + zoomStep) : Math.max(0.25, oldScale - zoomStep)
-  const factor = newScale / oldScale
-  pan.x = mx - factor * (mx - pan.x)
-  pan.y = my - factor * (my - pan.y)
-  scale.value = newScale
-}
 
 // focus selected
 const focusOnSelected = () => {
@@ -409,22 +396,22 @@ const focusNode = (nodeId) => {
   
   selectedNodeId.value = nodeId
   
-  // Use v-network-graph's focusNode if available
-  if (graph.value) {
-    try {
-      // Get node position from layouts
-      const pos = layouts.value.nodes[nodeId]
-      if (pos) {
-        // Simple pan to position
-        pan.x = -pos.x * scale.value + (containerEl.value?.clientWidth / 2 || 0)
-        pan.y = -pos.y * scale.value + (containerEl.value?.clientHeight / 2 || 0)
-      } else {
-        // If no fixed position (force layout), we might need to wait for simulation or just let it be
-        // For now, selecting it is enough as the attribute card will show up
-      }
-    } catch (e) {
-      console.warn("Focus node failed:", e)
-    }
+  // Try to find position
+  let pos = layouts.value.nodes[nodeId]
+  
+  // If no position in layouts (force layout), try to get from internal instance if available?
+  // v-network-graph doesn't easily expose internal node positions for force layout unless we bind layouts
+  // However, we can simply rely on the fact that if we are in force layout, we might not be able to focus easily
+  // OR we can use panTo if we knew coordinates.
+  
+  if (pos) {
+    viewPoint.x = pos.x
+    viewPoint.y = pos.y
+  } else {
+     // For force layout, we might not have the coordinates in layouts.nodes unless we bind it back?
+     // Actually, v-network-graph does NOT write back to layouts automatically unless configured.
+     // But we can try to access the graph instance.
+     // NOTE: As a fallback, we just center view (0,0) if we can't find node, or do nothing.
   }
 }
 
@@ -438,40 +425,10 @@ const onKeydown = (e) => {
   if (e.ctrlKey && e.key === "-") { e.preventDefault(); zoomOut() }
   if (e.key.toLowerCase() === "g") { e.preventDefault(); focusOnSelected() }
   if (e.key.toLowerCase() === "f") { e.preventDefault(); enterFullscreen() }
-  if (e.code === "Space") { spacePressed.value = true }
 }
-const onKeyup = (e) => { if (e.code === "Space") spacePressed.value = false }
-const onMouseDown = (e) => {
-  if (e.button === 1 || spacePressed.value) {
-    isPanning.value = true
-    lastPos.x = e.clientX
-    lastPos.y = e.clientY
-    e.preventDefault()
-  }
-}
-const onMouseMove = (e) => {
-  if (!isPanning.value) return
-  const dx = e.clientX - lastPos.x
-  const dy = e.clientY - lastPos.y
-  pan.x += dx
-  pan.y += dy
-  lastPos.x = e.clientX
-  lastPos.y = e.clientY
-}
-const onMouseUp = () => { isPanning.value = false }
 
-// bind wheel and keydown
-watch(containerEl, (el) => { 
-  if (el) {
-    el.addEventListener("wheel", onWheel, { passive: false })
-    el.addEventListener("mousedown", onMouseDown)
-    el.addEventListener("mousemove", onMouseMove)
-    el.addEventListener("mouseup", onMouseUp)
-    el.addEventListener("mouseleave", onMouseUp)
-  }
-})
 if (typeof window !== "undefined") { window.addEventListener("keydown", onKeydown) }
-if (typeof window !== "undefined") { window.addEventListener("keyup", onKeyup) }
+
 </script>
 
 
@@ -479,9 +436,8 @@ if (typeof window !== "undefined") { window.addEventListener("keyup", onKeyup) }
 .graph-container {
   width: 100%;
   height: 100%;
-  background-color: #f9f9fa;
-  border-radius: 8px;
-  border: 1px solid #e5e6eb;
+  background-color: #fff;
+  overflow: hidden;
 }
 .graph {
   width: 100%;

@@ -146,7 +146,284 @@ class QAService:
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:top_k]
 
-    async def qa(self, doc_id: int, query: str, db: AsyncSession, history: List[str] | None = None, trace_id: Optional[str] = None, scope: str = "doc") -> Dict[str, Any]:
+    async def qa_stream(self, doc_id: int, query: str, db: Optional[AsyncSession] = None, history: Optional[List[str]] = None, trace_id: Optional[str] = None, scope: str = "doc", session_id: Optional[str] = None):
+        """
+        流式问答函数（支持过程展示）。
+        通过 SSE 格式或纯文本流返回结果，包含检索过程。
+        """
+        import json
+        from app.db.session import AsyncSessionLocal
+        
+        # 使用传入的 db 或者新建一个会话（为了流式响应的稳定性，建议新建）
+        # 但考虑到 LightRAG 初始化可能已经绑定了某些状态，我们尝试使用传入的 db，如果失败则新建
+        # 最佳实践：在 Generator 内部管理生命周期
+        
+        session = db
+        should_close = False
+        if not session:
+            session = AsyncSessionLocal()
+            should_close = True
+            
+        try:
+            t0 = time.perf_counter()
+            
+            # 1. 初始思考过程
+            yield "<think>\n"
+            yield "正在初始化检索环境...\n"
+            
+            # 持久化用户消息
+            try:
+                user_chat = KnowledgeChat(doc_id=doc_id, role="user", content=query, session_id=session_id)
+                session.add(user_chat)
+                await session.commit()
+            except Exception as e:
+                logger.error(f"保存用户消息失败: {e}")
+                # 不中断流程
+
+            await lightrag_service.ensure_initialized(session)
+            yield f"环境初始化完成 ({time.perf_counter()-t0:.3f}s)\n"
+            
+            # 清理上下文
+            lightrag_service.clear_last_context()
+            
+            # 设置运行时变量
+            # [CRITICAL FIX] For doc scope, we DO NOT set filter_doc_id in runtime vars.
+            # Instead, we perform manual retrieval and pass constructed context to LLM.
+            # This avoids LightRAG's internal filtering logic which fails when chunks lack metadata markers.
+            lightrag_service.set_runtime_vars(knowledge="", history=history, filter_doc_id=None)
+            
+            yield f"正在执行混合检索 (Scope: {scope}, DocID: {doc_id if scope=='doc' else 'Global'})...\n"
+            
+            # Context containers
+            context_chunks = []
+            context_entities = []
+            
+            if scope == "doc":
+                # Manual Document-Scoped Retrieval
+                yield "正在进行文档专用向量检索...\n"
+                # Use the new search_doc_chunks method which uses file_path map for reliable filtering
+                raw_chunks = lightrag_service.search_doc_chunks(doc_id, query, top_k=15)
+                
+                if raw_chunks:
+                    yield f"找到 {len(raw_chunks)} 个相关文档片段：\n"
+                    for i, c in enumerate(raw_chunks):
+                        # Normalize chunk structure
+                        context_chunks.append({
+                            "content": c.get("content", ""),
+                            "file_path": c.get("file_path", ""),
+                            "score": c.get("score", 0)
+                        })
+                        if i < 3:
+                            preview = (c.get("content") or "").replace("\n", " ")[:50]
+                            yield f"- [{i+1}] {preview}...\n"
+                else:
+                    yield "向量检索未发现强相关片段，尝试图谱检索...\n"
+                
+                # Graph Search
+                yield "正在进行文档专用图谱检索...\n"
+                graph_results = await self.graph_search(doc_id, query, session, top_k=10)
+                if graph_results:
+                     yield f"找到 {len(graph_results)} 个相关实体/关系\n"
+                     context_entities = graph_results
+
+            else:
+                # Global Scope (Legacy Logic)
+                try:
+                    yield "正在进行全局向量粗排...\n"
+                    raw_chunks = lightrag_service.search_chunks(query, top_k=5)
+                    if raw_chunks:
+                        yield f"找到 {len(raw_chunks)} 个相关文档片段：\n"
+                        for i, c in enumerate(raw_chunks):
+                            preview = (c.get("preview") or "").replace("\n", " ")[:50]
+                            yield f"- [{i+1}] {preview}...\n"
+                    else:
+                        yield "向量检索未发现强相关片段，尝试图谱检索...\n"
+                except Exception as e:
+                    yield f"检索过程警告: {e}\n"
+
+            tq = time.perf_counter()
+            q_gen = f"{query} (请用中文回答)" if "中文" not in query else query
+            
+            yield "正在调用大模型生成回答...\n"
+            yield "</think>\n" # 结束思考/过程展示
+            
+            answer = ""
+            
+            if scope == "doc":
+                # Manual Context Construction
+                ctx_str = "Reference Document List\n"
+                for i, c in enumerate(context_chunks):
+                    # Add Source line so llm_model_func can parse citations
+                    # Note: file_path usually contains doc#ID:Filename
+                    src = c.get('file_path') or f"doc#{doc_id}"
+                    ctx_str += f"[{i+1}] Source: {src}\n{c['content']}\n\n"
+                
+                if context_entities:
+                    ctx_str += "####### Knowledge Graph Data (Entity)\n"
+                    for e in context_entities:
+                        ctx_str += f"{e['content']}\n"
+                
+                # Construct System Prompt with Context
+                # We use the special marker ---Context--- so llm_model_func detects it
+                final_system_prompt = f"---Context---\n{ctx_str}\n"
+                
+                # Call LLM directly
+                answer = await lightrag_service.call_llm(q_gen, system_prompt=final_system_prompt)
+                
+            else:
+                # Global Mode
+                # 执行真正的 LightRAG 查询
+                answer = await lightrag_service.query_async(q_gen, mode="mix", filter_doc_id=None)
+            
+            # 处理结果
+            
+            # 处理结果
+            fail_reason = None
+            if not answer or not str(answer).strip() or "查询出错" in str(answer):
+                fail_reason = "混合模式生成失败"
+                alt = await lightrag_service.query_async(q_gen, mode="local")
+                answer = alt or answer
+            else:
+                s = str(answer)
+                if any(x in s for x in ["[no-context]", "Authentication", "认证失败", "Sorry"]):
+                    fail_reason = "触发敏感词屏蔽"
+                    alt = await lightrag_service.query_async(q_gen, mode="local")
+                    answer = alt or answer
+            
+            answer_text = str(answer).strip()
+            
+            # 清理回答文本 (复用 qa 中的逻辑)
+            import re
+            answer_text = re.sub(r"\[\[Source:\s*(\d+)\]\]", r"[\1]", answer_text)
+            answer_text = re.sub(r"\[Source:\s*(\d+)\]", r"[\1]", answer_text)
+            answer_text = re.sub(r"【(\d+)】", r"[\1]", answer_text)
+            answer_text = re.split(r"(?:^|\n+)\s*(?:#+\s*)?(?:\*\*)?(?:References|Sources|参考来源|引用|引用文献|Reference Document List)(?::|：)?(?:\*\*)?\s*(?:\n+|$)", answer_text, flags=re.IGNORECASE)[0]
+            lines = answer_text.split("\n")
+            while lines and (re.match(r"^\s*\[\d+\]\s*.*$", lines[-1]) or not lines[-1].strip()):
+                lines.pop()
+            answer_text = "\n".join(lines).strip()
+            
+            if not answer_text:
+                answer_text = "未检索到有效答案"
+                
+            # 流式输出答案
+            yield answer_text
+            
+            # 构建 Sources
+            sources = []
+            last_ctx = lightrag_service.get_last_context()
+            if last_ctx:
+                # 复用 qa 中的 sources 提取逻辑
+                # 1. Chunks
+                chunks_text = last_ctx.get("chunks")
+                if not chunks_text and last_ctx.get("raw"):
+                    chunks_text = last_ctx.get("raw")
+                    if "####### Knowledge Graph Data" in chunks_text:
+                        chunks_text = chunks_text.split("####### Knowledge Graph Data")[0]
+
+                if chunks_text:
+                    chunk_matches = re.findall(r"\[(\d+)\]\s*(.*?)(?=\[\d+\]|$)", chunks_text, re.DOTALL)
+                    doc_ids_to_fetch = set()
+                    for _, ctext in chunk_matches:
+                        dm = re.search(r"doc#(\d+)", ctext)
+                        if dm:
+                            doc_ids_to_fetch.add(int(dm.group(1)))
+                    
+                    doc_map = {}
+                    if doc_ids_to_fetch:
+                        res = await session.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id.in_(doc_ids_to_fetch)))
+                        doc_map = {d.id: d.filename for d in res.scalars().all()}
+
+                    for cid, ctext in chunk_matches:
+                        dm = re.search(r"doc#(\d+)", ctext)
+                        did = int(dm.group(1)) if dm else None
+                        fname = doc_map.get(did) if did else None
+                        
+                        sources.append({
+                            "source": "vector", 
+                            "id": int(cid),
+                            "title": fname or ctext.strip().split("\n")[0][:50],
+                            "content": ctext.strip(),
+                            "score": 1.0,
+                            "doc_id": did,
+                            "filename": fname,
+                            "citation_index": int(cid)
+                        })
+                
+                # 2. Entities
+                if "entities" in last_ctx:
+                    try:
+                        import json
+                        ents = json.loads(last_ctx["entities"])
+                        if isinstance(ents, list):
+                            file_names_to_query = set()
+                            for ent in ents:
+                                if isinstance(ent, dict):
+                                    name = ent.get("entity_name") or ent.get("name")
+                                    etype = ent.get("entity_type")
+                                    if name and etype in ["文件", "文档", "File", "Document"]:
+                                        file_names_to_query.add(name)
+                            
+                            name_to_id = {}
+                            if file_names_to_query:
+                                res = await session.execute(select(KnowledgeDocument).filter(KnowledgeDocument.filename.in_(file_names_to_query)))
+                                for d in res.scalars().all():
+                                    name_to_id[d.filename] = d.id
+
+                            for ent in ents:
+                                if isinstance(ent, dict):
+                                    name = ent.get("entity_name") or ent.get("name")
+                                    etype = ent.get("entity_type", "Entity")
+                                    if name:
+                                        src_item = {
+                                            "source": "graph",
+                                            "title": name,
+                                            "content": f"实体: {name}\n类型: {etype}\n描述: {ent.get('description', '')}",
+                                            "score": 1.0
+                                        }
+                                        if etype in ["文件", "文档", "File", "Document"]:
+                                            src_item["filename"] = name
+                                            if name in name_to_id:
+                                                src_item["doc_id"] = name_to_id[name]
+                                        sources.append(src_item)
+                    except Exception:
+                        pass
+
+            # 持久化助手消息
+            try:
+                assistant_chat = KnowledgeChat(doc_id=doc_id, role="assistant", content=answer_text, sources=sources, session_id=session_id)
+                session.add(assistant_chat)
+                await session.commit()
+            except Exception as e:
+                logger.error(f"保存助手消息失败: {e}")
+
+            # 输出引用来源
+            if sources:
+                yield "\n\n**知识来源：**\n"
+                # 去重显示
+                seen_titles = set()
+                for s in sources:
+                    t = s.get("title") or "未知来源"
+                    idx = s.get("citation_index")
+                    prefix = f"[{idx}] " if idx else "- "
+                    
+                    # 简单去重策略：如果 title 相同且没有 index，就不重复显示
+                    if not idx and t in seen_titles:
+                        continue
+                    seen_titles.add(t)
+                    
+                    yield f"{prefix}{t}\n"
+
+        except Exception as e:
+            logger.error(f"LightRAG QA Stream 失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            yield f"\n[Error] 生成回答时遇到错误: {str(e)}"
+        finally:
+            if should_close and session:
+                await session.close()
+
+    async def qa(self, doc_id: int, query: str, db: AsyncSession, history: Optional[List[str]] = None, trace_id: Optional[str] = None, scope: str = "doc", session_id: Optional[str] = None) -> Dict[str, Any]:
         """
         主问答函数（LightRAG 方案）。
         直接使用 LightRAG 的混合检索与生成能力。
@@ -154,45 +431,89 @@ class QAService:
         try:
             t0 = time.perf_counter()
             
-            # Persist user message
-            user_chat = KnowledgeChat(doc_id=doc_id, role="user", content=query)
+            # 持久化用户消息
+            user_chat = KnowledgeChat(doc_id=doc_id, role="user", content=query, session_id=session_id)
             db.add(user_chat)
             await db.commit()
 
             await lightrag_service.ensure_initialized(db)
             logger.info(f"[QA][INIT][{trace_id}] ensured LightRAG in {time.perf_counter()-t0:.3f}s")
             
-            # [Optimization] We now rely on LightRAG's internal retrieval for mode="mix"
-            # No longer need manual retrieval which was causing double context injection.
+            # [优化] 我们现在依赖 LightRAG 的内部检索（mode="mix"）
+            # 不再需要手动检索，之前这会导致双重上下文注入。
             lightrag_service.clear_last_context()
             
-            # If scope is "doc", we filter by doc_id. If "global", we don't.
+            # 如果范围是 "doc"，我们按 doc_id 过滤。如果是 "global"，则不过滤。
             filter_doc_id = doc_id if scope == "doc" else None
             lightrag_service.set_runtime_vars(knowledge="", history=history, filter_doc_id=filter_doc_id)
             
             tq = time.perf_counter()
-            answer = await lightrag_service.query_async(query, mode="mix", filter_doc_id=filter_doc_id)
+            # [Prompt Engineering] 强制要求中文回答
+            q_gen = f"{query} (请用中文回答)" if "中文" not in query else query
             
+            answer = await lightrag_service.query_async(q_gen, mode="mix", filter_doc_id=filter_doc_id)
+            logger.info(f"[QA][RAW][{trace_id}] answer len={len(str(answer)) if answer else 0}: {str(answer)[:200]}...")
+            
+            fail_reason = None
             if not answer or not str(answer).strip() or "查询出错" in str(answer):
+                fail_reason = "混合模式生成失败"
                 logger.warning(f"[QA][GEN][{trace_id}] mix returned empty/error, fallback to local")
-                alt = await lightrag_service.query_async(query, mode="local")
+                alt = await lightrag_service.query_async(q_gen, mode="local")
                 answer = alt or answer
+            else:
+                s = str(answer)
+                if any(x in s for x in ["[no-context]", "Authentication", "认证失败", "Sorry"]):
+                    fail_reason = "触发敏感词屏蔽"
+                    logger.warning(f"[QA][GEN][{trace_id}] mix returned blocked keyword, fallback to local")
+                    alt = await lightrag_service.query_async(q_gen, mode="local")
+                    answer = alt or answer
+            
+            invalid = (not answer or not str(answer).strip() or any(x in str(answer) for x in ["[no-context]", "Authentication", "认证失败", "Sorry"]))
+            if invalid and not fail_reason:
+                 fail_reason = "本地模式生成无效"
+
+            sources = []
+            if invalid:
+                logger.info(f"[QA][FALLBACK][{trace_id}] answer invalid (reason={fail_reason}), trying vector chunks")
+                previews = []
+                vec_refs = lightrag_service.search_chunks(query, top_k=5)
+                if vec_refs:
+                    previews = [r.get("preview") or "" for r in vec_refs if r.get("preview")]
+                    previews = [p.strip() for p in previews if p.strip()]
+                    if previews:
+                        answer = "以下是与问题相关的文档片段整理：\n\n" + "\n\n".join(previews[:3])
+                        sources = [{"source": "vector", "title": r.get("title") or "", "content": r.get("preview") or "", "score": r.get("score") or 0.0} for r in vec_refs[:3]]
+                        fail_reason = "向量补救成功"
+                if not previews:
+                    fail_reason = fail_reason or "向量检索无结果"
+                    answer = "未检索到有效答案"
             if not answer or not str(answer).strip():
+                fail_reason = fail_reason or "最终结果为空"
                 answer = "未检索到有效答案"
             
-            # [Refinement] Clean the answer text to remove raw document IDs and format citations
             answer_text = str(answer).strip()
             import re
             
-            # 1. Handle in-text citations: [doc#3:xxx] -> [1] (if we can map it) or just remove the doc# part
+            # [Debug] Log the raw answer to see if citations exist
+            logger.info(f"[QA][RAW_TEXT][{trace_id}] {answer_text[:1000]}")
+
+            # 1. Normalize [Source: n] or [[Source: n]] to [n]
+            # Some LLMs might still output [[Source: n]] despite instructions
+            answer_text = re.sub(r"\[\[Source:\s*(\d+)\]\]", r"[\1]", answer_text)
+            answer_text = re.sub(r"\[Source:\s*(\d+)\]", r"[\1]", answer_text)
+            # Handle Chinese brackets
+            answer_text = re.sub(r"【(\d+)】", r"[\1]", answer_text)
+
+            # 2. Handle in-text citations: [doc#3:xxx] -> [1] (if we can map it) or just remove the doc# part
             # But LightRAG usually uses [[Source: n]] or [n] for indexed sources.
             # If it uses raw doc# in text, we should clean it.
-            answer_text = re.sub(r"doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?", "", answer_text)
+            # [Safe] Commented out aggressive doc# removal to prevent accidental deletion of valid content
+            # answer_text = re.sub(r"doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?", "", answer_text)
             
             # 2. Remove the trailing "References" or "Sources" section
             # This is a very aggressive cleanup to ensure no raw reference lists appear.
             # We look for common reference headers and remove everything after them.
-            answer_text = re.split(r"\n+\s*(?:#+\s*)?(?:\*\*)?(?:References|Sources|参考来源|引用|引用文献|Reference Document List)(?::|：)?(?:\*\*)?\s*(?:\n+|$)", answer_text, flags=re.IGNORECASE)[0]
+            answer_text = re.split(r"(?:^|\n+)\s*(?:#+\s*)?(?:\*\*)?(?:References|Sources|参考来源|引用|引用文献|Reference Document List)(?::|：)?(?:\*\*)?\s*(?:\n+|$)", answer_text, flags=re.IGNORECASE)[0]
             
             # 3. Also remove any trailing lines that look like [n] or [n] something
             lines = answer_text.split("\n")
@@ -206,14 +527,25 @@ class QAService:
             
             answer = answer_text
             
-            # [Refinement] Extract sources from captured context and map doc IDs to filenames
-            sources = []
+            if not answer:
+                if not fail_reason:
+                    fail_reason = "清理后内容为空"
+                answer = "未检索到有效答案"
+            
+            sources = sources
             last_ctx = lightrag_service.get_last_context()
             if last_ctx:
                 # 1. Chunks
-                if "chunks" in last_ctx:
+                chunks_text = last_ctx.get("chunks")
+                if not chunks_text and last_ctx.get("raw"):
+                    # Fallback to raw context if chunks parsing failed
+                    chunks_text = last_ctx.get("raw")
+                    if "####### Knowledge Graph Data" in chunks_text:
+                        chunks_text = chunks_text.split("####### Knowledge Graph Data")[0]
+
+                if chunks_text:
                     # LightRAG chunk list format: [n] Title \n Preview
-                    chunk_matches = re.findall(r"\[(\d+)\]\s*(.*?)(?=\[\d+\]|$)", last_ctx["chunks"], re.DOTALL)
+                    chunk_matches = re.findall(r"\[(\d+)\]\s*(.*?)(?=\[\d+\]|$)", chunks_text, re.DOTALL)
                     
                     # Pre-collect doc IDs to map filenames in bulk
                     doc_ids_to_fetch = set()
@@ -237,35 +569,71 @@ class QAService:
                             "id": int(cid),
                             "title": fname or ctext.strip().split("\n")[0][:50], # Filename as title
                             "content": ctext.strip(),
-                            "score": 1.0
+                            "score": 1.0,
+                            "doc_id": did,
+                            "filename": fname,
+                            # For global search (mix), we want to index to document
+                            # For local search, we want to index to chunk
+                            # We provide both info, frontend can decide
+                            "citation_index": int(cid)
                         })
                 
-                # 2. Entities (Graph mapping)
+                # 2. 实体（图谱映射）
                 if "entities" in last_ctx:
                     try:
                         import json
                         ents = json.loads(last_ctx["entities"])
                         if isinstance(ents, list):
+                            # [Fix] 预先收集需要反查 ID 的文件名
+                            file_names_to_query = set()
+                            logger.info(f"[Debug] Parsing entities for sources. Total entities: {len(ents)}")
                             for ent in ents:
                                 if isinstance(ent, dict):
                                     name = ent.get("entity_name") or ent.get("name")
+                                    etype = ent.get("entity_type")
+                                    # logger.info(f"[Debug] Entity: {name} ({etype})")
+                                    if name and etype in ["文件", "文档", "File", "Document"]:
+                                        file_names_to_query.add(name)
+                            
+                            logger.info(f"[Debug] Found file entities to resolve: {file_names_to_query}")
+                            
+                            name_to_id = {}
+                            if file_names_to_query:
+                                try:
+                                    res = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.filename.in_(file_names_to_query)))
+                                    for d in res.scalars().all():
+                                        name_to_id[d.filename] = d.id
+                                except Exception as e:
+                                    logger.warning(f"Failed to resolve document IDs for entities: {e}")
+
+                            for ent in ents:
+                                if isinstance(ent, dict):
+                                    name = ent.get("entity_name") or ent.get("name")
+                                    etype = ent.get("entity_type", "Entity")
                                     if name:
-                                        sources.append({
+                                        src_item = {
                                             "source": "graph",
                                             "title": name,
-                                            "content": f"实体: {name}\n类型: {ent.get('entity_type', 'Entity')}\n描述: {ent.get('description', '')}",
+                                            "content": f"实体: {name}\n类型: {etype}\n描述: {ent.get('description', '')}",
                                             "score": 1.0
-                                        })
-                    except Exception:
-                        pass
+                                        }
+                                        # 如果是文件实体，填充 filename 和 doc_id
+                                        if etype in ["文件", "文档", "File", "Document"]:
+                                            src_item["filename"] = name
+                                            if name in name_to_id:
+                                                src_item["doc_id"] = name_to_id[name]
+                                        
+                                        sources.append(src_item)
+                    except Exception as e:
+                        logger.warning(f"Error parsing graph entities context: {e}")
 
-            # Persist assistant message
-            assistant_chat = KnowledgeChat(doc_id=doc_id, role="assistant", content=str(answer).strip(), sources=sources)
+            # 持久化助手消息
+            assistant_chat = KnowledgeChat(doc_id=doc_id, role="assistant", content=str(answer).strip(), sources=sources, session_id=session_id)
             db.add(assistant_chat)
             await db.commit()
 
-            logger.info(f"[QA][DONE][{trace_id}] doc {doc_id} qlen={len(query or '')} sources={len(sources)} gen_time={time.perf_counter()-tq:.3f}s ans_len={len(str(answer) or '')}")
-            return {"answer": str(answer).strip(), "sources": sources}
+            logger.info(f"[QA][DONE][{trace_id}] doc {doc_id} qlen={len(query or '')} sources={len(sources)} gen_time={time.perf_counter()-tq:.3f}s ans_len={len(str(answer) or '')} reason={fail_reason}")
+            return {"answer": str(answer).strip(), "sources": sources, "reason": fail_reason}
         except Exception as e:
             logger.error(f"LightRAG QA 失败: {e}")
             logger.exception(f"[QA][ERR][{trace_id}] doc {doc_id} q='{(query or '')[:80]}'")

@@ -1,12 +1,17 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import shutil
 import os
 import uuid
 from pathlib import Path
 from pydantic import BaseModel
+
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
 
 from app.db.session import get_db, AsyncSessionLocal
 from app.models.knowledge import KnowledgeDocument, DocumentStatus, KnowledgeChat
@@ -27,17 +32,17 @@ async def background_delete_cleanup(filename: str, oss_key: str = None):
         if oss_key:
             try:
                 oss_service.delete_file(oss_key)
-                logger.info(f"[BG] Deleted from OSS: {oss_key}")
+                logger.info(f"[BG] 已从OSS删除: {oss_key}")
             except Exception as e:
-                logger.warning(f"[BG] Failed to delete from OSS: {e}")
+                logger.warning(f"[BG] 删除OSS对象失败: {e}")
         import asyncio
         try:
             await asyncio.to_thread(kb_service.delete_document, filename)
-            logger.info(f"[BG] LightRAG cleanup done for: {filename}")
+            logger.info(f"[BG] LightRAG清理完成: {filename}")
         except Exception as e:
-            logger.warning(f"[BG] LightRAG cleanup failed for {filename}: {e}")
+            logger.warning(f"[BG] LightRAG清理失败 文件={filename}: {e}")
     except Exception as e:
-        logger.error(f"[BG] Delete cleanup error: {e}")
+        logger.error(f"[BG] 删除清理错误: {e}")
 
 @router.post("/vector/clean")
 async def clean_vector_store(db: AsyncSession = Depends(get_db)):
@@ -68,6 +73,7 @@ async def background_incremental_index(doc_id: int, segments: List[str]):
 
         for i, seg in enumerate(segments):
             try:
+                logger.info(f"[Async Incremental] Processing chunk {i+1}/{len(segments)} (size={len(seg)})...")
                 # Update status: Processing...
                 async with AsyncSessionLocal() as db:
                     result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
@@ -92,11 +98,22 @@ async def background_incremental_index(doc_id: int, segments: List[str]):
                         pass
             except Exception:
                 pass
+        # Finalize: mark as indexed when all parts done
+        async with AsyncSessionLocal() as db:
+            try:
+                result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
+                doc = result.scalars().first()
+                if doc:
+                    doc.status = DocumentStatus.INDEXED
+                    doc.error_message = f"index_progress:{total}/{total}"
+                    await db.commit()
+            except Exception:
+                pass
     except Exception:
         pass
 
 async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_filename: str):
-    logger.info(f"Starting background processing for doc_id: {doc_id}")
+    logger.info(f"开始后台处理 文档ID={doc_id}")
     
     # 辅助函数：更新文档状态（独立事务）
     async def update_doc_status(doc_id: int, status: DocumentStatus, error_msg: str = None, 
@@ -114,29 +131,48 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
                     if oss_url:
                         doc.oss_url = oss_url
                     await db.commit()
-                    logger.info(f"Updated doc {doc_id} status to {status}")
+                    logger.info(f"文档状态更新 id={doc_id} 状态={status} 提示={error_msg} oss_key={getattr(doc,'oss_key',None)} oss_url={getattr(doc,'oss_url',None)}")
             except Exception as e:
-                logger.error(f"Failed to update doc status: {e}")
+                logger.error(f"更新文档状态失败: {e}")
+
+    # 标记处理是否成功，用于决定是否清理临时文件
+    process_success = False
 
     try:
         # --- Step 1: Upload to OSS ---
         oss_key = f"knowledge/{unique_filename}"
         oss_url = None
         try:
+            logger.info(f"OSS上传前检查 路径={temp_file_path} 存在={os.path.exists(temp_file_path)} 大小={os.path.getsize(temp_file_path) if os.path.exists(temp_file_path) else 0}")
             oss_url = oss_service.upload_file_path(oss_key, temp_file_path)
-            await update_doc_status(doc_id, DocumentStatus.UPLOADED, oss_key=oss_key, oss_url=oss_url)
-            logger.info(f"Background OSS upload successful for {doc_id}")
+            await update_doc_status(doc_id, DocumentStatus.UPLOADED, error_msg=None, oss_key=oss_key, oss_url=oss_url)
+            logger.info(f"OSS上传成功 文档ID={doc_id} 键={oss_key} URL={oss_url}")
         except Exception as e:
-            logger.error(f"Background OSS upload failed: {e}")
-            await update_doc_status(doc_id, DocumentStatus.UPLOADING, error_msg=f"OSS Upload Warning: {str(e)}")
-
+            logger.error(f"OSS上传失败: {e}")
+            await update_doc_status(doc_id, DocumentStatus.UPLOADING, error_msg=f"OSS 上传警告: {str(e)}")
+            # 注意：OSS上传失败通常不应继续索引，但原逻辑似乎允许继续？
+            # 如果OSS失败是致命的，这里应该raise或者return。
+            # 暂时保持原逻辑结构，但要注意 process_success 最终可能为 True 如果索引成功了？
+            # 通常如果OSS失败，后续索引可能也会有问题（如果依赖OSS），但这里索引是用本地文件的。
+            
 
         # --- Step 2: Indexing via LightRAG ---
         await update_doc_status(doc_id, DocumentStatus.INDEXING)
         try:
             async with AsyncSessionLocal() as db:
                 await lightrag_service.ensure_initialized(db)
-            text = parse_local_file(str(temp_file_path))
+                result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
+                _doc = result.scalars().first()
+                display_name = (_doc.filename if _doc and _doc.filename else unique_filename)
+            exists = os.path.exists(temp_file_path)
+            size = os.path.getsize(temp_file_path) if exists else 0
+            logger.info(f"解析前检查 路径={temp_file_path} 存在={exists} 大小={size}")
+            
+            # [Optimization] Run parsing in thread pool to avoid blocking event loop
+            import asyncio
+            text = await asyncio.to_thread(parse_local_file, str(temp_file_path))
+            
+            logger.info(f"解析文本长度={len(text or '')}")
             if not text:
                 raise RuntimeError("解析到的文本为空，无法索引")
             
@@ -147,11 +183,23 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             
             segments = [rest[i:i+seg_size] for i in range(0, len(rest), seg_size)] if rest else []
             total = len(segments) + 1
+            logger.info(f"[Document Processing] Chunking result: {total} parts (including first part). Seg size: {seg_size}")
             
             # Initial status
-            await update_doc_status(doc_id, DocumentStatus.INDEXING, error_msg=f"index_progress:0/{total} (extracting graph...)")
+            await update_doc_status(doc_id, DocumentStatus.INDEXING, error_msg=f"index_progress:0/{total} (正在提取图谱...)")
             
-            await lightrag_service.insert_text_async(first, description=f"doc#{doc_id}:{unique_filename}:part1")
+            await lightrag_service.insert_text_async(first, description=f"doc#{doc_id}:{display_name}")
+            try:
+                from app.services.lightrag_service import LIGHTRAG_DIR
+                import networkx as nx
+                gp = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
+                if gp.exists():
+                    G = nx.read_graphml(str(gp))
+                    logger.info(f"首段索引后图谱 节点={G.number_of_nodes()} 边={G.number_of_edges()} 文件大小={os.path.getsize(gp)}")
+                else:
+                    logger.info("首段索引后图谱文件缺失")
+            except Exception as e:
+                logger.warning(f"图谱检查失败: {e}")
             
             if segments:
                 import asyncio
@@ -162,26 +210,30 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             else:
                 await update_doc_status(doc_id, DocumentStatus.INDEXED, error_msg=f"index_progress:{total}/{total}")
             
-            logger.info(f"Document {doc_id} indexed into LightRAG successfully")
+            logger.info(f"索引完成 文档ID={doc_id}")
+            process_success = True  # 标记处理成功
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
-            logger.error(f"Failed to LightRAG index document {doc_id}: {e}")
-            logger.error(f"Detailed Traceback:\n{error_trace}")
-            await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"LightRAG Indexing Failed: {str(e)}")
+            logger.error(f"LightRAG 索引文档失败 id={doc_id}: {e}")
+            logger.error(f"详细堆栈:\n{error_trace}")
+            await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"LightRAG 索引失败: {str(e)}")
 
         
     except Exception as e:
-        logger.error(f"Background processing error: {e}")
-        await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"System Error: {str(e)}")
+        logger.error(f"后台处理错误: {e}")
+        await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"系统错误: {str(e)}")
     finally:
          # Cleanup Temp File
-         if os.path.exists(temp_file_path):
+         # 只有在处理成功时才删除文件，失败时保留以便排查
+         if process_success and os.path.exists(temp_file_path):
             try:
                 os.remove(temp_file_path)
-                logger.info(f"Cleaned up temp file: {temp_file_path}")
+                logger.info(f"清理临时文件 路径={temp_file_path}")
             except Exception as e:
-                logger.warning(f"Failed to clean up temp file {temp_file_path}: {e}")
+                logger.warning(f"清理临时文件失败 路径={temp_file_path}: {e}")
+         elif not process_success and os.path.exists(temp_file_path):
+            logger.warning(f"处理未完全成功，保留临时文件以供排查: {temp_file_path}")
 
 @router.post("/upload")
 async def upload_document(
@@ -189,7 +241,7 @@ async def upload_document(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
-    logger.info(f"Received upload request for file: {file.filename}")
+    logger.info(f"收到上传请求 文件={file.filename}")
     # 1. Save to Temp File (for indexing)
     file_ext = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -198,7 +250,9 @@ async def upload_document(
     try:
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        logger.info(f"Saved temp file to: {temp_file_path}")
+        exists = os.path.exists(temp_file_path)
+        size = os.path.getsize(temp_file_path) if exists else 0
+        logger.info(f"已保存临时文件 路径={temp_file_path} 存在={exists} 大小={size}")
         
         # 2. Create DB Record (Initial status: UPLOADING)
         # Note: We rely on background task for OSS upload, so keys are None initially
@@ -214,7 +268,7 @@ async def upload_document(
         db.add(new_doc)
         await db.commit()
         await db.refresh(new_doc)
-        logger.info(f"Created DB record for doc_id: {new_doc.id}")
+        logger.info(f"已创建文档记录 id={new_doc.id} 文件名={new_doc.filename} 大小={file_size}")
         
         # 3. Trigger Background Task (OSS Upload + Indexing)
         background_tasks.add_task(background_upload_and_index, new_doc.id, str(temp_file_path), unique_filename)
@@ -222,7 +276,7 @@ async def upload_document(
         return new_doc
         
     except Exception as e:
-        logger.error(f"Upload init failed: {e}")
+        logger.error(f"上传初始化失败: {e}")
         # Cleanup if failed
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
@@ -231,7 +285,7 @@ async def upload_document(
 
 @router.get("/list")
 async def list_documents(db: AsyncSession = Depends(get_db)):
-    logger.info("Listing documents")
+    logger.info("查询文档列表")
     result = await db.execute(select(KnowledgeDocument).order_by(KnowledgeDocument.created_at.desc()))
     docs = result.scalars().all()
     out = []
@@ -289,11 +343,11 @@ async def list_documents(db: AsyncSession = Depends(get_db)):
 
 @router.delete("/{doc_id}")
 async def delete_document(doc_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
-    logger.info(f"Deleting document {doc_id}")
+    logger.info(f"删除文档 {doc_id}")
     result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
     doc = result.scalars().first()
     if not doc:
-        logger.warning(f"Document {doc_id} not found for deletion")
+        logger.warning(f"文档 {doc_id} 未找到，无法删除")
         raise HTTPException(status_code=404, detail="Document not found")
     
     # Capture info for background cleanup
@@ -302,13 +356,13 @@ async def delete_document(doc_id: int, background_tasks: BackgroundTasks, db: As
     # 1. Delete from DB (first)
     await db.delete(doc)
     await db.commit()
-    logger.info(f"Deleted document {doc_id} from DB")
+    logger.info(f"已从数据库删除文档 {doc_id}")
     
     # 2. Schedule background cleanup (OSS + LightRAG)
     try:
         background_tasks.add_task(background_delete_cleanup, filename, oss_key)
     except Exception as e:
-        logger.warning(f"Failed to schedule background cleanup: {e}")
+        logger.warning(f"调度后台清理失败: {e}")
         # Best-effort immediate cleanup if scheduling fails
         try:
             await background_delete_cleanup(filename, oss_key)
@@ -340,7 +394,7 @@ async def get_document_content(doc_id: int, db: AsyncSession = Depends(get_db)):
         
         return {"content": content, "filename": doc.filename}
     except Exception as e:
-        logger.error(f"Failed to retrieve content for doc {doc_id}: {e}")
+        logger.error(f"获取文档内容失败 id={doc_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve content: {str(e)}")
     finally:
         # Cleanup
@@ -377,16 +431,28 @@ async def _enrich_graph_data(data: Dict[str, Any], db: AsyncSession):
     for node in nodes.values():
         attrs = node.get("attributes") or {}
         fp = attrs.get("file_path") or ""
-        match = re.search(r"doc#(\d+):", fp)
-        if match:
+        
+        # [Fix] 支持从多个文档来源提取文件名 (split by <SEP> first or regex all)
+        # file_path format: doc#1:name1<SEP>doc#2:name2
+        
+        found_names = []
+        matches = re.finditer(r"doc#(\d+):", fp)
+        seen_dids = set()
+        
+        for match in matches:
             did = int(match.group(1))
-            if did in doc_map:
-                # 只保留一个清晰的文件名展示，删除冗余的 file_path
-                attrs["file_name"] = doc_map[did]
-                if "file_path" in attrs:
-                    del attrs["file_path"]
-                if "_file_path_raw" in attrs:
-                    del attrs["_file_path_raw"]
+            if did in doc_map and did not in seen_dids:
+                found_names.append(doc_map[did])
+                seen_dids.add(did)
+        
+        if found_names:
+            # Join multiple filenames with comma or specific separator
+            attrs["file_name"] = ", ".join(found_names)
+            # 保留 file_path 以免破坏缓存数据，导致后续请求无法重新解析
+            # if "file_path" in attrs:
+            #     del attrs["file_path"]
+            if "_file_path_raw" in attrs:
+                del attrs["_file_path_raw"]
     return data
 
 @router.get("/{doc_id}/graph")
@@ -402,7 +468,7 @@ async def get_document_graph(doc_id: int, request: Request, db: AsyncSession = D
         tid = request.headers.get("X-Trace-Id") or str(uuid.uuid4())
         nodes = len(local_graph.get("nodes") or {})
         edges = len(local_graph.get("edges") or {})
-        logger.info(f"[GRAPH][{tid}] doc {doc_id} nodes={nodes} edges={edges} reason={local_graph.get('reason')}")
+        logger.info(f"[图谱][{tid}] 文档 {doc_id} 节点={nodes} 边={edges} 原因={local_graph.get('reason')}")
     except Exception:
         pass
     return local_graph
@@ -418,7 +484,7 @@ async def get_global_graph(request: Request, db: AsyncSession = Depends(get_db))
         tid = request.headers.get("X-Trace-Id") or str(uuid.uuid4())
         nodes = len(data.get("nodes") or {})
         edges = len(data.get("edges") or {})
-        logger.info(f"[GRAPH][{tid}] global nodes={nodes} edges={edges} reason={data.get('reason')}")
+        logger.info(f"[图谱][{tid}] 全局 节点={nodes} 边={edges} 原因={data.get('reason')}")
     except Exception:
         pass
     return data
@@ -427,37 +493,94 @@ class QARequest(BaseModel):
     query: str
     history: List[str] | None = None
     scope: str = "doc" # "doc" or "global"
+    session_id: str | None = None
+
+@router.get("/{doc_id}/qa/sessions")
+async def list_doc_sessions(doc_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    列出针对特定文档的所有会话列表。
+    按时间倒序排列，包含最新一条消息预览。
+    """
+    from sqlalchemy import func
+    
+    # 1. 找出该文档下所有不为空的 session_id
+    # 我们使用 group_by 来去重
+    subquery = (
+        select(
+            KnowledgeChat.session_id,
+            func.max(KnowledgeChat.created_at).label("last_active"),
+            func.count(KnowledgeChat.id).label("msg_count")
+        )
+        .where(KnowledgeChat.doc_id == doc_id)
+        .where(KnowledgeChat.session_id != None)
+        .group_by(KnowledgeChat.session_id)
+        .order_by(func.max(KnowledgeChat.created_at).desc())
+    )
+    
+    result = await db.execute(subquery)
+    sessions = result.all()
+    
+    out = []
+    for s in sessions:
+        sid, last_ts, count = s
+        
+        # 获取该会话的最后一条消息作为预览
+        # 优先取 User 的消息作为标题，如果没有则取 Assistant
+        last_msg_stmt = (
+            select(KnowledgeChat)
+            .where(KnowledgeChat.session_id == sid)
+            .order_by(KnowledgeChat.created_at.desc())
+            .limit(1)
+        )
+        msg_res = await db.execute(last_msg_stmt)
+        last_msg = msg_res.scalars().first()
+        
+        preview = ""
+        if last_msg:
+            preview = last_msg.content[:50] + "..." if len(last_msg.content) > 50 else last_msg.content
+            
+        out.append({
+            "session_id": sid,
+            "last_active": last_ts,
+            "message_count": count,
+            "preview": preview
+        })
+        
+    return out
 
 @router.delete("/{doc_id}/qa/history")
-async def clear_qa_history(doc_id: int, db: AsyncSession = Depends(get_db)):
-    logger.info(f"Clearing QA history for doc {doc_id}")
+async def clear_qa_history(doc_id: int, session_id: str = Query(None), db: AsyncSession = Depends(get_db)):
+    logger.info(f"清空文档 {doc_id} 的问答历史 (session_id={session_id})")
     try:
-        await db.execute(
-            delete(KnowledgeChat)
-            .where(KnowledgeChat.doc_id == doc_id)
-        )
+        query = delete(KnowledgeChat).where(KnowledgeChat.doc_id == doc_id)
+        if session_id:
+            query = query.where(KnowledgeChat.session_id == session_id)
+            
+        await db.execute(query)
         await db.commit()
         return {"status": "cleared"}
     except Exception as e:
-        logger.error(f"Failed to clear QA history: {e}")
+        logger.error(f"清空问答历史失败: {e}")
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{doc_id}/qa/history")
-async def get_qa_history(doc_id: int, db: AsyncSession = Depends(get_db)):
-    logger.info(f"Fetching QA history for doc {doc_id}")
-    result = await db.execute(
-        select(KnowledgeChat)
-        .filter(KnowledgeChat.doc_id == doc_id)
-        .order_by(KnowledgeChat.created_at.asc())
-    )
+async def get_qa_history(doc_id: int, session_id: str = Query(None), db: AsyncSession = Depends(get_db)):
+    logger.info(f"查询文档 {doc_id} 的问答历史 (session_id={session_id})")
+    stmt = select(KnowledgeChat).filter(KnowledgeChat.doc_id == doc_id)
+    if session_id:
+        stmt = stmt.filter(KnowledgeChat.session_id == session_id)
+    
+    result = await db.execute(stmt.order_by(KnowledgeChat.created_at.asc()))
     history = result.scalars().all()
+    logger.info(f"文档 {doc_id} 历史记录数量: {len(history)} (Session: {session_id})")
     return [
         {
             "role": h.role,
             "content": h.content,
             "sources": h.sources,
-            "created_at": h.created_at
+            "created_at": h.created_at,
+            "session_id": getattr(h, "session_id", None)
         }
         for h in history
     ]
@@ -465,15 +588,78 @@ async def get_qa_history(doc_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/{doc_id}/qa")
 async def document_qa(doc_id: int, request: QARequest, req: Request, db: AsyncSession = Depends(get_db)):
     tid = req.headers.get("X-Trace-Id") or str(uuid.uuid4())
-    logger.info(f"[QA][{tid}] POST doc {doc_id} scope={request.scope} qlen={len(request.query or '')}")
-    return await qa_service.qa(doc_id, request.query, db, history=request.history, trace_id=tid, scope=request.scope)
+    logger.info(f"[问答][{tid}] POST 文档 {doc_id} 范围={request.scope} 会话={request.session_id} 问句长度={len(request.query or '')}")
+    
+    # 优先使用流式响应
+    return StreamingResponse(
+        qa_service.qa_stream(doc_id, request.query, db, history=request.history, trace_id=tid, scope=request.scope, session_id=request.session_id),
+        media_type="text/plain" # 或者 "text/event-stream"
+    )
 
 @router.get("/{doc_id}/qa")
-async def document_qa_get(doc_id: int, q: str = Query(None), query: str = Query(None), history: str = Query(None), req: Request = None, db: AsyncSession = Depends(get_db)):
+async def document_qa_get(doc_id: int, q: str = Query(None), query: str = Query(None), history: str = Query(None), session_id: str = Query(None), req: Request = None, db: AsyncSession = Depends(get_db)):
     qtext = q or query or ""
     if not qtext.strip():
         raise HTTPException(status_code=400, detail="缺少 query 参数")
     hist = [history] if history else None
     tid = (req.headers.get("X-Trace-Id") if req else None) or str(uuid.uuid4())
-    logger.info(f"[QA][{tid}] GET doc {doc_id} qlen={len(qtext or '')}")
-    return await qa_service.qa(doc_id, qtext, db, history=hist, trace_id=tid)
+    logger.info(f"[问答][{tid}] GET 文档 {doc_id} 会话={session_id} 问句长度={len(qtext or '')}")
+    return StreamingResponse(
+        qa_service.qa_stream(doc_id, qtext, db, history=hist, trace_id=tid, session_id=session_id),
+        media_type="text/plain"
+    )
+
+@router.post("/qa")
+async def global_qa(request: QARequest, req: Request, db: AsyncSession = Depends(get_db)):
+    tid = req.headers.get("X-Trace-Id") or str(uuid.uuid4())
+    logger.info(f"[问答][{tid}] POST 全局 QA 范围={request.scope} 会话={request.session_id} 问句长度={len(request.query or '')}")
+    # Force global scope default if not provided, though QARequest default is "doc"
+    scope = "global"
+    # Pass doc_id=0 to indicate no specific document context
+    return StreamingResponse(
+        qa_service.qa_stream(0, request.query, db, history=request.history, trace_id=tid, scope=scope, session_id=request.session_id),
+        media_type="text/plain"
+    )
+
+# --- Chat History Management API ---
+
+class MessageUpdate(BaseModel):
+    content: Optional[str] = None
+    role: Optional[str] = None
+
+@router.delete("/chat/messages/{message_id}")
+async def delete_chat_message(message_id: int, db: AsyncSession = Depends(get_db)):
+    msg = await db.get(KnowledgeChat, message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    await db.delete(msg)
+    await db.commit()
+    return {"status": "deleted"}
+
+@router.put("/chat/messages/{message_id}")
+async def update_chat_message(message_id: int, update: MessageUpdate, db: AsyncSession = Depends(get_db)):
+    msg = await db.get(KnowledgeChat, message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    if update.content is not None:
+        msg.content = update.content
+    if update.role is not None:
+        msg.role = update.role
+        
+    await db.commit()
+    await db.refresh(msg)
+    return {
+        "id": msg.id,
+        "role": msg.role,
+        "content": msg.content,
+        "updated_at": msg.created_at # Actually should be updated_at if model has it
+    }
+
+@router.delete("/chat/sessions/{session_id}")
+async def delete_chat_session(session_id: str, db: AsyncSession = Depends(get_db)):
+    # Delete all messages with this session_id
+    stmt = delete(KnowledgeChat).where(KnowledgeChat.session_id == session_id)
+    result = await db.execute(stmt)
+    await db.commit()
+    return {"status": "deleted", "count": result.rowcount}

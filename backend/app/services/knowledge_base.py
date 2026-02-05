@@ -31,10 +31,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 # 路径配置
-# Fix: Use relative path "data" instead of "backend/data"
-DATA_DIR = Path("data")
+# Fix: Use absolute path relative to backend directory to avoid CWD dependency
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = BACKEND_DIR / "data"
 LANCEDB_DIR = DATA_DIR / "lancedb"
-UPLOAD_DIR = DATA_DIR / "uploads"
+# Use "temp" for temporary processing files to distinguish from persistent storage
+UPLOAD_DIR = DATA_DIR / "temp"
 
 # 确保必要的目录存在
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -231,6 +233,7 @@ class KnowledgeBaseService:
         :return: 包含 nodes 和 edges 的字典
         """
         llm = ModelFactory.create_model(model_config)
+        logger.info(f"Start extracting subgraph via LLM (fallback). Text len: {len(text)}")
         
         # 提示词工程：要求 LLM 提取实体、关系及详细属性
         prompt = f"""
@@ -312,6 +315,9 @@ Text:
             
             try:
                 graph_data = json.loads(content)
+                nodes_count = len(graph_data.get("nodes", {}))
+                edges_count = len(graph_data.get("edges", {}))
+                logger.info(f"Subgraph extraction success. Nodes: {nodes_count}, Edges: {edges_count}")
                 return graph_data
             except json.JSONDecodeError as je:
                 logger.error(f"Chunk JSON 解析错误: {je}")
@@ -332,7 +338,43 @@ Text:
             from app.services.lightrag_service import lightrag_service
             await lightrag_service.ensure_initialized(db)
             doc = await db.get(KnowledgeDocument, doc_id)
-            return lightrag_service.get_graph_data(doc)
+            data = lightrag_service.get_graph_data(doc)
+            if (not data.get("nodes")) and (not data.get("edges")):
+                text = ""
+                temp_path = None
+                try:
+                    if doc and doc.oss_key:
+                        file_ext = os.path.splitext(doc.filename or "")[1] or ".txt"
+                        temp_name = f"temp_graph_{doc.id}{file_ext}"
+                        temp_path = UPLOAD_DIR / temp_name
+                        oss_service.download_file(doc.oss_key, str(temp_path))
+                        text = parse_local_file(str(temp_path))
+                    else:
+                        candidate = UPLOAD_DIR / (doc.filename or "")
+                        if candidate.exists():
+                            text = parse_local_file(str(candidate))
+                except Exception:
+                    pass
+                finally:
+                    if temp_path and os.path.exists(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except Exception:
+                            pass
+                try:
+                    res = await db.execute(
+                        select(LLMModel)
+                        .filter(LLMModel.is_active == True, LLMModel.model_type != "embedding")
+                        .order_by(LLMModel.updated_at.desc())
+                    )
+                    llm_model = res.scalars().first()
+                    if text and llm_model:
+                        fallback = await self._extract_subgraph(text[:50000], llm_model)
+                        if isinstance(fallback, dict) and (fallback.get("nodes") or fallback.get("edges")):
+                            return fallback
+                except Exception:
+                    pass
+            return data
         except Exception as e:
             logger.error(f"获取 LightRAG 图谱失败: {e}")
             return {"nodes": {}, "edges": {}, "reason": f"error:{str(e)}"}

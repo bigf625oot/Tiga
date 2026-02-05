@@ -18,17 +18,21 @@ async def process_audio_background(recording_id: int, db_session_maker):
     """
     Background task to process audio with Aliyun ASR and (Mock) LLM
     """
+    logger.info(f"Background task started for recording_id: {recording_id}")
     async with db_session_maker() as db:
         try:
             result = await db.execute(select(Recording).filter(Recording.id == recording_id))
             recording = result.scalars().first()
             if not recording:
+                logger.error(f"Recording {recording_id} not found in background task")
                 return
 
             # 1. Get Audio URL
             # Note: For Aliyun to work, this URL must be publicly accessible.
             # If running locally, you might need ngrok or use Mock mode (handled by service if keys missing)
+            logger.info(f"Generating presigned URL for recording {recording_id} (key: {recording.s3_key})")
             file_url = s3_service.generate_presigned_url(recording.s3_key)
+            logger.info(f"Generated URL for ASR: {file_url}")
             
             # If URL is local, warn user
             if "localhost" in file_url or "127.0.0.1" in file_url:
@@ -37,16 +41,19 @@ async def process_audio_background(recording_id: int, db_session_maker):
                 # If we don't have keys, the service falls back to Mock, so it's fine.
             
             # 2. Call ASR
+            logger.info(f"Updating status to processing and calling ASR for recording {recording_id}")
             recording.asr_status = "processing"
             await db.commit()
             
             transcription = await aliyun_asr_service.transcribe_audio(file_url)
+            logger.info(f"ASR returned for recording {recording_id}. Transcription length: {len(transcription) if transcription else 0}")
             
             if transcription:
                 recording.transcription_text = transcription
                 recording.asr_status = "completed"
                 
                 # 3. Call LLM Summary (Still Mock for now, or we can integrate LLM later)
+                logger.info(f"Starting summary generation for recording {recording_id}")
                 recording.summary_status = "processing"
                 await db.commit()
                 
@@ -57,15 +64,19 @@ async def process_audio_background(recording_id: int, db_session_maker):
                     recording.summary_text = "内容较短，无需摘要。"
                 
                 recording.summary_status = "completed"
+                logger.info(f"Summary generation completed for recording {recording_id}")
                 
                 # 4. Recommendation (Mock)
+                logger.info(f"Starting recommendation generation for recording {recording_id}")
                 recording.recommendation_status = "processing"
                 await db.commit()
                 
                 # Mock Recommendation
                 recording.recommendation_text = f"【相关推荐】\n基于转写内容，为您推荐以下知识库文档：\n1. 《{recording.filename} 相关技术规范》\n2. 《语音识别最佳实践指南》\n3. 《会议记录归档流程》"
                 recording.recommendation_status = "completed"
+                logger.info(f"Recommendation generation completed for recording {recording_id}")
             else:
+                 logger.warning(f"ASR failed (empty transcription) for recording {recording_id}")
                  recording.transcription_text = "转写失败"
                  recording.summary_text = "转写失败，无法生成摘要"
                  recording.recommendation_text = "无法生成推荐"
@@ -74,9 +85,10 @@ async def process_audio_background(recording_id: int, db_session_maker):
                  recording.recommendation_status = "failed"
 
             await db.commit()
+            logger.info(f"Background task finished successfully for recording {recording_id}")
             
         except Exception as e:
-            logger.error(f"Error processing recording {recording_id}: {e}")
+            logger.error(f"Error processing recording {recording_id}: {e}", exc_info=True)
             recording.asr_status = "failed"
             recording.summary_status = "failed"
             recording.recommendation_status = "failed"
@@ -148,14 +160,20 @@ async def upload_recording(
     parent_id: int = Form(None), # Support upload to folder
     db: AsyncSession = Depends(get_db)
 ):
+    logger.info(f"Received upload request: filename={file.filename}, size={file.size}")
+    
     # Generate unique key
     file_ext = os.path.splitext(file.filename)[1]
     s3_key = f"{uuid.uuid4()}{file_ext}"
     
     # Upload to S3
+    logger.info(f"Uploading file to S3/OSS with key: {s3_key}")
     success = await s3_service.upload_file(file.file, s3_key)
     if not success:
+        logger.error("Upload failed")
         raise HTTPException(status_code=500, detail="Failed to upload file to S3")
+    
+    logger.info("Upload successful. Creating DB record...")
     
     # Save metadata to DB
     new_recording = Recording(
@@ -177,6 +195,8 @@ async def upload_recording(
     db.add(new_recording)
     await db.commit()
     await db.refresh(new_recording)
+    
+    logger.info(f"DB record created (ID: {new_recording.id}). Adding background task...")
     
     # Trigger Background Task for ASR
     background_tasks.add_task(process_audio_background, new_recording.id, AsyncSessionLocal)

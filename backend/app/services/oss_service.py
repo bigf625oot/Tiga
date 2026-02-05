@@ -43,6 +43,7 @@ class OSSService:
             # For simplicity in this demo, we'll construct the URL.
             # Format: https://bucket-name.endpoint/key
             url = f"https://{self.bucket.bucket_name}.{settings.ALIYUN_OSS_ENDPOINT}/{key}"
+            logger.info(f"Successfully uploaded to OSS: {key}")
             return url
         except Exception as e:
             logger.error(f"Failed to upload to OSS: {e}")
@@ -54,6 +55,7 @@ class OSSService:
         try:
             self.bucket.put_object_from_file(key, file_path)
             url = f"https://{self.bucket.bucket_name}.{settings.ALIYUN_OSS_ENDPOINT}/{key}"
+            logger.info(f"Successfully uploaded file to OSS: {key}")
             return url
         except Exception as e:
             logger.error(f"Failed to upload file from path to OSS: {e}")
@@ -64,6 +66,7 @@ class OSSService:
             return
         try:
             self.bucket.delete_object(key)
+            logger.info(f"Successfully deleted from OSS: {key}")
         except Exception as e:
             logger.error(f"Failed to delete from OSS: {e}")
             # Don't raise, just log
@@ -73,6 +76,7 @@ class OSSService:
             raise Exception("OSS storage is not enabled")
         try:
             self.bucket.get_object_to_file(key, file_path)
+            logger.info(f"Successfully downloaded from OSS: {key}")
         except Exception as e:
             logger.error(f"Failed to download from OSS: {e}")
             raise e

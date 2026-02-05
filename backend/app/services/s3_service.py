@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 class S3Service:
     def __init__(self):
         self.storage_type = settings.STORAGE_TYPE.lower()
-        self.upload_dir = "uploads"
+        # Use absolute path for backend/data/storage to avoid CWD dependency
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.upload_dir = os.path.join(backend_dir, "data", "storage")
         
         # Initialize clients based on type
         self.s3_client = None
@@ -64,12 +66,14 @@ class S3Service:
             self.storage_type = "local"
 
     async def upload_file(self, file_obj, object_name):
+        logger.info(f"Starting upload for {object_name} to {self.storage_type}...")
         if self.storage_type == "local":
             try:
                 file_path = os.path.join(self.upload_dir, object_name)
                 file_obj.seek(0)
                 with open(file_path, "wb") as f:
                     shutil.copyfileobj(file_obj, f)
+                logger.info(f"Successfully uploaded {object_name} to local storage at {file_path}")
                 return True
             except Exception as e:
                 logger.error(f"Failed to save locally: {e}")
@@ -79,6 +83,7 @@ class S3Service:
             try:
                 file_obj.seek(0)
                 self.oss_bucket.put_object(object_name, file_obj)
+                logger.info(f"Successfully uploaded {object_name} to Aliyun OSS")
                 return True
             except Exception as e:
                 logger.error(f"Aliyun OSS Upload Failed: {e}")
@@ -88,6 +93,7 @@ class S3Service:
             try:
                 file_obj.seek(0)
                 self.s3_client.upload_fileobj(file_obj, self.bucket_name, object_name)
+                logger.info(f"Successfully uploaded {object_name} to S3")
                 return True
             except Exception as e:
                 logger.error(f"S3 Upload Failed: {e}")
@@ -96,15 +102,19 @@ class S3Service:
         return False
 
     def generate_presigned_url(self, object_name, expiration=3600):
+        logger.info(f"Generating presigned URL for {object_name}...")
         if self.storage_type == "local":
             # Return local static URL
             # Note: This requires the frontend/client to be able to access this host
-            return f"http://localhost:8000/uploads/{object_name}"
+            url = f"http://localhost:8000/uploads/{object_name}"
+            logger.info(f"Generated local URL: {url}")
+            return url
 
         elif self.storage_type == "aliyun_oss":
             try:
                 # oss2 sign_url method
                 url = self.oss_bucket.sign_url('GET', object_name, expiration)
+                logger.info(f"Generated OSS URL: {url}")
                 return url
             except Exception as e:
                 logger.error(f"OSS Sign URL Failed: {e}")
@@ -116,6 +126,7 @@ class S3Service:
                                                                 Params={'Bucket': self.bucket_name,
                                                                         'Key': object_name},
                                                                 ExpiresIn=expiration)
+                logger.info(f"Generated S3 URL: {response}")
                 return response
             except Exception as e:
                 logger.error(f"S3 Sign URL Failed: {e}")

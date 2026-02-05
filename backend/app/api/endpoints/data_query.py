@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from fastapi.responses import StreamingResponse
 from app.services.vanna.service import data_query_service
 from app.services.vanna.models import DbConnectionConfig, VannaRequest
@@ -77,3 +77,27 @@ async def get_config():
             return json.loads(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load config: {str(e)}")
+
+@router.post("/export")
+async def export_dataset(schema: str | None = Query(default=None, description="可选 schema")):
+    """
+    触发导出当前连接数据库的所有表为 JSON/NDJSON，并增量更新 GraphML 图谱。
+    """
+    try:
+        result = await run_in_threadpool(data_query_service.export_dataset_and_update_graph, schema)
+        return {"message": "导出完成", **result}
+    except Exception as e:
+        logger.error(f"导出失败：{e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/export/stats")
+async def export_stats():
+    """
+    返回当前图谱中由结构化数据库生成的节点与边统计。
+    """
+    try:
+        result = await run_in_threadpool(data_query_service.get_db_graph_stats)
+        return result
+    except Exception as e:
+        logger.error(f"统计失败：{e}")
+        raise HTTPException(status_code=400, detail=str(e))

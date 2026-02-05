@@ -33,6 +33,14 @@ export default {
         ],
         din: ['"DIN Alternate"', 'DIN', 'sans-serif'],
       },
+      fontSize: {
+        // 整体调大字号，解决在 Mac 上显示过小的问题
+        xs: ['0.8125rem', { lineHeight: '1.125rem' }], // 13px
+        sm: ['0.9375rem', { lineHeight: '1.375rem' }], // 15px
+        base: ['1rem', { lineHeight: '1.5rem' }],      // 16px
+        lg: ['1.125rem', { lineHeight: '1.75rem' }],   // 18px
+        xl: ['1.25rem', { lineHeight: '1.75rem' }],    // 20px
+      },
     },
   },
   plugins: [],

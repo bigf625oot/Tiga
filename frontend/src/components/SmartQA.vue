@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex bg-slate-50 overflow-hidden shadow-sm relative bg-animated">
+  <div class="h-full flex bg-white overflow-hidden relative">
     <!-- Main Chat Area -->
     <div class="flex-1 flex flex-col h-full bg-white relative">
         
@@ -13,10 +13,10 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="font-bold text-figma-text text-[14px] m-0 leading-tight">
+                    <h2 class="font-bold text-figma-text text-sm m-0 leading-tight">
                         {{ currentSession?.title || '新任务' }}
                     </h2>
-                    <div class="flex items-center gap-1 text-[11px] text-figma-notation" v-if="currentAgent">
+                    <div class="flex items-center gap-1 text-sm text-figma-notation" v-if="currentAgent">
                         <span>当前智能体:</span>
                         <span class="font-medium text-blue-600">{{ currentAgent.name }}</span>
                     </div>
@@ -46,7 +46,7 @@
                     <div class="w-[94px] h-[94px] flex items-center justify-center mb-2">
                         <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain" />
                     </div>
-                    <h1 class="text-[24px] md:text-[28px] text-[#2A2F3C] text-center m-0 leading-tight" style="font-family: 'Alibaba PuHuiTi','PingFang SC','Microsoft YaHei',sans-serif; font-weight:115;">让我们创造点厉害的东西！</h1>
+                    <h1 class="text-[36px] text-[#2A2F3C] text-center m-0 leading-tight" style="font-family: sans-serif; font-weight:bold;">让我们创造点厉害的东西！</h1>
                 </div>
                 
                 <div class="w-full flex flex-col gap-10">
@@ -122,26 +122,34 @@
                         </div>
                     </div>
 
-                    <!-- Scripts Section (Frame 1321318130) -->
-                    <div v-if="userScripts.length > 0" class="flex flex-col gap-3 px-1">
-                        <span class="text-[13px] font-medium text-[#495363] px-3">剧本</span>
-                        <div class="flex flex-wrap gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                    <!-- Scripts Section (Card Style) -->
+                    <div v-if="userScripts.length > 0" class="flex flex-col gap-3 px-1 mt-4">
+                        <span class="text-sm font-medium text-[#495363] px-3">剧本</span>
+                        <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar px-2">
                             <div 
                                 v-for="s in userScripts" 
                                 :key="s.id" 
-                                class="flex items-center gap-2 px-4 py-2 bg-white hover:bg-figma-hover transition-all cursor-pointer rounded-full border border-[#F2F3F5] group shadow-sm flex-shrink-0" 
+                                class="w-[220px] h-[140px] flex-shrink-0 flex flex-col justify-between p-5 bg-gradient-to-br from-white via-white to-indigo-50/60 rounded-2xl border border-slate-100 hover:border-indigo-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden" 
                                 @click="sendQuickMessage(s.content)"
                             >
-                                <div class="w-4 h-4 flex items-center justify-center text-[#858B9B] group-hover:text-figma-text">
-                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 2H4.66667C3.19391 2 2 3.19391 2 4.66667V11.3333C2 12.8061 3.19391 14 4.66667 14H11.3333C12.8061 14 14 12.8061 14 11.3333V4.66667C14 3.19391 12.8061 2 11.3333 2H10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M6 1V3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M10 1V3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M5 7H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M5 10H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                <!-- Decorative Gradient Blob -->
+                                <div class="absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-purple-100/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                
+                                <!-- Top: Quote & Content -->
+                                <div class="flex flex-col gap-2 relative z-10">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="text-indigo-200 group-hover:text-indigo-500 transition-colors duration-300">
+                                        <!-- <path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z" /> -->
+                                        <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
                                     </svg>
+                                    <p class="text-xs text-slate-500 group-hover:text-slate-600 line-clamp-3 leading-relaxed transition-colors duration-300">
+                                        {{ s.content }}
+                                    </p>
                                 </div>
-                                <span class="text-[12px] text-[#858B9B] group-hover:text-figma-text whitespace-nowrap">{{ s.title }}</span>
+
+                                <!-- Bottom: Title -->
+                                <div class="relative z-10 flex items-center justify-between mt-1 pt-3 border-t border-slate-50 group-hover:border-slate-100 transition-colors duration-300">
+                                    <span class="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors duration-300 truncate">{{ s.title }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -180,7 +188,7 @@
                         </div>
                         
                         <!-- Markdown Content -->
-                        <div v-else class="markdown-body" v-html="renderMarkdown(msg.content)"></div>
+                        <div v-else class="markdown-body" v-html="renderMarkdown(msg.content, msg.role === 'assistant')"></div>
                         <div v-if="msg.meta_data && (msg.meta_data.structured_references || msg.meta_data.references)" class="mt-3 p-3 bg-slate-50 rounded border border-slate-200">
                             <div class="flex items-center justify-between">
                                 <div class="font-medium text-slate-700">参考资料</div>
@@ -718,13 +726,23 @@ const sendMessage = async () => {
     }
     
     try {
+        const payload = { 
+            message: userMsg, 
+            attachments: attachmentIds 
+        };
+        
+        // Use global QA endpoint if no specific agent selected or if it's the default behavior
+        // But here we are in SmartQA which uses chat session API.
+        // The backend chat session API routes to specific agents.
+        // If we want to support "Knowledge Base Global QA" in SmartQA, we need an agent that does that,
+        // OR we need to use the KnowledgeQA endpoints directly.
+        // Assuming SmartQA is general purpose, let's stick to session chat API.
+        // If the user wants Global Knowledge QA, they should select the "Knowledge Agent" or similar.
+        
         const response = await fetch(`/api/v1/chat/sessions/${currentSessionId.value}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                message: userMsg, 
-                attachments: attachmentIds 
-            })
+            body: JSON.stringify(payload)
         });
         
         if (!response.ok) throw new Error(response.statusText);
@@ -789,10 +807,31 @@ const scrollToBottom = () => {
     });
 };
 
-const renderMarkdown = (text) => {
+const renderMarkdown = (text, isAssistant = false) => {
     try {
         let inputText = (text || '').trim();
         
+        // 1. Handle <think> tags for assistant messages
+        let thinkHtml = '';
+        if (isAssistant) {
+            const thinkMatch = inputText.match(/<think>([\s\S]*?)<\/think>/);
+            if (thinkMatch) {
+                const thinkContent = thinkMatch[1];
+                const parsedThink = marked.parse(thinkContent);
+                thinkHtml = `
+                <details class="mb-3 bg-amber-50/50 rounded-lg border border-amber-100 overflow-hidden group" ${inputText.includes('</think>') ? '' : 'open'}>
+                    <summary class="px-3 py-1.5 text-xs font-medium text-amber-600/70 cursor-pointer hover:bg-amber-50 flex items-center gap-2 select-none transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        思考过程
+                    </summary>
+                    <div class="px-3 py-2 text-xs text-slate-600 border-t border-amber-100/50 bg-white/50 leading-relaxed">
+                        ${parsedThink}
+                    </div>
+                </details>`;
+                inputText = inputText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+            }
+        }
+
         // [Cleanup] Remove raw document references like doc#3:xxxx...
         inputText = inputText.replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '');
         
@@ -832,7 +871,7 @@ const renderMarkdown = (text) => {
             try { return katex.renderToString(formula, { displayMode: false }); } catch { return match; }
         });
         html = html.replace(/<p>\s*<\/p>/g, '');
-        return html;
+        return thinkHtml + html;
     } catch (e) {
         return text;
     }
@@ -877,8 +916,8 @@ const renderAmis = (index, content) => {
 }
 
 .markdown-body {
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 16px;
+    line-height: 1.7;
     color: #334155;
 }
 /* Typography */
@@ -939,7 +978,7 @@ const renderAmis = (index, content) => {
     line-height: 24px !important;
 }
 :deep(.agent-select-figma .ant-select-selection-item) {
-    font-size: 12px !important;
+    font-size: 13px !important;
     color: #000000 !important;
     font-weight: 400 !important;
     padding-inline-end: 4px !important;
@@ -950,23 +989,23 @@ const renderAmis = (index, content) => {
 
 .bubble-user {
     max-width: 85%;
-    padding: 10px 12px;
+    padding: 12px 16px;
     border-radius: 14px 14px 4px 14px;
     background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
     color: #ffffff;
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.18);
-    font-size: 12px;
+    font-size: 16px;
     line-height: 1.6;
 }
 .bubble-assistant {
     max-width: 85%;
-    padding: 10px 12px;
+    padding: 12px 16px;
     border-radius: 14px 14px 14px 4px;
     background: #ffffff;
     border: 1px solid #e6eaf2;
     color: #334155;
     box-shadow: 0 6px 18px rgba(191, 205, 237, 0.25);
-    font-size: 12px;
+    font-size: 16px;
     line-height: 1.6;
 }
 /* Ensure markdown spacing doesn't inflate bubble height */
@@ -1015,7 +1054,7 @@ const renderAmis = (index, content) => {
     left: 50%;
     top: 42%;
     transform: translate(-50%, -50%) rotate(-8deg);
-    font-family: 'Alibaba PuHuiTi','PingFang SC','Microsoft YaHei',sans-serif;
+    font-family: sans-serif;
     font-weight: 700;
     font-size: clamp(140px, 26vw, 380px);
     letter-spacing: 0.06em;
@@ -1029,12 +1068,12 @@ const renderAmis = (index, content) => {
  
 .textarea-modern {
     width: 100%;
-    padding: 12px 14px;
+    padding: 14px 16px;
     background: #ffffff;
     border: 1px solid #E6EAF2;
     border-radius: 14px;
     color: #334155;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
     transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
@@ -1055,60 +1094,12 @@ const renderAmis = (index, content) => {
 <style>
 /* Global Dropdown Styles */
 .agent-dropdown-custom .ant-select-item {
-    font-size: 13px;
-    padding: 8px 12px;
+    font-size: 15px;
+    padding: 10px 14px;
 }
 .agent-dropdown-custom .ant-select-item-option-selected {
     background-color: #F2F3F5 !important;
     color: #171717 !important;
     font-weight: 500;
-}
-</style>
-<style>
-/* Alibaba PuHuiTi Webfont (CDN) */
-@font-face {
-    font-family: 'Alibaba PuHuiTi';
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
-    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light/AlibabaPuHuiTi-2-45-Light.woff2') format('woff2'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light/AlibabaPuHuiTi-2-45-Light.woff') format('woff'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-45-Light/AlibabaPuHuiTi-2-45-Light.ttf') format('truetype');
-}
-@font-face {
-    font-family: 'Alibaba PuHuiTi';
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-55-Regular/AlibabaPuHuiTi-2-55-Regular.woff2') format('woff2'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-55-Regular/AlibabaPuHuiTi-2-55-Regular.woff') format('woff'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-55-Regular/AlibabaPuHuiTi-2-55-Regular.ttf') format('truetype');
-}
-@font-face {
-    font-family: 'Alibaba PuHuiTi';
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
-    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-65-Medium/AlibabaPuHuiTi-2-65-Medium.woff2') format('woff2'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-65-Medium/AlibabaPuHuiTi-2-65-Medium.woff') format('woff'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-65-Medium/AlibabaPuHuiTi-2-65-Medium.ttf') format('truetype');
-}
-@font-face {
-    font-family: 'Alibaba PuHuiTi';
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
-    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-75-SemiBold/AlibabaPuHuiTi-2-75-SemiBold.woff2') format('woff2'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-75-SemiBold/AlibabaPuHuiTi-2-75-SemiBold.woff') format('woff'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-75-SemiBold/AlibabaPuHuiTi-2-75-SemiBold.ttf') format('truetype');
-}
-@font-face {
-    font-family: 'Alibaba PuHuiTi';
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-    src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-85-Bold/AlibabaPuHuiTi-2-85-Bold.woff2') format('woff2'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-85-Bold/AlibabaPuHuiTi-2-85-Bold.woff') format('woff'),
-         url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-2/AlibabaPuHuiTi-2-85-Bold/AlibabaPuHuiTi-2-85-Bold.ttf') format('truetype');
 }
 </style>

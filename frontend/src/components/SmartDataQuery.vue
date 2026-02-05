@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex bg-slate-50 overflow-hidden rounded-2xl shadow-sm border border-slate-200">
+  <div class="h-full flex bg-white overflow-hidden rounded-2xl shadow-sm border border-slate-200">
     <!-- Config Sidebar -->
     <div class="w-96 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 p-6 overflow-y-auto custom-scrollbar">
         <h2 class="text-lg font-bold mb-6 flex items-center gap-2">
@@ -106,6 +106,14 @@
                 <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-blue-600" :disabled="testing">
                     保存配置并连接
                 </a-button>
+                
+                <a-button @click="exportDataset" :loading="exporting" class="w-full h-10 font-medium" :disabled="connecting || testing">
+                    导出数据集并更新图谱
+                </a-button>
+                
+                <a-button @click="viewGraphStats" :loading="statsLoading" class="w-full h-10 font-medium" :disabled="connecting || testing">
+                    查看图谱统计
+                </a-button>
             </div>
         </a-form>
         
@@ -113,6 +121,19 @@
         <div v-if="testResult" class="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
             <component :is="testResult.success ? 'CheckCircleOutlined' : 'CloseCircleOutlined'" class="mt-0.5" />
             <span class="break-all">{{ testResult.message }}</span>
+        </div>
+        
+        <div v-if="statsResult" class="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+            <div class="font-medium mb-2">图谱统计</div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>节点：{{ statsResult.nodes }}</div>
+                <div>边：{{ statsResult.edges }}</div>
+                <div>表：{{ statsResult.db_tables }}</div>
+                <div>列：{{ statsResult.db_columns }}</div>
+                <div>has_column：{{ statsResult.has_column_edges }}</div>
+                <div>fk：{{ statsResult.fk_edges }}</div>
+            </div>
+            <div class="mt-2 break-all text-slate-500">路径：{{ statsResult.path }}</div>
         </div>
         
         <div class="mt-8 p-4 bg-blue-50 text-blue-700 text-xs rounded-xl border border-blue-100 leading-relaxed">
@@ -130,7 +151,7 @@
     </div>
     
     <!-- Chat Area -->
-    <div class="flex-1 flex flex-col h-full bg-slate-50 relative">
+    <div class="flex-1 flex flex-col h-full bg-white relative">
         <!-- Messages -->
         <div class="flex-1 overflow-y-auto p-6 space-y-6" ref="messagesContainer">
              <div v-if="messages.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400">
@@ -149,7 +170,7 @@
                      <svg v-else class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                 </div>
                 <div :class="['rounded-2xl px-5 py-3.5 shadow-sm text-sm leading-relaxed max-w-[85%]', 
-                              msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-sm']">
+                              msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-slate-50 border border-slate-100 text-slate-700 rounded-tl-sm']">
                     <div v-if="msg.role === 'assistant'" class="markdown-body" v-html="renderMarkdown(msg.content)"></div>
                     <div v-else>{{ msg.content }}</div>
                 </div>
@@ -173,8 +194,8 @@
             <div class="max-w-4xl mx-auto relative">
                 <textarea 
                   v-model="input" 
-                  @keydown.enter.prevent="sendMessage"
-                  rows="1"
+                  @keydown.enter.exact.prevent="sendMessage"
+                  rows="3"
                   placeholder="输入您的问题..." 
                   class="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none resize-none text-sm text-slate-700 placeholder-slate-400 transition-all shadow-inner"
                   :disabled="isLoading"
@@ -218,6 +239,9 @@ const config = ref({
 const showAdvanced = ref(false);
 const testing = ref(false);
 const connecting = ref(false);
+const exporting = ref(false);
+const statsLoading = ref(false);
+const statsResult = ref(null);
 const testResult = ref(null);
 const input = ref('');
 const messages = ref([]);
@@ -333,6 +357,43 @@ const saveAndConnect = async () => {
         message.error(e.message);
     } finally {
         connecting.value = false;
+    }
+};
+
+const exportDataset = async () => {
+    exporting.value = true;
+    try {
+        const res = await fetch('/api/v1/data_query/export', { method: 'POST' });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || '导出失败');
+        }
+        const data = await res.json();
+        const idx = data.index || {};
+        const cnt = Array.isArray(idx.tables) ? idx.tables.length : 0;
+        message.success(`导出完成，表数：${cnt}，图谱已更新`);
+    } catch (e) {
+        message.error(e.message || '导出失败');
+    } finally {
+        exporting.value = false;
+    }
+};
+
+const viewGraphStats = async () => {
+    statsLoading.value = true;
+    try {
+        const res = await fetch('/api/v1/data_query/export/stats');
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || '统计失败');
+        }
+        const data = await res.json();
+        statsResult.value = data;
+        message.success('已获取图谱统计');
+    } catch (e) {
+        message.error(e.message || '统计失败');
+    } finally {
+        statsLoading.value = false;
     }
 };
 

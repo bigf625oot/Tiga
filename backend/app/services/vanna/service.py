@@ -1,4 +1,4 @@
-from typing import Optional, Any, Generator, List, Callable
+from typing import Optional, Any, Generator, List, Callable, Dict
 from agno.agent import Agent
 from app.services.model_factory import ModelFactory
 from .runners.sql_runner import SQLAlchemyRunner
@@ -11,6 +11,7 @@ import json
 import logging
 import time
 from sqlalchemy import text
+from .tools.export_dataset import export_database_to_json, update_graphml_from_dataset, get_db_graph_stats
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -51,7 +52,15 @@ class SmartDataQueryService:
             if config.db_schema:
                 connect_args['options'] = f'-c search_path={config.db_schema}'
         elif config.type == "mysql":
-            conn_str = f"mysql+pymysql://{config.user}:{config.password}@{config.host}:{config.port}/{config.database}"
+            # [Fix] URL encode password and host to handle special characters like # or @
+            import urllib.parse
+            safe_password = urllib.parse.quote_plus(config.password)
+            safe_host = urllib.parse.quote_plus(config.host)
+            # Host typically doesn't need encoding unless it has weird chars, but password definitely does.
+            # However, if host contains #, it breaks SQLAlchemy URL parsing.
+            
+            # Reconstruct connection string carefully
+            conn_str = f"mysql+pymysql://{config.user}:{safe_password}@{safe_host}:{config.port}/{config.database}"
             if config.charset:
                 connect_args['charset'] = config.charset
             
@@ -98,6 +107,23 @@ class SmartDataQueryService:
         
         # Reset state
         self.last_run_df = None
+
+    def export_dataset_and_update_graph(self, schema: Optional[str] = None) -> Dict[str, Any]:
+        """
+        导出当前连接数据库的所有表到 JSON，并增量更新图谱。
+        返回索引与图谱路径。
+        """
+        logger.info(f"Export dataset and update graph invoked, schema={schema}")
+        if not self.sql_runner:
+            raise RuntimeError("请先连接数据库")
+        index = export_database_to_json(engine=self.sql_runner.engine, schema=schema)
+        logger.info(f"Dataset export finished, tables={len(index.get('tables', []))}")
+        gpath = update_graphml_from_dataset(index)
+        logger.info(f"GraphML updated at {gpath}")
+        return {"index": index, "graphml_path": str(gpath)}
+
+    def get_db_graph_stats(self) -> Dict[str, Any]:
+        return get_db_graph_stats()
 
     def test_connection(self, config: DbConnectionConfig) -> bool:
         """

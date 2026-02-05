@@ -13,13 +13,27 @@ from app.api.api import api_router
 from contextlib import asynccontextmanager
 import os
 
+import logging
+import sys
+
+# Configure logging to output to stdout
+# [Force Reload] Trigger restart to ensure new models are loaded
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Connect to DB, Redis, S3 checks
-    print("Starting up...")
+    logging.info("Starting up...")
     
-    # Create uploads dir if not exists
-    os.makedirs("uploads", exist_ok=True)
+    # Create uploads dir if not exists (Use absolute path)
+    from pathlib import Path
+    BACKEND_DIR = Path(__file__).resolve().parents[1]
+    UPLOADS_DIR = BACKEND_DIR / "data" / "storage"
+    os.makedirs(str(UPLOADS_DIR), exist_ok=True)
     
     # Create tables (Simple init for SQLite/Dev)
     from app.db.session import engine
@@ -64,7 +78,12 @@ app.add_middleware(
 )
 
 # Mount uploads directory for local access
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Fix: Use absolute path to backend/data/storage for uploads
+from pathlib import Path
+BACKEND_DIR = Path(__file__).resolve().parents[1] # backend/
+UPLOADS_DIR = BACKEND_DIR / "data" / "storage"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
