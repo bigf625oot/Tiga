@@ -1,9 +1,11 @@
-from typing import Optional, List
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.graph_export import GraphExportConfig
 from app.schemas.graph_export import GraphExportConfigCreate, GraphExportConfigUpdate
+
 
 class CRUDGraphExportConfig:
     async def get(self, db: AsyncSession, id: int) -> Optional[GraphExportConfig]:
@@ -16,10 +18,7 @@ class CRUDGraphExportConfig:
 
     async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100) -> List[GraphExportConfig]:
         result = await db.execute(
-            select(GraphExportConfig)
-            .offset(skip)
-            .limit(limit)
-            .order_by(GraphExportConfig.updated_at.desc())
+            select(GraphExportConfig).offset(skip).limit(limit).order_by(GraphExportConfig.updated_at.desc())
         )
         return result.scalars().all()
 
@@ -31,7 +30,9 @@ class CRUDGraphExportConfig:
         await db.refresh(db_obj)
         return db_obj
 
-    async def update(self, db: AsyncSession, db_obj: GraphExportConfig, obj_in: GraphExportConfigUpdate) -> GraphExportConfig:
+    async def update(
+        self, db: AsyncSession, db_obj: GraphExportConfig, obj_in: GraphExportConfigUpdate
+    ) -> GraphExportConfig:
         update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_obj, field, value)
@@ -46,5 +47,6 @@ class CRUDGraphExportConfig:
             await db.delete(db_obj)
             await db.commit()
         return db_obj
+
 
 graph_export_config = CRUDGraphExportConfig()

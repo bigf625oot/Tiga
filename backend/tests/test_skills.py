@@ -2,16 +2,15 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi.testclient import TestClient
-from app.main import app
-from app.services.context_loader import context_loader
+from app.services.rag.context import context_loader
 from app.models.skill import Skill
 from unittest.mock import AsyncMock, MagicMock
 # import pytest
 
-# client = TestClient(app)
+# Client is now provided via fixture in conftest.py
+# client = TestClient(app) 
 
-def test_create_skill():
+def test_create_skill(client):
     response = client.post(
         "/api/v1/skills/",
         json={
@@ -25,9 +24,19 @@ def test_create_skill():
     data = response.json()
     assert data["name"] == "Test Skill"
     assert "id" in data
-    return data["id"]
+    # return data["id"] # Removed return to avoid pytest warning
 
-def test_read_skills():
+def test_read_skills(client):
+    # Ensure a skill exists (since tests might run in random order, create one first)
+    client.post(
+        "/api/v1/skills/",
+        json={
+            "name": "Test Skill 2",
+            "description": "A test skill",
+            "content": "You are a test skill.",
+            "version": "1.0.0"
+        }
+    )
     response = client.get("/api/v1/skills/")
     assert response.status_code == 200
     data = response.json()
@@ -60,8 +69,11 @@ def test_context_loader():
 if __name__ == "__main__":
     # If run directly
     try:
-        # sid = test_create_skill()
-        # test_read_skills()
+        from fastapi.testclient import TestClient
+        from app.main import app
+        client = TestClient(app)
+        # sid = test_create_skill(client)
+        # test_read_skills(client)
         test_context_loader()
         print("All tests passed!")
     except Exception as e:

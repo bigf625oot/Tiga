@@ -1,5 +1,5 @@
-import sqlite3
 import os
+import sqlite3
 
 db_path = "recorder_v5.db"
 
@@ -7,11 +7,11 @@ if os.path.exists(db_path):
     print(f"Connecting to {db_path}")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
     # Check if columns exist
     cursor.execute("PRAGMA table_info(agents)")
     columns = [info[1] for info in cursor.fetchall()]
-    
+
     if "skills_config" not in columns:
         print("Adding skills_config column...")
         try:
@@ -19,7 +19,7 @@ if os.path.exists(db_path):
             print("Added skills_config")
         except Exception as e:
             print(f"Error adding skills_config: {e}")
-            
+
     if "mcp_config" not in columns:
         print("Adding mcp_config column...")
         try:
@@ -54,7 +54,7 @@ if os.path.exists(db_path):
             FOREIGN KEY(agent_id) REFERENCES agents(id)
         )
         """)
-        
+
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +70,7 @@ if os.path.exists(db_path):
         print("Chat tables checked/created")
     except Exception as e:
         print(f"Error creating chat tables: {e}")
-            
+
     # Create Workflow Table
     print("Creating workflow table if not exist...")
     try:

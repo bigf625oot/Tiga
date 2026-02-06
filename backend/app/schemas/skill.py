@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+
 
 class SkillBase(BaseModel):
     name: str
@@ -11,11 +13,14 @@ class SkillBase(BaseModel):
     meta_data: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = True
 
+
 class SkillCreate(SkillBase):
     pass
 
+
 class SkillUpdate(SkillBase):
     name: Optional[str] = None
+
 
 class Skill(SkillBase):
     id: str

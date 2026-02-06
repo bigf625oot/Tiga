@@ -1,7 +1,0 @@
-{
-  "name": "recorder-demo_UniApp",
-  "version": "1.0.0",
-  "dependencies": {
-    "recorder-core": "*"
-  }
-}

@@ -1,14 +1,25 @@
 from fastapi import APIRouter
-from app.api.endpoints import recordings, llm
-from app.api.endpoints import rag
+
+from app.api.endpoints import (
+    agents,
+    chat,
+    data_query,
+    data_source,
+    graph_export,
+    health,
+    indicators,
+    knowledge,
+    llm,
+    mcp,
+    metrics_tool,
+    rag,
+    recordings,
+    render_data,
+    user_script,
+    workflow,
+    skills,
+)
 from app.api.endpoints.search_agent import news
-from app.api.endpoints import metrics_tool
-from app.api.endpoints import chat, knowledge, agents, mcp, workflow
-from app.api.endpoints import user_script
-from app.api.endpoints import data_query, data_source
-from app.api.endpoints import render_data
-from app.api.endpoints import indicators
-from app.api.endpoints import health, graph_export
 
 api_router = APIRouter()
 api_router.include_router(graph_export.router, prefix="/graph_export", tags=["graph_export"])
@@ -28,3 +39,4 @@ api_router.include_router(data_source.router, prefix="/data-sources", tags=["dat
 api_router.include_router(indicators.router, prefix="/indicators", tags=["indicators"])
 api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(rag.router, prefix="/rag", tags=["rag"])
+api_router.include_router(skills.router, prefix="/skills", tags=["skills"])

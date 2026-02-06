@@ -1,6 +1,0 @@
-view button{
-	font-weight: normal;
-}
-view button[size=mini]{
-	font-size: 14px;
-}

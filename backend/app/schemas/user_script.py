@@ -1,6 +1,8 @@
-from pydantic import BaseModel, field_validator
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, field_validator
+
 
 class UserScriptBase(BaseModel):
     agent_id: str
@@ -20,13 +22,16 @@ class UserScriptBase(BaseModel):
             raise ValueError("content length must be <= 500 and not empty")
         return v
 
+
 class UserScriptCreate(UserScriptBase):
     pass
+
 
 class UserScriptUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     sort_order: Optional[int] = None
+
 
 class UserScriptResponse(UserScriptBase):
     id: int

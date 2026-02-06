@@ -1,9 +1,10 @@
-
 import asyncio
+import logging
 import os
 import sys
-import logging
+
 import nest_asyncio
+
 nest_asyncio.apply()
 
 # Add backend directory to path
@@ -16,12 +17,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from app.db.session import AsyncSessionLocal
-from app.services.lightrag_service import lightrag_service
+from app.services.rag.engines.lightrag import lightrag_engine
+
 
 async def run():
     # Get filenames from command line arguments
     args = sys.argv[1:]
-    
+
     include_files = None
     if not args:
         logger.info("No arguments provided, using default hardcoded file.")
@@ -36,16 +38,14 @@ async def run():
     logger.info("Starting knowledge base rebuild (chunking + vectorization)...")
     try:
         async with AsyncSessionLocal() as db:
-            await lightrag_service.rebuild_store(
-                db, 
-                include_filenames=include_files,
-                clear_existing=False
-            )
+            await lightrag_engine.rebuild_store(db, include_filenames=include_files, clear_existing=False)
         logger.info("Rebuild completed successfully.")
     except Exception as e:
         logger.error(f"Rebuild failed: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(run())

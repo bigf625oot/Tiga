@@ -1,15 +1,20 @@
 from typing import List, Optional
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+
 from app.models.indicator import Indicator
 from app.schemas.indicator import IndicatorCreate, IndicatorUpdate
+
 
 class CRUDIndicator:
     async def get(self, db: AsyncSession, id: int) -> Optional[Indicator]:
         result = await db.execute(select(Indicator).filter(Indicator.id == id, Indicator.is_deleted == False))
         return result.scalars().first()
 
-    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 20, search: Optional[str] = None) -> List[Indicator]:
+    async def get_multi(
+        self, db: AsyncSession, skip: int = 0, limit: int = 20, search: Optional[str] = None
+    ) -> List[Indicator]:
         query = select(Indicator).filter(Indicator.is_deleted == False)
         if search:
             query = query.filter(Indicator.name.ilike(f"%{search}%"))
@@ -23,7 +28,7 @@ class CRUDIndicator:
             name=obj_in.name,
             alias=obj_in.alias,
             description=obj_in.description,
-            advanced_options=obj_in.advanced_options
+            advanced_options=obj_in.advanced_options,
         )
         db.add(db_obj)
         await db.commit()
@@ -50,11 +55,10 @@ class CRUDIndicator:
         return db_obj
 
     async def get_by_group_and_name(self, db: AsyncSession, group: str, name: str) -> Optional[Indicator]:
-        result = await db.execute(select(Indicator).filter(
-            Indicator.group == group, 
-            Indicator.name == name,
-            Indicator.is_deleted == False
-        ))
+        result = await db.execute(
+            select(Indicator).filter(Indicator.group == group, Indicator.name == name, Indicator.is_deleted == False)
+        )
         return result.scalars().first()
+
 
 crud_indicator = CRUDIndicator()

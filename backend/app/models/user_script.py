@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class UserScript(Base):
     __tablename__ = "user_scripts"

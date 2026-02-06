@@ -1,7 +1,9 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.agent import Agent
 from app.schemas.agent import AgentCreate, AgentUpdate
+
 
 class CRUDAgent:
     async def get(self, db: AsyncSession, id: str):
@@ -17,7 +19,7 @@ class CRUDAgent:
         # Map Pydantic 'agent_model_config' back to DB 'model_config'
         if "agent_model_config" in obj_data:
             obj_data["model_config"] = obj_data.pop("agent_model_config")
-            
+
         db_obj = Agent(**obj_data)
         db.add(db_obj)
         await db.commit()
@@ -29,7 +31,7 @@ class CRUDAgent:
         # Map Pydantic 'agent_model_config' back to DB 'model_config'
         if "agent_model_config" in update_data:
             update_data["model_config"] = update_data.pop("agent_model_config")
-            
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         db.add(db_obj)
@@ -43,5 +45,6 @@ class CRUDAgent:
             await db.delete(db_obj)
             await db.commit()
         return db_obj
+
 
 agent = CRUDAgent()

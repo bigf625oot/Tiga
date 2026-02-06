@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
 
 class LLMModelBase(BaseModel):
     name: str
@@ -11,8 +13,10 @@ class LLMModelBase(BaseModel):
     base_url: Optional[str] = None
     is_active: bool = False
 
+
 class LLMModelCreate(LLMModelBase):
     pass
+
 
 class LLMModelUpdate(BaseModel):
     name: Optional[str] = None
@@ -23,6 +27,7 @@ class LLMModelUpdate(BaseModel):
     base_url: Optional[str] = None
     is_active: Optional[bool] = None
 
+
 class LLMModelResponse(LLMModelBase):
     id: int
     created_at: datetime
@@ -31,11 +36,13 @@ class LLMModelResponse(LLMModelBase):
     class Config:
         from_attributes = True
 
+
 class LLMTestRequest(BaseModel):
     provider: str
     model_id: str
     api_key: Optional[str] = None
     base_url: Optional[str] = None
+
 
 class LLMTestResponse(BaseModel):
     success: bool

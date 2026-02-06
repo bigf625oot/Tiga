@@ -1,11 +1,19 @@
+from typing import Any, Dict
+
 from fastapi import APIRouter
+
 from app.core.config import settings
-from app.services.knowledge_base import kb_service
-from typing import Dict, Any
+from app.services.rag.knowledge_base import kb_service
 
 router = APIRouter()
 
-@router.get("/health/retrieval")
+
+@router.get("/")
+async def health_check() -> Dict[str, str]:
+    return {"status": "ok"}
+
+
+@router.get("/retrieval")
 async def retrieval_health() -> Dict[str, Any]:
     out: Dict[str, Any] = {
         "vector": {
@@ -20,7 +28,7 @@ async def retrieval_health() -> Dict[str, Any]:
             "ok": False,
             "version": None,
             "count": None,
-        }
+        },
     }
 
     vb = out["vector"]["backend"]
@@ -30,6 +38,7 @@ async def retrieval_health() -> Dict[str, Any]:
     try:
         if vb == "lancedb":
             import lancedb
+
             out["vector"]["version"] = getattr(lancedb, "__version__", None)
             # Try to access underlying table name
             tbl = getattr(kb_service.vector_db, "table_name", None)
@@ -41,9 +50,15 @@ async def retrieval_health() -> Dict[str, Any]:
             except Exception:
                 out["vector"]["ok"] = True
         elif vb == "qdrant":
-            from qdrant_client import QdrantClient, __version__ as qv
+            from qdrant_client import QdrantClient
+            from qdrant_client import __version__ as qv
+
             out["vector"]["version"] = qv
-            client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY) if settings.QDRANT_URL else QdrantClient()
+            client = (
+                QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+                if settings.QDRANT_URL
+                else QdrantClient()
+            )
             coll = settings.QDRANT_COLLECTION
             out["vector"]["collection"] = coll
             try:
@@ -59,8 +74,10 @@ async def retrieval_health() -> Dict[str, Any]:
                 out["vector"]["ok"] = False
         elif vb == "milvus":
             import pymilvus
+
             out["vector"]["version"] = getattr(pymilvus, "__version__", None)
-            from pymilvus import connections, Collection
+            from pymilvus import Collection, connections
+
             host = settings.MILVUS_HOST or "127.0.0.1"
             port = settings.MILVUS_PORT or 19530
             connections.connect("default", host=host, port=port)
@@ -80,8 +97,10 @@ async def retrieval_health() -> Dict[str, Any]:
     try:
         if gb == "neo4j":
             import neo4j
+
             out["graph"]["version"] = getattr(neo4j, "__version__", None)
-            from app.services.graph_service import _get_driver
+            from app.services.rag.graph import _get_driver
+
             driver = _get_driver()
             with driver.session() as session:
                 session.run("RETURN 1")

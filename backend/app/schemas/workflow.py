@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
 
 class WorkflowBase(BaseModel):
     name: str
@@ -8,14 +10,17 @@ class WorkflowBase(BaseModel):
     webhook_url: str
     is_active: bool = True
 
+
 class WorkflowCreate(WorkflowBase):
     pass
+
 
 class WorkflowUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     webhook_url: Optional[str] = None
     is_active: Optional[bool] = None
+
 
 class WorkflowResponse(WorkflowBase):
     id: str

@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
 
 class DataSourceBase(BaseModel):
     name: str
@@ -12,8 +14,10 @@ class DataSourceBase(BaseModel):
     schema: Optional[str] = None
     description: Optional[str] = None
 
+
 class DataSourceCreate(DataSourceBase):
     password: Optional[str] = None
+
 
 class DataSourceUpdate(BaseModel):
     name: Optional[str] = None
@@ -26,6 +30,7 @@ class DataSourceUpdate(BaseModel):
     schema: Optional[str] = None
     description: Optional[str] = None
 
+
 class DataSourceOut(DataSourceBase):
     id: int
     created_at: datetime
@@ -34,6 +39,7 @@ class DataSourceOut(DataSourceBase):
 
     class Config:
         from_attributes = True
+
 
 class DataSourceTest(DataSourceCreate):
     pass

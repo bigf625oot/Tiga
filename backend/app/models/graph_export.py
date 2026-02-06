@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON
+from sqlalchemy import JSON, Column, DateTime, Integer, String
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class GraphExportConfig(Base):
     __tablename__ = "graph_export_configs"

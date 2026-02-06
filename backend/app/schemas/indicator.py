@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
 
 class IndicatorBase(BaseModel):
     group: str
@@ -9,8 +11,10 @@ class IndicatorBase(BaseModel):
     description: Optional[str] = None
     advanced_options: Optional[dict] = None
 
+
 class IndicatorCreate(IndicatorBase):
     pass
+
 
 class IndicatorUpdate(BaseModel):
     group: Optional[str] = None
@@ -19,6 +23,7 @@ class IndicatorUpdate(BaseModel):
     description: Optional[str] = None
     advanced_options: Optional[dict] = None
     is_deleted: Optional[bool] = None
+
 
 class IndicatorResponse(IndicatorBase):
     id: int

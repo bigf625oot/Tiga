@@ -1,14 +1,18 @@
-from sqlalchemy import Column, String, Integer, DateTime, Enum, Text, JSON
-from datetime import datetime
 import enum
+from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, Enum, Integer, String, Text
+
 from app.db.base import Base
+
 
 class DocumentStatus(str, enum.Enum):
     UPLOADING = "uploading"
-    UPLOADED = "uploaded" 
+    UPLOADED = "uploaded"
     INDEXING = "indexing"
     INDEXED = "indexed"
     FAILED = "failed"
+
 
 class KnowledgeDocument(Base):
     __tablename__ = "knowledge_documents"
@@ -23,12 +27,13 @@ class KnowledgeDocument(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     error_message = Column(String, nullable=True)
 
+
 class KnowledgeChat(Base):
     __tablename__ = "knowledge_chats"
 
     id = Column(Integer, primary_key=True, index=True)
     doc_id = Column(Integer, index=True)
-    role = Column(String) # 'user' or 'assistant'
+    role = Column(String)  # 'user' or 'assistant'
     content = Column(Text)
     sources = Column(JSON, nullable=True)
     session_id = Column(String, index=True, nullable=True)
