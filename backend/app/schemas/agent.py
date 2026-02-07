@@ -14,7 +14,7 @@ class AgentBase(BaseModel):
     # because it conflicts with the ConfigDict 'model_config'.
     # So we use 'agent_model_config' and alias it to 'model_config' for JSON serialization.
     agent_model_config: Optional[Dict[str, Any]] = Field(default_factory=dict, alias="model_config")
-    tools_config: Optional[List[str]] = None
+    tools_config: Optional[List[Any]] = None
     mcp_config: Optional[List[Dict[str, Any]]] = None
     skills_config: Optional[Dict[str, Any]] = None
     knowledge_config: Optional[Dict[str, Any]] = None

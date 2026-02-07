@@ -48,6 +48,24 @@ async def lifespan(app: FastAPI):
     from app.db.session import engine
 
     # Import models to ensure they are registered
+    from app.models import (
+        agent,
+        chat,
+        data_source,
+        graph_export,
+        indicator,
+        knowledge,
+        llm_model,
+        mcp,
+        recording,
+        service_category,
+        skill,
+        tool,
+        user,
+        user_script,
+        user_tool,
+        workflow,
+    )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

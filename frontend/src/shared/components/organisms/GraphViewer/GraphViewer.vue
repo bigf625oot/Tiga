@@ -51,7 +51,11 @@
         @zoom-in="zoomIn"
         @zoom-out="zoomOut"
         @switch-scope="$emit('switchScope', $event)"
-    />
+    >
+        <template #extra-tools>
+            <slot name="toolbar-extras"></slot>
+        </template>
+    </GraphToolbar>
     
     <!-- Loading Overlay -->
     <div v-if="loading" class="absolute inset-0 bg-white/50 z-50 flex items-center justify-center backdrop-blur-sm">

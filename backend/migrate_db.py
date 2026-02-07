@@ -28,6 +28,95 @@ if os.path.exists(db_path):
         except Exception as e:
             print(f"Error adding mcp_config: {e}")
 
+    # --- Skills Table ---
+    print("Checking skills table...")
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS skills (
+            id VARCHAR PRIMARY KEY,
+            name VARCHAR NOT NULL,
+            description VARCHAR,
+            version VARCHAR DEFAULT '1.0.0',
+            content TEXT,
+            tools_config JSON,
+            meta_data JSON,
+            category VARCHAR,
+            author VARCHAR DEFAULT 'System',
+            is_official BOOLEAN DEFAULT 0,
+            downloads INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        
+        # Check columns for skills (for existing tables)
+        cursor.execute("PRAGMA table_info(skills)")
+        skill_cols = [info[1] for info in cursor.fetchall()]
+        
+        new_skill_cols = {
+            "category": "VARCHAR",
+            "author": "VARCHAR DEFAULT 'System'",
+            "is_official": "BOOLEAN DEFAULT 0",
+            "downloads": "INTEGER DEFAULT 0"
+        }
+        
+        for col, dtype in new_skill_cols.items():
+            if col not in skill_cols:
+                print(f"Adding {col} to skills...")
+                try:
+                    cursor.execute(f"ALTER TABLE skills ADD COLUMN {col} {dtype}")
+                except Exception as e:
+                    print(f"Error adding {col} to skills: {e}")
+                    
+        print("Skills table checked/created")
+    except Exception as e:
+        print(f"Error checking/creating skills table: {e}")
+
+    # --- MCP Servers Table ---
+    print("Checking mcp_servers table...")
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS mcp_servers (
+            id VARCHAR PRIMARY KEY,
+            name VARCHAR NOT NULL,
+            description VARCHAR,
+            type VARCHAR NOT NULL,
+            config JSON NOT NULL,
+            category VARCHAR,
+            author VARCHAR DEFAULT 'User',
+            is_official BOOLEAN DEFAULT 0,
+            downloads INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        
+        # Check columns for mcp_servers
+        cursor.execute("PRAGMA table_info(mcp_servers)")
+        mcp_cols = [info[1] for info in cursor.fetchall()]
+        
+        new_mcp_cols = {
+            "version": "VARCHAR DEFAULT '1.0.0'",
+            "category": "VARCHAR",
+            "author": "VARCHAR DEFAULT 'User'",
+            "is_official": "BOOLEAN DEFAULT 0",
+            "downloads": "INTEGER DEFAULT 0"
+        }
+        
+        for col, dtype in new_mcp_cols.items():
+            if col not in mcp_cols:
+                print(f"Adding {col} to mcp_servers...")
+                try:
+                    cursor.execute(f"ALTER TABLE mcp_servers ADD COLUMN {col} {dtype}")
+                except Exception as e:
+                    print(f"Error adding {col} to mcp_servers: {e}")
+
+        print("MCP Servers table checked/created")
+    except Exception as e:
+        print(f"Error checking/creating mcp_servers table: {e}")
+
     # Check LLMModel table
     cursor.execute("PRAGMA table_info(llm_models)")
     llm_columns = [info[1] for info in cursor.fetchall()]

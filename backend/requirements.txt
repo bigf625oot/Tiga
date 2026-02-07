@@ -25,7 +25,7 @@ psycopg2-binary==2.9.11
 # --- AI & Agents ---
 agno==2.3.24
 openai==2.15.0
-duckduckgo-search>=5.0.0
+ddgs>=9.10.0
 vanna==2.0.1
 plotly==6.5.2
 tabulate==0.9.0
@@ -75,3 +75,7 @@ neo4j
 ruff
 pytest
 pytest-asyncio
+
+# --- Added by Agent ---
+mcp>=1.0.0
+pyjwt

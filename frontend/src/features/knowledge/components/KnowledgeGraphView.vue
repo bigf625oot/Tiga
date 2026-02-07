@@ -20,12 +20,26 @@
                 <div v-if="graphReason" class="mb-3 px-3 py-2 bg-amber-50  text-amber-700 rounded-lg text-xs">
                     {{ graphReason }}
                 </div>
-                <GraphViewer ref="graphViewerRef" :nodes="graphNodes" :edges="graphEdges" :hiddenTypes="hiddenTypes" :colorMap="colorMap" :reload="reloadGraph" :scope="graphScope" :switchScope="switchGraphScope" :showScopeToggle="!!docId" />
+                <GraphViewer ref="graphViewerRef" :nodes="graphNodes" :edges="graphEdges" :hiddenTypes="hiddenTypes" :colorMap="colorMap" :reload="reloadGraph" :scope="graphScope" @switchScope="switchGraphScope" :showScopeToggle="!!docId">
+                    <template #toolbar-extras>
+                        <button 
+                            class="w-[28px] h-[28px] inline-flex items-center justify-center rounded-md text-[#2a2f3c] bg-[#f3f4f6] hover:bg-[#e5e6eb] transition-all cursor-pointer"
+                            :class="{'!bg-blue-100 !text-blue-600': showChat}"
+                            @click="showChat = !showChat" 
+                            aria-label="知识问答" 
+                            title="知识问答"
+                        >
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            </svg>
+                        </button>
+                    </template>
+                </GraphViewer>
             </div>
         </div>
 
         <!-- Right: Chat -->
-        <div class="w-[400px] flex flex-col pl-4 bg-white relative">
+        <div v-show="showChat" class="w-[400px] flex flex-col pl-4 bg-white relative transition-all duration-300">
             
             <!-- Header for Chat -->
             <div class="py-3 border-b border-slate-100 flex justify-between items-center bg-white shrink-0 pr-2">
@@ -309,6 +323,7 @@ const graphViewerRef = ref(null);
 
 const chatMessages = ref([]);
 const chatInput = ref('');
+const showChat = ref(false);
 const chatLoading = ref(false);
 const chatContainer = ref(null);
 const currentSessionId = ref(null);
@@ -326,10 +341,10 @@ const toggleHistoryPanel = () => {
 };
 
 const fetchSessions = async () => {
-    if (!props.docId) return;
+    const targetDocId = props.docId || 0;
     sessionsLoading.value = true;
     try {
-        const res = await api.get(`/knowledge/${props.docId}/qa/sessions`);
+        const res = await api.get(`/knowledge/${targetDocId}/qa/sessions`);
         sessions.value = res.data;
     } catch (e) {
         message.error("获取会话列表失败");
@@ -341,7 +356,7 @@ const fetchSessions = async () => {
 const switchSession = async (sid) => {
     currentSessionId.value = sid;
     showHistoryPanel.value = false;
-    await fetchChatHistory(props.docId);
+    await fetchChatHistory(props.docId || 0);
 };
 
 const deleteSession = async (sid) => {
@@ -416,9 +431,7 @@ const initView = () => {
 
     // Do not fetch mixed history by default. Start with empty chat.
     // User can load history from the panel.
-    if (props.docId) {
-        fetchSessions();
-    }
+    fetchSessions();
     
     loadGraphData();
 };
@@ -508,7 +521,8 @@ const rebuildFilterFromGraph = () => {
 
 // Chat Methods
 const fetchChatHistory = async (docId) => {
-    if (!docId) return;
+    // 允许 docId 为 0
+    if (docId === null || docId === undefined) return;
     
     // Safety check: Prevent fetching mixed history when no session is selected
     if (!currentSessionId.value) {

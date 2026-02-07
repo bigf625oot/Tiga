@@ -6,12 +6,7 @@ from agno.tools import Toolkit
 try:
     from ddgs import DDGS
 except ImportError:
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            from duckduckgo_search import DDGS
-    except ImportError:
-        DDGS = None
+    DDGS = None
 
 
 class DuckDuckGoTools(Toolkit):

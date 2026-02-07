@@ -9,6 +9,24 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 
+# Import all models to ensure they are registered with Base.metadata
+from app.models.agent import Agent
+from app.models.user_script import UserScript
+from app.models.tool import Tool
+from app.models.user_tool import UserTool
+from app.models.user import User
+from app.models.mcp import MCPServer
+from app.models.skill import Skill
+from app.models.service_category import ServiceCategory
+from app.models.graph_export import GraphExportConfig
+from app.models.data_source import DataSource
+from app.models.recording import Recording
+from app.models.chat import ChatSession, ChatMessage
+from app.models.llm_model import LLMModel
+from app.models.knowledge import KnowledgeDocument, KnowledgeChat
+from app.models.workflow import Workflow
+from app.models.indicator import Indicator
+
 # Use an in-memory SQLite database for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

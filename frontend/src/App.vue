@@ -85,6 +85,13 @@
             <div class="px-4 py-1 text-xs font-bold text-slate-400 uppercase tracking-widest">智能体平台</div>
             <div 
                 class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
+                @click="mobileMenuClick('service_market')"
+            >
+                <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center text-xs">🛒</div>
+                <span class="text-sm font-semibold">工具市场</span>
+            </div>
+            <div 
+                class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
                 @click="mobileMenuClick('agent')"
             >
                 <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center text-xs">⚙️</div>
@@ -273,9 +280,10 @@
                         <path d="M6 7.33333L7.33333 8.66667L10.3333 5.66667M6.6 12.8L7.57333 14.0978C7.71808 14.2908 7.79045 14.3873 7.87918 14.4218C7.95689 14.452 8.04311 14.452 8.12082 14.4218C8.20955 14.3873 8.28192 14.2908 8.42667 14.0978L9.4 12.8C9.59543 12.5394 9.69315 12.4091 9.81234 12.3097C9.97126 12.177 10.1589 12.0832 10.3603 12.0357C10.5114 12 10.6743 12 11 12C11.9319 12 12.3978 12 12.7654 11.8478C13.2554 11.6448 13.6448 11.2554 13.8478 10.7654C14 10.3978 14 9.93188 14 9V5.2C14 4.0799 14 3.51984 13.782 3.09202C13.5903 2.71569 13.2843 2.40973 12.908 2.21799C12.4802 2 11.9201 2 10.8 2H5.2C4.0799 2 3.51984 2 3.09202 2.21799C2.71569 2.40973 2.40973 2.71569 2.21799 3.09202C2 3.51984 2 4.07989 2 5.2V9C2 9.93188 2 10.3978 2.15224 10.7654C2.35523 11.2554 2.74458 11.6448 3.23463 11.8478C3.60218 12 4.06812 12 5 12C5.32572 12 5.48858 12 5.63967 12.0357C5.84113 12.0832 6.02874 12.177 6.18766 12.3097C6.30685 12.4091 6.40457 12.5394 6.6 12.8Z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
+
                 <!-- Agent Icon -->
                 <div 
-                    @click="sidebarTab = 'agent'"
+                    @click="sidebarTab = 'agent'; currentView = 'agent'"
                     class="w-10 h-10 flex items-center justify-center cursor-pointer rounded-xl transition-colors"
                     :class="sidebarTab === 'agent' ? 'bg-white border border-figma-line shadow-sm text-figma-text' : 'text-figma-notation hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                 >
@@ -295,6 +303,7 @@
                         </defs>
                     </svg>
                 </div>
+
                 <!-- Knowledge Icon -->
                 <div 
                     @click="sidebarTab = 'knowledge'; currentView = 'knowledge'"
@@ -313,7 +322,7 @@
         </div>
 
         <!-- Tab Content Area -->
-        <div class="flex-1 py-2 flex flex-col gap-1 overflow-y-auto custom-scrollbar" :class="isSidebarCollapsed ? 'px-2' : 'px-4'">
+        <div v-if="!isSidebarCollapsed" class="flex-1 py-2 flex flex-col gap-1 overflow-y-auto custom-scrollbar px-4">
              <!-- Task Tab Content -->
              <template v-if="sidebarTab === 'task'">
                 <div v-if="!isSidebarCollapsed" class="flex flex-col gap-0.5">
@@ -366,7 +375,7 @@
                 </div>
                 
         <!-- Collapsed state sessions -->
-                <div v-if="isSidebarCollapsed" class="flex flex-col gap-2 px-2">
+                <div v-if="isSidebarCollapsed" class="flex flex-col gap-2">
                      <div 
                         v-for="session in topSessions" 
                         :key="session.id"
@@ -382,7 +391,7 @@
 
              <!-- Agent Tab Content -->
              <template v-else-if="sidebarTab === 'agent'">
-                <div class="flex flex-col gap-1 overflow-y-auto custom-scrollbar" :class="isSidebarCollapsed ? 'items-center px-2' : ''">
+                <div class="flex flex-col gap-1 overflow-y-auto custom-scrollbar" :class="isSidebarCollapsed ? 'items-center' : ''">
                     <!-- Agent Center -->
                     <div 
                         @click="currentView = 'agent'"
@@ -401,6 +410,24 @@
                             </svg>
                         </div>
                         <span v-if="!isSidebarCollapsed" class="text-[14px] transition-colors" :class="currentView === 'agent' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">智能体中心</span>
+                    </div>
+
+                    <!-- Service Market -->
+                    <div 
+                        @click="currentView = 'service_market'"
+                        class="group transition-all cursor-pointer flex items-center rounded-lg h-[38px] flex-shrink-0"
+                        :class="[
+                            currentView === 'service_market' ? 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10' : 'hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-indigo-500/5',
+                            isSidebarCollapsed ? 'w-10 justify-center' : 'px-2 mx-1 gap-2'
+                        ]"
+                    >
+                        <div class="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3.33333 4.66667H12.6667L14 14H2L3.33333 4.66667Z" :stroke="currentView === 'service_market' ? '#171717' : '#858B9B'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M5.33333 7.33333V4.66667C5.33333 3.19391 6.52724 2 8 2C9.47276 2 10.6667 3.19391 10.6667 4.66667V7.33333" :stroke="currentView === 'service_market' ? '#171717' : '#858B9B'" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <span v-if="!isSidebarCollapsed" class="text-[14px] transition-colors" :class="currentView === 'service_market' ? 'text-figma-text font-medium' : 'text-figma-notation group-hover:text-figma-text'">工具市场</span>
                     </div>
 
                     <div v-if="!isSidebarCollapsed" class="mx-3 my-2 h-px bg-[#F0F0F0] flex-shrink-0"></div>
@@ -443,9 +470,6 @@
                             
                             <div v-show="isDocProcessingExpanded || isSidebarCollapsed" class="flex flex-col gap-0.5" :class="isSidebarCollapsed ? '' : 'ml-11'">
                                 <div v-for="item in [
-                                    {name: '文档阅读', view: 'read'}, 
-                                    {name: '文档审查', view: 'review'}, 
-                                    {name: '文档对比', view: 'compare'}, 
                                     {name: '指标提取', view: 'metrics'},
                                     {name: '指标管理', view: 'indicators'}
                                 ]" :key="item.name"
@@ -475,9 +499,7 @@
                             
                             <div v-show="isContentCreationExpanded || isSidebarCollapsed" class="flex flex-col gap-0.5" :class="isSidebarCollapsed ? '' : 'ml-11'">
                                 <div v-for="item in [
-                                    {name: '录音纪要', view: 'list'},
-                                    {name: '智能纪要', view: 'summary'}, 
-                                    {name: 'PPT创作', view: 'ppt'}
+                                    {name: '录音纪要', view: 'list'}
                                 ]" :key="item.name"
                                     @click="currentView = item.view"
                                     class="h-[38px] flex items-center rounded-lg transition-all cursor-pointer"
@@ -656,7 +678,7 @@
         </div>
 
         <!-- User Profile -->
-        <div class="mt-auto border-t border-figma-line p-3">
+        <div class="mt-auto border-t border-figma-line" :class="isSidebarCollapsed ? 'py-3' : 'p-3'">
             <div 
                 class="flex items-center transition-all duration-300"
                 :class="isSidebarCollapsed ? 'justify-center' : 'px-2 py-2 rounded-xl hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10 cursor-pointer group gap-3'"
@@ -684,7 +706,7 @@
         'h-full flex flex-col !p-0 !max-w-none': currentView === 'chat',
         'h-full flex flex-col': currentView === 'knowledge',
         'h-full flex flex-col !p-4 !max-w-none': false,
-        'h-full flex flex-col !p-0 !max-w-none': currentView === 'media_library' || currentView === 'database' || currentView === 'knowledge_graph' || currentView === 'knowledge'
+        'h-full flex flex-col !p-0 !max-w-none': currentView === 'media_library' || currentView === 'database' || currentView === 'knowledge_graph' || currentView === 'knowledge' || currentView === 'service_market'
       }">
         <!-- Main Content Area -->
         <RecordingList v-if="currentView === 'list'" @view-detail="viewDetail" />
@@ -724,6 +746,9 @@
 
     <!-- Agent Management View -->
     <AgentManagement v-else-if="currentView === 'agent'" />
+
+    <!-- Service Market View -->
+    <ServiceMarket v-else-if="currentView === 'service_market'" />
 
     <!-- Workflow Integration View -->
     <WorkflowManagement v-else-if="currentView === 'workflow'" />
@@ -804,6 +829,7 @@ const GraphExportConfig = defineAsyncComponent(() => import('@/features/knowledg
 const ModelManagement = defineAsyncComponent(() => import('@/features/system/components/ModelManagement.vue'));
 const DatabaseManagement = defineAsyncComponent(() => import('@/features/system/components/DatabaseManagement.vue'));
 const AgentManagement = defineAsyncComponent(() => import('@/features/agent/components/AgentManagement.vue'));
+const ServiceMarket = defineAsyncComponent(() => import('@/features/agent/components/ServiceMarket.vue'));
 const WorkflowManagement = defineAsyncComponent(() => import('@/features/workflow/components/WorkflowManagement.vue'));
 
 // Setup Axios
@@ -825,6 +851,7 @@ const getPageTitle = computed(() => {
         case 'media_library': return '音视频库';
         case 'model': return '模型管理';
         case 'agent': return '智能体管理';
+        case 'service_market': return '工具市场';
         case 'workflow': return '工作流集成';
         case 'list': return '录音纪要';
         case 'detail': return '录音详情';
@@ -846,6 +873,7 @@ const getPageSubtitle = computed(() => {
         case 'media_library': return '音视频资源集中管理';
         case 'model': return '配置和管理大语言模型';
         case 'agent': return '基于 Agno 框架构建和管理智能体';
+        case 'service_market': return '发现和获取优质智能体服务';
         case 'workflow': return '集成 N8N 流程引擎实现自动化工作流';
         case 'list': return '智能识别整理，会议提效神器';
         case 'detail': return '查看录音详情与转写结果';

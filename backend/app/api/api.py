@@ -18,10 +18,13 @@ from app.api.endpoints import (
     user_script,
     workflow,
     skills,
+    service_categories,
+    tools,
 )
 from app.api.endpoints.search_agent import news
 
 api_router = APIRouter()
+api_router.include_router(tools.router, prefix="/tools", tags=["tools"])
 api_router.include_router(graph_export.router, prefix="/graph_export", tags=["graph_export"])
 api_router.include_router(recordings.router, prefix="/recordings", tags=["recordings"])
 api_router.include_router(llm.router, prefix="/llm", tags=["llm"])
@@ -40,3 +43,4 @@ api_router.include_router(indicators.router, prefix="/indicators", tags=["indica
 api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(rag.router, prefix="/rag", tags=["rag"])
 api_router.include_router(skills.router, prefix="/skills", tags=["skills"])
+api_router.include_router(service_categories.router, prefix="/service-categories", tags=["service-categories"])

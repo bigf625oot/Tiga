@@ -11,6 +11,10 @@ class SkillBase(BaseModel):
     content: Optional[str] = None
     tools_config: Optional[List[str]] = None
     meta_data: Optional[Dict[str, Any]] = None
+    category: Optional[str] = None
+    author: Optional[str] = "System"
+    is_official: bool = False
+    downloads: int = 0
     is_active: Optional[bool] = True
 
 
@@ -20,6 +24,8 @@ class SkillCreate(SkillBase):
 
 class SkillUpdate(SkillBase):
     name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
 
 
 class Skill(SkillBase):

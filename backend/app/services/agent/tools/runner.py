@@ -97,11 +97,15 @@ def run_reasoning_tool_loop(
                 args = {}
             fn = tool_call_map.get(name)
             if not fn:
+                logger.warning(f"Tool not found: {name}")
                 result = {"error": f"Unknown tool: {name}", "args": args}
             else:
                 try:
+                    logger.info(f"Executing tool: {name} with args: {args}")
                     result = fn(**args) if isinstance(args, dict) else fn(args)
+                    logger.info(f"Tool {name} result: {str(result)[:500]}")
                 except Exception as e:
+                    logger.error(f"Tool {name} failed: {e}", exc_info=True)
                     result = {"error": str(e), "args": args}
             tool_msg = {"role": "tool", "content": json.dumps(result, ensure_ascii=False), "tool_call_id": call.id}
             messages.append(tool_msg)

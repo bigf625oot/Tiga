@@ -20,6 +20,10 @@
         <button class="tool-btn" @click="$emit('zoomOut')" aria-label="缩小" title="缩小 (Ctrl -)">
             <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M6 11h12v2H6z"/></svg>
         </button>
+        
+        <!-- Extra Tools Slot -->
+        <slot name="extra-tools"></slot>
+
         <span class="zoom-indicator" :aria-label="`缩放比例 ${Math.round(scale*100)}%`">{{ Math.round(scale*100) }}%</span>
         
         <template v-if="showScopeToggle">

@@ -3,14 +3,12 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 
-import nest_asyncio
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-nest_asyncio.apply()
 
 import logging
 
@@ -162,7 +160,7 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             await update_doc_status(doc_id, DocumentStatus.UPLOADED, error_msg=None, oss_key=oss_key, oss_url=oss_url)
             logger.info(f"OSS上传成功 文档ID={doc_id} 键={oss_key} URL={oss_url}")
         except Exception as e:
-            logger.error(f"OSS上传失败: {e}")
+            logger.error(f"OSS上传失败: {e}", exc_info=True)
             await update_doc_status(doc_id, DocumentStatus.UPLOADING, error_msg=f"OSS 上传警告: {str(e)}")
             # 注意：OSS上传失败通常不应继续索引，但原逻辑似乎允许继续？
             # 如果OSS失败是致命的，这里应该raise或者return。
@@ -244,7 +242,7 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"LightRAG 索引失败: {str(e)}")
 
     except Exception as e:
-        logger.error(f"后台处理错误: {e}")
+        logger.error(f"后台处理错误: {e}", exc_info=True)
         await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"系统错误: {str(e)}")
     finally:
         # Cleanup Temp File
@@ -294,7 +292,7 @@ async def upload_document(
         return new_doc
 
     except Exception as e:
-        logger.error(f"上传初始化失败: {e}")
+        logger.error(f"上传初始化失败: {e}", exc_info=True)
         # Cleanup if failed
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)

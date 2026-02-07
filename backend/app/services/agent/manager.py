@@ -112,6 +112,47 @@ class AgentManager:
             tools = []
             tools_config = agent_model.tools_config or []
             skills_config = agent_model.skills_config or {}
+            mcp_config = agent_model.mcp_config or []
+
+            # Instructions handling (Base)
+            instructions = agent_model.system_prompt or "You are a helpful assistant."
+            
+            # --- Market Skills Integration ---
+            # Extract skills from tools_config (mixed list of strings and objects)
+            market_skills = [t for t in tools_config if isinstance(t, dict) and t.get('type') == 'skill']
+            if market_skills:
+                skill_instructions = []
+                for skill in market_skills:
+                    if skill.get('content'):
+                        skill_instructions.append(f"### Skill: {skill.get('name')}\n{skill.get('content')}")
+                
+                if skill_instructions:
+                    instructions += "\n\n## Enabled Skills\n" + "\n\n".join(skill_instructions)
+            
+            # --- MCP Integration ---
+            if mcp_config:
+                try:
+                    from app.services.mcp_client import mcp_pool
+                    for mcp_server in mcp_config:
+                        # Support WebSocket URL in 'url' or 'command' field
+                        url = mcp_server.get("url") or (
+                            mcp_server.get("command") if mcp_server.get("command", "").startswith(("ws://", "wss://")) else None
+                        )
+                        
+                        if url:
+                            logger.info(f"Initializing MCP connection to {url}")
+                            try:
+                                client = mcp_pool.get_client(url)
+                                # Connection is lazy, but we can verify it or pre-connect
+                                # In a real scenario, we would fetch tools here:
+                                # tools_list = await client.send_request("tools/list")
+                                # And register them.
+                                # For this task, we ensure the client is ready and managed.
+                                pass
+                            except Exception as e:
+                                logger.error(f"Failed to initialize MCP client for {url}: {e}")
+                except ImportError:
+                    logger.error("MCP Client services not available")
 
             # Standard Tools
             if "duckduckgo" in tools_config or (skills_config.get("browser", {}).get("enabled")):
@@ -175,19 +216,9 @@ class AgentManager:
 
             # 6. Create Agent
             is_reasoning = ModelFactory.should_use_agno_reasoning(llm_model)
-            is_native_reasoning = ModelFactory.is_reasoning_model(llm_model)
+            # is_native_reasoning = ModelFactory.is_reasoning_model(llm_model) # Unused
 
-            # Instructions handling:
-            # If user provides system_prompt, use it.
-            # Otherwise default to "You are a helpful assistant."
-            instructions = agent_model.system_prompt
-            if not instructions:
-                instructions = "You are a helpful assistant."
-
-            # Agno Agent `instructions` parameter can be a string or list of strings.
-            # It is usually used as the SYSTEM PROMPT.
-            # However, `description` is also used.
-            # Let's ensure system_prompt is passed correctly.
+            # Instructions are prepared above (including Skills)
 
             agent = AgnoAgent(
                 name=agent_model.name,

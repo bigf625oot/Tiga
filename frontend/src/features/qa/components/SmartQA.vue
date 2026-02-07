@@ -997,7 +997,7 @@ const renderAmis = (index, content) => {
     background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
     color: #ffffff;
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.18);
-    font-size: 16px;
+    font-size: 12px;
     line-height: 1.6;
 }
 .bubble-assistant {
@@ -1008,7 +1008,7 @@ const renderAmis = (index, content) => {
     border: 1px solid #e6eaf2;
     color: #334155;
     box-shadow: 0 6px 18px rgba(191, 205, 237, 0.25);
-    font-size: 16px;
+    font-size: 12px;
     line-height: 1.6;
 }
 /* Ensure markdown spacing doesn't inflate bubble height */
@@ -1104,5 +1104,21 @@ const renderAmis = (index, content) => {
     background-color: #F2F3F5 !important;
     color: #171717 !important;
     font-weight: 500;
+}
+
+/* Custom Scrollbar for Agent Dropdown */
+.agent-dropdown-custom .rc-virtual-list-holder::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.agent-dropdown-custom .rc-virtual-list-holder::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+}
+.agent-dropdown-custom .rc-virtual-list-holder:hover::-webkit-scrollbar-thumb {
+    background: #e5e6eb;
+}
+.agent-dropdown-custom .rc-virtual-list-holder::-webkit-scrollbar-thumb:hover {
+    background: #bcc1cd;
 }
 </style>
