@@ -25,13 +25,26 @@ class Settings(BaseSettings):
             return self.SQLALCHEMY_DATABASE_URI
 
         if self.USE_SQLITE:
-            return "sqlite+aiosqlite:///./recorder_v5.db"
+            import os
+            # Ensure we use an absolute path to avoid CWD issues
+            # Base it on the backend directory (where main.py usually is)
+            # This file is in backend/app/core/config.py -> backend is 3 levels up
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            db_path = os.path.join(base_dir, "recorder_v5.db")
+            # Windows path handling for SQLAlchemy URL
+            if os.name == 'nt':
+                 db_path = db_path.replace('\\', '/')
+            return f"sqlite+aiosqlite:///{db_path}"
 
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
 
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+
+    TASK_MODE_CACHE_TTL_SECONDS: int = 30
+    TASK_MODE_LOG_RETENTION_NORMAL_DAYS: int = 30
+    TASK_MODE_LOG_RETENTION_IMPORTANT_DAYS: int = 365
 
     # S3 Object Storage
     STORAGE_TYPE: str = "local"  # local, s3, aliyun_oss

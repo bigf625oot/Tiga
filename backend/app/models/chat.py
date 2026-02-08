@@ -14,6 +14,7 @@ class ChatSession(Base):
     title = Column(String, nullable=True)
     user_id = Column(String, nullable=True)  # For future auth
     agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
+    workflow_state = Column(JSON, nullable=True)  # Stores tasks, logs, documents
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())

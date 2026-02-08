@@ -41,9 +41,8 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(session_id: str, db: AsyncSession = Depends(get_db)):
-    session = await crud_chat.remove(db, session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    await crud_chat.remove(db, session_id)
+    # Idempotent: Always return success even if not found
     return {"status": "deleted"}
 
 
@@ -412,7 +411,9 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                         logger.warning(f"Streaming failed ({err_msg}), attempting fallback to non-streaming.")
                         stream = fallback_agent_runner()
                     else:
-                        raise e
+                        logger.error(f"Agent runner failed: {e}")
+                        yield f"Error: Agent execution failed: {str(e)}"
+                        stream = []
             else:
                 try:
                     from app.services.agent.tools.runner import run_reasoning_tool_loop
@@ -444,15 +445,26 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                                 "description": "Get current datetime string",
                                 "parameters": {
                                     "type": "object",
-                                    "properties": {},
+                                    "properties": {
+                                        "format": {
+                                            "type": "string", 
+                                            "description": "Optional format string (e.g. %Y-%m-%d)"
+                                        }
+                                    },
+                                    "required": [],
+                                    "additionalProperties": False,
                                 },
                             },
                         },
                     ]
 
-                    def _get_datetime():
+                    def _get_datetime(format: str = None):
                         from datetime import datetime
-
+                        if format:
+                            try:
+                                return {"now": datetime.now().strftime(format)}
+                            except:
+                                pass
                         return {"now": datetime.now().isoformat()}
 
                     tool_map = {
@@ -461,7 +473,7 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                             if ddg
                             else {"error": "ddg not available"}
                         ),
-                        "get_datetime": lambda: _get_datetime(),
+                        "get_datetime": lambda format=None: _get_datetime(format),
                     }
 
                     # Only enable thinking for DeepSeek Reasoner models
@@ -491,6 +503,7 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                     stream = []
                 except Exception as ee:
                     logger.error(f"DeepSeek tool loop error: {ee}")
+                    yield f"Error: DeepSeek reasoning process failed: {str(ee)}"
                     stream = []
 
             has_started_reasoning = False
@@ -586,10 +599,12 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
             if request.ab_variant:
                 meta["ab_variant"] = request.ab_variant
 
-            await save_assistant_message(
+            msg_id = await save_assistant_message(
                 session_id, full_response, None if not meta.get("reasoning") else meta["reasoning"]
             )
-            if meta:
+            if meta and msg_id:
+                await save_message_meta(session_id, meta, msg_id)
+            elif meta:
                 await save_message_meta(session_id, meta)
 
         except Exception as e:
@@ -618,24 +633,26 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
     return StreamingResponse(event_generator(), media_type="text/plain")
 
 
-async def save_assistant_message(session_id: str, content: str, reasoning: str = None):
+async def save_assistant_message(session_id: str, content: str, reasoning: str = None) -> Optional[str]:
     from app.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
         try:
-            await crud_chat.create_message(
+            msg = await crud_chat.create_message(
                 db, session_id, "assistant", content, {"reasoning": reasoning} if reasoning else None
             )
+            return msg.id
         except Exception as e:
             logger.error(f"Failed to save assistant message: {e}")
+            return None
 
 
-async def save_message_meta(session_id: str, meta: dict):
+async def save_message_meta(session_id: str, meta: dict, message_id: str = None):
     from app.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
         try:
-            await crud_chat.update_message_meta(db, session_id, meta)
+            await crud_chat.update_message_meta(db, session_id, meta, message_id=message_id)
         except Exception as e:
             logger.error(f"Failed to update assistant message meta: {e}")
 

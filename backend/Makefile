@@ -1,4 +1,4 @@
-.PHONY: install run lint test clean
+.PHONY: install run lint test clean benchmark
 
 install:
 	pip install -r requirements.txt
@@ -19,3 +19,6 @@ test:
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+
+benchmark:
+	python -m scripts.benchmark_workflow

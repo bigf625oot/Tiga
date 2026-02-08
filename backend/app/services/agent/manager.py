@@ -1,4 +1,5 @@
 import logging
+import inspect
 
 from agno.agent import Agent as AgnoAgent
 from agno.tools.duckduckgo import DuckDuckGoTools
@@ -15,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.services.llm.factory import ModelFactory
+
+try:
+    from app.services.mcp_client import mcp_pool
+except Exception:
+    mcp_pool = None
 
 
 def has_global_api_key():
@@ -132,7 +138,11 @@ class AgentManager:
             # --- MCP Integration ---
             if mcp_config:
                 try:
-                    from app.services.mcp_client import mcp_pool
+                    from app.services.agent.tools.mcp_tool import MCPToolkit
+                    
+                    if mcp_pool is None:
+                        raise ImportError("mcp_pool unavailable")
+
                     for mcp_server in mcp_config:
                         # Support WebSocket URL in 'url' or 'command' field
                         url = mcp_server.get("url") or (
@@ -142,17 +152,25 @@ class AgentManager:
                         if url:
                             logger.info(f"Initializing MCP connection to {url}")
                             try:
-                                client = mcp_pool.get_client(url)
-                                # Connection is lazy, but we can verify it or pre-connect
-                                # In a real scenario, we would fetch tools here:
-                                # tools_list = await client.send_request("tools/list")
-                                # And register them.
-                                # For this task, we ensure the client is ready and managed.
-                                pass
+                                client_result = mcp_pool.get_client(url)
+                                client = await client_result if inspect.isawaitable(client_result) else client_result
+                                await client.connect() # Ensure connected
+                                
+                                # Fetch tools
+                                tools_list = await client.list_tools()
+                                if tools_list:
+                                    logger.info(f"Loaded {len(tools_list)} tools from MCP {url}")
+                                    mcp_toolkit = MCPToolkit(client, tools_list)
+                                    tools.append(mcp_toolkit)
+                                else:
+                                    logger.warning(f"No tools found in MCP {url}")
+                                    
                             except Exception as e:
                                 logger.error(f"Failed to initialize MCP client for {url}: {e}")
-                except ImportError:
-                    logger.error("MCP Client services not available")
+                except ImportError as e:
+                    logger.error(f"MCP Client services not available: {e}")
+                except Exception as e:
+                    logger.error(f"Error loading MCP tools: {e}")
 
             # Standard Tools
             if "duckduckgo" in tools_config or (skills_config.get("browser", {}).get("enabled")):

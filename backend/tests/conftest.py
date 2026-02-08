@@ -26,6 +26,7 @@ from app.models.llm_model import LLMModel
 from app.models.knowledge import KnowledgeDocument, KnowledgeChat
 from app.models.workflow import Workflow
 from app.models.indicator import Indicator
+from app.models.task_mode import Task, TaskLog, TaskQA, TaskVersion
 
 # Use an in-memory SQLite database for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

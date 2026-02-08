@@ -40,6 +40,8 @@ class CRUDChat:
             db_obj.title = obj_in.title
         if obj_in.agent_id is not None:
             db_obj.agent_id = obj_in.agent_id
+        if obj_in.workflow_state is not None:
+            db_obj.workflow_state = obj_in.workflow_state
         await db.commit()
         await db.refresh(db_obj)
         return db_obj
@@ -65,11 +67,16 @@ class CRUDChat:
         )
         return result.scalars().all()
 
-    async def update_message_meta(self, db: AsyncSession, session_id: str, meta: dict):
-        result = await db.execute(
-            select(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(desc(ChatMessage.created_at))
-        )
-        msg = result.scalars().first()
+    async def update_message_meta(self, db: AsyncSession, session_id: str, meta: dict, message_id: Optional[str] = None):
+        if message_id:
+            result = await db.execute(select(ChatMessage).filter(ChatMessage.id == message_id))
+            msg = result.scalars().first()
+        else:
+            result = await db.execute(
+                select(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(desc(ChatMessage.created_at))
+            )
+            msg = result.scalars().first()
+            
         if msg:
             base = msg.meta_data or {}
             for k, v in meta.items():

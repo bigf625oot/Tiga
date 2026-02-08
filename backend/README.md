@@ -28,6 +28,7 @@ Taichi Agent 是一个企业级 AI 智能体（Agent）管理与编排平台，�
 ### 4. 🔄 自动化与扩展
 *   **N8N 工作流**: 无缝集成 N8N，支持 Agent 触发复杂业务流程 (Webhook)。
 *   **用户脚本 (User Scripts)**: 支持挂载自定义 Python 脚本，灵活扩展 Agent 能力。
+*   **Workflow System**: 基于 Agno.Workflow 的原子化任务编排系统，支持静态 DAG 与动态规划模式。
 *   **多存储支持**: 兼容 AWS S3 及 Aliyun OSS 对象存储。
 
 ---
@@ -36,7 +37,7 @@ Taichi Agent 是一个企业级 AI 智能体（Agent）管理与编排平台，�
 
 | 模块 | 技术组件 |
 | :--- | :--- |
-| **Backend** | **FastAPI**, **Agno**, **LightRAG**, **Vanna**, SQLAlchemy, Celery/APScheduler |
+| **Backend** | **FastAPI**, **Agno Workflow**, **LightRAG**, **Vanna**, SQLAlchemy, Celery/APScheduler |
 | **Frontend** | **Vue 3**, **Vite**, **Element Plus**, TailwindCSS, Pinia |
 | **Vector DB** | LanceDB (Default), Qdrant, Milvus |
 | **Graph DB** | NetworkX (Local), Neo4j |

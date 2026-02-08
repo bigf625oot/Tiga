@@ -60,6 +60,7 @@ async def lifespan(app: FastAPI):
         recording,
         service_category,
         skill,
+        task_mode,
         tool,
         user,
         user_script,
@@ -70,8 +71,17 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Initialize Knowledge Base with DB Config
     from app.db.session import AsyncSessionLocal
+
+    try:
+        from app.crud.crud_task_mode import task_mode as crud_task_mode
+
+        async with AsyncSessionLocal() as db:
+            await crud_task_mode.purge_expired_logs(db)
+    except Exception as e:
+        logger.error(f"Failed to purge expired task logs: {e}")
+
+    # Initialize Knowledge Base with DB Config
     from app.services.rag.knowledge_base import kb_service
 
     try:

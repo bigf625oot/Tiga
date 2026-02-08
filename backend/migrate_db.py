@@ -178,6 +178,102 @@ if os.path.exists(db_path):
     except Exception as e:
         print(f"Error creating workflow table: {e}")
 
+    print("Creating task mode tables if not exist...")
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id VARCHAR PRIMARY KEY,
+            name VARCHAR NOT NULL,
+            description_enc TEXT,
+            status VARCHAR NOT NULL DEFAULT 'open',
+            priority INTEGER NOT NULL DEFAULT 3,
+            assignee_id VARCHAR,
+            created_by VARCHAR,
+            current_version INTEGER NOT NULL DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(assignee_id) REFERENCES users(id),
+            FOREIGN KEY(created_by) REFERENCES users(id)
+        )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_tasks_name ON tasks(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_tasks_status ON tasks(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_tasks_priority ON tasks(priority)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_tasks_assignee_id ON tasks(assignee_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_tasks_created_by ON tasks(created_by)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_tasks_created_at ON tasks(created_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_tasks_updated_at ON tasks(updated_at)")
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS task_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id VARCHAR NOT NULL,
+            version INTEGER NOT NULL,
+            name VARCHAR NOT NULL,
+            description_enc TEXT,
+            status VARCHAR NOT NULL,
+            priority INTEGER NOT NULL,
+            assignee_id VARCHAR,
+            changed_by VARCHAR,
+            change_summary VARCHAR,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(task_id) REFERENCES tasks(id),
+            FOREIGN KEY(assignee_id) REFERENCES users(id),
+            FOREIGN KEY(changed_by) REFERENCES users(id)
+        )
+        """)
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_task_versions_task_version ON task_versions(task_id, version)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_versions_task_id ON task_versions(task_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_versions_version ON task_versions(version)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_versions_created_at ON task_versions(created_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_versions_changed_by ON task_versions(changed_by)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_versions_assignee_id ON task_versions(assignee_id)")
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS task_qas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id VARCHAR NOT NULL,
+            user_id VARCHAR,
+            question_enc TEXT NOT NULL,
+            answer_enc TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(task_id) REFERENCES tasks(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_qas_task_id ON task_qas(task_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_qas_user_id ON task_qas(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_qas_created_at ON task_qas(created_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_qas_updated_at ON task_qas(updated_at)")
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS task_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id VARCHAR NOT NULL,
+            actor_id VARCHAR,
+            action_type VARCHAR NOT NULL,
+            importance VARCHAR NOT NULL DEFAULT 'normal',
+            content_enc TEXT,
+            before_state_enc TEXT,
+            after_state_enc TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME,
+            FOREIGN KEY(task_id) REFERENCES tasks(id),
+            FOREIGN KEY(actor_id) REFERENCES users(id)
+        )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_logs_task_id ON task_logs(task_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_logs_actor_id ON task_logs(actor_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_logs_action_type ON task_logs(action_type)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_logs_importance ON task_logs(importance)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_logs_created_at ON task_logs(created_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_task_logs_expires_at ON task_logs(expires_at)")
+
+        print("Task mode tables checked/created")
+    except Exception as e:
+        print(f"Error creating task mode tables: {e}")
+
     conn.commit()
     conn.close()
 else:

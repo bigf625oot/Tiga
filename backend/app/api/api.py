@@ -17,9 +17,11 @@ from app.api.endpoints import (
     render_data,
     user_script,
     workflow,
+    agent_workflow,
     skills,
     service_categories,
     tools,
+    task_mode,
 )
 from app.api.endpoints.search_agent import news
 
@@ -35,6 +37,7 @@ api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledg
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
 api_router.include_router(mcp.router, prefix="/mcp", tags=["mcp"])
 api_router.include_router(workflow.router, prefix="/workflows", tags=["workflows"])
+api_router.include_router(agent_workflow.router, prefix="/agent-workflows", tags=["agent-workflows"])
 api_router.include_router(render_data.router, tags=["render_data"])
 api_router.include_router(user_script.router, tags=["user_script"])
 api_router.include_router(data_query.router, prefix="/data_query", tags=["data_query"])
@@ -44,3 +47,4 @@ api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(rag.router, prefix="/rag", tags=["rag"])
 api_router.include_router(skills.router, prefix="/skills", tags=["skills"])
 api_router.include_router(service_categories.router, prefix="/service-categories", tags=["service-categories"])
+api_router.include_router(task_mode.router, prefix="/task-mode", tags=["task-mode"])

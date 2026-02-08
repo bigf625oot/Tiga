@@ -337,11 +337,21 @@
                             'px-2 py-1.5 mx-1'
                         ]"
                     >
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-3">
                             <!-- Status Icon -->
-                            <div class="relative flex-shrink-0">
-                                <div class="w-[18px] h-[18px] rounded-full bg-figma-gray flex items-center justify-center">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-figma-notation"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            <div class="relative flex-shrink-0 w-[32px] h-[32px] flex items-center justify-center">
+                                <a-progress type="circle" :percent="getSessionProgress(session)" :size="32" :strokeWidth="4" :showInfo="false" strokeColor="#6366f1" trailColor="#e2e8f0" class="!m-0 !p-0" />
+                                <div class="absolute inset-0 m-auto w-5 h-5 rounded-full flex items-center justify-center shadow-sm overflow-hidden">
+                                    <AgentIcon
+                                        v-if="getAgentIcon(session.agent_id)"
+                                        :src="getAgentIcon(session.agent_id)"
+                                        :name="session.title"
+                                        :size="20"
+                                        class="w-full h-full"
+                                    />
+                                    <div v-else class="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                                        <BaseIcon icon="mdi:file-document-outline" class="text-white" :size="12" />
+                                    </div>
                                 </div>
                             </div>
 
@@ -375,7 +385,7 @@
                 </div>
                 
         <!-- Collapsed state sessions -->
-                <div v-if="isSidebarCollapsed" class="flex flex-col gap-2">
+                <div v-if="isSidebarCollapsed" class="flex flex-col gap-2 items-center">
                      <div 
                         v-for="session in topSessions" 
                         :key="session.id"
@@ -384,7 +394,21 @@
                         :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-white border border-figma-line shadow-sm' : 'hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10'"
                         :title="session.title"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="currentSessionId === session.id && currentView === 'chat' ? 'text-figma-text' : 'text-figma-notation'"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        <div class="relative w-[32px] h-[32px] flex items-center justify-center">
+                            <a-progress type="circle" :percent="getSessionProgress(session)" :size="32" :strokeWidth="4" :showInfo="false" strokeColor="#6366f1" trailColor="#e2e8f0" class="!m-0 !p-0" />
+                            <div class="absolute inset-0 m-auto w-5 h-5 rounded-full flex items-center justify-center shadow-sm overflow-hidden">
+                                <AgentIcon
+                                    v-if="getAgentIcon(session.agent_id)"
+                                    :src="getAgentIcon(session.agent_id)"
+                                    :name="session.title"
+                                    :size="20"
+                                    class="w-full h-full"
+                                />
+                                <div v-else class="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                                    <img src="/tiga.svg" class="w-3 h-3" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
              </template>
@@ -701,110 +725,115 @@
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 overflow-y-auto bg-white custom-scrollbar">
-      <div class="max-w-[1200px] mx-auto px-10 py-12" :class="{
-        'h-full flex flex-col !p-0 !max-w-none': currentView === 'chat',
-        'h-full flex flex-col': currentView === 'knowledge',
-        'h-full flex flex-col !p-4 !max-w-none': false,
-        'h-full flex flex-col !p-0 !max-w-none': currentView === 'media_library' || currentView === 'database' || currentView === 'knowledge_graph' || currentView === 'knowledge' || currentView === 'service_market'
-      }">
-        <!-- Main Content Area -->
-        <RecordingList v-if="currentView === 'list'" @view-detail="viewDetail" />
+    <div class="flex-1 bg-white overflow-hidden flex flex-col relative">
+      <!-- Full Screen Chat View -->
+      <SmartQA 
+        v-if="currentView === 'chat'" 
+        :session-id="currentSessionId" 
+        @refresh-sessions="fetchSessions" 
+        class="w-full h-full"
+      />
 
-<!-- File List Removed -->
+      <!-- Other Views (Scrollable Container) -->
+      <div v-else class="flex-1 overflow-y-auto custom-scrollbar">
+        <div class="max-w-[1200px] mx-auto px-10 py-12" :class="{
+          'h-full flex flex-col': currentView === 'knowledge',
+          'h-full flex flex-col !p-0 !max-w-none': currentView === 'media_library' || currentView === 'database' || currentView === 'knowledge_graph' || currentView === 'knowledge' || currentView === 'service_market'
+        }">
+          <!-- Main Content Area -->
+          <RecordingList v-if="currentView === 'list'" @view-detail="viewDetail" />
 
-<!-- Modals Removed -->
-
-    <!-- Detail View -->
-    <RecordingDetail v-else-if="currentView === 'detail'" :recording="selectedRecording" @back="currentView = 'list'" />
-
-    <!-- Metrics View -->
-    <MetricsExtraction v-else-if="currentView === 'metrics'" :prefilled-indicator="prefilledIndicator" />
-
-    <!-- Indicator Management View -->
-    <IndicatorManagement v-else-if="currentView === 'indicators'" @navigate-to-extraction="handleNavigateToExtraction" />
-
-    <!-- Data Query View -->
-    <SmartDataQuery v-else-if="currentView === 'data_query'" />
-                
-    <SmartQA v-else-if="currentView === 'chat'" :session-id="currentSessionId" @refresh-sessions="fetchSessions" />
-
-    <KnowledgeBase v-else-if="currentView === 'knowledge'" />
-
-    <KnowledgeGraphView v-else-if="currentView === 'knowledge_graph'" initial-scope="global" />
-
-    <DatabaseManagement v-else-if="currentView === 'database'" />
-
-    <MediaLibrary v-else-if="currentView === 'media_library'" />
-
-    <GraphExportConfig v-else-if="currentView === 'graph_export'" />
-
-    <ModelManagement v-else-if="currentView === 'model'" />
-    
-    <!-- Search View -->
-    <SearchAgent v-else-if="currentView === 'search'" />
-
-    <!-- Agent Management View -->
-    <AgentManagement v-else-if="currentView === 'agent'" />
-
-    <!-- Service Market View -->
-    <ServiceMarket v-else-if="currentView === 'service_market'" />
-
-    <!-- Workflow Integration View -->
-    <WorkflowManagement v-else-if="currentView === 'workflow'" />
-
-<!-- Recorder Removed -->
-
-    <!-- All Sessions Modal -->
-    <a-modal 
-        v-model:open="allSessionsModalVisible" 
-        title="全部任务记录" 
-        :footer="null"
-        width="600px"
-        destroyOnClose
-    >
-        <div class="py-4 flex flex-col gap-4">
-            <a-input 
-                v-model:value="sessionSearchKeyword" 
-                placeholder="搜索任务名称..." 
-                allow-clear
-            >
-                <template #prefix>
-                    <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                </template>
-            </a-input>
-            
-            <div class="max-h-[400px] overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-1">
-                <div v-if="filteredSessions.length === 0" class="text-center py-10 text-slate-400 italic">
-                    未找到相关任务
-                </div>
-                <div 
-                    v-for="session in filteredSessions" 
-                    :key="session.id"
-                    @click="selectSession(session.id)"
-                    class="px-4 py-3 rounded-xl border border-transparent transition-all cursor-pointer flex items-center justify-between group"
-                    :class="currentSessionId === session.id ? 'bg-blue-50 border-blue-100 text-blue-700' : 'hover:bg-slate-50 text-slate-600'"
-                >
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <svg class="w-4 h-4 flex-shrink-0" :class="currentSessionId === session.id ? 'text-blue-500' : 'text-slate-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-                        <span class="text-sm font-medium truncate">{{ session.title || '新对话' }}</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">{{ formatDate(session.updated_at) }}</span>
-                        <button 
-                            @click.stop="deleteSession(session.id)"
-                            class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </a-modal>
-
+  <!-- File List Removed -->
+  
+  <!-- Modals Removed -->
+  
+      <!-- Detail View -->
+      <RecordingDetail v-else-if="currentView === 'detail'" :recording="selectedRecording" @back="currentView = 'list'" />
+  
+      <!-- Metrics View -->
+      <MetricsExtraction v-else-if="currentView === 'metrics'" :prefilled-indicator="prefilledIndicator" />
+  
+      <!-- Indicator Management View -->
+      <IndicatorManagement v-else-if="currentView === 'indicators'" @navigate-to-extraction="handleNavigateToExtraction" />
+  
+      <!-- Data Query View -->
+      <SmartDataQuery v-else-if="currentView === 'data_query'" />
+                  
+      <KnowledgeBase v-else-if="currentView === 'knowledge'" />
+  
+      <KnowledgeGraphView v-else-if="currentView === 'knowledge_graph'" initial-scope="global" />
+  
+      <DatabaseManagement v-else-if="currentView === 'database'" />
+  
+      <MediaLibrary v-else-if="currentView === 'media_library'" />
+  
+      <GraphExportConfig v-else-if="currentView === 'graph_export'" />
+  
+      <ModelManagement v-else-if="currentView === 'model'" />
+      
+      <!-- Search View -->
+      <SearchAgent v-else-if="currentView === 'search'" />
+  
+      <!-- Agent Management View -->
+      <AgentManagement v-else-if="currentView === 'agent'" />
+  
+      <!-- Service Market View -->
+      <ServiceMarket v-else-if="currentView === 'service_market'" />
+  
+      <!-- Workflow Integration View -->
+      <WorkflowManagement v-else-if="currentView === 'workflow'" />
+  
+      <!-- All Sessions Modal -->
+      <a-modal 
+          v-model:open="allSessionsModalVisible" 
+          title="全部任务记录" 
+          :footer="null"
+          width="600px"
+          destroyOnClose
+      >
+          <div class="py-4 flex flex-col gap-4">
+              <a-input 
+                  v-model:value="sessionSearchKeyword" 
+                  placeholder="搜索任务名称..." 
+                  allow-clear
+              >
+                  <template #prefix>
+                      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  </template>
+              </a-input>
+              
+              <div class="max-h-[400px] overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-1">
+                  <div v-if="filteredSessions.length === 0" class="text-center py-10 text-slate-400 italic">
+                      未找到相关任务
+                  </div>
+                  <div 
+                      v-for="session in filteredSessions" 
+                      :key="session.id"
+                      @click="selectSession(session.id)"
+                      class="px-4 py-3 rounded-xl border border-transparent transition-all cursor-pointer flex items-center justify-between group"
+                      :class="currentSessionId === session.id ? 'bg-blue-50 border-blue-100 text-blue-700' : 'hover:bg-slate-50 text-slate-600'"
+                  >
+                      <div class="flex items-center gap-3 overflow-hidden">
+                          <svg class="w-4 h-4 flex-shrink-0" :class="currentSessionId === session.id ? 'text-blue-500' : 'text-slate-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                          <span class="text-sm font-medium truncate">{{ session.title || '新对话' }}</span>
+                      </div>
+                      <div class="flex items-center gap-3">
+                          <span class="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">{{ formatDate(session.updated_at) }}</span>
+                          <button 
+                              @click.stop="deleteSession(session.id)"
+                              class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </a-modal>
+  
+      </div>
     </div>
-  </div>
+    </div>
   </div>
 </template>
 
@@ -813,6 +842,8 @@ import { ref, onMounted, computed, defineAsyncComponent } from 'vue';
 import { message } from 'ant-design-vue';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
+import SmartQA from '@/features/qa/components/SmartQA.vue';
 
 // Async Components
 const RecordingList = defineAsyncComponent(() => import('@/features/recording/components/RecordingList.vue'));
@@ -822,7 +853,6 @@ const SearchAgent = defineAsyncComponent(() => import('@/features/search/compone
 const MetricsExtraction = defineAsyncComponent(() => import('@/features/analytics/components/MetricsExtraction.vue'));
 const IndicatorManagement = defineAsyncComponent(() => import('@/features/analytics/components/IndicatorManagement.vue'));
 const SmartDataQuery = defineAsyncComponent(() => import('@/features/analytics/components/SmartDataQuery.vue'));
-const SmartQA = defineAsyncComponent(() => import('@/features/qa/components/SmartQA.vue'));
 const KnowledgeBase = defineAsyncComponent(() => import('@/features/knowledge/components/KnowledgeBase.vue'));
 const KnowledgeGraphView = defineAsyncComponent(() => import('@/features/knowledge/components/KnowledgeGraphView.vue'));
 const GraphExportConfig = defineAsyncComponent(() => import('@/features/knowledge/components/GraphExportConfig.vue'));
@@ -831,11 +861,38 @@ const DatabaseManagement = defineAsyncComponent(() => import('@/features/system/
 const AgentManagement = defineAsyncComponent(() => import('@/features/agent/components/AgentManagement.vue'));
 const ServiceMarket = defineAsyncComponent(() => import('@/features/agent/components/ServiceMarket.vue'));
 const WorkflowManagement = defineAsyncComponent(() => import('@/features/workflow/components/WorkflowManagement.vue'));
+const AgentIcon = defineAsyncComponent(() => import('@/shared/components/atoms/AgentIcon/AgentIcon.vue'));
+const BaseIcon = defineAsyncComponent(() => import('@/shared/components/atoms/BaseIcon/index'));
 
 // Setup Axios
 const api = axios.create({
     baseURL: '/api/v1'
 });
+
+const workflowStore = useWorkflowStore();
+const agents = ref([]);
+
+const fetchAgents = async () => {
+    try {
+        const res = await api.get('/agents/');
+        agents.value = res.data;
+    } catch (e) {
+        console.error("Failed to fetch agents", e);
+    }
+};
+
+const getAgentIcon = (agentId) => {
+    if (!agentId) return null;
+    const agent = agents.value.find(a => a.id === agentId);
+    return agent ? (agent.icon || agent.icon_url) : null;
+};
+
+const getSessionProgress = (session) => {
+    if (session.id === currentSessionId.value) {
+        return workflowStore.progress;
+    }
+    return session.progress || 0;
+};
 
 const getPageTitle = computed(() => {
     switch (currentView.value) {
@@ -986,6 +1043,7 @@ const handleNavigateToExtraction = (indicator) => {
 
 onMounted(() => {
     fetchSessions();
+    fetchAgents();
 });
 </script>
 
