@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 提升 Element Plus 基础字号，使其在 Mac 上更易读 */
+  --el-font-size-base: 15px;
+  --el-font-size-small: 13px;
+  --el-font-size-medium: 15px;
+  --el-font-size-large: 17px;
+  --el-font-size-extra-large: 19px;
+}
+
+html, body {
+  /* 确保全局基准字号为 16px，并优化字体渲染 */
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 针对 Mac 高分屏的微调，让文字看起来更精致 */
+@media screen and (min-resolution: 2dppx) {
+  body {
+    font-weight: 400; /* 避免在 Retina 屏上过细 */
+  }
+}

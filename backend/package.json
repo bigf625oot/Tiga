@@ -1,0 +1,17 @@
+{
+  "name": "taichi-agent-backend",
+  "version": "1.0.0",
+  "description": "Backend scripts for Taichi Agent",
+  "scripts": {
+    "install": "pip install -r requirements.txt",
+    "dev": "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+    "start": "uvicorn app.main:app --host 0.0.0.0 --port 8000",
+    "lint": "ruff check . && ruff format . --check",
+    "format": "ruff format .",
+    "test": "pytest tests/",
+    "clean": "powershell -Command \"Get-ChildItem -Path . -Include __pycache__,*.pyc -Recurse | Remove-Item -Force -Recurse\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
