@@ -66,6 +66,7 @@ class ChatRequest(BaseModel):
     debug: bool = False
     ab_variant: Optional[str] = None
     attachments: Optional[List[int]] = None
+    enable_search: bool = True
 
 
 @router.post("/sessions/{session_id}/chat")
@@ -87,7 +88,7 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
     logger.info(f"[CHAT] Session agent_id={session.agent_id}")
     if session.agent_id:
         try:
-            agent = await agent_manager.create_agno_agent(db, session.agent_id, session_id)
+            agent = await agent_manager.create_agno_agent(db, session.agent_id, session_id, enable_search=request.enable_search)
             from sqlalchemy import select
 
             agent_res = await db.execute(select(Agent).filter(Agent.id == session.agent_id))
@@ -391,11 +392,18 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                         structured_refs.append(
                             {
                                 "id": d.id if d else 0,
+                                "docId": d.id if d else 0,
                                 "title": t,
                                 "createTime": (d.created_at.isoformat() if d and d.created_at else None),
+                                "updateTime": (d.updated_at.isoformat() if d and d.updated_at else None),
                                 "coverImage": (d.oss_url if d else r.get("url")),
                                 "summary": r.get("preview") or "",
+                                "text": r.get("content") or r.get("preview"),
+                                "score": r.get("score") or 0,
                                 "tags": [],
+                                "chunkId": r.get("chunk_id") or r.get("id"),
+                                "pageNo": r.get("page"),
+                                "nodeId": r.get("node_id") or r.get("nodeId")
                             }
                         )
                 except Exception as re:
@@ -425,8 +433,10 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                     model_id = getattr(model_obj, "id", None) or "deepseek-reasoner"
                     client = OpenAI(api_key=api_key or "dummy", base_url=base_url)
                     ddg = DuckDuckGoTools()
-                    tools = [
-                        {
+                    tools = []
+                    
+                    if request.enable_search:
+                        tools.append({
                             "type": "function",
                             "function": {
                                 "name": "duckduckgo_search",
@@ -437,8 +447,9 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                                     "required": ["query"],
                                 },
                             },
-                        },
-                        {
+                        })
+
+                    tools.append({
                             "type": "function",
                             "function": {
                                 "name": "get_datetime",
@@ -455,8 +466,7 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                                     "additionalProperties": False,
                                 },
                             },
-                        },
-                    ]
+                        })
 
                     def _get_datetime(format: str = None):
                         from datetime import datetime
@@ -468,20 +478,54 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                         return {"now": datetime.now().isoformat()}
 
                     tool_map = {
-                        "duckduckgo_search": lambda query, max_results=5: (
+                        "get_datetime": lambda format=None: _get_datetime(format),
+                    }
+                    
+                    if request.enable_search:
+                        tool_map["duckduckgo_search"] = lambda query, max_results=5: (
                             json.loads(ddg.search(query, max_results=max_results))
                             if ddg
                             else {"error": "ddg not available"}
-                        ),
-                        "get_datetime": lambda format=None: _get_datetime(format),
-                    }
+                        )
+
+                    # Inject Knowledge Base Tool if agent has KB configured
+                    kb = getattr(agent, "knowledge", None)
+                    if kb:
+                        tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": "search_knowledge_base",
+                                    "description": "Search the knowledge base for relevant documents.",
+                                    "parameters": {
+                                        "type": "object",
+                                        "properties": {
+                                            "query": {"type": "string", "description": "The search query"},
+                                            "num_documents": {"type": "integer", "description": "Number of documents to return", "default": 5}
+                                        },
+                                        "required": ["query"],
+                                    },
+                                },
+                            }
+                        )
+                        
+                        def _search_kb(query: str, num_documents: int = 5):
+                            # Agno KB search returns list of Document objects or dicts
+                            results = kb.search(query=query, num_documents=num_documents)
+                            # Convert to simplified text for LLM
+                            return [
+                                {"content": getattr(r, "content", "") or str(r), "meta": getattr(r, "meta_data", {})} 
+                                for r in results
+                            ]
+
+                        tool_map["search_knowledge_base"] = _search_kb
 
                     # Only enable thinking for DeepSeek Reasoner models
                     is_deepseek = "deepseek" in model_id.lower() and (
                         "reasoner" in model_id.lower() or "r1" in model_id.lower()
                     )
 
-                    res = run_reasoning_tool_loop(
+                    res = await run_reasoning_tool_loop(
                         client=client,
                         model_id=model_id,
                         user_prompt=request.message,
@@ -581,6 +625,10 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                 citations_text = "\n".join(citations) + "\n"
                 full_response += citations_text
                 yield citations_text
+
+            # Inject structured sources for frontend
+            if structured_refs:
+                yield f"\n\n__SOURCES__\n{json.dumps(structured_refs, ensure_ascii=False)}\n"
 
             # 5. Save Assistant Message to DB
             meta = {}

@@ -54,23 +54,13 @@
             <div v-if="isAmisJSON(message.content)" :id="'amis-' + uniqueId" class="amis-container my-2 rounded-lg overflow-hidden bg-white border border-slate-100"></div>
             <div v-else class="markdown-body" v-html="renderedContent"></div>
 
-            <!-- References -->
-            <div v-if="hasReferences" class="mt-3 pt-3 border-t border-slate-100/50">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="text-xs font-medium text-slate-500 flex items-center gap-1">
-                        <BaseIcon icon="lucide:book-open" :size="12" />
-                        参考资料
-                    </div>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <div v-for="(ref, idx) in structuredRefs" :key="idx" 
-                         class="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-100 text-xs text-slate-600 hover:text-indigo-600 hover:border-indigo-100 transition-colors cursor-pointer"
-                    >
-                        <span class="w-3.5 h-3.5 flex items-center justify-center bg-slate-100 rounded text-[9px] font-mono text-slate-500">{{ idx + 1 }}</span>
-                        <span class="truncate max-w-[120px]">{{ ref.title }}</span>
-                    </div>
-                </div>
-            </div>
+            <!-- References / Sources -->
+            <SourcePanel 
+              v-if="hasReferences || hasSources" 
+              :sources="combinedSources" 
+              @locate-node="handleLocateNode"
+              @show-doc-summary="handleDocSummary"
+            />
         </div>
         <div v-else class="whitespace-pre-wrap">{{ message.content }}</div>
       </div>
@@ -79,11 +69,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, nextTick } from 'vue';
+import { computed, onMounted, nextTick, inject } from 'vue';
 import { marked } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import BaseIcon from '@/shared/components/atoms/BaseIcon'; // Assuming this exists based on SmartQA
+import BaseIcon from '@/shared/components/atoms/BaseIcon';
+import SourcePanel from './SourcePanel.vue';
 import dayjs from 'dayjs';
 
 const props = defineProps({
@@ -94,6 +85,8 @@ const props = defineProps({
   agent: { type: Object, default: null },
   uniqueId: { type: String, default: () => Math.random().toString(36).substr(2, 9) }
 });
+
+const emit = defineEmits(['locate-node', 'show-doc-summary']);
 
 const bubbleClasses = computed(() => {
   if (props.isUser) {
@@ -108,16 +101,39 @@ const hasReferences = computed(() => {
     return props.message.meta_data && (props.message.meta_data.structured_references || props.message.meta_data.references);
 });
 
-const structuredRefs = computed(() => {
+const hasSources = computed(() => {
+    return props.message.sources && props.message.sources.length > 0;
+});
+
+const combinedSources = computed(() => {
+    if (props.message.sources && props.message.sources.length > 0) {
+        return props.message.sources;
+    }
     const sr = props.message.meta_data?.structured_references || [];
-    if (sr.length) return sr;
+    if (sr.length) return sr.map(r => ({
+        docId: r.id,
+        title: r.title,
+        summary: r.summary,
+        score: 1.0, // Default
+        updateTime: r.createTime
+    }));
     const refs = props.message.meta_data?.references || [];
     return refs.map((r, i) => ({
-        id: i + 1,
+        docId: i + 1,
         title: r.title || 'Unknown Source',
-        url: r.url
+        summary: r.preview || '',
+        score: r.score || 1.0
     }));
 });
+
+const handleLocateNode = (item) => {
+    emit('locate-node', item);
+};
+
+const handleDocSummary = (item) => {
+    emit('show-doc-summary', item);
+};
+
 
 const agentIcon = computed(() => {
     return props.agent?.icon || props.agent?.icon_url;

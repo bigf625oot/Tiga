@@ -107,6 +107,10 @@ class KnowledgeBaseService:
                         "page": it.get("page"),
                         "score": score,
                         "preview": it.get("preview") or "",
+                        "chunk_id": it.get("chunk_id") or it.get("id"),
+                        "doc_id": it.get("doc_id"),
+                        "node_id": it.get("node_id"),
+                        "content": it.get("content"),
                     }
                 )
         except Exception as e:

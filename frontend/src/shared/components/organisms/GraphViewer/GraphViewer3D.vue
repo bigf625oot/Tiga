@@ -75,6 +75,10 @@ const initGraph = () => {
                 3000
             );
         });
+        
+    // Adjust force engine parameters for better spacing
+    Graph.d3Force('charge').strength(-300); // Repel force
+    Graph.d3Force('link').distance(100); // Link distance
 
     updateGraphData();
 };

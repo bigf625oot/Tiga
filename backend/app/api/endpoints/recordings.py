@@ -12,11 +12,15 @@ AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
 
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.recording import Recording
+from app.models.llm_model import LLMModel
 from app.services.media.asr import aliyun_asr_service
 from app.services.storage.service import storage_service
+from app.services.llm.factory import ModelFactory
+from agno.agent import Agent
 
 logger = logging.getLogger(__name__)
 
@@ -63,18 +67,74 @@ async def process_audio_background(recording_id: int, db_session_maker):
                 recording.transcription_text = transcription
                 recording.asr_status = "completed"
 
-                # 3. Call LLM Summary (Still Mock for now, or we can integrate LLM later)
-                logger.info(f"Starting summary generation for recording {recording_id}")
+                # 3. Call LLM Summary
+                logger.info(f"Starting AI summary generation for recording {recording_id}")
                 recording.summary_status = "processing"
                 await db.commit()
 
-                # Simple heuristic summary based on length
-                if len(transcription) > 100:
-                    recording.summary_text = f"【智能摘要】\n根据转写内容，主要包含以下要点：\n1. {transcription[:30]}...\n2. {transcription[30:60]}..."
-                else:
-                    recording.summary_text = "内容较短，无需摘要。"
+                try:
+                    # Fetch active LLM model
+                    model_res = await db.execute(
+                        select(LLMModel)
+                        .filter(LLMModel.is_active == True)
+                        .limit(1)
+                    )
+                    llm_model = model_res.scalars().first()
 
-                recording.summary_status = "completed"
+                    if llm_model:
+                        try:
+                            model = ModelFactory.create_model(llm_model)
+                            agent = Agent(
+                                model=model,
+                                description="你是一个专业的会议纪要助手。",
+                                instructions="请根据会议转写内容生成专业的会议纪要，并提取关键词。",
+                                markdown=True
+                            )
+
+                            prompt = f"""
+                            请根据以下会议转写内容，生成一份专业的会议纪要。
+
+                            转写内容：
+                            {transcription}
+
+                            要求：
+                            1. **会议主题**：简短的标题。
+                            2. **主要讨论点**：使用项目符号列出。
+                            3. **待办事项 (Action Items)**：列出任务和负责人（如果有）。
+                            4. **关键词**：提取 5-10 个关键词。
+
+                            请以 Markdown 格式输出。
+                            在最后一行，请严格按照以下格式输出关键词（用于系统自动提取）：
+                            __KEYWORDS__: keyword1, keyword2, keyword3
+                            """
+
+                            # Run in thread to avoid blocking
+                            response = await asyncio.to_thread(agent.run, prompt)
+                            full_content = response.content
+
+                            # Parse Keywords
+                            if "__KEYWORDS__:" in full_content:
+                                parts = full_content.split("__KEYWORDS__:")
+                                recording.summary_text = parts[0].strip()
+                                recording.keywords = parts[1].strip()
+                            else:
+                                recording.summary_text = full_content
+                                recording.keywords = ""
+                            
+                            recording.summary_status = "completed"
+                        except Exception as inner_e:
+                            logger.error(f"Agent execution failed: {inner_e}")
+                            recording.summary_text = f"摘要生成失败: {str(inner_e)}"
+                            recording.summary_status = "failed"
+                    else:
+                        recording.summary_text = "未找到激活的大模型，无法生成摘要。"
+                        recording.summary_status = "failed"
+
+                except Exception as e:
+                    logger.error(f"Summary generation error: {e}")
+                    recording.summary_text = f"处理出错: {str(e)}"
+                    recording.summary_status = "failed"
+                
                 logger.info(f"Summary generation completed for recording {recording_id}")
 
                 # 4. Recommendation (Mock)
@@ -187,19 +247,39 @@ async def upload_recording(
 
     try:
         logger.info(f"Processing audio file: {tmp_orig_path}")
-        audio = AudioSegment.from_file(tmp_orig_path)
-        # Resample to 16000Hz, Mono channel
-        audio = audio.set_frame_rate(16000).set_channels(1)
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_converted:
-            converted_path = tmp_converted.name
-
-        # Export
+        # Use subprocess to call ffmpeg directly, bypassing pydub's ffprobe dependency
+        import subprocess
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        
+        # Determine output format (mp4 container for m4a/aac)
         export_format = file_ext.replace(".", "")
         if export_format == "m4a":
              export_format = "mp4"
 
-        audio.export(converted_path, format=export_format)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{export_format}") as tmp_converted:
+            converted_path = tmp_converted.name
+
+        # Command: ffmpeg -y -i input -ar 16000 -ac 1 -f format output
+        cmd = [
+            ffmpeg_exe,
+            "-y",
+            "-i", tmp_orig_path,
+            "-ar", "16000",
+            "-ac", "1",
+            "-f", export_format,
+            converted_path
+        ]
+        
+        logger.info(f"Running ffmpeg command: {' '.join(cmd)}")
+        # Capture output for debugging
+        process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        if process.returncode != 0:
+            logger.error(f"FFmpeg failed with return code {process.returncode}")
+            logger.error(f"FFmpeg stderr: {process.stderr.decode('utf-8', errors='ignore')}")
+            raise Exception("FFmpeg conversion failed")
+
         logger.info(f"Audio converted to 16kHz mono: {converted_path}")
 
         # Upload converted file

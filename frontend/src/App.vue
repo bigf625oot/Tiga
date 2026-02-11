@@ -788,10 +788,10 @@
       <KnowledgeBase v-else-if="currentView === 'knowledge'" />
   
       <KnowledgeGraphView v-else-if="currentView === 'knowledge_graph'" initial-scope="global" />
-  
-      <DatabaseManagement v-else-if="currentView === 'database'" />
-  
-      <MediaLibrary v-else-if="currentView === 'media_library'" />
+
+    <DatabaseManagement v-else-if="currentView === 'database'" @navigate="currentView = $event" />
+
+    <MediaLibrary v-else-if="currentView === 'media_library'" />
   
       <GraphExportConfig v-else-if="currentView === 'graph_export'" />
     

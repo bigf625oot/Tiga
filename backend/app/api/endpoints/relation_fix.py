@@ -25,6 +25,13 @@ class CreateRelationRequest(BaseModel):
     rel_type: str
     attributes: Optional[Dict[str, Any]] = {}
 
+class DeleteRelationItem(BaseModel):
+    source: str
+    target: str
+
+class DeleteRelationsRequest(BaseModel):
+    relations: List[DeleteRelationItem]
+
 class RestoreRequest(BaseModel):
     filename: Optional[str] = None
 
@@ -52,6 +59,16 @@ def create_relation(request: CreateRelationRequest):
         request.source, request.target, request.rel_type, request.attributes
     )
     return {"success": success}
+
+@router.post("/delete", response_model=Dict[str, int])
+def delete_relations(request: DeleteRelationsRequest):
+    """
+    Delete a batch of relations.
+    """
+    count = relation_fix_service.delete_relations(
+        [rel.dict() for rel in request.relations]
+    )
+    return {"count": count}
 
 @router.post("/backup", response_model=Dict[str, str])
 def backup_graph():

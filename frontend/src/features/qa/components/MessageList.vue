@@ -16,6 +16,8 @@
         :show-meta="mIdx === 0 && group.role !== 'user'"
         :agent="currentAgent"
         :unique-id="`${gIdx}-${mIdx}`"
+        @locate-node="$emit('locate-node', $event)"
+        @show-doc-summary="$emit('show-doc-summary', $event)"
       />
     </div>
 

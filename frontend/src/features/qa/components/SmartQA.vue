@@ -86,7 +86,7 @@
                         v-model="input" 
                         @keydown="onInputKeydown"
                         rows="1"
-                        placeholder="描述您的需求..." 
+                        :placeholder="'描述您的需求...'"
                         class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
                         :disabled="isLoading"
                         @input="adjustHeight"
@@ -101,6 +101,11 @@
                              <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode">
                                 <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
                                 <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-slate-500'">任务模式</span>
+                             </div>
+                             <div class="h-4 w-px bg-slate-200 mx-1"></div>
+                             <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
+                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
                              </div>
                          </div>
                          
@@ -164,6 +169,8 @@
             :messages="messages" 
             :current-agent="currentAgent" 
             :is-loading="isLoading"
+            @locate-node="handleLocateNode"
+            @show-doc-summary="handleDocSummary"
         />
 
         <!-- Input Area (Fixed Bottom for Chat) -->
@@ -184,13 +191,19 @@
                         v-model="input" 
                         @keydown="onInputKeydown"
                         rows="1"
-                        placeholder="描述您的需求..." 
+                        :placeholder="'描述您的需求...'"
                         class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
                         :disabled="isLoading"
                         @input="adjustHeight"
                     ></textarea>
 
-                    <div class="flex justify-end items-center px-2 pb-1">
+                    <div class="flex justify-between items-center px-2 pb-1">
+                         <div class="flex items-center gap-2 h-8">
+                             <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
+                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
+                             </div>
+                         </div>
                          <div class="flex items-center gap-3 h-8">
                              <button 
                                 @click="sendMessage" 
@@ -273,9 +286,9 @@
                           v-model="input" 
                           @keydown="onInputKeydown"
                           rows="1"
-                          placeholder="描述您的需求..." 
-                          class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
-                          :disabled="isLoading"
+                          :placeholder="'描述您的需求...'"
+                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
@@ -288,6 +301,11 @@
                                <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode">
                                   <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
                                   <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-slate-500'">任务模式</span>
+                               </div>
+                               <div class="h-4 w-px bg-slate-200 mx-1"></div>
+                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                  <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
+                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
                                </div>
                            </div>
                            
@@ -352,6 +370,8 @@
               :messages="messages" 
               :current-agent="currentAgent" 
               :is-loading="isLoading"
+              @locate-node="handleLocateNode"
+              @show-doc-summary="handleDocSummary"
           />
 
           <div v-if="messages.length > 0" class="flex-none w-full py-3 px-4 bg-white z-30 border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
@@ -370,9 +390,9 @@
                           v-model="input" 
                           @keydown="onInputKeydown"
                           rows="1"
-                          placeholder="描述您的需求..." 
-                          class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
-                          :disabled="isLoading"
+                          :placeholder="'描述您的需求...'"
+                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
@@ -385,6 +405,11 @@
                                <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode">
                                   <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
                                   <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-slate-500'">任务模式</span>
+                               </div>
+                               <div class="h-4 w-px bg-slate-200 mx-1"></div>
+                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                  <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
+                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
                                </div>
                            </div>
 
@@ -496,6 +521,7 @@ const emit = defineEmits(['refresh-sessions']);
 
 const workflowStore = useWorkflowStore();
 const isWorkflowMode = ref(false); // Default to chat mode, but user can toggle
+const isNetworkSearchEnabled = ref(true); // Network search toggle
 const useTaskUI = computed(() => isWorkflowMode.value || workflowStore.isRunning || (workflowStore.tasks?.length || 0) > 0);
 const input = ref('');
 const messages = ref([]);
@@ -644,6 +670,13 @@ const getDefaultAgentId = (list) => {
 };
 
 onMounted(() => {
+    try {
+        const saved = localStorage.getItem('isNetworkSearchEnabled');
+        if (saved !== null) {
+            isNetworkSearchEnabled.value = saved === 'true';
+        }
+    } catch (e) {}
+
     splitRatio.value = readSplitRatio();
     updateIsDesktop();
     window.addEventListener('resize', updateIsDesktop);
@@ -724,6 +757,10 @@ const fetchUserScripts = async (aid) => {
 watch(selectedAgentId, (nv) => {
     fetchUserScripts(nv);
     try { if (nv) localStorage.setItem('defaultAgentId', nv); } catch {}
+});
+
+watch(isNetworkSearchEnabled, (val) => {
+    try { localStorage.setItem('isNetworkSearchEnabled', String(val)); } catch {}
 });
 
 const adjustHeight = (e) => {
@@ -946,7 +983,11 @@ const sendMessage = async () => {
 
     // Chat Mode
     try {
-        const payload = { message: userMsg, attachments: attachmentIds };
+        const payload = { 
+            message: userMsg, 
+            attachments: attachmentIds,
+            enable_search: isNetworkSearchEnabled.value 
+        };
         const response = await fetch(`/api/v1/chat/sessions/${currentSessionId.value}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -973,18 +1014,38 @@ const sendMessage = async () => {
             const chunk = decoder.decode(value, { stream: true });
             fullBuffer += chunk;
             
-            const thinkStart = fullBuffer.indexOf('<think>');
+            // Check for hidden sources block
+            const sourcesStart = fullBuffer.indexOf('__SOURCES__');
+            let contentToProcess = fullBuffer;
+            
+            if (sourcesStart !== -1) {
+                const jsonStr = fullBuffer.substring(sourcesStart + 11).trim();
+                try {
+                    if (jsonStr.endsWith('}')) { // Simple check if JSON might be complete
+                        const sources = JSON.parse(jsonStr);
+                        assistantMsg.sources = sources;
+                    } else if (done) {
+                         const sources = JSON.parse(jsonStr);
+                         assistantMsg.sources = sources;
+                    }
+                } catch (e) {
+                    // JSON might be incomplete during streaming
+                }
+                contentToProcess = fullBuffer.substring(0, sourcesStart);
+            }
+
+            const thinkStart = contentToProcess.indexOf('<think>');
             if (thinkStart !== -1) {
-                const thinkEnd = fullBuffer.indexOf('</think>');
+                const thinkEnd = contentToProcess.indexOf('</think>');
                 if (thinkEnd !== -1) {
-                    assistantMsg.reasoning = fullBuffer.substring(thinkStart + 7, thinkEnd).trim();
-                    assistantMsg.content = (fullBuffer.substring(0, thinkStart) + fullBuffer.substring(thinkEnd + 8)).trim();
+                    assistantMsg.reasoning = contentToProcess.substring(thinkStart + 7, thinkEnd).trim();
+                    assistantMsg.content = (contentToProcess.substring(0, thinkStart) + contentToProcess.substring(thinkEnd + 8)).trim();
                 } else {
-                    assistantMsg.reasoning = fullBuffer.substring(thinkStart + 7);
-                    assistantMsg.content = fullBuffer.substring(0, thinkStart);
+                    assistantMsg.reasoning = contentToProcess.substring(thinkStart + 7);
+                    assistantMsg.content = contentToProcess.substring(0, thinkStart);
                 }
             } else {
-                assistantMsg.content = fullBuffer;
+                assistantMsg.content = contentToProcess;
             }
             scrollToBottom();
         }
@@ -1060,6 +1121,25 @@ const renderAmis = (index, content) => {
 const toggleAgentSelect = (e) => {
     if (e.target.closest('.ant-select-selector')) return;
     agentSelectOpen.value = !agentSelectOpen.value;
+};
+
+const handleLocateNode = (item) => {
+    // Open right pane if collapsed
+    if (isRightCollapsed.value) {
+        isRightCollapsed.value = false;
+    }
+    // Call workspaceTabs to locate node
+    // item: { chunkId, docId, nodeId, ... }
+    // If nodeId is present, use it. Else fall back to title or some other ID.
+    // The requirement says "highlight node (nodeId binds to chunk metadata nodeId)".
+    const nid = item.nodeId || item.title; 
+    workspaceTabsRef.value?.locateNode?.(nid, item.docId);
+};
+
+const handleDocSummary = (item) => {
+    console.log("View doc summary:", item);
+    // Logic handled in SourcePanel usually, but if we need global overlay:
+    // ...
 };
 </script>
 

@@ -35,6 +35,25 @@ class RelationFixService:
             logger.error(f"Error reading graph file: {e}")
             raise
 
+    def _sanitize_attrs(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Remove None values from attributes to prevent GraphML errors.
+        Convert non-supported types to string if necessary.
+        """
+        clean = {}
+        for k, v in attrs.items():
+            if v is None:
+                continue # Skip None values
+            if isinstance(v, (str, int, float, bool)):
+                clean[k] = v
+            else:
+                # Convert complex types (list, dict, etc.) to string
+                try:
+                    clean[k] = str(v)
+                except Exception:
+                    clean[k] = ""
+        return clean
+
     def _save_graph(self, G: nx.Graph):
         try:
             nx.write_graphml(G, self.graph_path)
@@ -131,7 +150,8 @@ class RelationFixService:
             for k, v in fix.get("attributes", {}).items():
                 attrs[k] = v
                 
-            G.add_edge(src, tgt, **attrs)
+            clean_attrs = self._sanitize_attrs(attrs)
+            G.add_edge(src, tgt, **clean_attrs)
             count += 1
             
         if count > 0:
@@ -149,11 +169,47 @@ class RelationFixService:
         attrs["source_id"] = "manual_create_tool"
         attrs["created_at"] = datetime.now().isoformat()
         
-        G.add_edge(source, target, **attrs)
+        clean_attrs = self._sanitize_attrs(attrs)
+        G.add_edge(source, target, **clean_attrs)
                    
         self._save_graph(G)
         self._log_action("CREATE", f"Created relation {source} -> {target} ({rel_type})")
         return True
+
+    def delete_relations(self, relations: List[Dict[str, str]]) -> int:
+        if not relations:
+            return 0
+            
+        self.backup_graph()
+        G = self._get_graph()
+        count = 0
+        
+        for rel in relations:
+            src = rel.get("source")
+            tgt = rel.get("target")
+            
+            if not src or not tgt:
+                continue
+                
+            if G.has_edge(src, tgt):
+                G.remove_edge(src, tgt)
+                count += 1
+            elif G.has_edge(tgt, src):
+                # Try reverse direction if undirected or just in case
+                # Note: NetworkX Graph is undirected by default unless DiGraph is used.
+                # nx.read_graphml usually returns a Graph or DiGraph based on the file.
+                # LightRAG usually uses undirected for co-occurrence but let's check.
+                # If it is a DiGraph, direction matters. If Graph, order doesn't matter.
+                # We'll assume the user provided order matches or the graph is undirected.
+                # If the graph is undirected, has_edge(src, tgt) is same as has_edge(tgt, src).
+                pass
+
+        if count > 0:
+            self._save_graph(G)
+            self._log_action("DELETE", f"Deleted {count} relations")
+            
+        return count
+
         
     def get_logs(self, limit: int = 100) -> List[str]:
         if not os.path.exists(self.log_file):

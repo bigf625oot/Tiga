@@ -71,21 +71,96 @@
       </div>
     </div>
 
-    <!-- Create Manual Relation -->
+    <!-- Relation Management -->
     <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-      <h3 class="font-medium text-slate-800 mb-2">新建关系</h3>
-      <div class="space-y-3">
+      <div class="flex border-b border-slate-200 mb-4">
+        <button 
+          @click="activeTab = 'create'"
+          class="flex-1 pb-2 text-sm font-medium transition-colors relative"
+          :class="activeTab === 'create' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'"
+        >
+          新建关系
+          <div v-if="activeTab === 'create'" class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
+        </button>
+        <button 
+          @click="activeTab = 'delete'"
+          class="flex-1 pb-2 text-sm font-medium transition-colors relative"
+          :class="activeTab === 'delete' ? 'text-red-600' : 'text-slate-500 hover:text-slate-700'"
+        >
+          解除关系
+          <div v-if="activeTab === 'delete'" class="absolute bottom-0 left-0 w-full h-0.5 bg-red-600"></div>
+        </button>
+      </div>
+
+      <!-- Create Tab -->
+      <div v-if="activeTab === 'create'" class="space-y-3">
         <div class="grid grid-cols-2 gap-2">
-          <input v-model="newRel.source" placeholder="源节点" class="px-3 py-2 border rounded-md text-sm" />
-          <input v-model="newRel.target" placeholder="目标节点" class="px-3 py-2 border rounded-md text-sm" />
+          <input v-model="newRel.source" placeholder="源节点 (例如: 北京分公司)" class="px-3 py-2 border rounded-md text-sm" />
+          <input v-model="newRel.target" placeholder="目标节点 (例如: 中国联通)" class="px-3 py-2 border rounded-md text-sm" />
         </div>
-        <input v-model="newRel.type" placeholder="关系类型 (如: related)" class="w-full px-3 py-2 border rounded-md text-sm" />
+        <div>
+           <label class="block text-xs text-slate-500 mb-1 ml-1">关系类型</label>
+           <input v-model="newRel.type" placeholder="例如: 属于、包含、位于" class="w-full px-3 py-2 border rounded-md text-sm" />
+        </div>
         <button 
           @click="createRelation"
           class="w-full py-2 bg-slate-800 text-white rounded-md text-sm hover:bg-slate-900"
         >
           创建关系
         </button>
+      </div>
+
+      <!-- Delete Tab -->
+      <div v-else class="space-y-3">
+        <div v-if="!currentRelations || currentRelations.length === 0" class="text-xs text-slate-500 text-center py-4 bg-slate-50 rounded">
+          当前无可见关系，请先搜索并加载节点
+        </div>
+        <div v-else>
+          <div class="flex items-center justify-between mb-2 px-1">
+             <span class="text-xs text-slate-500">当前列表 ({{ currentRelations.length }})</span>
+             <button 
+               v-if="selectedRelationsToDelete.length < currentRelations.length"
+               @click="selectedRelationsToDelete = [...currentRelations]"
+               class="text-xs text-blue-600 hover:underline"
+             >全选</button>
+             <button 
+               v-else
+               @click="selectedRelationsToDelete = []"
+               class="text-xs text-blue-600 hover:underline"
+             >取消全选</button>
+          </div>
+          <div class="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
+            <div 
+              v-for="(rel, idx) in currentRelations" 
+              :key="idx" 
+              class="flex items-start gap-2 p-2 rounded border transition-colors cursor-pointer"
+              :class="selectedRelationsToDelete.includes(rel) ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100 hover:border-slate-300'"
+              @click="toggleSelection(rel)"
+            >
+              <input 
+                type="checkbox" 
+                :checked="selectedRelationsToDelete.includes(rel)"
+                class="mt-1 text-red-600 focus:ring-red-500" 
+                @click.stop="toggleSelection(rel)"
+              />
+              <div class="text-xs flex-1 break-all">
+                <div class="flex flex-wrap gap-1 items-center">
+                   <span class="font-medium text-slate-700">{{ rel.source }}</span>
+                   <span class="text-slate-400">-></span>
+                   <span class="font-medium text-slate-700">{{ rel.target }}</span>
+                </div>
+                <div class="mt-1 text-[10px] text-slate-400" v-if="rel.label">类型: {{ rel.label }}</div>
+              </div>
+            </div>
+          </div>
+          <button 
+            @click="deleteRelations"
+            :disabled="selectedRelationsToDelete.length === 0"
+            class="w-full mt-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-md text-sm hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            解除选中关系 ({{ selectedRelationsToDelete.length }})
+          </button>
+        </div>
       </div>
     </div>
 
@@ -106,6 +181,7 @@ import type { RelationFix } from '../api';
 
 const props = defineProps<{
   fixes: RelationFix[];
+  currentRelations?: Array<{ source: string; target: string; label?: string }>;
 }>();
 
 const emit = defineEmits<{
@@ -113,6 +189,7 @@ const emit = defineEmits<{
   (e: 'detect', mainNode: string, keyword: string): void;
   (e: 'applyFixes', fixes: RelationFix[]): void;
   (e: 'create', source: string, target: string, type: string): void;
+  (e: 'delete', relations: Array<{ source: string; target: string }>): void;
   (e: 'backup'): void;
   (e: 'restore'): void;
 }>();
@@ -121,7 +198,9 @@ const searchQuery = ref('');
 const detectMainNode = ref('');
 const detectKeyword = ref('');
 const selectedFixes = ref<RelationFix[]>([]);
-const newRel = ref({ source: '', target: '', type: 'related' });
+const newRel = ref({ source: '', target: '', type: '包含' });
+const activeTab = ref<'create' | 'delete'>('create');
+const selectedRelationsToDelete = ref<any[]>([]);
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
@@ -131,8 +210,26 @@ const handleSearch = () => {
 
 const createRelation = () => {
   if (newRel.value.source && newRel.value.target) {
-    emit('create', newRel.value.source, newRel.value.target, newRel.value.type);
-    newRel.value = { source: '', target: '', type: 'related' };
+    emit('create', newRel.value.source, newRel.value.target, newRel.value.type || 'related');
+    newRel.value = { source: '', target: '', type: '包含' };
+  }
+};
+
+const toggleSelection = (rel: any) => {
+  const index = selectedRelationsToDelete.value.indexOf(rel);
+  if (index === -1) {
+    selectedRelationsToDelete.value.push(rel);
+  } else {
+    selectedRelationsToDelete.value.splice(index, 1);
+  }
+};
+
+const deleteRelations = () => {
+  if (selectedRelationsToDelete.value.length === 0) return;
+  
+  if (confirm(`确定要解除选中的 ${selectedRelationsToDelete.value.length} 个关系吗？`)) {
+    emit('delete', selectedRelationsToDelete.value);
+    selectedRelationsToDelete.value = [];
   }
 };
 

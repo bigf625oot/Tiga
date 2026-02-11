@@ -36,7 +36,7 @@ class AgentManager:
             cls._instance = cls()
         return cls._instance
 
-    async def create_agno_agent(self, db: AsyncSession, agent_id: str, session_id: str = None) -> AgnoAgent:
+    async def create_agno_agent(self, db: AsyncSession, agent_id: str, session_id: str = None, enable_search: bool = True) -> AgnoAgent:
         try:
             # 1. Fetch Agent Config
             result = await db.execute(select(AgentModel).filter(AgentModel.id == agent_id))
@@ -173,7 +173,7 @@ class AgentManager:
                     logger.error(f"Error loading MCP tools: {e}")
 
             # Standard Tools
-            if "duckduckgo" in tools_config or (skills_config.get("browser", {}).get("enabled")):
+            if ("duckduckgo" in tools_config or (skills_config.get("browser", {}).get("enabled"))) and enable_search:
                 tools.append(DuckDuckGoTools())
 
             # N8N Tools

@@ -44,6 +44,37 @@ async def background_delete_cleanup(filename: str, oss_key: str = None):
         logger.error(f"[BG] 删除清理错误: {e}")
 
 
+class CreateFolderRequest(BaseModel):
+    name: str
+    parent_id: Optional[int] = None
+
+
+@router.post("/folder")
+async def create_folder(request: CreateFolderRequest, db: AsyncSession = Depends(get_db)):
+    # Check if folder with same name exists in same parent
+    stmt = select(KnowledgeDocument).where(
+        KnowledgeDocument.filename == request.name,
+        KnowledgeDocument.is_folder == True,
+        KnowledgeDocument.parent_id == request.parent_id
+    )
+    result = await db.execute(stmt)
+    if result.scalars().first():
+        raise HTTPException(status_code=400, detail="Folder already exists")
+
+    new_folder = KnowledgeDocument(
+        filename=request.name,
+        is_folder=True,
+        parent_id=request.parent_id,
+        status=DocumentStatus.INDEXED, # Folders are always "indexed" / ready
+        file_size=0
+    )
+    db.add(new_folder)
+    await db.commit()
+    await db.refresh(new_folder)
+    return new_folder
+
+
+
 @router.post("/vector/clean")
 async def clean_vector_store(db: AsyncSession = Depends(get_db)):
     await lightrag_engine.reset_vector_store(db)
@@ -259,9 +290,12 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
 
 @router.post("/upload")
 async def upload_document(
-    background_tasks: BackgroundTasks, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    parent_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db)
 ):
-    logger.info(f"收到上传请求 文件={file.filename}")
+    logger.info(f"收到上传请求 文件={file.filename} parent_id={parent_id}")
     # 1. Save to Temp File (for indexing)
     file_ext = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -279,7 +313,12 @@ async def upload_document(
         file_size = os.path.getsize(temp_file_path)
 
         new_doc = KnowledgeDocument(
-            filename=file.filename, oss_key=None, oss_url=None, file_size=file_size, status=DocumentStatus.UPLOADING
+            filename=file.filename,
+            oss_key=None,
+            oss_url=None,
+            file_size=file_size,
+            status=DocumentStatus.UPLOADING,
+            parent_id=parent_id
         )
         db.add(new_doc)
         await db.commit()
@@ -300,9 +339,32 @@ async def upload_document(
 
 
 @router.get("/list")
-async def list_documents(db: AsyncSession = Depends(get_db)):
-    logger.info("查询文档列表")
-    result = await db.execute(select(KnowledgeDocument).order_by(KnowledgeDocument.created_at.desc()))
+async def list_documents(
+    parent_id: Optional[int] = Query(None),
+    show_deleted: bool = Query(False),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db)
+):
+    logger.info(f"查询文档列表 parent_id={parent_id} show_deleted={show_deleted} page={page}")
+    stmt = select(KnowledgeDocument)
+    
+    if not show_deleted:
+        stmt = stmt.where(KnowledgeDocument.is_deleted == False) # Default to False if null
+
+    if parent_id is None:
+        stmt = stmt.where(KnowledgeDocument.parent_id.is_(None))
+    else:
+        stmt = stmt.where(KnowledgeDocument.parent_id == parent_id)
+        
+    # Sort folders first, then by time
+    stmt = stmt.order_by(KnowledgeDocument.is_folder.desc(), KnowledgeDocument.created_at.desc())
+    
+    # Pagination
+    offset = (page - 1) * page_size
+    stmt = stmt.offset(offset).limit(page_size)
+    
+    result = await db.execute(stmt)
     docs = result.scalars().all()
     out = []
 
@@ -356,11 +418,92 @@ async def list_documents(db: AsyncSession = Depends(get_db)):
                     "updated_at": getattr(d, "updated_at", None),
                     "error_message": d.error_message,
                     "progress": prog,
+                    "is_folder": getattr(d, "is_folder", False),
+                    "parent_id": getattr(d, "parent_id", None),
                 }
             )
         except Exception:
             pass
     return out
+
+
+class BatchDeleteRequest(BaseModel):
+    item_ids: List[int]
+
+
+@router.post("/batch_delete")
+async def batch_delete_documents(
+    request: BatchDeleteRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    logger.info(f"批量删除文档/文件夹 ids={request.item_ids}")
+    
+    # Check items exist
+    stmt = select(KnowledgeDocument).where(KnowledgeDocument.id.in_(request.item_ids))
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    
+    if not items:
+        return {"status": "deleted", "count": 0}
+
+    # Soft delete
+    for item in items:
+        item.is_deleted = True
+        item.deleted_at = datetime.utcnow()
+    
+    await db.commit()
+    
+    # TODO: If we want to support recursive delete for folders, we need to implement that.
+    # For now, soft deleting a folder hides it, but its children remain (but inaccessible via normal navigation)
+    # A complete implementation would recursively soft-delete children.
+    
+    return {"status": "deleted", "count": len(items)}
+
+
+class MoveRequest(BaseModel):
+    target_parent_id: Optional[int] # None means root
+    item_ids: List[int]
+
+
+@router.post("/move")
+async def move_documents(
+    request: MoveRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    logger.info(f"移动文档 ids={request.item_ids} to target={request.target_parent_id}")
+    
+    # 1. Validate Target
+    if request.target_parent_id is not None:
+        target = await db.get(KnowledgeDocument, request.target_parent_id)
+        if not target:
+             raise HTTPException(status_code=404, detail="Target folder not found")
+        if not target.is_folder:
+             raise HTTPException(status_code=400, detail="Target must be a folder")
+             
+        # Check for circular reference (if moving a folder into itself or its child)
+        # This is complex to do efficiently without CTEs or path strings.
+        # Simple check: cannot move a folder into itself.
+        if request.target_parent_id in request.item_ids:
+             raise HTTPException(status_code=400, detail="Cannot move a folder into itself")
+             
+    # 2. Get Items
+    stmt = select(KnowledgeDocument).where(KnowledgeDocument.id.in_(request.item_ids))
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    
+    if not items:
+        raise HTTPException(status_code=404, detail="Items not found")
+
+    # 3. Update
+    for item in items:
+        # Conflict check: check if name exists in target
+        # For simplicity, we might allow duplicates or append (1)
+        # Here we just update parent_id
+        item.parent_id = request.target_parent_id
+        
+    await db.commit()
+    return {"status": "moved", "count": len(items)}
 
 
 @router.delete("/{doc_id}")

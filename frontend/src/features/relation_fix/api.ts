@@ -31,6 +31,11 @@ export const relationFixApi = {
     return response.data;
   },
 
+  deleteRelations: async (relations: { source: string; target: string }[]) => {
+    const response = await api.post<{ count: number }>('/relation-fix/delete', { relations });
+    return response.data;
+  },
+
   backupGraph: async () => {
     const response = await api.post<{ path: string }>('/relation-fix/backup');
     return response.data;

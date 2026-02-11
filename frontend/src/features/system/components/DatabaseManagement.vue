@@ -183,7 +183,7 @@
                                     type="link" 
                                     size="small" 
                                     class="!px-0 !h-auto text-xs"
-                                    @click="$router.push('/knowledge-graph')"
+                                    @click="$emit('navigate', 'knowledge_graph')"
                                 >
                                     查看图谱 &rarr;
                                 </a-button>
@@ -340,6 +340,7 @@ import { message } from 'ant-design-vue';
 const showCreateModal = ref(false);
 const isEdit = ref(false);
 const loading = ref(false);
+const emit = defineEmits(['navigate']);
 const currentConfig = ref({}); // Stores the fetched config
 
 // Form State

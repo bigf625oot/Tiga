@@ -35,6 +35,18 @@
               class="absolute left-0 right-0 -bottom-[1px] h-0.5 bg-slate-900 rounded"
             ></span>
           </button>
+
+          <button
+            class="relative pb-3 text-sm font-semibold transition-colors"
+            :class="activeTab === 'graph' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'"
+            @click="activeTab = 'graph'"
+          >
+            知识图谱
+            <span
+              v-if="activeTab === 'graph'"
+              class="absolute left-0 right-0 -bottom-[1px] h-0.5 bg-slate-900 rounded"
+            ></span>
+          </button>
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
@@ -65,15 +77,27 @@
       <div v-show="activeTab === 'doc'" class="h-full">
         <DocumentPanel :showHeader="false" />
       </div>
+
+      <div v-if="activeTab === 'graph'" class="h-full relative">
+        <GraphViewer 
+            ref="graphViewerRef"
+            :nodes="graphNodes" 
+            :edges="graphEdges" 
+            :loading="graphLoading"
+            scope="doc"
+            @nodeClick="handleNodeClick"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import TaskPanel from '@/features/workflow/components/TaskPanel.vue';
 import DocumentPanel from '@/features/workflow/components/DocumentPanel.vue';
+import GraphViewer from '@/shared/components/organisms/GraphViewer/GraphViewer.vue';
 import { CodeOutlined } from '@ant-design/icons-vue';
 
 const props = defineProps({
@@ -86,6 +110,13 @@ const props = defineProps({
 const store = useWorkflowStore();
 const activeTab = ref('task');
 const taskPanelRef = ref(null);
+const graphViewerRef = ref(null);
+
+// Graph State
+const graphNodes = ref({});
+const graphEdges = ref({});
+const graphLoading = ref(false);
+const currentDocId = ref(null);
 
 watch(() => store.documents.length, (len, prev) => {
   if (len > prev) activeTab.value = 'doc';
@@ -104,7 +135,43 @@ watch(() => props.isWorkflowMode, (val) => {
   if (!val) activeTab.value = 'task';
 });
 
+// Graph Methods
+const loadGraph = async (docId) => {
+    if (!docId || currentDocId.value === docId) return;
+    graphLoading.value = true;
+    try {
+        const res = await fetch(`/api/v1/knowledge/graph/${docId}`);
+        if (res.ok) {
+            const data = await res.json();
+            graphNodes.value = data.nodes || {};
+            graphEdges.value = data.edges || {};
+            currentDocId.value = docId;
+        }
+    } catch (e) {
+        console.error("Failed to load graph", e);
+    } finally {
+        graphLoading.value = false;
+    }
+};
+
+const locateNode = async (nodeId, docId) => {
+    activeTab.value = 'graph';
+    if (docId) {
+        await loadGraph(docId);
+    }
+    // Wait for view switch and data load
+    setTimeout(() => {
+        graphViewerRef.value?.focusNode(nodeId);
+    }, 100);
+};
+
+const handleNodeClick = (nodeId) => {
+    // Handle side panel or info
+    console.log("Node clicked:", nodeId);
+};
+
 defineExpose({
-  openTaskLogs
+  openTaskLogs,
+  locateNode
 });
 </script>

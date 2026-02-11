@@ -129,6 +129,42 @@ if os.path.exists(db_path):
         except Exception as e:
             print(f"Error adding model_type: {e}")
 
+    # Check KnowledgeDocument table
+    cursor.execute("PRAGMA table_info(knowledge_documents)")
+    kd_columns = [info[1] for info in cursor.fetchall()]
+
+    if "is_folder" not in kd_columns:
+        print("Adding is_folder column to knowledge_documents...")
+        try:
+            cursor.execute("ALTER TABLE knowledge_documents ADD COLUMN is_folder BOOLEAN DEFAULT 0")
+            print("Added is_folder")
+        except Exception as e:
+            print(f"Error adding is_folder: {e}")
+
+    if "parent_id" not in kd_columns:
+        print("Adding parent_id column to knowledge_documents...")
+        try:
+            cursor.execute("ALTER TABLE knowledge_documents ADD COLUMN parent_id INTEGER")
+            print("Added parent_id")
+        except Exception as e:
+            print(f"Error adding parent_id: {e}")
+
+    if "is_deleted" not in kd_columns:
+        print("Adding is_deleted column to knowledge_documents...")
+        try:
+            cursor.execute("ALTER TABLE knowledge_documents ADD COLUMN is_deleted BOOLEAN DEFAULT 0")
+            print("Added is_deleted")
+        except Exception as e:
+            print(f"Error adding is_deleted: {e}")
+
+    if "deleted_at" not in kd_columns:
+        print("Adding deleted_at column to knowledge_documents...")
+        try:
+            cursor.execute("ALTER TABLE knowledge_documents ADD COLUMN deleted_at DATETIME")
+            print("Added deleted_at")
+        except Exception as e:
+            print(f"Error adding deleted_at: {e}")
+
     # Create Chat Tables if not exist
     print("Creating chat tables if not exist...")
     try:

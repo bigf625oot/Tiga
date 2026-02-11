@@ -19,9 +19,9 @@ export function useGraphLayout(nodes: Ref<Record<string, IGraphNode>>) {
             const forceLink = d3.forceLink(edges).id((d: any) => d.id)
             return d3
               .forceSimulation(nodes)
-              .force("edge", forceLink.distance(60))
-              .force("charge", d3.forceManyBody().strength(-300))
-              .force("center", d3.forceCenter().strength(0.1))
+              .force("edge", forceLink.distance(150))
+              .force("charge", d3.forceManyBody().strength(-800))
+              .force("center", d3.forceCenter().strength(0.05))
               .alphaMin(0.001)
           }
         }),
@@ -88,7 +88,7 @@ export function useGraphLayout(nodes: Ref<Record<string, IGraphNode>>) {
     if (count === 0) return
   
     const cols = Math.ceil(Math.sqrt(count))
-    const gap = 120 
+    const gap = 160 
     
     const newLayout: Record<string, {x: number, y: number}> = {}
     nodeIds.forEach((nodeId, index) => {
@@ -109,7 +109,7 @@ export function useGraphLayout(nodes: Ref<Record<string, IGraphNode>>) {
     const count = nodeIds.length
     if (count === 0) return
   
-    const radius = Math.max(count * 20, 200)
+    const radius = Math.max(count * 30, 300)
     const angleStep = (2 * Math.PI) / count
     
     const newLayout: Record<string, {x: number, y: number}> = {}
@@ -132,8 +132,8 @@ export function useGraphLayout(nodes: Ref<Record<string, IGraphNode>>) {
             const forceLink = d3.forceLink(edges).id((d: any) => d.id)
             return d3
               .forceSimulation(nodes)
-              .force("edge", forceLink.distance(100))
-              .force("charge", d3.forceManyBody().strength(-500))
+              .force("edge", forceLink.distance(150))
+              .force("charge", d3.forceManyBody().strength(-800))
               .force("center", d3.forceCenter().strength(0.05))
               .alphaMin(0.001)
           }

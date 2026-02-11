@@ -1,11 +1,19 @@
 <template>
   <div class="relative w-full h-full bg-slate-50 overflow-hidden rounded-xl" ref="containerRef">
+    <!-- Empty State -->
+    <div v-if="!hasNodes && !loading" class="absolute inset-0 flex flex-col items-center justify-center z-10">
+        <div class="w-[120px] h-[120px] mb-4 opacity-80">
+            <img src="/empty-graph.svg" alt="No Data" class="w-full h-full object-contain" />
+        </div>
+        <p class="text-slate-400 text-sm font-medium">暂无图谱数据</p>
+    </div>
+
     <!-- Layout Switcher (Molecule) -->
-    <GraphLayoutSwitch :current-layout="currentLayout" @switch-layout="switchLayout" />
+    <GraphLayoutSwitch v-if="hasNodes" :current-layout="currentLayout" @switch-layout="switchLayout" />
 
     <!-- 3D Graph Canvas -->
     <GraphViewer3D
-      v-if="currentLayout === '3d'"
+      v-if="hasNodes && currentLayout === '3d'"
       ref="graph3DRef"
       class="w-full h-full"
       :nodes="nodes"
@@ -17,7 +25,7 @@
 
     <!-- Graph Canvas (Atom/Lib Wrapper) -->
     <v-network-graph
-      v-else
+      v-else-if="hasNodes"
       ref="graphRef"
       class="w-full h-full"
       :nodes="nodes"
@@ -69,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRefs, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, toRefs, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { VNetworkGraph, VEdgeLabel } from "v-network-graph";
 import GraphViewer3D from './GraphViewer3D.vue';
 import { useGraphLayout } from '@/shared/hooks/useGraphLayout';
@@ -77,6 +85,7 @@ import { GraphToolbar } from '@/shared/components/molecules/GraphToolbar';
 import { GraphLayoutSwitch } from '@/shared/components/molecules/GraphLayoutSwitch';
 import { GraphNodeDetails } from '@/shared/components/molecules/GraphNodeDetails';
 import { Loading } from '@/shared/components/atoms/Loading';
+import { createGraphLocator, type GraphLocatorAdapter } from '@/features/knowledge/utils/graphLocator';
 import type { IGraphViewerProps } from './types';
 import type { IGraphNode } from '@/shared/types/graph';
 
@@ -92,6 +101,7 @@ const props = withDefaults(defineProps<IGraphViewerProps>(), {
 const emit = defineEmits(['switchScope', 'nodeClick', 'search']);
 
 const { nodes } = toRefs(props);
+const hasNodes = computed(() => Object.keys(nodes.value).length > 0);
 const { currentLayout, layouts, configs, zoomLevel, switchLayout } = useGraphLayout(nodes);
 
 // Selection State
@@ -109,6 +119,21 @@ const clearSelection = () => {
 // Graph Ref
 const graphRef = ref<InstanceType<typeof VNetworkGraph>>();
 const graph3DRef = ref<InstanceType<typeof GraphViewer3D>>();
+const locator = ref<GraphLocatorAdapter | null>(null);
+
+// Initialize Locator
+watch([graphRef, currentLayout], async ([g, layout]) => {
+    if (layout !== '3d' && g) {
+        await nextTick();
+        locator.value = createGraphLocator('v-network-graph', graphRef, { 
+            nodes, 
+            layouts, 
+            onNodeClick: handleNodeClick 
+        });
+    } else {
+        locator.value = null;
+    }
+});
 
 // Event Handlers
 const handleNodeClick = (nodeId: string) => {
@@ -149,36 +174,14 @@ const focusNode = async (nodeId: string) => {
     
     if (currentLayout.value === '3d' && graph3DRef.value) {
         graph3DRef.value.focusNode(nodeId);
+    } else if (locator.value) {
+        await locator.value.locateNode(nodeId);
     } else if (graphRef.value) {
-        // Use fitToContents with delay for better robustness
-        setTimeout(() => {
-            try {
-                if (graphRef.value) {
-                    const nodePos = layouts.value.nodes[nodeId];
-                    if (nodePos) {
-                        // Use transitionWhile for animation
-                        if (typeof graphRef.value.transitionWhile === 'function') {
-                             graphRef.value.transitionWhile(() => {
-                                graphRef.value?.panTo({ x: nodePos.x, y: nodePos.y });
-                             }, 500);
-                        } else {
-                            graphRef.value.panTo({ x: nodePos.x, y: nodePos.y });
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn("Graph focusNode failed:", e);
-                // Last resort fallback
-                try {
-                    const nodePos = layouts.value.nodes[nodeId];
-                    if (nodePos && graphRef.value) {
-                         graphRef.value.panTo({ x: nodePos.x, y: nodePos.y });
-                    }
-                } catch (e2) {
-                     console.warn("Graph panTo fallback failed:", e2);
-                }
-            }
-        }, 100);
+        // Fallback
+        const nodePos = layouts.value.nodes[nodeId];
+        if (nodePos) {
+             graphRef.value.panTo({ x: nodePos.x, y: nodePos.y });
+        }
     }
 };
 

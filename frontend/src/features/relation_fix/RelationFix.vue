@@ -16,10 +16,12 @@
       <div class="w-96 flex-shrink-0 border-r border-slate-200 bg-white z-10 overflow-y-auto custom-scrollbar">
         <RelationEditor 
           :fixes="fixes"
+          :currentRelations="currentRelations"
           @search="handleSearch"
           @detect="handleDetect"
           @applyFixes="handleApplyFixes"
           @create="handleCreate"
+          @delete="handleDelete"
           @backup="handleBackup"
           @restore="handleRestore"
         />
@@ -81,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import GraphViewer from '@/shared/components/organisms/GraphViewer/GraphViewer.vue';
 import RelationEditor from './components/RelationEditor.vue';
 import { relationFixApi, type RelationFix } from './api';
@@ -93,6 +95,9 @@ const fixes = ref<RelationFix[]>([]);
 const logs = ref<string[]>([]);
 const showLogs = ref(false);
 const graphViewerRef = ref();
+const currentNodeId = ref<string>('');
+
+const currentRelations = computed(() => Object.values(edges.value));
 
 const loadLogs = async () => {
   try {
@@ -122,6 +127,7 @@ const handleSearch = async (query: string) => {
 
 const loadNode = async (nodeId: string, setGlobalLoading = true) => {
   if (setGlobalLoading) loading.value = true;
+  currentNodeId.value = nodeId;
   try {
     const data = await relationFixApi.getNodeRelations(nodeId);
     
@@ -213,6 +219,23 @@ const handleCreate = async (source: string, target: string, type: string) => {
   } catch (e) {
       console.error(e);
       alert("创建失败");
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleDelete = async (relations: Array<{ source: string, target: string }>) => {
+  loading.value = true;
+  try {
+    const res = await relationFixApi.deleteRelations(relations);
+    alert(`已解除 ${res.count} 个关系`);
+    if (currentNodeId.value) {
+        await loadNode(currentNodeId.value, false);
+    }
+    await loadLogs();
+  } catch (e) {
+      console.error(e);
+      alert("解除关系失败");
   } finally {
     loading.value = false;
   }

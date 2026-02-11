@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import JSON, Column, DateTime, Enum, Integer, String, Text
+from sqlalchemy import JSON, Column, DateTime, Enum, Integer, String, Text, Boolean
 
 from app.db.base import Base
 
@@ -26,6 +26,10 @@ class KnowledgeDocument(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     error_message = Column(String, nullable=True)
+    is_folder = Column(Boolean, default=False)
+    parent_id = Column(Integer, nullable=True)
+    is_deleted = Column(Boolean, default=False)
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class KnowledgeChat(Base):

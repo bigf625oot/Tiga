@@ -181,6 +181,38 @@ async def _run_agent_generator(agent, user_msg, history, is_deepseek):
                     ),
                     "get_datetime": lambda format=None: _get_datetime(format),
                 })
+                
+                # Inject Knowledge Base Tool if agent has KB configured
+                kb = getattr(agent, "knowledge", None)
+                if kb:
+                    tools.append(
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "search_knowledge_base",
+                                "description": "Search the knowledge base for relevant documents.",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "query": {"type": "string", "description": "The search query"},
+                                        "num_documents": {"type": "integer", "description": "Number of documents to return", "default": 5}
+                                    },
+                                    "required": ["query"],
+                                },
+                            },
+                        }
+                    )
+                    
+                    def _search_kb(query: str, num_documents: int = 5):
+                        # Agno KB search returns list of Document objects or dicts
+                        results = kb.search(query=query, num_documents=num_documents)
+                        # Convert to simplified text for LLM
+                        return [
+                            {"content": getattr(r, "content", "") or str(r), "meta": getattr(r, "meta_data", {})} 
+                            for r in results
+                        ]
+
+                    tool_map["search_knowledge_base"] = _search_kb
 
             # Check if agent has tools configured (Agno Agent)
             # Since converting Agno Toolkits to OpenAI schemas dynamically is complex without Agno's internal helpers,
