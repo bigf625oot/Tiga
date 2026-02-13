@@ -130,10 +130,12 @@
                              <button 
                                 @click="sendMessage" 
                                 class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                :class="input.trim() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
-                                :disabled="!input.trim() || isLoading"
+                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                              >
-                                <ArrowUpOutlined class="text-sm font-bold" />
+                                <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
+                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
+                                <ArrowUpOutlined v-else class="text-sm font-bold" />
                              </button>
                          </div>
                     </div>
@@ -208,10 +210,12 @@
                              <button 
                                 @click="sendMessage" 
                                 class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                :class="input.trim() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
-                                :disabled="!input.trim() || isLoading"
+                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                              >
-                                <ArrowUpOutlined class="text-sm font-bold" />
+                                <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
+                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
+                                <ArrowUpOutlined v-else class="text-sm font-bold" />
                              </button>
                          </div>
                     </div>
@@ -331,10 +335,12 @@
                                <button 
                                   @click="sendMessage" 
                                   class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                  :class="input.trim() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
-                                  :disabled="!input.trim() || isLoading"
+                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                  :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
-                                  <ArrowUpOutlined class="text-sm font-bold" />
+                                  <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
+                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
+                                  <ArrowUpOutlined v-else class="text-sm font-bold" />
                                </button>
                            </div>
                       </div>
@@ -435,10 +441,12 @@
                                <button 
                                   @click="sendMessage" 
                                   class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                  :class="input.trim() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
-                                  :disabled="!input.trim() || isLoading"
+                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                  :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
-                                  <ArrowUpOutlined class="text-sm font-bold" />
+                                  <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
+                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
+                                  <ArrowUpOutlined v-else class="text-sm font-bold" />
                                </button>
                            </div>
                       </div>
@@ -511,7 +519,9 @@ import {
     DeleteOutlined,
     InboxOutlined,
     SearchOutlined,
-    ArrowUpOutlined
+    ArrowUpOutlined,
+    StopOutlined,
+    LoadingOutlined
 } from '@ant-design/icons-vue';
 
 const props = defineProps({
@@ -534,6 +544,10 @@ const isLoading = ref(false);
 const isStreaming = ref(false);
 const messagesContainer = ref(null);
 const textareaRef = ref(null);
+const abortController = ref(null);
+const isStopping = ref(false);
+
+const isTaskRunning = computed(() => isLoading.value || workflowStore.isRunning || isStreaming.value);
 
 // Attachment Refs
 const attachmentModalVisible = ref(false);
@@ -904,8 +918,31 @@ const handleAgentChange = async () => {
 };
 
 const sendMessage = async () => {
+    if (isTaskRunning.value) {
+        // Handle stop action
+        isStopping.value = true;
+        try {
+            if (workflowStore.isRunning) {
+                workflowStore.stopWorkflow();
+            }
+            if (abortController.value) {
+                abortController.value.abort();
+                abortController.value = null;
+            }
+        } finally {
+            // Delay to show loading state if needed
+            setTimeout(() => {
+                isStopping.value = false;
+                isLoading.value = false;
+                isStreaming.value = false;
+            }, 300);
+        }
+        return;
+    }
+
     if (!input.value.trim() || isLoading.value) return;
     isLoading.value = true;
+    abortController.value = new AbortController();
     
     // Upload attachments
     let attachmentIds = [];
@@ -918,14 +955,21 @@ const sendMessage = async () => {
             const formData = new FormData();
             formData.append('file', att.file);
             try {
-                const res = await fetch('/api/v1/knowledge/upload', { method: 'POST', body: formData });
-                if (res.ok) {
-                    const doc = await res.json();
-                    attachmentIds.push(doc.id);
-                } else { message.error(`附件上传失败: ${att.name}`); }
-            } catch (e) { message.error(`附件上传出错: ${att.name}`); }
+            const res = await fetch('/api/v1/knowledge/upload', { 
+                method: 'POST', 
+                body: formData,
+                signal: abortController.value.signal 
+            });
+            if (res.ok) {
+                const doc = await res.json();
+                attachmentIds.push(doc.id);
+            } else { message.error(`附件上传失败: ${att.name}`); }
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            message.error(`附件上传出错: ${att.name}`);
         }
     }
+}
     
     const userMsg = input.value;
     input.value = '';
@@ -944,21 +988,23 @@ const sendMessage = async () => {
     if (!currentSessionId.value) {
         try {
             const res = await fetch('/api/v1/chat/sessions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    title: (userMsg && userMsg.slice(0, 20)) || '新对话',
-                    agent_id: selectedAgentId.value || null 
-                })
-            });
-            if (res.ok) {
-                const newSession = await res.json();
-                emit('refresh-sessions');
-                currentSessionId.value = newSession.id;
-                currentSession.value = newSession;
-            } else { throw new Error("Failed to create session"); }
-        } catch (e) {
-            console.error(e);
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                title: (userMsg && userMsg.slice(0, 20)) || '新对话',
+                agent_id: selectedAgentId.value || null 
+            }),
+            signal: abortController.value.signal
+        });
+        if (res.ok) {
+            const newSession = await res.json();
+            emit('refresh-sessions');
+            currentSessionId.value = newSession.id;
+            currentSession.value = newSession;
+        } else { throw new Error("Failed to create session"); }
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.error(e);
             messages.value[messages.value.length - 1].status = 'error'; // Update status
             messages.value.push({ role: 'assistant', content: "Error: 会话创建失败", timestamp: new Date().toISOString() });
             isLoading.value = false;
@@ -991,7 +1037,8 @@ const sendMessage = async () => {
         const response = await fetch(`/api/v1/chat/sessions/${currentSessionId.value}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: abortController.value.signal
         });
         
         if (!response.ok) throw new Error(response.statusText);
@@ -1051,8 +1098,12 @@ const sendMessage = async () => {
         }
         if (isAmisJSON(assistantMsg.content)) nextTick(() => renderAmis(assistantMsgIndex, assistantMsg.content));
     } catch (e) {
-        console.error(e);
-        messages.value.push({ role: 'assistant', content: "Error: " + e.message });
+        if (e.name === 'AbortError') {
+            messages.value.push({ role: 'assistant', content: "[任务已停止]", timestamp: new Date().toISOString() });
+        } else {
+            console.error(e);
+            messages.value.push({ role: 'assistant', content: "Error: " + e.message });
+        }
     } finally {
         isLoading.value = false;
         isStreaming.value = false;

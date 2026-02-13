@@ -46,7 +46,8 @@ async def run_workflow(request: WorkflowRunRequest, db: AsyncSession = Depends(g
 @router.post("/run_stream")
 async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = Depends(get_db)):
     """
-    Execute workflow with streaming SSE.
+    执行工作流并返回流式 SSE 响应。
+    返回完整的事件对象，包含 step, status, output, system 等字段，供前端渲染日志和进度。
     """
     try:
         # Save User Message
@@ -57,7 +58,7 @@ async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = De
         history = [{"role": m.role, "content": m.content} for m in history_msgs]
         
         workflow = AppWorkflow(session_id=request.session_id, mode=request.mode)
-        
+        # 执行工作流并返回流式事件
         async def event_generator():
             async for event in workflow.run_stream(
                 user_message=request.message,
@@ -65,9 +66,10 @@ async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = De
                 history=history,
                 **request.params
             ):
-                yield f"data: {event}\n\n"
+                if event is not None:
+                    yield f"data: {event}\n\n"
             yield "data: [DONE]\n\n"
-
+            
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as e:
         logger.error(f"Stream init failed: {e}")
