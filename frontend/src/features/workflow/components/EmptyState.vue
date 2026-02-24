@@ -9,6 +9,6 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // Empty state component
 </script>

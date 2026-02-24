@@ -173,6 +173,7 @@
             :is-loading="isLoading"
             @locate-node="handleLocateNode"
             @show-doc-summary="handleDocSummary"
+            @open-doc-space="handleOpenDocSpace"
         />
 
         <!-- Input Area (Fixed Bottom for Chat) -->
@@ -378,6 +379,7 @@
               :is-loading="isLoading"
               @locate-node="handleLocateNode"
               @show-doc-summary="handleDocSummary"
+              @open-doc-space="handleOpenDocSpace"
           />
 
           <div v-if="messages.length > 0" class="flex-none w-full py-3 px-4 bg-white z-30 border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
@@ -717,6 +719,10 @@ watch(() => props.sessionId, (newId) => {
     } else {
         currentSession.value = null;
         messages.value = [];
+        workflowStore.resetWorkflow();
+        isWorkflowMode.value = false;
+        selectedAttachments.value = [];
+        input.value = '';
     }
 });
 
@@ -1192,6 +1198,14 @@ const handleDocSummary = (item) => {
     // Logic handled in SourcePanel usually, but if we need global overlay:
     // ...
 };
+
+const handleOpenDocSpace = (docId) => {
+    if (isRightCollapsed.value) {
+        isRightCollapsed.value = false;
+    }
+    workspaceTabsRef.value?.openDocSpace?.(docId);
+};
+
 </script>
 
 <style scoped>

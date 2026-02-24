@@ -52,7 +52,7 @@
 
             <!-- AMIS or Markdown -->
             <div v-if="isAmisJSON(message.content)" :id="'amis-' + uniqueId" class="amis-container my-2 rounded-lg overflow-hidden bg-white border border-slate-100"></div>
-            <div v-else class="markdown-body" v-html="renderedContent"></div>
+            <div v-else class="markdown-body" v-html="renderedContent" @click="handleMarkdownClick"></div>
 
             <!-- References / Sources -->
             <SourcePanel 
@@ -86,7 +86,7 @@ const props = defineProps({
   uniqueId: { type: String, default: () => Math.random().toString(36).substr(2, 9) }
 });
 
-const emit = defineEmits(['locate-node', 'show-doc-summary']);
+const emit = defineEmits(['locate-node', 'show-doc-summary', 'open-doc-space']);
 
 const bubbleClasses = computed(() => {
   if (props.isUser) {
@@ -161,17 +161,80 @@ const isAmisJSON = (text) => {
 const renderMarkdown = (text) => {
     try {
         let inputText = (text || '').trim();
-        // Simple markdown config
-        marked.setOptions({
-            breaks: true,
-            gfm: true
-        });
         
-        // Katex support (simplified from SmartQA)
-        let html = marked.parse(inputText);
+        // Use global options or configure once if possible, 
+        // but to ensure [n] works without breaking structure, we can post-process or use use() carefully.
+        // If marked.parse throws with renderer option (incompat version), let's fallback to use() pattern 
+        // OR simply post-process the HTML string which is safer for this specific regex.
+        
+        // Simple Markdown parse first
+        let html = marked.parse(inputText, { breaks: true, gfm: true });
+
+        // Post-process [n] citations
+        // We replace [n] only if it looks like a citation (not inside attributes).
+        // A simple regex replacement on the HTML text is risky but for [n] it's usually fine 
+        // provided we don't match inside tags. 
+        // However, a safer way is to use a tokenizer extension.
+        
+        // Let's try the safer tokenizer extension approach using marked.use()
+        // But since we can't easily scope marked.use() to just this call, 
+        // and we want to avoid global side effects if possible (though marked is global),
+        // let's stick to the post-processing for now as it guarantees we don't break parsing.
+        
+        html = html.replace(/\[(\d+)\]/g, (match, p1) => {
+            return `<span class="citation-link cursor-pointer text-indigo-600 hover:underline font-medium mx-0.5" data-index="${p1}">[${p1}]</span>`;
+        });
+
+        // DocCard: [DocCard: Title](doc_id)
+        // Matches <a href="doc_id">DocCard: Title</a>, optionally wrapped in <p>
+        html = html.replace(/(?:<p>\s*)?<a\s+href="([^"]+)">DocCard:\s*(.*?)<\/a>(?:\s*<\/p>)?/g, (match, docId, title) => {
+             return `<div class="doc-card cursor-pointer bg-white border border-slate-200 rounded-lg p-3 my-2 flex items-center gap-3 hover:shadow-md transition-shadow group select-none" data-doc-id="${docId}">
+                <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0 text-left">
+                    <h4 class="text-sm font-semibold text-slate-800 truncate mb-0.5 leading-tight">${title}</h4>
+                    <p class="text-xs text-slate-500 m-0">点击打开文档空间</p>
+                </div>
+                <div class="text-slate-400 group-hover:text-blue-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </div>
+            </div>`;
+        });
+
         return html;
     } catch (e) {
+        console.error("Markdown render error:", e);
         return text;
+    }
+};
+
+const handleMarkdownClick = (e) => {
+    // Doc Card Click
+    const docCard = e.target.closest('.doc-card');
+    if (docCard) {
+        const docId = docCard.dataset.docId;
+        if (docId) {
+            emit('open-doc-space', docId);
+            return;
+        }
+    }
+
+    const target = e.target.closest('.citation-link');
+    if (target) {
+        const index = parseInt(target.dataset.index, 10);
+        if (!isNaN(index) && index > 0 && index <= combinedSources.value.length) {
+            const source = combinedSources.value[index - 1];
+            if (source.chunkId || source.nodeId) {
+                emit('locate-node', source);
+            } else {
+                emit('show-doc-summary', source);
+            }
+        }
     }
 };
 
@@ -201,4 +264,7 @@ onMounted(() => {
 .markdown-body :deep(code) { font-family: monospace; background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 4px; }
 .markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 1.5em; margin-bottom: 0.5em; }
 .markdown-body :deep(li) { margin-bottom: 0.25em; }
+.markdown-body :deep(strong), .markdown-body :deep(b) { font-weight: 700 !important; color: #1e293b; }
+.markdown-body :deep(.citation-link) { color: #4f46e5; cursor: pointer; font-weight: 500; padding: 0 2px; transition: all 0.2s; }
+.markdown-body :deep(.citation-link:hover) { text-decoration: underline; background-color: #eef2ff; border-radius: 2px; }
 </style>

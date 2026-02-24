@@ -40,6 +40,23 @@ def mock_planner_run(mock_db_session): # Add dependency on mock_db_session
         yield mock_instance.run
 
 @pytest.mark.asyncio
+async def test_plan_step_instructions_contain_chinese_requirement(mock_context, mock_db_session):
+    with patch("app.workflow.steps.plan_step.Agent") as MockAgent:
+        # We need to mock the run method to avoid errors, even though we care about init
+        mock_instance = MockAgent.return_value
+        mock_instance.run.return_value = MagicMock(content='{"steps": [], "reasoning": ""}')
+        
+        await plan_step(mock_context)
+        
+        # Check the instructions passed to Agent constructor
+        args, kwargs = MockAgent.call_args
+        instructions = kwargs.get("instructions", "")
+        
+        assert "Chinese (Simplified Chinese)" in instructions
+        assert "description" in instructions
+        assert "reasoning" in instructions
+
+@pytest.mark.asyncio
 async def test_plan_step_single_step(mock_context, mock_planner_run):
     # Mock response
     plan = ExecutionPlan(

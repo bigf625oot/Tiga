@@ -44,10 +44,13 @@ describe('LogDrawer.vue', () => {
       }
     });
     
-    // Find buttons. The Clear button is the second one in the template.
+    // Find buttons. 
+    // Button 0: Theme toggle (raw <button>)
+    // Button 1: Download (<a-button> stubbed to <button>)
+    // Button 2: Clear (<a-button> stubbed to <button>)
     const buttons = wrapper.findAll('button');
-    expect(buttons.length).toBe(2);
-    await buttons[1].trigger('click');
+    expect(buttons.length).toBe(3);
+    await buttons[2].trigger('click');
     
     expect(wrapper.emitted()).toHaveProperty('clear');
   });

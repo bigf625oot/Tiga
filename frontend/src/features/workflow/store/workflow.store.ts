@@ -148,6 +148,16 @@ export const useWorkflowStore = defineStore('workflow', () => {
         logs.value = [];
     };
 
+    const resetWorkflow = () => {
+        sessionId.value = '';
+        tasks.value = [];
+        logs.value = [];
+        documents.value = [];
+        currentStep.value = '';
+        executeBuffer.value = '';
+        isRunning.value = false;
+    };
+
     const updateTaskStatus = (stepName: string, status: WorkflowTask['status'], output?: string) => {
         // Find the last task with this stepName to see if we need a new one
         // If the last one is completed/failed, and we get 'running', create a new one.
@@ -321,11 +331,24 @@ export const useWorkflowStore = defineStore('workflow', () => {
              tasks.value = tasks.value.filter(t => t.status !== 'pending');
              
              // Add new plan tasks
-             if (data.plan.steps && Array.isArray(data.plan.steps)) {
-                 data.plan.steps.forEach((step: any) => {
+              if (data.plan.steps && Array.isArray(data.plan.steps)) {
+                  // Add reasoning as a log if available
+                  if (data.plan.reasoning) {
+                      addLog(`规划思路: ${data.plan.reasoning}`, 'info', 'plan');
+                      // Also add to the Planning task logs so it shows on the card
+                      const planTask = tasks.value.find(t => t.id.startsWith('plan') || t.name.includes('Planning') || t.name.includes('任务规划'));
+                      if (planTask) {
+                          planTask.logs.push(`规划思路: ${data.plan.reasoning}`);
+                      }
+                  }
+                  
+                  data.plan.steps.forEach((step: any) => {
+                     // Use step.description if available (it should be in Chinese now), otherwise fallback to formatted name
+                     const taskName = step.description || formatStepName(step.operation);
+                     
                      tasks.value.push({
                          id: `future-${step.step_id}`, // Use prefix to avoid collision but simple enough
-                         name: formatStepName(step.operation),
+                         name: taskName,
                          description: step.description,
                          status: 'pending',
                          progress: 0,
@@ -399,6 +422,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         runWorkflow,
         stopWorkflow,
         addLog,
-        clearLogs
+        clearLogs,
+        resetWorkflow
     };
 });

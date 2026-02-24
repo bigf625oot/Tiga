@@ -791,11 +791,14 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
     def get_graph_data(self, doc: Optional[KnowledgeDocument] = None) -> Dict[str, Any]:
         import networkx as nx
         graphml_path = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
+        
         if not graphml_path.exists():
             return {"nodes": {}, "edges": {}}
 
         try:
             G = nx.read_graphml(str(graphml_path))
+
+            marker = ""
             if doc:
                 fname = (doc.filename or "").strip()
                 oss_name = Path(doc.oss_key).name if getattr(doc, "oss_key", None) else ""
@@ -823,6 +826,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                 pr = nx.pagerank(G)
             except Exception:
                 pr = {n: d for n, d in G.degree}
+            
             top_nodes_ids = [n for n, _ in sorted(pr.items(), key=lambda x: x[1], reverse=True)[:200]]
             subgraph = G.subgraph(top_nodes_ids)
 
@@ -836,6 +840,12 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                     chunk_ids = [s.strip() for s in str(source_id).split(",") if s.strip()]
                     chunks_data = []
                     for cid in chunk_ids:
+                        # Filter chunks by document marker to avoid cross-document context contamination
+                        if marker:
+                            fp = self._chunks_doc_map.get(cid)
+                            if not fp or marker not in fp:
+                                continue
+
                         content = self._chunks_cache.get(cid)
                         if content:
                             chunks_data.append({"id": cid, "content": content})
@@ -945,27 +955,71 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
         except Exception as e:
             logger.error(f"LightRAG rebuild failed: {e}")
 
-    def search_chunks(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search_chunks(self, query: str, top_k: int = 5, doc_ids: Optional[List[int]] = None) -> List[Dict[str, Any]]:
         if not self.rag:
             self._init_rag()
         if not self.rag:
             return []
+        
+        # Load cache for doc mapping
+        self._load_chunks_cache()
+        
         try:
             storage = getattr(self.rag, "chunks_vdb", None)
             if hasattr(storage, "search"):
-                res = storage.search(query, top_k=top_k)
+                # Retrieve more candidates if filtering is needed
+                fetch_k = top_k * 5 if doc_ids else top_k
+                res = storage.search(query, top_k=fetch_k)
                 items = []
+                
                 for r in res or []:
                     preview = ""
                     score = 0.0
+                    cid = None
                     try:
                         preview = getattr(r, "text", None) or getattr(r, "content", None) or ""
                         score = float(getattr(r, "score", 0.0) or 0.0)
+                        cid = getattr(r, "id", None) or getattr(r, "__id__", None)
+                        if not cid and isinstance(r, dict):
+                            cid = r.get("id") or r.get("__id__")
                     except Exception:
                         pass
+                    
+                    # Doc ID Filtering
+                    doc_id = None
+                    file_path = "Unknown"
+                    if cid and cid in self._chunks_doc_map:
+                        file_path = self._chunks_doc_map[cid]
+                        # Parse doc_id from file_path (format: doc#123:filename)
+                        if file_path and "doc#" in file_path:
+                            try:
+                                doc_part = file_path.split("doc#")[1]
+                                if ":" in doc_part:
+                                    doc_id_str = doc_part.split(":")[0]
+                                    if doc_id_str.isdigit():
+                                        doc_id = int(doc_id_str)
+                            except:
+                                pass
+                    
+                    if doc_ids and (doc_id is None or doc_id not in doc_ids):
+                        continue
+                        
                     items.append(
-                        {"title": "", "url": None, "page": None, "score": score, "preview": (preview or "")[:200]}
+                        {
+                            "title": Path(file_path).name if file_path else "", 
+                            "url": None, 
+                            "page": None, 
+                            "score": score, 
+                            "preview": (preview or "")[:200],
+                            "doc_id": doc_id,
+                            "chunk_id": cid,
+                            "content": preview
+                        }
                     )
+                    
+                    if len(items) >= top_k:
+                        break
+                        
                 return items
         except Exception as e:
             logger.warning(f"LightRAG chunk search failed: {e}")

@@ -15,7 +15,7 @@ class CRUDAgent:
         result = await db.execute(select(Agent).offset(skip).limit(limit).order_by(Agent.created_at.desc()))
         return result.scalars().all()
 
-    async def create(self, db: AsyncSession, obj_in: AgentCreate):
+    async def create(self, db: AsyncSession, obj_in: AgentCreate, commit: bool = True):
         obj_data = obj_in.model_dump()
         # Map Pydantic 'agent_model_config' back to DB 'model_config'
         if "agent_model_config" in obj_data:
@@ -23,19 +23,11 @@ class CRUDAgent:
 
         db_obj = Agent(**obj_data)
         db.add(db_obj)
-        await db.flush()
-
-        # Create default UserScript
-        default_script = UserScript(
-            agent_id=db_obj.id,
-            title="默认剧本",
-            content="# 默认剧本\n\n这是一个自动生成的剧本模板。",
-            sort_order=0
-        )
-        db.add(default_script)
-
-        await db.commit()
-        await db.refresh(db_obj)
+        if commit:
+            await db.commit()
+            await db.refresh(db_obj)
+        else:
+            await db.flush()
         return db_obj
 
     async def update(self, db: AsyncSession, db_obj: Agent, obj_in: AgentUpdate):

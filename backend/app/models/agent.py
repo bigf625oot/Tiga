@@ -12,7 +12,7 @@ class Agent(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, index=True, nullable=False)
     description = Column(String, nullable=True)
-    icon = Column(String, nullable=True, default="robot")  # Icon name or URL
+    icon = Column(String, nullable=True, default="/tiga.svg")  # Icon name or URL
 
     # Configuration
     system_prompt = Column(Text, nullable=True)
@@ -27,6 +27,7 @@ class Agent(Base):
     storage_config = Column(JSON, nullable=True)
 
     # Status
+    role = Column(String, default="general", nullable=False) # planner, executor, general
     is_active = Column(Boolean, default=True)
     is_template = Column(Boolean, default=False)
 

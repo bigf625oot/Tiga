@@ -66,7 +66,7 @@
         <TaskPanel
           ref="taskPanelRef"
           embedded
-          :showEmbeddedHeader="false"
+          :showEmbeddedHeader="true"
           :sessionId="sessionId"
           :agentName="agentName"
           :isWorkflowMode="isWorkflowMode"
@@ -75,7 +75,7 @@
       </div>
 
       <div v-show="activeTab === 'doc'" class="h-full">
-        <DocumentPanel :showHeader="false" />
+        <DocumentPanel ref="documentPanelRef" :showHeader="false" />
       </div>
 
       <div v-if="activeTab === 'graph'" class="h-full relative">
@@ -84,7 +84,7 @@
             :nodes="graphNodes" 
             :edges="graphEdges" 
             :loading="graphLoading"
-            scope="doc"
+            :scope="graphScope"
             @nodeClick="handleNodeClick"
         />
       </div>
@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import TaskPanel from '@/features/workflow/components/TaskPanel.vue';
 import DocumentPanel from '@/features/workflow/components/DocumentPanel.vue';
@@ -110,6 +110,7 @@ const props = defineProps({
 const store = useWorkflowStore();
 const activeTab = ref('task');
 const taskPanelRef = ref(null);
+const documentPanelRef = ref(null);
 const graphViewerRef = ref(null);
 
 // Graph State
@@ -117,9 +118,21 @@ const graphNodes = ref({});
 const graphEdges = ref({});
 const graphLoading = ref(false);
 const currentDocId = ref(null);
+const isLocating = ref(false);
+
+const graphScope = computed(() => currentDocId.value ? 'doc' : 'global');
 
 watch(() => store.documents.length, (len, prev) => {
   if (len > prev) activeTab.value = 'doc';
+});
+
+watch(activeTab, (val) => {
+    if (val === 'graph' && !isLocating.value) {
+        // If graph is empty or we haven't loaded anything yet, load global graph
+        if (Object.keys(graphNodes.value).length === 0) {
+            loadGraph(null);
+        }
+    }
 });
 
 const openTaskLogs = () => {
@@ -136,11 +149,18 @@ watch(() => props.isWorkflowMode, (val) => {
 });
 
 // Graph Methods
-const loadGraph = async (docId) => {
-    if (!docId || currentDocId.value === docId) return;
+const loadGraph = async (docId = null) => {
+    // Don't reload if we are already on the same doc (or both null)
+    // Exception: if we want to force reload, we might need another param or method
+    if (currentDocId.value === docId && Object.keys(graphNodes.value).length > 0) return;
+    
     graphLoading.value = true;
     try {
-        const res = await fetch(`/api/v1/knowledge/graph/${docId}`);
+        const url = docId 
+            ? `/api/v1/knowledge/${docId}/graph`
+            : `/api/v1/knowledge/graph`;
+            
+        const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
             graphNodes.value = data.nodes || {};
@@ -155,14 +175,18 @@ const loadGraph = async (docId) => {
 };
 
 const locateNode = async (nodeId, docId) => {
+    isLocating.value = true;
     activeTab.value = 'graph';
-    if (docId) {
-        await loadGraph(docId);
+    try {
+        await loadGraph(docId || null);
+        
+        // Wait for view switch and data load
+        setTimeout(() => {
+            graphViewerRef.value?.focusNode(nodeId);
+        }, 100);
+    } finally {
+        isLocating.value = false;
     }
-    // Wait for view switch and data load
-    setTimeout(() => {
-        graphViewerRef.value?.focusNode(nodeId);
-    }, 100);
 };
 
 const handleNodeClick = (nodeId) => {
@@ -170,8 +194,16 @@ const handleNodeClick = (nodeId) => {
     console.log("Node clicked:", nodeId);
 };
 
+const openDocSpace = (docId) => {
+    activeTab.value = 'doc';
+    if (docId) {
+        documentPanelRef.value?.selectDoc?.(docId);
+    }
+};
+
 defineExpose({
   openTaskLogs,
-  locateNode
+  locateNode,
+  openDocSpace
 });
 </script>

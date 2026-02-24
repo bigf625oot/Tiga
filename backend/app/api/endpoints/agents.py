@@ -15,7 +15,8 @@ async def read_agents(db: AsyncSession = Depends(get_db), skip: int = 0, limit: 
     """
     Retrieve agents.
     """
-    agents = await crud_agent.get_multi(db, skip=skip, limit=limit)
+    from app.services.agent.service import agent_service
+    agents = await agent_service.get_agents(db, skip=skip, limit=limit)
     return agents
 
 
@@ -24,7 +25,8 @@ async def create_agent(*, db: AsyncSession = Depends(get_db), agent_in: AgentCre
     """
     Create new agent.
     """
-    agent = await crud_agent.create(db=db, obj_in=agent_in)
+    from app.services.agent.service import agent_service
+    agent = await agent_service.create_agent(db, agent_in)
     return agent
 
 
@@ -33,7 +35,8 @@ async def read_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     """
     Get agent by ID.
     """
-    agent = await crud_agent.get(db=db, id=agent_id)
+    from app.services.agent.service import agent_service
+    agent = await agent_service.get_agent(db, agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
@@ -44,10 +47,10 @@ async def update_agent(*, db: AsyncSession = Depends(get_db), agent_id: str, age
     """
     Update an agent.
     """
-    agent = await crud_agent.get(db=db, id=agent_id)
+    from app.services.agent.service import agent_service
+    agent = await agent_service.update_agent(db, agent_id, agent_in)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    agent = await crud_agent.update(db=db, db_obj=agent, obj_in=agent_in)
     return agent
 
 
@@ -56,8 +59,8 @@ async def delete_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     """
     Delete an agent.
     """
-    agent = await crud_agent.get(db=db, id=agent_id)
+    from app.services.agent.service import agent_service
+    agent = await agent_service.delete_agent(db, agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    await crud_agent.delete(db=db, id=agent_id)
     return agent

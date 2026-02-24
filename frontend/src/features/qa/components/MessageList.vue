@@ -18,6 +18,7 @@
         :unique-id="`${gIdx}-${mIdx}`"
         @locate-node="$emit('locate-node', $event)"
         @show-doc-summary="$emit('show-doc-summary', $event)"
+        @open-doc-space="$emit('open-doc-space', $event)"
       />
     </div>
 

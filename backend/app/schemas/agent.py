@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class AgentBase(BaseModel):
     name: str
     description: Optional[str] = None
-    icon: Optional[str] = "robot"
+    icon: Optional[str] = "/tiga.svg"
     system_prompt: Optional[str] = None
     # Rename field to avoid conflict with Pydantic protected namespace 'model_'
     # And we CANNOT use 'model_config' as variable name in Pydantic V2 class body

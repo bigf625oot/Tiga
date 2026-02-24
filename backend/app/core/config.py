@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: Optional[str] = None
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
 
+    # E2B Sandbox
+    E2B_API_KEY: Optional[str] = None
+    E2B_TEMPLATE_ID: Optional[str] = None
+
     # Graphiti Service
     GRAPHITI_URL: str = "http://localhost:8000"
 

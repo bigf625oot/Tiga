@@ -84,9 +84,7 @@
                                         class="w-[46px] h-[46px] rounded-[20px] flex items-center justify-center shadow-sm border border-slate-100 overflow-hidden"
                                         :class="agent.is_template ? 'bg-transparent' : 'bg-white'"
                                     >
-                                        <img v-if="isImageIcon(agent.icon)" :src="agent.icon" class="w-full h-full object-cover" />
-                                        <component v-else-if="agent.iconComponent" :is="agent.iconComponent" class="w-8 h-8 text-slate-700" />
-                                        <img v-else src="/tiga.svg" class="w-8 h-8 object-contain" />
+                                        <img src="/tiga.svg" class="w-8 h-8 object-contain" />
                                     </div>
                                     <span class="font-medium text-[#171717]">{{ agent.name }}</span>
                                 </div>
@@ -564,10 +562,11 @@
                                 <button 
                                     @click="selectToolFromMarket(tool)"
                                     class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                                    :class="isToolSelected(tool) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'"
-                                    :disabled="isToolSelected(tool)"
+                                    :class="isToolSelected(tool) || (tool.is_active === false) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'"
+                                    :disabled="isToolSelected(tool) || (tool.is_active === false)"
+                                    :title="(tool.is_active === false) ? '工具未配置或不可用' : ''"
                                 >
-                                    {{ isToolSelected(tool) ? '已添加' : '添加' }}
+                                    {{ isToolSelected(tool) ? '已添加' : ((tool.is_active === false) ? '不可用' : '添加') }}
                                 </button>
                             </div>
                         </div>
@@ -731,7 +730,7 @@ const form = ref({
     id: null,
     name: '',
     description: '',
-    icon: 'globe',
+    icon: '/tiga.svg',
     system_prompt: '',
     model_config: { model_id: '', reasoning: false },
     tools_config: [],
@@ -953,13 +952,10 @@ const fetchMarketTools = async () => {
         const mcps = mcpRes.ok ? await mcpRes.json() : [];
         const skills = skillRes.ok ? await skillRes.json() : [];
         
-        // Filter by installed tools (localStorage)
-        const installedSet = new Set(JSON.parse(localStorage.getItem('installed_tools') || '[]'));
-        
         marketTools.value = [
             ...mcps.map(m => ({ ...m, type: 'mcp' })),
             ...skills.map(s => ({ ...s, type: 'skill' }))
-        ].filter(t => installedSet.has(t.id));
+        ];
     } catch (e) {
         console.error("Failed to fetch tools", e);
         message.error("获取组件列表失败");

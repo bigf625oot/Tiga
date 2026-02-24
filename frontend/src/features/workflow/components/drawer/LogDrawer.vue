@@ -100,7 +100,23 @@ import {
     DeleteOutlined,
     SearchOutlined
 } from '@ant-design/icons-vue';
+import { 
+    Drawer, 
+    Space, 
+    Button, 
+    Input, 
+    Select, 
+    SelectOption 
+} from 'ant-design-vue';
 import EmptyLogState from '../common/EmptyLogState.vue';
+
+// Register Ant Design components locally to ensure test compatibility
+const ADrawer = Drawer;
+const ASpace = Space;
+const AButton = Button;
+const AInput = Input;
+const ASelect = Select;
+const ASelectOption = SelectOption;
 
 const props = defineProps({
   visible: { type: Boolean, default: false },

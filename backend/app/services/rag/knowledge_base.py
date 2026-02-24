@@ -47,7 +47,11 @@ class KnowledgeBaseService:
         """
         self.embedder_config = {}
         self.vector_db = None
+        
+        # [Refactor] Removed AgnoLightRAGAdapter.
+        # Knowledge access is now provided via MCP Tools directly in Agent Manager.
         self.knowledge = None
+        logger.info("KnowledgeBase initialized (MCP Mode). Agno Adapter removed.")
 
     @classmethod
     def get_instance(cls):

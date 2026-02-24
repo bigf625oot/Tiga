@@ -51,8 +51,14 @@
                     </div>
                 </template>
                 
-                <div v-if="parsedBlocks.length === 0 && !localValue" class="flex flex-col items-center justify-center h-64 text-slate-400">
-                    <p>请输入 Markdown 或 Vue 代码...</p>
+                <div v-if="parsedBlocks.length === 0 && !localValue" class="flex flex-col items-center justify-center h-full min-h-[300px] text-slate-400 select-none absolute inset-0">
+                    <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-slate-300">
+                            <path d="M16 18L22 12L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 6L2 12L8 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <p class="text-sm font-medium text-slate-500">等待 LLM 生成代码...</p>
                 </div>
             </div>
         </div>

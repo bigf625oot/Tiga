@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "content": "Hello World",
+  "type": "text",
+  "files": [],
+  "session_id": "test-session"
+}

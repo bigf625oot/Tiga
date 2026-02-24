@@ -71,6 +71,16 @@ const clearDocs = () => {
     selectedId.value = '';
 };
 
+const selectDoc = (id) => {
+    if (documents.value.some(d => d.id === id)) {
+        selectedId.value = id;
+    }
+};
+
+defineExpose({
+    selectDoc
+});
+
 
 </script>
 

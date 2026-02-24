@@ -30,8 +30,8 @@ class MCPToolkit(Toolkit):
             # we mainly need the callable to exist.
             
             # We create a wrapper that delegates to the MCP client
-            # We use a closure to capture 'name'
-            async def tool_wrapper(**kwargs):
+            # We use a closure to capture 'name' - Use default argument to break closure binding issue
+            async def tool_wrapper(name=name, **kwargs):
                 """
                 Dynamic MCP Tool Wrapper
                 """

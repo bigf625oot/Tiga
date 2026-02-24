@@ -156,6 +156,8 @@ async def plan_step(context: AgentContext) -> AgentContext:
             6. If the task is simple, the plan can be short (e.g., just execute -> finish).
             7. Use keys: reasoning (string) and steps (array). Each step must include: step_id, operation, description, dependencies, estimated_time (seconds, number), required_resources (array of strings).
             8. Do not include markdown code blocks (```json). Just the raw JSON string.
+            9. **CRITICAL**: The `description` and `reasoning` MUST be in Chinese (Simplified Chinese). The `description` should be a short, clear task name (e.g. "执行代码计算斐波那契数列", "检索关于React的文档").
+            10. Break down complex tasks into multiple `execute` steps if needed, with clear descriptions for each phase.
             
             Current State:
             - User Message: {user_message}

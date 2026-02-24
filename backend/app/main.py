@@ -50,6 +50,7 @@ async def lifespan(app: FastAPI):
     # Import models to ensure they are registered
     from app.models import (
         agent,
+        agent_plan,
         chat,
         data_source,
         graph_export,
