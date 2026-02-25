@@ -282,8 +282,20 @@ class SmartDataQueryService:
         """
         运行 Tiga 查询并以流式返回结果。
         """
+        step_id = 1
+        
+        def wrap_msg(content: str, type_: str = "process") -> str:
+            nonlocal step_id
+            msg_obj = {
+                "step": step_id,
+                "content": content,
+                "type": type_
+            }
+            step_id += 1
+            return json.dumps(msg_obj, ensure_ascii=False) + "\n"
+
         if not self.vanna_core.sql_runner:
-            yield "请先连接到数据库。"
+            yield wrap_msg("请先连接到数据库。", "error")
             return
 
         # 保存用户消息
@@ -300,35 +312,36 @@ class SmartDataQueryService:
 
         try:
             # 1. 意图识别
-            msg = "正在分析问题与意图...\n\n"
-            yield msg
-            full_content.append(msg)
+            msg = "1.1.正在分析问题与意图...\n\n"
+            yield wrap_msg(msg, "process")
             
             intent = self.vanna_core.classify_intent(question)
-            msg = f"> **识别到意图**: {intent}\n\n"
-            yield msg
-            full_content.append(msg)
+            msg = f"> **1.2.识别到意图**: {intent}\n\n"
+            yield wrap_msg(msg, "process")
 
             # 2. 生成 SQL
-            msg = "正在生成 SQL...\n"
-            yield msg
-            full_content.append(msg)
+            msg = "2.正在生成 SQL...\n"
+            yield wrap_msg(msg, "process")
             
             sql = self.vanna_core.generate_sql(question)
             generated_sql = sql
+            
+            # Extract pure SQL for frontend state, but send block for display if needed (or just send pure SQL?)
+            # The frontend currently expects the block in the 'content' for SQL view if we were using content,
+            # but we are moving to structured types.
+            # Let's send the markdown block as 'sql' type so it can be rendered if needed, 
+            # or frontend can strip backticks.
             msg = f"```sql\n{sql}\n```\n\n"
-            yield msg
-            full_content.append(msg)
+            yield wrap_msg(msg, "sql")
             
             if sql.startswith("--"):
                 msg = "抱歉，未能生成有效的 SQL 查询。"
-                yield msg
-                full_content.append(msg)
+                yield wrap_msg(msg, "error")
+                full_content.append(msg) # Keep error in content
                 return
 
             msg = "正在执行查询...\n\n"
-            yield msg
-            full_content.append(msg)
+            yield wrap_msg(msg, "process")
             
             # 3. 执行 SQL
             logger.info(f"审计：用户问题 '{question}' 执行的 SQL：{sql}")
@@ -336,23 +349,22 @@ class SmartDataQueryService:
             
             if df.empty:
                 msg = "查询已执行，但未返回结果。"
-                yield msg
+                yield wrap_msg(msg, "process")
                 full_content.append(msg)
                 return
                 
             # 4. 数据预览
             msg_header = f"### 查询结果（{len(df)} 行）\n"
-            yield msg_header
+            yield wrap_msg(msg_header, "data")
             full_content.append(msg_header)
             
             msg_table = df.head(10).to_markdown() + "\n\n"
-            yield msg_table
+            yield wrap_msg(msg_table, "data")
             full_content.append(msg_table)
             
             # 5. 生成图表
             msg = "正在生成可视化...\n"
-            yield msg
-            full_content.append(msg)
+            yield wrap_msg(msg, "process")
             
             chart = self.vanna_core.generate_echarts(question, df, sql)
             generated_chart = chart
@@ -360,12 +372,12 @@ class SmartDataQueryService:
             if chart:
                 # 使用特殊块供前端解析
                 msg = f"\n::: echarts\n{json.dumps(chart, indent=2)}\n:::\n"
-                yield msg
+                yield wrap_msg(msg, "chart")
                 full_content.append(msg)
             
         except Exception as e:
             error_msg = str(e)
-            yield f"错误：{str(e)}"
+            yield wrap_msg(f"错误：{str(e)}", "error")
         finally:
             # 保存助手消息
             if session_id:

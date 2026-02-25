@@ -770,7 +770,7 @@
 
       <!-- Other Views (Scrollable Container) -->
       <div v-else class="flex-1 overflow-y-auto custom-scrollbar">
-        <div class="max-w-[1200px] mx-auto px-10 py-12" :class="{
+        <div class="max-w-[1600px] mx-auto px-10 py-12" :class="{
           'h-full flex flex-col': currentView === 'knowledge',
           'h-full flex flex-col !p-0 !max-w-none': currentView === 'media_library' || currentView === 'database' || currentView === 'knowledge_graph' || currentView === 'knowledge' || currentView === 'service_market' || currentView === 'relation_fix'
         }">

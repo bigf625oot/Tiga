@@ -196,7 +196,7 @@
     
     <!-- Resize Handle -->
     <div 
-      class="w-1 hover:bg-slate-200 cursor-col-resize flex-shrink-0"
+      class="w-1 hover:bg-slate-200 cursor-col-resize flex-shrink-0 border-r border-slate-200"
       :class="isResizing ? 'bg-slate-200' : 'bg-transparent'"
       @mousedown="startResizing"
       title="拖拽调整侧栏宽度"
@@ -232,41 +232,135 @@
                 <p class="text-sm max-w-xs text-center leading-relaxed">配置数据库并开始提问，我会自动为您生成 SQL 查询并可视化结果。</p>
              </div>
              
-             <div v-for="(msg, index) in messages" :key="index" 
+            <div v-for="(msg, index) in messages" :key="msg._id || index" 
                  :class="['flex gap-4 max-w-4xl mx-auto', msg.role === 'user' ? 'flex-row-reverse' : '']">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
                      :class="msg.role === 'user' ? 'bg-blue-600' : 'bg-white'">
                      <span v-if="msg.role === 'user'" class="text-white text-xs font-bold">Me</span>
                      <svg v-else class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                 </div>
-                <div :class="['rounded-2xl px-5 py-3.5 shadow-sm text-sm leading-relaxed max-w-[85%]', 
-                              msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-700 rounded-tl-sm w-full']">
-                    <div v-if="msg.role === 'assistant'">
-                        <!-- Text Content -->
-                        <div class="markdown-body" v-html="renderMarkdown(getMessageText(msg.content))"></div>
-                        <!-- SQL Preview -->
-                        <div v-if="msg.sql_query" class="relative group/sql mt-3 bg-white rounded-lg">
-                            <button
-                              class="w-full px-3 py-1 text-[11px] uppercase tracking-wide text-slate-600 flex items-center justify-between hover:bg-slate-50 transition-colors"
-                              @click="toggleSql(index)"
-                              aria-label="切换 SQL 折叠"
+                <div :class="['rounded-2xl shadow-sm text-sm leading-relaxed max-w-[90%] overflow-hidden', 
+                              msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm px-5 py-3.5' : 'bg-white text-slate-700 rounded-tl-sm w-full border border-slate-100']">
+                    <div v-if="msg.role === 'assistant'" class="flex flex-col">
+                        <!-- 1. Process Nodes (Collapsible) -->
+                        <div class="border-b border-slate-100">
+                            <button 
+                                @click="toggleProcess(msg._id)"
+                                class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors"
                             >
-                              <span>SQL</span>
-                              <span class="text-blue-600">{{ isSqlExpanded(index) ? '收起' : '展开' }}</span>
+                                <div class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                    <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                    <span>思考过程</span>
+                                </div>
+                                <svg 
+                                    class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200"
+                                    :class="isProcessExpanded(msg._id) ? 'rotate-180' : ''"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
                             </button>
-                            <pre v-show="isSqlExpanded(index)" class="p-3 text-xs text-slate-800 overflow-x-auto"><code>{{ msg.sql_query }}</code></pre>
-                            <button
-                              @click="copySql(msg.sql_query)"
-                              class="absolute top-0 right-0 mt-1 mr-1 p-1.5 rounded-md bg-slate-100 text-slate-600 opacity-0 group-hover/sql:opacity-100 transition-opacity hover:bg-slate-200"
-                              title="复制 SQL"
-                              aria-label="复制 SQL"
-                            >
-                              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 4h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                            </button>
+                            <div v-show="isProcessExpanded(msg._id)" class="bg-slate-50 px-4 py-3 border-t border-slate-100 animate-in slide-in-from-top-1">
+                                <div class="space-y-3">
+                                    <div v-for="(step, sIdx) in (msg.steps || [])" :key="step.step" class="flex gap-3">
+                                        <div class="flex flex-col items-center">
+                                            <div class="w-2 h-2 rounded-full mt-1.5" 
+                                                 :class="sIdx === (msg.steps || []).length - 1 && isStreaming ? 'bg-blue-500 animate-pulse' : 'bg-blue-500'"></div>
+                                            <div v-if="sIdx < (msg.steps || []).length - 1" class="w-0.5 h-full bg-slate-200 my-1"></div>
+                                        </div>
+                                        <div class="pb-2 min-w-0 flex-1">
+                                            <div class="text-xs font-medium text-slate-700 flex justify-between">
+                                                <span>步骤 {{ step.step }}</span>
+                                                <span class="text-slate-400 font-normal">{{ formatRelative(step.timestamp) }}</span>
+                                            </div>
+                                            <div class="text-[11px] text-slate-500 mt-0.5 break-words whitespace-pre-wrap font-mono bg-white border border-slate-200 p-2 rounded shadow-sm" 
+                                                 v-if="step.content && step.content.trim()">
+                                                {{ step.content.trim() }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-if="(!msg.steps || msg.steps.length === 0) && isStreaming" class="text-xs text-slate-400 italic px-2">
+                                        正在初始化流程...
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <!-- Chart Content -->
-                        <div v-if="msg.chart_config || getMessageChart(msg.content)" class="mt-4 h-64 w-full bg-white rounded-lg p-2">
-                            <v-chart class="chart" :option="msg.chart_config || getMessageChart(msg.content)" autoresize />
+
+                        <!-- 2. Content Area with View Switcher -->
+                        <div class="p-4">
+                            <!-- Loading Skeleton -->
+                            <div v-if="isStreaming && !msg.content && !msg.error_message" class="space-y-6 animate-pulse p-4">
+                                <!-- Table Skeleton -->
+                                <div class="space-y-4">
+                                    <div class="h-4 bg-slate-200 rounded w-1/4"></div>
+                                    <div class="border border-slate-200 rounded-lg overflow-hidden">
+                                        <div class="h-10 bg-slate-100 border-b border-slate-200"></div>
+                                        <div class="p-4 space-y-3">
+                                            <div class="h-3 bg-slate-100 rounded w-full"></div>
+                                            <div class="h-3 bg-slate-100 rounded w-full"></div>
+                                            <div class="h-3 bg-slate-100 rounded w-3/4"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Chart Skeleton -->
+                                <div class="space-y-4">
+                                    <div class="h-4 bg-slate-200 rounded w-1/5"></div>
+                                    <div class="h-64 bg-slate-50 rounded-xl border border-slate-200"></div>
+                                </div>
+                            </div>
+
+                            <!-- Toolbar -->
+                            <div class="flex items-center justify-between mb-3" v-if="msg.sql_query && (msg.content || !isStreaming)">
+                                <div class="text-xs text-slate-400 font-medium">查询结果</div>
+                                <div class="flex bg-slate-100 p-0.5 rounded-lg">
+                                    <button 
+                                        @click="setMsgViewMode(msg._id, 'table')"
+                                        :class="getMsgViewMode(msg._id) === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                                        class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7-8v8m14-8v8M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                        表格视图
+                                    </button>
+                                    <button 
+                                        @click="setMsgViewMode(msg._id, 'sql')"
+                                        :class="getMsgViewMode(msg._id) === 'sql' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                                        class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                                        SQL查询
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- View Content -->
+                            <div class="min-h-[60px]">
+                                <!-- Table View (Markdown) -->
+                                <div v-show="getMsgViewMode(msg._id) === 'table'" class="markdown-body" v-html="renderMarkdown(getMessageText(msg.content))"></div>
+                                
+                                <!-- SQL View -->
+                                <div v-show="getMsgViewMode(msg._id) === 'sql'" class="relative group/sql">
+                                    <pre class="p-3 text-xs text-slate-800 bg-slate-50 rounded-lg border border-slate-200 overflow-x-auto font-mono"><code>{{ msg.sql_query }}</code></pre>
+                                    <button
+                                      @click="copySql(msg.sql_query)"
+                                      class="absolute top-2 right-2 p-1.5 rounded-md bg-white shadow-sm border border-slate-200 text-slate-500 opacity-0 group-hover/sql:opacity-100 transition-opacity hover:text-blue-600"
+                                      title="复制 SQL"
+                                    >
+                                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 4h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 3. Chart Content (Bottom) -->
+                            <div v-if="msg.chart_config || getMessageChart(msg.content)" class="mt-5 pt-5 border-t border-slate-100">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                                    <span class="text-xs font-bold text-slate-700">可视化图表</span>
+                                </div>
+                                <div class="h-72 w-full bg-slate-50 rounded-xl p-2 border border-slate-100">
+                                    <v-chart class="chart" :option="msg.chart_config || getMessageChart(msg.content)" autoresize />
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div v-else>{{ msg.content }}</div>
@@ -297,14 +391,14 @@
                       ref="textareaRef"
                       rows="3"
                       placeholder="输入您的问题..."
-                      class="w-full pl-4 pr-28 py-3.5 bg-slate-50 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none resize-none text-sm text-slate-700 placeholder-slate-400 transition-all shadow-inner max-h-48 overflow-y-auto"
+                      class="w-full pl-4 pr-28 py-3.5 bg-transparent border border-slate-200 rounded-xl outline-none resize-none text-sm text-slate-700 placeholder-slate-400 transition-all max-h-48 overflow-y-auto focus:border-blue-400"
                       :disabled="isLoading"
                     ></textarea>
                     <div class="absolute right-2 bottom-2 flex items-center gap-2">
                         <button 
                           @click="sendMessage"
                           class="p-2 rounded-lg transition-all duration-200"
-                          :class="input.trim() && !isLoading ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'"
+                          :class="input.trim() && !isLoading ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' : 'text-slate-300 cursor-not-allowed'"
                           :disabled="isLoading || !input.trim()"
                           aria-label="发送"
                         >
@@ -317,56 +411,7 @@
                 </div>
                 <!-- Icon Toolbar -->
                 <div class="flex items-center justify-between mt-2">
-                    <div class="flex items-center gap-1.5">
-                        <button 
-                          v-if="isStreaming"
-                          @click="stopStreaming"
-                          class="p-2 rounded-md hover:bg-slate-100 text-slate-600 transition-colors"
-                          title="停止生成"
-                          aria-label="停止生成"
-                        >
-                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect x="6" y="6" width="12" height="12" stroke-width="2" rx="1.5"></rect>
-                          </svg>
-                        </button>
-                        <button 
-                          @click="clearInput"
-                          class="p-2 rounded-md hover:bg-slate-100 text-slate-600 transition-colors"
-                          title="清空输入"
-                          aria-label="清空输入"
-                        >
-                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M3 6h18" stroke-width="2" stroke-linecap="round"></path>
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke-width="2"></path>
-                            <path d="M10 11v6M14 11v6" stroke-width="2" stroke-linecap="round"></path>
-                          </svg>
-                        </button>
-                        <div class="relative">
-                          <button 
-                            @click="templatesOpen = !templatesOpen"
-                            class="p-2 rounded-md hover:bg-slate-100 text-slate-600 transition-colors"
-                            title="插入模板"
-                            aria-label="插入模板"
-                          >
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path d="M12 3v18M3 12h18" stroke-width="2" stroke-linecap="round"></path>
-                            </svg>
-                          </button>
-                          <div 
-                            v-show="templatesOpen" 
-                            class="absolute z-20 mt-1 w-56 bg-white rounded-lg shadow-lg p-2 border border-slate-100"
-                          >
-                            <button 
-                              v-for="(tpl, i) in templates" 
-                              :key="i"
-                              @click="insertTemplate(tpl.content)"
-                              class="w-full text-left px-2 py-1.5 rounded-md text-sm hover:bg-slate-50 text-slate-700"
-                            >
-                              {{ tpl.name }}
-                            </button>
-                          </div>
-                        </div>
-                    </div>
+
                     <div class="text-[10px] text-slate-400">
                       <span>{{ input.length }}/2000</span>
                     </div>
@@ -422,6 +467,7 @@ import VChart from 'vue-echarts';
 import 'echarts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import utc from 'dayjs/plugin/utc';
 import 'dayjs/locale/zh-cn';
 
 // Session panel state
@@ -430,9 +476,11 @@ const sessions = ref([]);
 const sessionSearch = ref('');
 const activeSessionId = ref(null);
 const sessionsLoading = ref(false);
-const expandedSql = ref(new Set());
+const expandedProcess = ref(new Set());
+const msgViewModes = reactive({});
 
 dayjs.extend(relativeTime);
+dayjs.extend(utc);
 dayjs.locale('zh-cn');
 
 const formRef = ref();
@@ -548,7 +596,7 @@ const rules = computed(() => {
 const formatRelative = (ts) => {
     try {
         if (!ts) return '';
-        return dayjs(ts).fromNow();
+        return dayjs.utc(ts).local().fromNow();
     } catch {
         return '';
     }
@@ -557,19 +605,24 @@ const formatRelative = (ts) => {
 const formatAbsolute = (ts) => {
     try {
         if (!ts) return '';
-        return dayjs(ts).format('YYYY-MM-DD HH:mm:ss');
+        return dayjs.utc(ts).local().format('YYYY-MM-DD HH:mm:ss');
     } catch {
         return '';
     }
 };
 
-const isSqlExpanded = (idx) => expandedSql.value.has(idx);
-const toggleSql = (idx) => {
-    if (expandedSql.value.has(idx)) {
-        expandedSql.value.delete(idx);
+const isProcessExpanded = (id) => expandedProcess.value.has(id);
+const toggleProcess = (id) => {
+    if (expandedProcess.value.has(id)) {
+        expandedProcess.value.delete(id);
     } else {
-        expandedSql.value.add(idx);
+        expandedProcess.value.add(id);
     }
+};
+
+const getMsgViewMode = (id) => msgViewModes[id] || 'table';
+const setMsgViewMode = (id, mode) => {
+    msgViewModes[id] = mode;
 };
 
 const handleTypeChange = (val) => {
@@ -707,22 +760,13 @@ const filteredSessions = computed(() => {
     return base;
 });
 
-const handleCreateSession = () => {
-    createForm.title = '新的会话';
-    createModalOpen.value = true;
-};
-const closeCreateModal = () => { createModalOpen.value = false; };
-const confirmCreateSession = async () => {
-    if (!createForm.title || !createForm.title.trim()) {
-        message.warning('请输入会话标题');
-        return;
-    }
+const handleCreateSession = async () => {
     createLoading.value = true;
     try {
         const res = await fetch('/api/v1/data_query/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: createForm.title.trim(), user_id: 'default_user' })
+            body: JSON.stringify({ title: '新的会话', user_id: 'default_user' })
         });
         if (!res.ok) throw new Error('创建失败');
         let created = null;
@@ -730,16 +774,20 @@ const confirmCreateSession = async () => {
         if (created && created.id) {
             sessions.value.unshift(created);
             activeSessionId.value = created.id;
+            messages.value = []; // Clear messages for new session
             await loadSessionMessages(created.id);
         }
         message.success('已创建会话');
-        createModalOpen.value = false;
         leftTab.value = 'sessions';
     } catch (e) {
         message.error(e.message || '创建失败');
     } finally {
         createLoading.value = false;
     }
+};
+const closeCreateModal = () => { createModalOpen.value = false; };
+const confirmCreateSession = async () => {
+    // Deprecated
 };
 
 const handleRenameSession = (s) => {
@@ -843,6 +891,7 @@ const loadSessionMessages = async (id) => {
         const data = await res.json();
         const items = Array.isArray(data.items) ? data.items : [];
         messages.value = items.map(m => ({
+            _id: m.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             role: m.role,
             content: m.content || '',
             sql_query: m.sql_query || null,
@@ -873,12 +922,18 @@ const sendMessage = async () => {
     if (textareaRef.value) {
         textareaRef.value.style.height = 'auto';
     }
-    messages.value.push({ role: 'user', content: userMsg });
+    messages.value.push({ _id: `msg_${Date.now()}_user`, role: 'user', content: userMsg });
     isLoading.value = true;
     scrollToBottom();
     
     // Add placeholder for assistant response
-    messages.value.push({ role: 'assistant', content: '' });
+    messages.value.push({ 
+        _id: `msg_${Date.now()}_assistant`, 
+        role: 'assistant', 
+        content: '',
+        steps: [],
+        currentStep: 0
+    });
     const assistantMsg = messages.value[messages.value.length - 1];
 
     try {
@@ -915,16 +970,70 @@ const sendMessage = async () => {
         const decoder = new TextDecoder();
         isStreaming.value = true;
         
+        let buffer = '';
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             const chunk = decoder.decode(value, { stream: true });
-            assistantMsg.content += chunk;
+            buffer += chunk;
+            
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep the last incomplete line
+            
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const stepData = JSON.parse(line);
+                     if (stepData.step && stepData.content) {
+                        stepData.timestamp = Date.now();
+                        assistantMsg.steps.push(stepData);
+                        assistantMsg.currentStep = stepData.step;
+                        
+                        // Only append to display content if it is data or chart or error
+                        if (['data', 'chart', 'error'].includes(stepData.type)) {
+                             assistantMsg.content += stepData.content;
+                        }
+                        
+                        if (stepData.type === 'sql') {
+                            const sqlMatch = stepData.content.match(/```sql\n([\s\S]*?)\n```/);
+                            if (sqlMatch && sqlMatch[1]) {
+                                assistantMsg.sql_query = sqlMatch[1].trim();
+                            } else {
+                                // If regex fails, assume it's just the SQL (or handle as is)
+                                // But service sends ```sql...
+                                assistantMsg.sql_query = stepData.content.replace(/```sql|```/g, '').trim();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse step JSON', e);
+                    // Fallback: treat as raw text if JSON parse fails (though backend should be consistent)
+                    // assistantMsg.content += line + '\n';
+                }
+            }
             scrollToBottom();
         }
-        // Flush remaining bytes
-        assistantMsg.content += decoder.decode();
-        scrollToBottom();
+        
+        // Process remaining buffer
+         if (buffer.trim()) {
+             try {
+                 const stepData = JSON.parse(buffer);
+                 if (stepData.step && stepData.content) {
+                    stepData.timestamp = Date.now();
+                    assistantMsg.steps.push(stepData);
+                    assistantMsg.currentStep = stepData.step;
+                    
+                    if (['data', 'chart', 'error'].includes(stepData.type)) {
+                         assistantMsg.content += stepData.content;
+                    }
+                    if (stepData.type === 'sql') {
+                        assistantMsg.sql_query = stepData.content.replace(/```sql|```/g, '').trim();
+                    }
+                }
+             } catch (e) {
+                  // ignore or append as text
+             }
+         }
         
     } catch (e) {
         if (!assistantMsg.content) {
