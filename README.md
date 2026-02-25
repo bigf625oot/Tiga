@@ -1,6 +1,6 @@
 # Taichi Agent - 智能体编排与数据智能平台
 
-Taichi Agent 是一个集成了智能体编排、多模态知识库（RAG）、数据智能分析、自动化工作流与全网搜索的现代化全栈平台。本项目采用前后端分离架构，旨在为开发者提供开箱即用的企业级 AI 应用开发框架，支持从简单的对话机器人到复杂的自主智能体任务执行。
+Taichi Agent (内部代号: Tiga) 是一个集成了智能体编排、多模态知识库（RAG）、数据智能分析、自动化工作流与全网搜索的现代化全栈平台。本项目采用前后端分离架构，旨在为开发者提供开箱即用的企业级 AI 应用开发框架，支持从简单的对话机器人到复杂的自主智能体任务执行。
 
 ---
 
@@ -39,6 +39,7 @@ Taichi Agent 是一个集成了智能体编排、多模态知识库（RAG）、�
 | **可视化** | V-Network-Graph / 3D-Force-Graph | 知识图谱与网络关系可视化 |
 | **图表** | Chart.js / Vue-Chartjs | 数据报表与指标展示 |
 | **录音** | Recorder-Lib | 浏览器端音频录制与处理 |
+| **沙箱** | XTerm.js | Web 终端模拟器 |
 
 ### 目录结构
 ```bash
@@ -52,6 +53,8 @@ frontend/
 │   │   ├── knowledge/   # 知识库与图谱 (Graph Export)
 │   │   ├── qa/          # 智能问答 (Chat)
 │   │   ├── recording/   # 录音与多媒体 (ASR)
+│   │   ├── relation_fix/# 知识图谱关系修复
+│   │   ├── sandbox/     # 代码沙箱与终端管理
 │   │   ├── search/      # 全网搜索智能体 (News, Web)
 │   │   ├── system/      # 系统设置 (DB, Model)
 │   │   └── workflow/    # 工作流编排 (Task Panel, Artifacts)
@@ -71,6 +74,7 @@ frontend/
 - **Smart QA**: 基于 RAG 的智能问答系统，支持多模态交互。
 - **Workflow**: 可视化工作流编排，支持任务面板、日志审计与产物编辑。
 - **Media & ASR**: 浏览器端录音与自动语音转文字功能。
+- **Sandbox**: 基于 E2B 的代码执行沙箱，支持 Python/Shell 交互。
 
 ### 环境准备与启动
 1.  **安装依赖**:
@@ -99,6 +103,7 @@ frontend/
 - **RAG 引擎**: LightRAG, LanceDB (向量库), Neo4j (图数据库支持)
 - **工具协议**: MCP (Model Context Protocol)
 - **搜索服务**: DuckDuckGo Search (ddgs)
+- **沙箱运行时**: E2B (Firecracker VM)
 - **存储**: Local, AWS S3, Aliyun OSS
 - **工具库**: Pandas, NumPy, Pydantic, NetworkX
 
@@ -109,6 +114,7 @@ frontend/
 - **RAG Service**: 基于 LightRAG 的知识库构建与检索，支持图谱生成。
 - **Media Service**: 音频处理与 ASR 服务。
 - **Analytics (Vanna)**: 自然语言转 SQL 与数据分析可视化。
+- **Sandbox Service**: 集成 E2B 的安全代码执行环境。
 
 ### 数据库与存储
 后端默认使用 SQLite (`recorder_v5.db`)，支持平滑切换至 PostgreSQL 或 MySQL。
@@ -129,6 +135,7 @@ frontend/
     # LLM API Keys
     OPENAI_API_KEY=sk-xxxx
     DEEPSEEK_API_KEY=sk-xxxx
+    E2B_API_KEY=e2b_xxxx  # 用于沙箱环境
     
     # Storage
     STORAGE_TYPE=local
@@ -161,6 +168,11 @@ Task Mode 是本项目的一个重要特性，专为长流程、复杂任务设�
   - **QA 记录**: 任务执行过程中的问答对持久化。
   - **备份与恢复**: 支持任务数据的导出与导入。
 
+### 部署 (Deployment)
+项目包含 K8s 部署脚本 (`deploy/`)，支持蓝绿部署与回滚。
+- **K8s**: 使用 Helm Chart 进行管理。
+- **Scripts**: `deploy.sh` (部署), `rollback.sh` (回滚)。
+
 ### API 接口
 - **Swagger UI**: `http://localhost:8000/docs`
 - **OpenAPI JSON**: `/api/v1/openapi.json`
@@ -170,6 +182,7 @@ Task Mode 是本项目的一个重要特性，专为长流程、复杂任务设�
   - `/api/v1/task-mode`: 任务模式管理
   - `/api/v1/knowledge`: 知识库与 RAG
   - `/api/v1/mcp`: MCP 工具集成
+  - `/api/v1/sandbox`: 沙箱环境管理
 
 ---
 
