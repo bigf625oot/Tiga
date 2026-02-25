@@ -1,22 +1,27 @@
 import { mount } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import AgentIcon from '../AgentIcon.vue';
+import AgentIcon from './AgentIcon.vue';
 
 describe('AgentIcon.vue', () => {
-  // Mock IntersectionObserver
   const observe = vi.fn();
   const disconnect = vi.fn();
-  
+
   beforeEach(() => {
-    global.IntersectionObserver = vi.fn().mockImplementation((callback) => {
-      // Trigger callback immediately for testing if needed, or expose it
-      // Here we assume manual trigger or immediate visibility in some tests
-      return {
-        observe,
-        disconnect,
-        takeRecords: () => {}
-      };
-    });
+    const mockConstructor = vi.fn();
+    
+    // Mock IntersectionObserver
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor(callback) {
+        mockConstructor(callback);
+        this.callback = callback;
+      }
+      observe() { observe(); }
+      disconnect() { disconnect(); }
+      takeRecords() { return []; }
+    };
+    
+    // Expose mock property to access calls
+    global.IntersectionObserver.mock = mockConstructor.mock;
   });
 
   afterEach(() => {

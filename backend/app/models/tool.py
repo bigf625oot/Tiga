@@ -5,6 +5,7 @@ from app.db.base import Base
 
 class Tool(Base):
     __tablename__ = "tools"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, index=True, nullable=False)

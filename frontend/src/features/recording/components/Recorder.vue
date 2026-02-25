@@ -13,13 +13,13 @@
             </svg>
         </button>
         
-        <div class="w-[88px] h-[88px] mx-auto mb-6 bg-gradient-to-b from-blue-50 to-blue-50/50 rounded-[28px] flex justify-center items-center shadow-[0_8px_16px_-4px_rgba(75,139,245,0.15)] ring-1 ring-inset ring-white/50 relative">
-            <svg width="50" height="50" viewBox="0 0 24 24" fill="#4B8BF5" class="drop-shadow-md">
-                <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#8FB5FE"/>
-                <path d="M14 2V8H20" fill="#669DF6"/>
+        <div class="w-[88px] h-[88px] mx-auto mb-6 bg-gradient-to-b from-brand-primary/10 to-brand-primary/5 rounded-[28px] flex justify-center items-center shadow-[0_8px_16px_-4px_rgba(0,82,217,0.15)] ring-1 ring-inset ring-white/50 relative">
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="#0052D9" class="drop-shadow-md">
+                <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#85B1FF"/>
+                <path d="M14 2V8H20" fill="#5E96FF"/>
                 <path d="M8 12H16M8 16H16" stroke="white" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <div class="absolute -bottom-1 -right-1 bg-gradient-to-br from-blue-400 to-blue-500 text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg border-2 border-white">
+            <div class="absolute -bottom-1 -right-1 bg-gradient-to-br from-brand-gradient-start to-brand-gradient-end text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg border-2 border-white">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
@@ -45,7 +45,7 @@
             </a-select>
         </div>
 
-        <button class="w-full py-3.5 rounded-xl border-none text-base font-semibold cursor-pointer transition-all duration-200 mb-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:-translate-y-px hover:shadow-xl hover:brightness-105 active:translate-y-0 active:shadow-md" @mousedown.stop @click="startRecording">开始录音</button>
+        <button class="w-full py-3.5 rounded-xl border-none text-base font-semibold cursor-pointer transition-all duration-200 mb-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:-translate-y-px hover:shadow-xl hover:brightness-105 active:translate-y-0 active:shadow-md" @mousedown.stop @click="startRecording">开始录音</button>
       </div>
     </div>
 
@@ -58,8 +58,8 @@
          <!-- Header -->
         <div class="flex justify-between items-start mb-8">
             <div class="flex items-center gap-2">
-                 <div class="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse"></div>
-                 <span class="text-blue-500 font-bold text-lg">{{ isPaused ? '已暂停' : '录音转写中...' }}</span>
+                 <div class="w-2.5 h-2.5 bg-brand-primary rounded-full animate-pulse"></div>
+                 <span class="text-brand-primary font-bold text-lg">{{ isPaused ? '已暂停' : '录音转写中...' }}</span>
             </div>
             <div class="flex items-center gap-1" @mousedown.stop>
                 <button class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" @click="stopRecording">

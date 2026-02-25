@@ -41,6 +41,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const sessionId = ref<string>('');
     const eventSource = ref<EventSource | null>(null);
     const executeBuffer = ref<string>('');
+    
+    // Graph State
+    const graph = ref<{ nodes: any[], edges: any[] }>({ nodes: [], edges: [] });
+    const selectedTaskId = ref<string | null>(null);
 
     // Stats
     const totalTasks = computed(() => {
@@ -158,6 +162,49 @@ export const useWorkflowStore = defineStore('workflow', () => {
         isRunning.value = false;
     };
 
+    const updateGraph = (task: WorkflowTask) => {
+        // Check if node exists
+        const existingNodeIndex = graph.value.nodes.findIndex(n => n.id === task.id);
+        
+        const nodeData = {
+            label: task.name,
+            status: task.status,
+            progress: task.progress,
+            logs: task.logs
+        };
+
+        if (existingNodeIndex !== -1) {
+            // Update existing node
+            graph.value.nodes[existingNodeIndex].data = nodeData;
+        } else {
+            // Add new node
+            // Simple layout for now: vertical stack based on order
+            const y = graph.value.nodes.length * 100;
+            
+            graph.value.nodes.push({
+                id: task.id,
+                type: 'custom', // We will create a custom node component
+                data: nodeData,
+                position: { x: 250, y: y }
+            });
+        }
+
+        // Add edges based on dependencies
+        if (task.dependencies) {
+            task.dependencies.forEach(depId => {
+                const edgeId = `e-${depId}-${task.id}`;
+                if (!graph.value.edges.find(e => e.id === edgeId)) {
+                    graph.value.edges.push({
+                        id: edgeId,
+                        source: depId,
+                        target: task.id,
+                        animated: true
+                    });
+                }
+            });
+        }
+    };
+
     const updateTaskStatus = (stepName: string, status: WorkflowTask['status'], output?: string) => {
         // Find the last task with this stepName to see if we need a new one
         // If the last one is completed/failed, and we get 'running', create a new one.
@@ -229,6 +276,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
             if (output) {
                 task.logs.push(output);
             }
+            
+            updateGraph(task);
         }
     };
 
@@ -418,11 +467,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
         documents,
         currentStep,
         progress,
+        graph, // Export graph state
         initWorkflow,
         runWorkflow,
         stopWorkflow,
         addLog,
         clearLogs,
-        resetWorkflow
+        resetWorkflow,
+        updateGraph // Export updateGraph action
     };
 });

@@ -21,12 +21,11 @@ except ImportError as e:
 
 # --- Tavily SDK ---
 try:
-    try:
-        from tavily import TavilyClient
-    except ModuleNotFoundError:
-        TavilyClient = None
+    from tavily import TavilyClient
     TAVILY_AVAILABLE = True
-except ImportError:
+except (ImportError, ModuleNotFoundError) as e:
+    logger.warning(f"Tavily SDK not available: {e}")
+    TavilyClient = None
     TAVILY_AVAILABLE = False
 
 

@@ -192,11 +192,8 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             logger.info(f"OSS上传成功 文档ID={doc_id} 键={oss_key} URL={oss_url}")
         except Exception as e:
             logger.error(f"OSS上传失败: {e}", exc_info=True)
-            await update_doc_status(doc_id, DocumentStatus.UPLOADING, error_msg=f"OSS 上传警告: {str(e)}")
-            # 注意：OSS上传失败通常不应继续索引，但原逻辑似乎允许继续？
-            # 如果OSS失败是致命的，这里应该raise或者return。
-            # 暂时保持原逻辑结构，但要注意 process_success 最终可能为 True 如果索引成功了？
-            # 通常如果OSS失败，后续索引可能也会有问题（如果依赖OSS），但这里索引是用本地文件的。
+            await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"OSS 上传失败: {str(e)}")
+            return
 
         # --- Step 2: Indexing via LightRAG ---
         await update_doc_status(doc_id, DocumentStatus.INDEXING)

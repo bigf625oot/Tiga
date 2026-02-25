@@ -85,3 +85,4 @@ pydub
 imageio-ffmpeg
 e2b-code-interpreter>=0.0.10
 mcp>=1.26.0
+tavily-python>=0.3.0

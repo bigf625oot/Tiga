@@ -1,68 +1,124 @@
 <template>
-  <div class="h-full flex bg-white">
-    <!-- Inner Sidebar -->
-    <div class="w-56 bg-white border-r border-slate-100 flex flex-col flex-shrink-0">
-      <div class="p-4">
-        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+  <div class="h-full flex bg-slate-50">
+    <!-- Collapsible Sidebar -->
+    <div 
+      class="bg-white border-r border-slate-200 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out z-20 shadow-sm"
+      :class="isSidebarCollapsed ? 'w-20' : 'w-64'"
+    >
+      <!-- Sidebar Header -->
+      <div class="p-5 flex items-center justify-between border-b border-slate-50 h-[73px]">
+        <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" :class="{'opacity-0 w-0': isSidebarCollapsed}">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-blue-200 shadow-md flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-800">工具市场</h2>
+            <p class="text-[10px] text-slate-400 font-medium">Tool Market</p>
+          </div>
+        </div>
+        
+        <!-- Toggle Button -->
+        <button 
+          @click="isSidebarCollapsed = !isSidebarCollapsed"
+          class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors mx-auto"
+          :title="isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'"
+        >
+          <svg class="w-5 h-5 transition-transform duration-300" :class="{'rotate-180': isSidebarCollapsed}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
           </svg>
-          工具市场
-        </h2>
-        <p class="text-xs text-slate-500 mt-1">发现并集成强大的AI能力</p>
+        </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+      <!-- Categories List -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
         <div 
           v-for="item in menuItems" 
           :key="item.id"
           @click="activeCategory = item.id"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm font-medium"
-          :class="activeCategory === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
+          class="group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 relative"
+          :class="activeCategory === item.id ? 'bg-blue-50/80 text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'"
+          :title="isSidebarCollapsed ? item.label : ''"
         >
-          <span>{{ item.label }}</span>
-          <span v-if="item.count" class="ml-auto text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{{ item.count }}</span>
+          <!-- Category Icon (Placeholder or specific based on ID) -->
+          <div class="w-6 h-6 flex items-center justify-center flex-shrink-0 transition-colors" 
+            :class="activeCategory === item.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'">
+            <svg v-if="item.id === 'all'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            <svg v-else-if="item.id === 'mcp'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <svg v-else-if="item.id === 'skills'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          
+          <span class="font-medium text-sm whitespace-nowrap overflow-hidden transition-all duration-300"
+            :class="isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">
+            {{ item.label }}
+          </span>
+          
+          <span v-if="item.count && !isSidebarCollapsed" 
+            class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full transition-colors"
+            :class="activeCategory === item.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'">
+            {{ item.count }}
+          </span>
+          
+          <!-- Tooltip on hover when collapsed -->
+          <div v-if="isSidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+            {{ item.label }}
+          </div>
         </div>
       </div>
 
-      <!-- User Custom Link -->
-      <div class="p-4 border-t border-slate-100">
-        <button 
-          @click="showCreateToolModal = true"
-          class="flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors w-full"
-        >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          <span>创建工具</span>
-        </button>
+      <!-- Quick Actions (Optional, simplified for collapsed) -->
+      <div class="p-4 border-t border-slate-100" v-if="!isSidebarCollapsed">
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100/50">
+          <h4 class="text-xs font-bold text-blue-800 mb-1">找不到需要的工具？</h4>
+          <p class="text-[10px] text-blue-600/80 mb-3 leading-relaxed">尝试创建一个自定义工具来扩展您的工作流。</p>
+          <button 
+            @click="showCreateToolModal = true"
+            class="w-full py-1.5 bg-white text-blue-600 text-xs font-bold rounded-lg border border-blue-200 shadow-sm hover:shadow hover:border-blue-300 transition-all flex items-center justify-center gap-1.5"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            立即创建
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden" @click="activeMenuId = null">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative" @click="activeMenuId = null">
       <!-- Header -->
-      <div class="px-8 py-5 bg-white border-b border-slate-100 flex items-center justify-between flex-shrink-0">
-        <div class="flex items-center gap-4">
-          <div class="relative">
+      <div class="px-8 py-4 bg-white border-b border-slate-200 flex items-center justify-between flex-shrink-0 shadow-sm z-10">
+        <div class="flex items-center gap-6 flex-1">
+          <!-- Search Bar -->
+          <div class="relative group max-w-md w-full">
             <input 
               v-model="searchQuery"
               type="text" 
               placeholder="搜索工具、插件或技能..." 
-              class="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm w-80 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+              class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white focus:outline-none transition-all placeholder:text-slate-400"
             />
-            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-5 h-5 text-slate-400 absolute left-3.5 top-2.5 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
           
           <!-- Filter Tags -->
-          <div class="flex gap-2">
+          <div class="flex gap-2 hidden md:flex">
             <button 
               v-for="tag in [{id: 'all', label: '全部'}, {id: 'hot', label: '热门'}, {id: 'new', label: '最新'}, {id: 'official', label: '官方'}]" 
               :key="tag.id"
-              class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-              :class="activeFilter === tag.id ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+              class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+              :class="activeFilter === tag.id ? 'bg-slate-800 text-white shadow-md shadow-slate-200' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50'"
               @click="activeFilter = tag.id"
             >
               {{ tag.label }}
@@ -70,136 +126,91 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <button @click="refreshData" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" title="刷新">
+        <div class="flex items-center gap-4">
+          <!-- Refresh Button -->
+          <button @click="refreshData" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="刷新数据">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
+          </button>
+
+          <!-- Primary Create Button -->
+          <button 
+            @click="showCreateToolModal = true"
+            class="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all active:scale-95"
+          >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>添加工具</span>
           </button>
         </div>
       </div>
 
       <!-- Content Grid -->
-      <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-slate-50/50">
         <!-- Skeleton Loader -->
         <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div v-for="n in 8" :key="n" class="border border-slate-100 rounded-xl p-5 bg-white h-[220px] flex flex-col animate-pulse">
-            <!-- ... skeleton content ... -->
-          </div>
-        </div>
-
-        <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-400">
-          <svg class="w-16 h-16 mb-4 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <p>未找到相关服务</p>
-        </div>
-
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div 
-            v-for="item in filteredItems" 
-            :key="item.id" 
-            class="group bg-white border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-200 flex flex-col h-[230px] relative"
-          >
-            <div class="p-4 flex flex-col h-full">
-              <!-- Header: Icon + Title + Menu -->
-              <div class="flex gap-3 mb-2">
-                <!-- Icon -->
-                <img v-if="item.iconUrl" :src="item.iconUrl" class="w-12 h-12 object-contain flex-shrink-0" />
-                <div v-else class="w-12 h-12 flex-shrink-0 flex items-center justify-center text-base text-gray-400 bg-gray-50 rounded-lg">{{ item.icon }}</div>
-                
-                <!-- Title & Tags Area -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex justify-between items-start">
-                    <h3 class="font-bold text-gray-800 text-sm leading-tight truncate pr-1" :title="item.name">{{ item.name }}</h3>
-                    
-                    <!-- Menu Trigger -->
-                    <div v-if="!item.is_official" class="relative flex-shrink-0 -mt-1 -mr-1">
-                      <button 
-                        @click.stop="toggleMenu(item.id)"
-                        class="p-1 text-gray-300 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
-                        :class="{'text-gray-600 bg-gray-50': activeMenuId === item.id}"
-                      >
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                      </button>
-                      
-                      <!-- Dropdown Menu -->
-                      <div 
-                        v-if="activeMenuId === item.id"
-                        class="absolute right-0 top-full mt-1 w-24 bg-white border border-gray-200 rounded-lg shadow-xl z-20 py-1"
-                        @click.stop
-                      >
-                        <button 
-                          @click="openEditModal(item); activeMenuId = null"
-                          class="w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-colors"
-                        >
-                          编辑
-                        </button>
-                        <button 
-                          @click="deleteTool(item); activeMenuId = null"
-                          class="w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
-                        >
-                          删除
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Tags (Below Title) -->
-                  <div class="flex items-center gap-1.5 mt-1">
-                    <span class="px-1.5 py-px rounded text-[10px] font-medium border" 
-                      :class="item.type === 'mcp' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'">
-                      {{ item.type === 'mcp' ? 'MCP' : 'Skill' }}
-                    </span>
-                    <span v-if="item.is_official" class="px-1.5 py-px rounded text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100">
-                      官方
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Description -->
-              <p class="text-xs text-gray-500 leading-relaxed line-clamp-3 mb-3 flex-1" :title="item.description">
-                {{ item.description || '暂无描述' }}
-              </p>
-
-              <!-- Footer -->
-              <div class="mt-auto pt-3 border-t border-gray-50 flex flex-col gap-2">
-                <div class="text-[10px] text-gray-400">
-                  <span class="truncate max-w-[120px]">@{{ item.author }}</span>
-                </div>
-
-                <div class="flex items-center justify-between">
-                  <div class="text-[10px] text-gray-400">
-                    <span v-if="item.downloads">{{ item.downloads }}k</span>
-                    <span v-else>v{{ item.version }}</span>
-                  </div>
-
-                  <button 
-                    @click.stop="handleInstall(item)"
-                    class="px-2.5 py-1 text-xs rounded transition-colors border"
-                    :class="item.installed || (item.is_active === false)
-                      ? 'bg-gray-50 text-gray-400 border-transparent cursor-default' 
-                      : 'bg-white border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-200 hover:shadow-sm'"
-                    :disabled="item.installed || item.isInstalling || (item.is_active === false)"
-                    :title="(item.is_active === false) ? '工具未配置或不可用' : ''"
-                  >
-                    <div class="flex items-center gap-1">
-                      <svg v-if="item.isInstalling" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>{{ item.installed ? '已安装' : (item.isInstalling ? '安装中' : ((item.is_active === false) ? '不可用' : '获取')) }}</span>
-                    </div>
-                  </button>
+          <div v-for="n in 8" :key="n" class="border border-slate-100 rounded-2xl p-5 bg-white h-[260px] flex flex-col animate-pulse shadow-sm">
+            <div class="flex gap-4 mb-4">
+              <div class="w-14 h-14 bg-slate-100 rounded-xl"></div>
+              <div class="flex-1 space-y-2 py-1">
+                <div class="h-4 bg-slate-100 rounded w-3/4"></div>
+                <div class="flex gap-2">
+                  <div class="h-5 w-12 bg-slate-100 rounded"></div>
+                  <div class="h-5 w-12 bg-slate-100 rounded"></div>
                 </div>
               </div>
             </div>
+            <div class="space-y-2 flex-1">
+              <div class="h-3 bg-slate-100 rounded w-full"></div>
+              <div class="h-3 bg-slate-100 rounded w-5/6"></div>
+              <div class="h-3 bg-slate-100 rounded w-4/6"></div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-slate-50">
+              <div class="flex justify-between mb-3">
+                <div class="h-3 w-16 bg-slate-100 rounded"></div>
+                <div class="h-3 w-12 bg-slate-100 rounded"></div>
+              </div>
+              <div class="h-8 bg-slate-100 rounded-lg w-full"></div>
+            </div>
           </div>
         </div>
+
+        <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-slate-400">
+          <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+            <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-700 mb-2">未找到相关服务</h3>
+          <p class="text-sm text-slate-500 max-w-xs text-center leading-relaxed">尝试调整搜索关键词或筛选条件，也可以点击右上角"添加工具"创建新的服务。</p>
+          <button @click="searchQuery = ''; activeFilter = 'all'" class="mt-6 text-blue-600 font-medium hover:underline text-sm">清除筛选条件</button>
+        </div>
+
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+          <ToolCard 
+            v-for="item in filteredItems" 
+            :key="item.id" 
+            :item="item"
+            :active-menu-id="activeMenuId"
+            @toggle-menu="toggleMenu"
+            @edit="openEditModal"
+            @delete="deleteTool"
+            @install="handleInstall"
+          />
+        </div>
       </div>
+
+      <!-- Floating Action Button (Mobile Only) -->
+      <button 
+        @click="showCreateToolModal = true"
+        class="sm:hidden absolute bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-all z-30"
+      >
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -439,10 +450,12 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue';
 import JSZip from 'jszip';
+import ToolCard from './ToolCard.vue';
 
 const menuItems = ref([]);
 
 const activeCategory = ref('all');
+const isSidebarCollapsed = ref(false);
 const searchQuery = ref('');
 const activeFilter = ref('all'); // all, hot, new, official
 const isLoading = ref(false);

@@ -20,6 +20,7 @@ import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
+import { AttachAddon } from 'xterm-addon-attach';
 import 'xterm/css/xterm.css';
 import { ClearOutlined, CopyOutlined } from '@ant-design/icons-vue';
 import { ElMessage } from 'element-plus';
@@ -29,6 +30,7 @@ const props = defineProps<{
   fontSize?: number;
   initialContent?: string;
   readOnly?: boolean;
+  url?: string; // WebSocket URL
 }>();
 
 const emit = defineEmits(['data', 'resize']);
@@ -36,6 +38,8 @@ const emit = defineEmits(['data', 'resize']);
 const terminalRef = ref<HTMLElement | null>(null);
 let term: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
+let socket: WebSocket | null = null;
+let attachAddon: AttachAddon | null = null;
 
 const initTerminal = () => {
   if (!terminalRef.value) return;
@@ -71,21 +75,46 @@ const initTerminal = () => {
     console.warn("Fit addon failed initially", e);
   }
 
-  term.onData(data => {
-    emit('data', data);
-  });
+  // WebSocket Connection
+  if (props.url) {
+      socket = new WebSocket(props.url);
+      socket.onopen = () => {
+        attachAddon = new AttachAddon(socket!);
+        term?.loadAddon(attachAddon);
+        fitAddon?.fit();
+        term?.writeln('\x1b[1;32mConnected to Sandbox Terminal\x1b[0m');
+      };
+      socket.onerror = (err) => {
+          term?.writeln('\x1b[1;31mConnection Error\x1b[0m');
+          console.error(err);
+      };
+      socket.onclose = () => {
+          term?.writeln('\x1b[1;33mConnection Closed\x1b[0m');
+      };
+  } else {
+      // Fallback or Local Echo
+      term.onData(data => {
+        emit('data', data);
+        if (!props.url) term?.write(data); // Local echo if no socket
+      });
+  }
 
   term.onResize(size => {
     emit('resize', size);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
+    }
   });
 
   if (props.initialContent) {
     term.write(props.initialContent);
   }
 
-  // Welcome message
-  term.writeln('\x1b[1;36mAI Autonomous Terminal Initialized\x1b[0m');
-  term.writeln('\x1b[38;5;240mWaiting for deployment commands...\x1b[0m\r\n');
+  if (!props.url) {
+      // Welcome message only if not connected to backend yet
+      term.writeln('\x1b[1;36mAI Autonomous Terminal Initialized\x1b[0m');
+      term.writeln('\x1b[38;5;240mWaiting for deployment commands...\x1b[0m\r\n');
+  }
 };
 
 const write = (data: string) => {

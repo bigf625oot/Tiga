@@ -7,16 +7,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        'figma-bg': '#F7F7F7',
+        'brand-primary': '#0052D9', // Main Brand Color
+        'brand-gradient-start': '#0052D9',
+        'brand-gradient-end': '#0052FF',
+        'brand-action': '#FF3355', // Key Action Color
+        'figma-bg': '#F9FAFB',
+        'figma-card': '#FFFFFF',
+        'figma-text-primary': '#1F2937',
+        'figma-text-secondary': '#6B7280',
+        'figma-border': '#E5E7EB',
+        'figma-hover': '#F3F4F6',
         'figma-gray': '#E8E8E8',
-        'figma-text': '#171717',
         'figma-notation': '#858B9B',
         'figma-line': '#E5E6EB',
         'figma-disable': '#BCC1CD',
         'figma-heading': '#2A2F3C',
         'figma-subhead': '#495363',
-        'figma-border': '#F2F3F5',
-        'figma-hover': '#F0F0F0',
         'figma-avatar-bg': '#E6EFFF',
       },
       fontFamily: {

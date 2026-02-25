@@ -1,109 +1,119 @@
 <template>
-    <div class="h-full flex flex-col bg-white overflow-y-auto p-8">
-        <div class="max-w-[1200px] mx-auto w-full flex flex-col gap-8">
-            <h2 class="text-xl font-bold text-[#171717]">智能体</h2>
+    <div class="h-full flex flex-col bg-white overflow-hidden">
+        <!-- Header -->
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between flex-shrink-0 bg-white z-10">
+            <div class="flex items-center gap-4">
+                <h2 class="text-xl font-bold text-slate-800">智能体中心</h2>
+                <div class="h-6 w-px bg-slate-200 mx-2"></div>
+                <div class="relative">
+                    <input 
+                        v-model="searchQuery"
+                        type="text" 
+                        placeholder="搜索智能体..." 
+                        class="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-64 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+                    />
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+            
+            <button 
+                @click="openCreateModal"
+                class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all active:scale-95"
+            >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>创建智能体</span>
+            </button>
+        </div>
 
-            <Loading v-if="isLoading" type="skeleton-card" />
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50/30">
+            <div class="max-w-[1400px] mx-auto w-full flex flex-col gap-10">
+                
+                <Loading v-if="isLoading" type="skeleton-card" />
 
-            <template v-else>
-                <!-- Section: My Agents -->
-                <div class="flex flex-col gap-6">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg font-semibold text-[#171717]">我的智能体</span>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        <!-- Create Card -->
-                        <div 
-                            @click="openCreateModal"
-                            class="bg-[#f9fafb] rounded-2xl h-[160px] flex items-center justify-center cursor-pointer hover:shadow-md transition-all group"
-                        >
-                            <div class="flex items-center gap-4">
-                                <div class="w-[54px] h-[54px] rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                                    <svg class="w-6 h-6 text-[#171717]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                </div>
-                                <span class="text-sm font-medium text-[#171717]">创建智能体</span>
-                            </div>
+                <template v-else>
+                    <!-- Search Results (if searching) -->
+                    <div v-if="searchQuery" class="flex flex-col gap-6">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg font-bold text-slate-800">搜索结果</span>
+                            <span class="text-sm text-slate-400">({{ filteredAgents.length }})</span>
                         </div>
+                        
+                        <div v-if="filteredAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <AgentCard 
+                                v-for="agent in filteredAgents" 
+                                :key="agent.id" 
+                                :agent="agent"
+                                @click="editAgent"
+                                @edit="editAgent"
+                                @delete="deleteAgent"
+                            />
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-20 text-slate-400">
+                            <svg class="w-16 h-16 mb-4 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <p>未找到相关智能体</p>
+                        </div>
+                    </div>
 
-                        <!-- User Agents -->
-                        <div 
-                            v-for="agent in myAgents" 
-                            :key="agent.id"
-                            class="bg-[#f9fafb] rounded-2xl p-4 h-[160px] flex flex-col justify-between hover:shadow-md transition-all relative group cursor-pointer"
-                            @click="editAgent(agent)"
-                        >
-                            <div class="flex items-start justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-lg font-bold text-[#171717] shadow-sm overflow-hidden border border-slate-100">
-                                        <img v-if="isImageIcon(agent.icon)" :src="agent.icon" class="w-full h-full object-cover" />
-                                        <component v-else :is="agent.iconComponent" class="w-5 h-5 text-slate-700" />
-                                    </div>
-                                    <span class="font-medium text-[#171717] truncate max-w-[120px]">{{ agent.name }}</span>
+                    <template v-else>
+                        <!-- Section: My Agents -->
+                        <div class="flex flex-col gap-6">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1 h-6 bg-blue-500 rounded-full"></div>
+                                <span class="text-lg font-bold text-slate-800">我的智能体</span>
+                            </div>
+                            
+                            <div v-if="myAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <AgentCard 
+                                    v-for="agent in myAgents" 
+                                    :key="agent.id" 
+                                    :agent="agent"
+                                    @click="editAgent"
+                                    @edit="editAgent"
+                                    @delete="deleteAgent"
+                                />
+                            </div>
+                            
+                            <!-- Empty State -->
+                            <div v-else class="py-12 flex flex-col items-center justify-center text-center bg-white border border-dashed border-slate-200 rounded-2xl">
+                                <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                                    <svg class="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                                 </div>
-                                <!-- Delete Action -->
+                                <h3 class="text-slate-800 font-medium mb-1">暂无智能体</h3>
+                                <p class="text-slate-400 text-xs mb-6">创建您的第一个 AI 助手，开始智能之旅</p>
                                 <button 
-                                    @click.stop="deleteAgent(agent)" 
-                                    class="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-opacity"
+                                    @click="openCreateModal"
+                                    class="px-6 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:border-blue-300 hover:text-blue-600 transition-colors"
                                 >
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    立即创建
                                 </button>
                             </div>
-                            <p class="text-xs text-[#858b9b] line-clamp-2 leading-relaxed">
-                                {{ agent.description || '暂无描述...' }}
-                            </p>
                         </div>
 
-                        <!-- Empty State (Only shown when myAgents is empty) -->
-                        <div v-if="myAgents.length === 0" class="col-span-full py-8 flex flex-col items-center justify-center text-center">
-                            <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                                <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <!-- Section: Discover -->
+                        <div class="flex flex-col gap-6">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1 h-6 bg-indigo-500 rounded-full"></div>
+                                <span class="text-lg font-bold text-slate-800">发现模版</span>
                             </div>
-                            <p class="text-slate-500 text-sm font-medium">暂无智能体</p>
-                            <p class="text-slate-400 text-xs mt-1">点击上方“创建智能体”开始构建您的专属AI助手</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section: Discover -->
-                <div class="flex flex-col gap-6">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg font-semibold text-[#171717]">发现</span>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        <div 
-                            v-for="(agent, index) in discoverAgents" 
-                            :key="index"
-                            class="bg-[#f9fafb] rounded-2xl p-4 h-[160px] flex flex-col justify-between hover:shadow-md transition-all cursor-pointer relative group"
-                            @click="editAgent(agent)"
-                        >
-                            <div class="flex items-start justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div 
-                                        class="w-[46px] h-[46px] rounded-[20px] flex items-center justify-center shadow-sm border border-slate-100 overflow-hidden"
-                                        :class="agent.is_template ? 'bg-transparent' : 'bg-white'"
-                                    >
-                                        <img src="/tiga.svg" class="w-8 h-8 object-contain" />
-                                    </div>
-                                    <span class="font-medium text-[#171717]">{{ agent.name }}</span>
-                                </div>
-                                <!-- Delete Action -->
-                                <button 
-                                    @click.stop="deleteAgent(agent)" 
-                                    class="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-opacity"
-                                >
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <AgentCard 
+                                    v-for="agent in discoverAgents" 
+                                    :key="agent.id" 
+                                    :agent="agent"
+                                    @click="editAgent"
+                                />
                             </div>
-                            <p class="text-xs text-[#858b9b] line-clamp-2 leading-relaxed mt-2">
-                                {{ agent.description }}
-                            </p>
                         </div>
-                    </div>
-                </div>
-            </template>
-
+                    </template>
+                </template>
+            </div>
         </div>
 
         <!-- Create/Edit Modal (Reused Logic) -->
@@ -583,6 +593,7 @@ import Loading from '@/shared/components/atoms/Loading/Loading.vue';
 import { Modal, message } from 'ant-design-vue';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import UserScriptsEditor from './UserScriptsEditor.vue';
+import AgentCard from './AgentCard.vue';
 
 // Helper to create simple SVG icons without runtime compiler dependency
 const createIcon = (d) => ({
@@ -617,6 +628,8 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const isSaving = ref(false);
 const isLoading = ref(true);
+
+const searchQuery = ref('');
 
 // Tools Viewer
 const showToolsModal = ref(false);
@@ -740,6 +753,13 @@ const form = ref({
 });
 
 const activeAgentId = computed(() => form.value.id || '');
+
+const filteredAgents = computed(() => {
+    if (!searchQuery.value) return [];
+    const query = searchQuery.value.toLowerCase();
+    const all = [...myAgents.value, ...discoverAgents.value];
+    return all.filter(a => a.name.toLowerCase().includes(query) || (a.description && a.description.toLowerCase().includes(query)));
+});
 
 onMounted(() => {
     fetchAgents();

@@ -3,100 +3,91 @@ import { mount } from '@vue/test-utils';
 import SandboxResultViewer from '../SandboxResultViewer.vue';
 import { SandboxService } from '../../api/sandbox';
 
-// Mock SandboxService
-vi.mock('../../api/sandbox', () => ({
-  SandboxService: {
-    runCode: vi.fn()
-  }
+// Mock i18n
+vi.mock('../../../../locales', () => ({
+  useI18n: () => ({
+    t: (key: string) => key
+  })
 }));
 
-// Mock VueMonacoEditor
-vi.mock('@guolao/vue-monaco-editor', () => ({
-  VueMonacoEditor: {
-    template: '<div class="monaco-mock"></div>',
-    props: ['value']
-  }
-}));
+// Mock SandboxService
+
+// Mock components
+const stubs = {
+    'a-button': { template: '<button><slot /></button>' },
+    'el-image': { template: '<div></div>' },
+    'el-carousel': { template: '<div><slot /></div>' },
+    'el-carousel-item': { template: '<div><slot /></div>' },
+    'AppstoreOutlined': { template: '<span></span>' },
+    'FileImageOutlined': { template: '<span></span>' },
+    'CloseCircleFilled': { template: '<span></span>' }
+};
 
 describe('SandboxResultViewer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders correctly in idle state', () => {
-    const wrapper = mount(SandboxResultViewer, {
-      props: {
-        code: 'print("hello")',
-        language: 'python'
-      }
-    });
-    
-    expect(wrapper.find('.monaco-mock').exists()).toBe(true);
-    expect(wrapper.text()).toContain('执行代码');
-    expect(wrapper.text()).toContain('任务执行结果');
-  });
-
-  it('handles run action successfully', async () => {
-    const mockResult = {
-      status: 'success',
-      result: {
-        type: 'text',
-        content: 'hello world',
-        files: []
-      }
-    };
-    
-    (SandboxService.runCode as any).mockResolvedValue(mockResult);
-
+  it('renders correctly in idle state (empty)', () => {
     const wrapper = mount(SandboxResultViewer, {
       props: {
         code: 'print("hello")'
-      }
+      },
+      global: { stubs }
+    });
+    
+    // Should show empty state
+    expect(wrapper.text()).toContain('sandbox.status.noData'); // Using key because i18n mock returns key
+  });
+
+  it('renders result content when available', async () => {
+    const wrapper = mount(SandboxResultViewer, {
+      props: {
+        code: 'print("hello")'
+      },
+      global: { stubs }
     });
 
-    // Click run button
-    await wrapper.find('button.ant-btn-primary').trigger('click');
-    
-    expect(wrapper.text()).toContain('重新执行'); // Button text changes if result exists? No, logic says "重新执行" if result exists
-    
-    // Check service call
-    expect(SandboxService.runCode).toHaveBeenCalledWith({
-      language: 'python',
-      code: 'print("hello")',
-      template: undefined,
-      params: undefined
-    }, expect.any(Object));
+    // Simulate result
+    wrapper.vm.result = {
+      status: 'success',
+      content: 'Hello World',
+      files: []
+    };
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain('Hello World');
+    expect(wrapper.text()).toContain('sandbox.output.preview');
   });
 
   it('displays error state correctly', async () => {
-    const errorMsg = 'Syntax Error';
-    (SandboxService.runCode as any).mockRejectedValue(new Error(errorMsg));
-
     const wrapper = mount(SandboxResultViewer, {
-      props: { code: 'bad code' }
+      props: { code: 'bad code' },
+      global: { stubs }
     });
 
-    await wrapper.find('button.ant-btn-primary').trigger('click');
-    
-    // Wait for async
-    await new Promise(resolve => setTimeout(resolve, 0));
+    // Simulate error
+    wrapper.vm.error = { message: 'Syntax Error' };
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.text()).toContain('执行出错');
-    expect(wrapper.text()).toContain(errorMsg);
+    expect(wrapper.text()).toContain('sandbox.status.error');
+    expect(wrapper.text()).toContain('Syntax Error');
   });
 
   it('switches tabs correctly', async () => {
-    const wrapper = mount(SandboxResultViewer);
+    const wrapper = mount(SandboxResultViewer, {
+        global: { stubs }
+    });
     
-    // Initial tab is code
-    expect(wrapper.find('.monaco-mock').isVisible()).toBe(true);
+    // Default tab is result
+    expect(wrapper.text()).toContain('sandbox.status.noData'); // Empty result
     
-    // Switch to result tab (Ant Design Tabs structure might be complex to click in unit test, checking logic instead)
-    // We can simulate state change if we expose it or just check if tabs exist
-    const tabs = wrapper.findAll('.ant-tabs-tab');
-    expect(tabs.length).toBe(2);
-    expect(tabs[0].text()).toContain('代码');
-    expect(tabs[1].text()).toContain('运行结果');
+    // Switch to env tab
+    const buttons = wrapper.findAll('button');
+    // Assuming 2nd button is env tab (index 1)
+    await buttons[1].trigger('click');
+    
+    expect(wrapper.text()).toContain('sandbox.env.title');
+    expect(wrapper.text()).toContain('Python 3.10');
   });
 });

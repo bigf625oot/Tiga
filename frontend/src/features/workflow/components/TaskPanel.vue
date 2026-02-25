@@ -37,7 +37,7 @@
        </div>
 
        <div class="flex-1 overflow-hidden relative flex flex-col">
-          <template v-if="currentTask || activeView === 'code' || activeView === 'results'">
+          <template v-if="currentTask || activeView === 'code' || activeView === 'results' || activeView === 'graph'">
               <!-- Task View -->
               <div v-if="activeView === 'tasks'" class="h-full overflow-y-auto p-4 custom-scrollbar">
                  <!-- Task List / Details -->
@@ -60,8 +60,13 @@
                   </div>
               </div>
 
+              <!-- Graph View -->
+              <div v-else-if="activeView === 'graph'" class="h-full w-full">
+                  <TaskGraph />
+              </div>
+
               <!-- Code View -->
-              <ArtifactEditor 
+              <ArtifactEditor  
                   v-else-if="activeView === 'code'"
                   :value="taskContent"
                   :language="detectLanguage(currentTask)"
@@ -150,6 +155,15 @@
                 />
                 <span class="text-[10px] font-medium text-slate-400 font-mono min-w-[1.2rem]">{{ totalSteps || 0 }}</span>
             </div>
+
+            <!-- Log Button -->
+            <button 
+                @click="openLogDrawer"
+                class="w-7 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-500 transition-colors log-trigger"
+                title="View Logs"
+            >
+                <FileTextOutlined :style="{ fontSize: '12px' }" />
+            </button>
         </div>
     </div>
 
@@ -189,6 +203,8 @@ import EmptyState from '@/features/workflow/components/EmptyState.vue';
 import LogDrawer from '@/features/workflow/components/drawer/LogDrawer.vue';
 import AgentStatusDashboard from '@/features/workflow/components/AgentStatusDashboard.vue';
 import SandboxTerminal from '@/features/sandbox/components/SandboxTerminal.vue';
+import TaskTree from './TaskTree.vue';
+import TaskGraph from './graph/TaskGraph.vue';
 import { useI18n } from '../../../locales';
 import { 
     AppstoreOutlined, 
@@ -198,7 +214,8 @@ import {
     RightOutlined, 
     StopOutlined, 
     FileTextOutlined,
-    DownOutlined
+    DownOutlined,
+    ApartmentOutlined
 } from '@ant-design/icons-vue';
 
 defineProps({
@@ -243,6 +260,7 @@ watch(() => store.isRunning, (running) => {
 
 const views = [
     { id: 'tasks', labelKey: 'taskView', icon: AppstoreOutlined },
+    { id: 'graph', labelKey: 'graphView', icon: ApartmentOutlined },
     { id: 'code', labelKey: 'codeView', icon: CodeOutlined },
     { id: 'results', labelKey: 'runResults', icon: PlayCircleOutlined },
     { id: 'terminal', labelKey: 'terminal', icon: CodeOutlined }

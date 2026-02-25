@@ -24,10 +24,12 @@ from app.api.endpoints import (
     task_mode,
     relation_fix,
     sandbox,
+    tasks,
 )
 from app.api.endpoints.search_agent import news
 
 api_router = APIRouter()
+api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(sandbox.router, prefix="/sandbox", tags=["sandbox"])
 api_router.include_router(relation_fix.router, prefix="/relation-fix", tags=["relation-fix"])
 api_router.include_router(tools.router, prefix="/tools", tags=["tools"])

@@ -134,18 +134,17 @@ const hoveredChunkId = ref(null);
 
 const isDocMode = computed(() => {
   if (props.mode) return props.mode === 'doc';
-  // Infer: if first item has 'chunkId' or 'text', it's chunk mode. If 'title' and 'docId', it's doc mode.
   if (props.sources && props.sources.length > 0) {
     const first = props.sources[0];
-    // Check for chunk-specific fields
-    if (first.chunkId !== undefined || first.nodeId !== undefined || first.source === 'vector' || first.source === 'graph') {
-        // However, 'vector' source in backend has 'title' too.
-        // Let's look for specific requirement keys
-        // All Docs: docId, title, summary, score, updateTime
-        // Single Doc: chunkId, docId, nodeId, text, score, pageNo
-        if (first.chunkId !== undefined || first.nodeId !== undefined) return false;
-        if (first.docId !== undefined && first.summary !== undefined && !first.text) return true;
-    }
+    
+    // Explicit chunk indicators
+    if (first.chunkId !== undefined || first.nodeId !== undefined) return false;
+    
+    // Explicit doc indicators
+    if (first.docId !== undefined && first.summary !== undefined) return true;
+    
+    // Fallback based on text vs title?
+    if (first.text && !first.summary) return false; // chunk usually has text
   }
   return false;
 });

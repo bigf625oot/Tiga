@@ -68,6 +68,13 @@
             </div>
             <div 
                 class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
+                @click="mobileMenuClick('batch_metrics')"
+            >
+                <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xs">📚</div>
+                <span class="text-sm font-semibold">批量提取</span>
+            </div>
+            <div 
+                class="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-3 text-slate-700 cursor-pointer"
                 @click="mobileMenuClick('indicators')"
             >
                 <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xs">📐</div>
@@ -357,7 +364,7 @@
                                         class="w-full h-full"
                                     />
                                     <div v-else class="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                                        <BaseIcon icon="mdi:file-document-outline" class="text-white" :size="12" />
+                                        <img src="/tiga.svg" class="w-3 h-3" />
                                     </div>
                                 </div>
                             </div>
@@ -502,6 +509,7 @@
                             <div v-show="isDocProcessingExpanded || isSidebarCollapsed" class="flex flex-col gap-0.5" :class="isSidebarCollapsed ? '' : 'ml-11'">
                                 <div v-for="item in [
                                     {name: '指标提取', view: 'metrics'},
+                                    {name: '批量提取', view: 'batch_metrics'},
                                     {name: '指标管理', view: 'indicators'}
                                 ]" :key="item.name"
                                     @click="currentView = item.view"
@@ -779,6 +787,9 @@
       <!-- Metrics View -->
       <MetricsExtraction v-else-if="currentView === 'metrics'" :prefilled-indicator="prefilledIndicator" />
   
+      <!-- Batch Metrics View -->
+      <BatchExtraction v-else-if="currentView === 'batch_metrics'" />
+
       <!-- Indicator Management View -->
       <IndicatorManagement v-else-if="currentView === 'indicators'" @navigate-to-extraction="handleNavigateToExtraction" />
   
@@ -879,7 +890,8 @@ const RecordingDetail = defineAsyncComponent(() => import('@/features/recording/
 const MediaLibrary = defineAsyncComponent(() => import('@/features/recording/components/MediaLibrary.vue'));
 const SearchAgent = defineAsyncComponent(() => import('@/features/search/components/SearchAgent.vue'));
 const MetricsExtraction = defineAsyncComponent(() => import('@/features/analytics/components/MetricsExtraction.vue'));
-const IndicatorManagement = defineAsyncComponent(() => import('@/features/analytics/components/IndicatorManagement.vue'));
+const BatchExtraction = defineAsyncComponent(() => import('@/features/analytics/components/BatchExtraction.vue'));
+const IndicatorManagement = defineAsyncComponent(() => import('@/features/analytics/components/IndicatorList.vue'));
 const SmartDataQuery = defineAsyncComponent(() => import('@/features/analytics/components/SmartDataQuery.vue'));
 const KnowledgeBase = defineAsyncComponent(() => import('@/features/knowledge/components/KnowledgeBase.vue'));
 const KnowledgeGraphView = defineAsyncComponent(() => import('@/features/knowledge/components/KnowledgeGraphView.vue'));
@@ -926,6 +938,7 @@ const getSessionProgress = (session) => {
 const getPageTitle = computed(() => {
     switch (currentView.value) {
         case 'metrics': return '指标提取';
+        case 'batch_metrics': return '批量指标提取';
         case 'indicators': return '指标管理';
         case 'data_query': return '智能问数';
         case 'search': return '智能爬取';
@@ -949,6 +962,7 @@ const getPageTitle = computed(() => {
 const getPageSubtitle = computed(() => {
     switch (currentView.value) {
         case 'metrics': return '自动化数据洞察与分析';
+        case 'batch_metrics': return '海量文档数据高效批量处理';
         case 'indicators': return '统一管理和维护业务指标体系';
         case 'data_query': return '数据智能查询与分析';
         case 'search': return '自动化智能网页数据爬取与分析';

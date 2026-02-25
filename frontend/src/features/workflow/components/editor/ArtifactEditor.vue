@@ -1,16 +1,52 @@
 <template>
   <div class="h-full flex flex-col relative bg-white overflow-hidden">
+    <!-- Toolbar -->
+    <div class="h-10 border-b border-slate-200 flex items-center px-4 justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Code Editor</span>
+            <span v-if="isReadOnly" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-500">READ ONLY</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button 
+                class="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-200 text-slate-600 transition-colors"
+                @click="toggleDiff"
+                title="Toggle Diff View"
+            >
+                <component :is="showDiff ? 'EyeInvisibleOutlined' : 'DiffOutlined'" />
+                {{ showDiff ? 'Hide Diff' : 'Show Diff' }}
+            </button>
+            <button 
+                class="text-xs flex items-center gap-1 px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors border border-indigo-200"
+                @click="runSelection"
+                title="Run Selected Code"
+            >
+                <PlayCircleOutlined />
+                Run Selection
+            </button>
+        </div>
+    </div>
+
     <div class="flex-1 flex overflow-hidden">
         <!-- Editor Area (Left) -->
         <div class="h-full border-r border-slate-200 transition-all duration-300" 
              :class="isReadOnly ? 'w-0 overflow-hidden border-none' : 'w-1/2'">
+            
             <vue-monaco-editor
-                v-if="!isReadOnly"
+                v-if="!isReadOnly && !showDiff"
                 v-model:value="localValue"
                 language="markdown"
                 :options="editorOptions"
                 class="h-full w-full"
                 @mount="handleMount"
+            />
+            
+            <vue-monaco-diff-editor
+                v-else-if="showDiff"
+                :original="originalValue"
+                :modified="localValue"
+                language="markdown"
+                :options="{ ...editorOptions, readOnly: true }"
+                class="h-full w-full"
             />
         </div>
         
@@ -68,25 +104,47 @@
 
 <script setup>
 import { ref, computed, watch, shallowRef, defineComponent, onErrorCaptured, h, onBeforeUnmount, nextTick } from 'vue';
-import { VueMonacoEditor } from '@guolao/vue-monaco-editor';
+import { VueMonacoEditor, VueMonacoDiffEditor } from '@guolao/vue-monaco-editor';
 import { marked } from 'marked';
 import { compile } from 'vue';
+import { PlayCircleOutlined, DiffOutlined, EyeInvisibleOutlined } from '@ant-design/icons-vue';
 
 const props = defineProps({
     value: { type: String, default: '' },
+    originalValue: { type: String, default: '' }, // For Diff
     language: { type: String, default: 'markdown' }, // Deprecated but kept for compat
     readOnly: { type: Boolean, default: false },
     fileType: { type: String, default: 'text' }
 });
 
-const emit = defineEmits(['update:value']);
+const emit = defineEmits(['update:value', 'run']);
 
 const localValue = ref(props.value);
 const isReadOnly = ref(props.readOnly);
+const showDiff = ref(false);
 const editorRef = shallowRef();
 const parsedBlocks = ref([]);
 const rendering = ref(false);
 const componentCache = new Map();
+
+const toggleDiff = () => {
+    showDiff.value = !showDiff.value;
+};
+
+const runSelection = () => {
+    if (!editorRef.value) return;
+    const selection = editorRef.value.getSelection();
+    const selectedText = editorRef.value.getModel().getValueInRange(selection);
+    
+    if (selectedText) {
+        emit('run', selectedText);
+    } else {
+        // Run all if nothing selected? Or show warning?
+        // Let's run all for now or maybe just the current block?
+        // For now, just emit all if empty
+        emit('run', localValue.value);
+    }
+};
 
 // Error Boundary Component
 const ErrorBoundary = defineComponent({

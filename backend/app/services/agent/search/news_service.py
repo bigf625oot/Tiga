@@ -49,6 +49,11 @@ async def _search_gov_site_tier1(
     Strategy: Simulate in-site search form submission
     """
     results = []
+    
+    # Ensure URL has protocol
+    if not site_url.startswith(("http://", "https://")):
+        site_url = "https://" + site_url
+
     try:
         html = await _fetch_text(session, site_url)
         if not html:
@@ -241,6 +246,12 @@ async def search_news(request: NewsSearchRequest) -> NewsSearchResponse:
         async with aiohttp.ClientSession() as session:
             for keyword in request.keywords:
                 for site in request.gov_sites:
+                    # Auto-correct common domain issues
+                    if site == "gov.cn":
+                        site = "www.gov.cn"
+                    elif site == "miit.gov.cn":
+                        site = "www.miit.gov.cn"
+                        
                     res = await _search_gov_site_tier1(session, site, keyword, request.target_date)
                     logger.debug(f"[DEBUG] Tier 1 {site} result count: {len(res)}")
                     all_results.extend(res)
@@ -573,7 +584,7 @@ class NewsQueryExecutor:
             # 3. Crawler Search (Tier 1)
             if "crawler" in self.enabled_tiers:
                 try:
-                    default_gov_sites = ["gov.cn", "miit.gov.cn"]
+                    default_gov_sites = ["www.gov.cn", "www.miit.gov.cn"]
                     async with aiohttp.ClientSession() as session:
                         for site in default_gov_sites:
                             # Use keyword directly for crawler, not the long query string

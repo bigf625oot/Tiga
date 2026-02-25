@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.db.session import AsyncSessionLocal
 from app.models.llm_model import LLMModel
 from app.services.llm.factory import ModelFactory
+from agno.models.message import Message
 
 logger = logging.getLogger(__name__)
 
@@ -140,22 +141,8 @@ class DataExtractionService:
         try:
             model = await self._get_model_client(model_id)
             
-            # Agno model usage: model.response(messages)
-            # We need to construct messages. 
-            # The prompt in this service seems to be a full prompt string.
-            # We can pass it as a user message.
-            
-            # However, Agno's `response` method might return an object. 
-            # Usually `response.content` is the string.
-            
-            # Wait, `OpenAIChat` in Agno usually has a `run` or `response` method.
-            # Let's assume `response` returns a `ModelResponse` object which has `content`.
-            
-            # Since I can't check Agno docs, I'll rely on common patterns or check `llm/factory.py` usage elsewhere.
-            # `llm/factory.py` just returns the object.
-            # I'll assume standard Agno usage: `response = model.response(messages=[{"role": "user", "content": prompt}])`
-            
-            response = model.response(messages=[{"role": "user", "content": prompt}])
+            # Agno model usage: model.response(messages=[Message(role="user", content=prompt)])
+            response = model.response(messages=[Message(role="user", content=prompt)])
             return response.content
         except Exception as e:
             logger.error(f"LLM Call Error: {e}")

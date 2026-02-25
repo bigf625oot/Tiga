@@ -100,6 +100,17 @@ class AdvancedOptions(BaseModel):
     default_value: Optional[str] = None
     value_range: Optional[str] = None
     reference_range: Optional[str] = None
+    # New unified fields
+    code: Optional[str] = None
+    type: Optional[str] = None
+    unit: Optional[str] = None
+    threshold_range: Optional[str] = None
+    threshold_min: Optional[str] = None
+    threshold_max: Optional[str] = None
+    prompt: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 
 class PreviewPromptRequest(BaseModel):

@@ -1,88 +1,142 @@
 <template>
-  <div>
-    <div class="flex items-center justify-between mb-3">
-      <div class="text-xs text-slate-500">为智能体预设常用对话场景，方便用户快速开始。</div>
-      <button @click="showCreate = true" class="px-2 py-1 text-xs font-medium rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1">
-        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+  <div class="space-y-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-slate-500">为智能体预设常用对话场景，方便用户快速开始。</div>
+      <button 
+        @click="showCreate = true" 
+        class="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+        v-if="!showCreate"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
         添加剧本
       </button>
     </div>
 
     <!-- Create Form -->
-    <div v-if="showCreate" class="p-3 mb-3 border border-slate-200 rounded-lg bg-slate-50 animate-fade-in-down">
+    <div v-if="showCreate" class="p-4 border border-slate-200 rounded-xl bg-slate-50/50 animate-fade-in-down shadow-sm">
+      <div class="flex justify-between items-start mb-3">
+        <h4 class="text-sm font-bold text-slate-700">新建剧本</h4>
+        <button @click="cancelCreate" class="text-slate-400 hover:text-slate-600">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1">剧本名称</label>
-          <input v-model="createForm.title" maxlength="50" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-sm focus:border-blue-500 outline-none" placeholder="e.g. 翻译助手">
+          <label class="block text-xs font-medium text-slate-500 mb-1.5">剧本名称 <span class="text-red-500">*</span></label>
+          <input 
+            v-model="createForm.title" 
+            maxlength="50" 
+            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" 
+            placeholder="例如：翻译助手"
+          >
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1">提示词内容 (Prompt)</label>
-          <textarea v-model="createForm.content" rows="3" maxlength="500" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-sm focus:border-blue-500 outline-none resize-none" placeholder="用户点击剧本后自动发送的内容..."></textarea>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5">提示词内容 (Prompt) <span class="text-red-500">*</span></label>
+          <textarea 
+            v-model="createForm.content" 
+            rows="3" 
+            maxlength="500" 
+            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none font-mono text-slate-600" 
+            placeholder="用户点击剧本后自动发送的内容..."
+          ></textarea>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1">描述 (可选)</label>
-          <input v-model="createForm.description" maxlength="200" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-sm focus:border-blue-500 outline-none" placeholder="简短描述该剧本的用途">
+          <label class="block text-xs font-medium text-slate-500 mb-1.5">描述 (可选)</label>
+          <input 
+            v-model="createForm.description" 
+            maxlength="200" 
+            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" 
+            placeholder="简短描述该剧本的用途"
+          >
         </div>
         
-        <div class="flex justify-end gap-2 pt-1">
-            <button @click="cancelCreate" class="px-3 py-1 text-xs text-slate-500 hover:bg-slate-200 rounded transition-colors">取消</button>
-            <button @click="submitCreate" class="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-1" :disabled="createLoading">
-                <span v-if="createLoading" class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                保存
+        <div class="flex justify-end gap-2 pt-2">
+            <button @click="cancelCreate" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">取消</button>
+            <button 
+                @click="submitCreate" 
+                class="px-4 py-2 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-200" 
+                :disabled="createLoading"
+            >
+                <span v-if="createLoading" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span>保存剧本</span>
             </button>
         </div>
       </div>
     </div>
 
     <!-- List -->
-    <div v-if="loading" class="py-4 flex justify-center"><div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
-    <div v-else-if="items.length === 0 && !showCreate" class="py-6 text-center text-slate-400 text-sm border border-dashed border-slate-200 rounded-lg bg-slate-50">
-        暂无预设剧本
+    <div v-if="loading" class="py-8 flex justify-center">
+        <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
-    <div v-else class="space-y-2">
+    
+    <div v-else-if="items.length === 0 && !showCreate" class="py-8 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+            <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        </div>
+        <span class="text-sm text-slate-500 font-medium">暂无预设剧本</span>
+        <span class="text-xs text-slate-400 mt-1">添加剧本以引导用户更好地使用智能体</span>
+    </div>
+
+    <div v-else class="space-y-3">
       <div 
         v-for="(it, idx) in items" 
         :key="it.localId" 
-        class="group bg-white border border-slate-200 rounded-lg transition-all hover:shadow-sm hover:border-blue-200"
+        class="group bg-white border border-slate-200 rounded-xl transition-all hover:shadow-md hover:border-blue-300"
+        :class="{'ring-2 ring-blue-100 border-blue-400': editingId === it.localId}"
         draggable="true" 
         @dragstart="dragStart(idx)" 
         @dragover.prevent 
         @drop="dragDrop(idx)"
       >
         <!-- View Mode -->
-        <div v-if="editingId !== it.localId" class="p-3 flex items-start gap-3">
-            <div class="mt-1 text-slate-300 cursor-move hover:text-slate-500">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        <div v-if="editingId !== it.localId" class="p-4 flex items-start gap-4">
+            <div class="mt-1 text-slate-300 cursor-move hover:text-slate-500 transition-colors" title="拖拽排序">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
             </div>
-            <div class="flex-1 min-w-0" @click="startEdit(it)">
-                <div class="flex items-center gap-2 mb-0.5">
-                    <span class="font-medium text-slate-700 text-sm truncate">{{ it.title }}</span>
-                    <span v-if="it.description" class="text-xs text-slate-400 truncate max-w-[150px]">{{ it.description }}</span>
+            <div class="flex-1 min-w-0 cursor-pointer" @click="startEdit(it)">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-slate-700 text-sm truncate">{{ it.title }}</span>
+                    <span v-if="it.description" class="text-xs text-slate-400 truncate border-l border-slate-200 pl-2 max-w-[200px]">{{ it.description }}</span>
                 </div>
-                <p class="text-xs text-slate-500 line-clamp-1 bg-slate-50 px-1.5 py-0.5 rounded w-fit max-w-full font-mono">{{ it.content }}</p>
+                <div class="bg-slate-50 px-3 py-2 rounded-lg text-xs text-slate-600 font-mono line-clamp-2 border border-slate-100 group-hover:bg-blue-50/30 group-hover:border-blue-100 transition-colors">
+                    {{ it.content }}
+                </div>
             </div>
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button @click="startEdit(it)" class="p-1 text-slate-400 hover:text-blue-500 rounded hover:bg-blue-50">
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                <button @click.stop="startEdit(it)" class="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="编辑">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 </button>
-                <button @click="confirmDelete(it)" class="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-red-50">
+                <button @click.stop="confirmDelete(it)" class="p-2 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors" title="删除">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             </div>
         </div>
 
         <!-- Edit Mode -->
-        <div v-else class="p-3 bg-blue-50/30 space-y-3">
-            <div class="flex gap-3">
-                <div class="flex-1 space-y-2">
-                    <input v-model="it.editTitle" class="w-full px-2 py-1 bg-white border border-slate-200 rounded text-sm focus:border-blue-500 outline-none" placeholder="标题">
-                    <textarea v-model="it.editContent" rows="2" class="w-full px-2 py-1 bg-white border border-slate-200 rounded text-sm focus:border-blue-500 outline-none resize-none" placeholder="内容"></textarea>
-                    <input v-model="it.editDescription" class="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs focus:border-blue-500 outline-none" placeholder="描述 (可选)">
+        <div v-else class="p-4 bg-blue-50/30 space-y-3 rounded-xl">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">编辑剧本</span>
+            </div>
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-slate-500 font-medium">标题</label>
+                        <input v-model="it.editTitle" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-slate-500 font-medium">描述</label>
+                        <input v-model="it.editDescription" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] text-slate-500 font-medium">内容</label>
+                    <textarea v-model="it.editContent" rows="3" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none font-mono text-slate-600"></textarea>
                 </div>
             </div>
-            <div class="flex justify-end gap-2">
-                <button @click="cancelEdit(it)" class="px-2 py-1 text-xs text-slate-500 hover:bg-slate-200 rounded">取消</button>
-                <button @click="saveEdit(it)" class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">保存修改</button>
+            <div class="flex justify-end gap-2 pt-1">
+                <button @click="cancelEdit(it)" class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">取消</button>
+                <button @click="saveEdit(it)" class="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm">保存修改</button>
             </div>
         </div>
       </div>
@@ -92,7 +146,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { message } from 'ant-design-vue';
+import { message, Modal } from 'ant-design-vue';
+import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import { createVNode } from 'vue';
 
 const props = defineProps({
   agentId: { type: String, required: true }
@@ -219,17 +275,26 @@ const saveEdit = async (it) => {
 };
 
 const confirmDelete = (it) => {
-  if (confirm('确定删除该剧本？')) {
-      removeItem(it);
-  }
+  Modal.confirm({
+      title: '确定要删除该剧本吗？',
+      icon: createVNode(ExclamationCircleOutlined),
+      content: '删除后将无法恢复。',
+      okText: '确认',
+      cancelText: '取消',
+      onOk: () => removeItem(it)
+  });
 };
 
 const removeItem = async (it) => {
   if (!it.id) return;
-  const res = await fetch(`/api/v1/user_scripts/${it.id}`, { method: 'DELETE' });
-  if (res.ok) {
-      items.value = items.value.filter(x => x.id !== it.id);
-      message.success('已删除');
+  try {
+      const res = await fetch(`/api/v1/user_scripts/${it.id}`, { method: 'DELETE' });
+      if (res.ok) {
+          items.value = items.value.filter(x => x.id !== it.id);
+          message.success('已删除');
+      }
+  } catch(e) {
+      message.error('删除失败');
   }
 };
 
@@ -241,10 +306,8 @@ const dragDrop = async (idx) => {
   items.value.splice(idx, 0, moved);
   
   // Update sort order for all
-  // In a real app, you might want to debounce this or save strictly on drop
   items.value.forEach(async (x, i) => {
     x.sort_order = i + 1;
-    // Optimistic update, maybe don't await loop
     await fetch(`/api/v1/user_scripts/${x.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

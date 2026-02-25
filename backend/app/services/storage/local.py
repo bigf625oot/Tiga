@@ -15,6 +15,7 @@ class LocalStorage(StorageProvider):
     async def upload_file(self, file_obj: BinaryIO, object_name: str) -> bool:
         try:
             file_path = os.path.join(self.upload_dir, object_name)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             file_obj.seek(0)
             with open(file_path, "wb") as f:
                 shutil.copyfileobj(file_obj, f)
@@ -27,6 +28,7 @@ class LocalStorage(StorageProvider):
     def upload_file_sync(self, key: str, data: bytes) -> str:
         try:
             file_path = os.path.join(self.upload_dir, key)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "wb") as f:
                 f.write(data)
             return self.generate_presigned_url(key)
