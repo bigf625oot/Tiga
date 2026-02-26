@@ -26,7 +26,9 @@ class Cache:
         if self._redis is not None:
             return self._redis
         try:
-            client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True)
+            client = redis.Redis(
+                host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True, db=settings.REDIS_DB
+            )
             await client.ping()
             self._redis = client
             return self._redis
