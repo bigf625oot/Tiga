@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tiga-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=Taichi Agent
+      - API_V1_STR=/api/v1
+      - USE_SQLITE=True
+      # Persist SQLite DB in the data volume
+      - SQLALCHEMY_DATABASE_URI=sqlite+aiosqlite:////app/data/recorder_v5.db
+      # If using Postgres, set USE_SQLITE=False and uncomment below:
+      # - POSTGRES_SERVER=postgres
+      # - POSTGRES_USER=postgres
+      # - POSTGRES_PASSWORD=password
+      # - POSTGRES_DB=recorder_db
+      - REDIS_HOST=redis
+    volumes:
+      # Persist data/storage (SQLite db and uploaded files)
+      - ./backend/data:/app/data
+    depends_on:
+      - redis
+    networks:
+      - tiga-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tiga-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - tiga-network
+
+  redis:
+    image: redis:alpine
+    container_name: tiga-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - tiga-network
+
+  # Uncomment if you want to use PostgreSQL
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: tiga-postgres
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=password
+  #     - POSTGRES_DB=recorder_db
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - tiga-network
+
+networks:
+  tiga-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
