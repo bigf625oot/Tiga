@@ -87,6 +87,37 @@ async def rebuild_vector_store(db: AsyncSession = Depends(get_db)):
     return {"status": "rebuilt"}
 
 
+async def safe_update_status(
+    doc_id: int, status: DocumentStatus, msg: str = None, oss_key: str = None, oss_url: str = None
+):
+    async with AsyncSessionLocal() as db:
+        try:
+            result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
+            doc = result.scalars().first()
+            if doc:
+                doc.status = status
+                if msg is not None:
+                    doc.error_message = msg
+                if oss_key is not None:
+                    doc.oss_key = oss_key
+                if oss_url is not None:
+                    doc.oss_url = oss_url
+                await db.commit()
+                logger.info(
+                    f"文档状态更新 id={doc_id} 状态={status} 提示={msg} oss_key={getattr(doc, 'oss_key', None)} oss_url={getattr(doc, 'oss_url', None)}"
+                )
+        except Exception as e:
+            logger.exception(f"状态更新失败 doc={doc_id} status={status}: {e}")
+
+
+async def safe_update_progress(doc_id: int, done: int, total: int, extra: str = None):
+    msg = f"index_progress:{done}/{total}"
+    if extra:
+        msg += f" {extra}"
+    # Status remains INDEXING while updating progress
+    await safe_update_status(doc_id, DocumentStatus.INDEXING, msg=msg)
+
+
 async def background_incremental_index(doc_id: int, segments: List[str]):
     try:
         async with AsyncSessionLocal() as db:
@@ -105,76 +136,37 @@ async def background_incremental_index(doc_id: int, segments: List[str]):
                     return 0, 0
                 G = nx.read_graphml(str(p))
                 return G.number_of_nodes(), G.number_of_edges()
-            except:
+            except Exception as e:
+                logger.warning(f"Failed to get graph stats: {e}")
                 return 0, 0
 
         for i, seg in enumerate(segments):
             try:
                 logger.info(f"[Async Incremental] Processing chunk {i + 1}/{len(segments)} (size={len(seg)})...")
                 # Update status: Processing...
-                async with AsyncSessionLocal() as db:
-                    result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
-                    doc = result.scalars().first()
-                    if doc:
-                        doc.error_message = f"index_progress:{done}/{total} (processing part {done + 1}/{total})"
-                        await db.commit()
+                await safe_update_progress(doc_id, done, total, extra=f"(processing part {done + 1}/{total})")
 
                 await lightrag_engine.insert_text_async(seg, description=f"doc#{doc_id}:part{done + 1}/{total}")
                 done += 1
 
                 # Update status: Done with part, show graph size
                 n, e = get_stats()
-                async with AsyncSessionLocal() as db:
-                    try:
-                        result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
-                        doc = result.scalars().first()
-                        if doc:
-                            doc.error_message = f"index_progress:{done}/{total} (graph: {n}n/{e}e)"
-                            await db.commit()
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+                await safe_update_progress(doc_id, done, total, extra=f"(graph: {n}n/{e}e)")
+
+            except Exception as e:
+                logger.exception(f"增量索引失败 doc={doc_id} chunk={i}: {e}")
+                await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"增量索引失败: {str(e)}")
+                return  # Stop processing on error
+
         # Finalize: mark as indexed when all parts done
-        async with AsyncSessionLocal() as db:
-            try:
-                result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
-                doc = result.scalars().first()
-                if doc:
-                    doc.status = DocumentStatus.INDEXED
-                    doc.error_message = f"index_progress:{total}/{total}"
-                    await db.commit()
-            except Exception:
-                pass
-    except Exception:
-        pass
+        await safe_update_status(doc_id, DocumentStatus.INDEXED, msg=f"index_progress:{total}/{total}")
+    except Exception as e:
+        logger.exception(f"后台增量索引任务失败 doc={doc_id}: {e}")
+        await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"系统错误: {str(e)}")
 
 
 async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_filename: str):
     logger.info(f"开始后台处理 文档ID={doc_id}")
-
-    # 辅助函数：更新文档状态（独立事务）
-    async def update_doc_status(
-        doc_id: int, status: DocumentStatus, error_msg: str = None, oss_key: str = None, oss_url: str = None
-    ):
-        async with AsyncSessionLocal() as db:
-            try:
-                result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
-                doc = result.scalars().first()
-                if doc:
-                    doc.status = status
-                    if error_msg:
-                        doc.error_message = error_msg
-                    if oss_key:
-                        doc.oss_key = oss_key
-                    if oss_url:
-                        doc.oss_url = oss_url
-                    await db.commit()
-                    logger.info(
-                        f"文档状态更新 id={doc_id} 状态={status} 提示={error_msg} oss_key={getattr(doc, 'oss_key', None)} oss_url={getattr(doc, 'oss_url', None)}"
-                    )
-            except Exception as e:
-                logger.error(f"更新文档状态失败: {e}")
 
     # 标记处理是否成功，用于决定是否清理临时文件
     process_success = False
@@ -188,15 +180,15 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
                 f"OSS上传前检查 路径={temp_file_path} 存在={os.path.exists(temp_file_path)} 大小={os.path.getsize(temp_file_path) if os.path.exists(temp_file_path) else 0}"
             )
             oss_url = storage_service.upload_file_path(oss_key, temp_file_path)
-            await update_doc_status(doc_id, DocumentStatus.UPLOADED, error_msg=None, oss_key=oss_key, oss_url=oss_url)
+            await safe_update_status(doc_id, DocumentStatus.UPLOADED, msg=None, oss_key=oss_key, oss_url=oss_url)
             logger.info(f"OSS上传成功 文档ID={doc_id} 键={oss_key} URL={oss_url}")
         except Exception as e:
             logger.error(f"OSS上传失败: {e}", exc_info=True)
-            await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"OSS 上传失败: {str(e)}")
+            await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"OSS 上传失败: {str(e)}")
             return
 
         # --- Step 2: Indexing via LightRAG ---
-        await update_doc_status(doc_id, DocumentStatus.INDEXING)
+        await safe_update_status(doc_id, DocumentStatus.INDEXING)
         try:
             async with AsyncSessionLocal() as db:
                 await lightrag_engine.ensure_initialized(db)
@@ -228,8 +220,8 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             )
 
             # Initial status
-            await update_doc_status(
-                doc_id, DocumentStatus.INDEXING, error_msg=f"index_progress:0/{total} (正在提取图谱...)"
+            await safe_update_status(
+                doc_id, DocumentStatus.INDEXING, msg=f"index_progress:0/{total} (正在提取图谱...)"
             )
 
             await lightrag_engine.insert_text_async(first, description=f"doc#{doc_id}:{display_name}")
@@ -257,7 +249,7 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
                 except Exception:
                     await background_incremental_index(doc_id, segments)
             else:
-                await update_doc_status(doc_id, DocumentStatus.INDEXED, error_msg=f"index_progress:{total}/{total}")
+                await safe_update_status(doc_id, DocumentStatus.INDEXED, msg=f"index_progress:{total}/{total}")
 
             logger.info(f"索引完成 文档ID={doc_id}")
             process_success = True  # 标记处理成功
@@ -267,11 +259,11 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             error_trace = traceback.format_exc()
             logger.error(f"LightRAG 索引文档失败 id={doc_id}: {e}")
             logger.error(f"详细堆栈:\n{error_trace}")
-            await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"LightRAG 索引失败: {str(e)}")
+            await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"LightRAG 索引失败: {str(e)}")
 
     except Exception as e:
         logger.error(f"后台处理错误: {e}", exc_info=True)
-        await update_doc_status(doc_id, DocumentStatus.FAILED, error_msg=f"系统错误: {str(e)}")
+        await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"系统错误: {str(e)}")
     finally:
         # Cleanup Temp File
         # 只有在处理成功时才删除文件，失败时保留以便排查
@@ -379,7 +371,8 @@ async def list_documents(
                 total = int(nums[1]) if len(nums) > 1 else 0
                 if total > 0:
                     return max(0, min(100, int(done * 100 / total)))
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to parse progress for doc: {e}")
             return None
         return None
 
@@ -395,8 +388,8 @@ async def list_documents(
                 return "已完成"
             if s == DocumentStatus.FAILED:
                 return "失败"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to get status text for {s}: {e}")
         return "未知"
 
     for d in docs:
@@ -419,8 +412,8 @@ async def list_documents(
                     "parent_id": getattr(d, "parent_id", None),
                 }
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error processing document {d.id} for list response: {e}", exc_info=True)
     return out
 
 
@@ -528,8 +521,8 @@ async def delete_document(doc_id: int, background_tasks: BackgroundTasks, db: As
         # Best-effort immediate cleanup if scheduling fails
         try:
             await background_delete_cleanup(filename, oss_key)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Immediate cleanup failed: {e}")
 
     return {"status": "deleted"}
 
@@ -564,8 +557,8 @@ async def get_document_content(doc_id: int, db: AsyncSession = Depends(get_db)):
         if temp_path and os.path.exists(temp_path):
             try:
                 os.remove(temp_path)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temp file {temp_path}: {e}")
 
 
 async def _enrich_graph_data(data: Dict[str, Any], db: AsyncSession):
@@ -635,8 +628,8 @@ async def get_document_graph(doc_id: int, request: Request, db: AsyncSession = D
         nodes = len(local_graph.get("nodes") or {})
         edges = len(local_graph.get("edges") or {})
         logger.info(f"[图谱][{tid}] 文档 {doc_id} 节点={nodes} 边={edges} 原因={local_graph.get('reason')}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to log graph stats for doc {doc_id}: {e}")
     return local_graph
 
 
@@ -653,8 +646,8 @@ async def get_global_graph(request: Request, db: AsyncSession = Depends(get_db))
         nodes = len(data.get("nodes") or {})
         edges = len(data.get("edges") or {})
         logger.info(f"[图谱][{tid}] 全局 节点={nodes} 边={edges} 原因={data.get('reason')}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to log global graph stats: {e}")
     return data
 
 

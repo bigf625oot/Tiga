@@ -872,8 +872,6 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
             removed = 0
             import shutil
             for p in LIGHTRAG_DIR.iterdir():
-                if p.is_file() and p.suffix.lower() == ".graphml":
-                    continue
                 try:
                     if p.is_dir():
                         shutil.rmtree(p, ignore_errors=True)
@@ -882,6 +880,11 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                     removed += 1
                 except Exception:
                     pass
+            
+            # Clear memory cache
+            self._chunks_cache = {}
+            self._chunks_doc_map = {}
+            self._chunks_mtime = 0
         except Exception:
             pass
 
