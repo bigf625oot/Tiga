@@ -27,7 +27,11 @@ class Cache:
             return self._redis
         try:
             client = redis.Redis(
-                host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True, db=settings.REDIS_DB
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                decode_responses=True,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD,
             )
             await client.ping()
             self._redis = client
