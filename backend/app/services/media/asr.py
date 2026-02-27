@@ -102,13 +102,14 @@ class AliyunASRService:
             logger.error(f"Aliyun GetTaskResult Error: {e}")
             return {"status": "FAILED", "error": str(e)}
 
-    async def transcribe_audio(self, file_url: str) -> str:
+    async def transcribe_audio(self, file_url: str) -> dict:
         """
         Async wrapper to submit and poll for result
+        Returns dict with "text" and "sentences" (if available)
         """
         task_id = self.submit_task(file_url)
         if not task_id:
-            return "Transcription Failed: Could not submit task"
+            return {"text": "Transcription Failed: Could not submit task", "status": "FAILED"}
 
         # Polling
         max_retries = 60  # 2 minutes max for demo
@@ -117,13 +118,13 @@ class AliyunASRService:
             status = result.get("status")
 
             if status == "SUCCESS":
-                return result.get("text", "")
+                return result
             elif status == "FAILED":
-                return f"Transcription Failed: {result.get('error')}"
+                return {"text": f"Transcription Failed: {result.get('error')}", "status": "FAILED"}
 
             await asyncio.sleep(2)
 
-        return "Transcription Timeout"
+        return {"text": "Transcription Timeout", "status": "FAILED"}
 
 
 aliyun_asr_service = AliyunASRService()

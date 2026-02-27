@@ -15,6 +15,7 @@ from app.models.data_query_session import DataQuerySession, DataQueryMessage
 from .models import DbConnectionConfig
 from .runners.sql_runner import SQLAlchemyRunner
 from .core import VannaCore
+from app.services.rag.engines.lightrag import lightrag_engine
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -416,8 +417,44 @@ class SmartDataQueryService:
         }
 
     async def convert_table_to_graph_task(self, job_id: str, table_name: str, update_status_callback: Callable):
-        # 保留现有逻辑还是改为使用 Vanna 上下文？
-        # 暂时保持不变（直接使用 LightRAG）
-        pass
+        try:
+            update_status_callback(job_id, "running", 10, "正在获取表数据...")
+            
+            # 获取数据 (限制50条用于演示)
+            limit = 50 
+            # 在线程池中运行以避免阻塞事件循环
+            data = await run_in_threadpool(self.get_table_data, table_name, limit=limit)
+            rows = data.get("data", [])
+            cols = data.get("columns", [])
+            
+            if not rows:
+                update_status_callback(job_id, "completed", 100, "表为空，无需转换")
+                return
+
+            update_status_callback(job_id, "running", 30, f"正在分析 {len(rows)} 条数据...")
+            
+            # 构建文本
+            text_parts = []
+            for idx, row in enumerate(rows):
+                # 简单的行转文本逻辑
+                row_str = ", ".join([f"{k}:{v}" for k, v in zip(cols, row)])
+                text_parts.append(f"数据表记录 #{idx+1}：{row_str}")
+            
+            full_text = f"以下是数据库表【{table_name}】的数据记录，请构建相关实体和关系：\n\n" + "\n".join(text_parts)
+            
+            update_status_callback(job_id, "running", 50, "正在构建知识图谱（这可能需要一些时间）...")
+            
+            # 确保 LightRAG 已初始化
+            async with AsyncSessionLocal() as session:
+                await lightrag_engine.ensure_initialized(session)
+            
+            # 插入文本建立索引和图谱
+            await lightrag_engine.insert_text_async(full_text, description=f"Database Table: {table_name}")
+            
+            update_status_callback(job_id, "completed", 100, "转换成功！")
+            
+        except Exception as e:
+            logger.error(f"转换图谱任务失败: {e}")
+            update_status_callback(job_id, "failed", 0, f"转换失败: {str(e)}")
 
 data_query_service = SmartDataQueryService.get_instance()

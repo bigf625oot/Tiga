@@ -81,19 +81,19 @@
         <!-- Card Grid -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-[fadeIn_0.3s_ease-out]">
             <div v-for="item in filteredIndicators" :key="item.id" 
-                class="group bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] hover:border-blue-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-[220px] relative"
+                class="group bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all duration-300 flex flex-col justify-between h-[240px] relative"
             >
                 <!-- Card Header -->
-                <div>
+                <div class="flex-1 flex flex-col">
                     <div class="flex justify-between items-start mb-3">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 truncate max-w-[120px]">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-100 truncate max-w-[120px]">
                             {{ item.group }}
                         </span>
                         
                         <!-- Actions Dropdown -->
                         <div class="opacity-0 group-hover:opacity-100 transition-opacity">
                              <a-dropdown placement="bottomRight" :trigger="['click']">
-                                <button class="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                                <button class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                                 </button>
                                 <template #overlay>
@@ -123,24 +123,31 @@
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-800 mb-1 truncate" :title="item.name">{{ item.name }}</h3>
-                    <div class="text-xs text-slate-400 mb-3 truncate" v-if="item.alias">别名: {{ item.alias }}</div>
-                    <div class="text-xs text-slate-400 mb-3 h-4" v-else></div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-1 truncate tracking-tight" :title="item.name">{{ item.name }}</h3>
+                    <div class="text-xs text-slate-400 mb-3 truncate flex items-center gap-1.5 h-5">
+                        <template v-if="item.alias">
+                            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                            {{ item.alias }}
+                        </template>
+                    </div>
                     
-                    <p class="text-sm text-slate-500 line-clamp-3 leading-relaxed h-[60px]">
+                    <p class="text-sm text-slate-500 line-clamp-3 leading-relaxed pr-2">
                         {{ item.description || '暂无描述信息...' }}
                     </p>
                 </div>
 
                 <!-- Card Footer -->
-                <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-50">
-                    <span class="text-xs text-slate-400">{{ formatDate(item.created_at) }}</span>
+                <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-50">
+                    <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        {{ formatDate(item.created_at) }}
+                    </span>
                     <button 
                         @click="handleExtract(item)"
-                        class="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
+                        class="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1.5 group/btn"
                     >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                         去提取
+                        <svg class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                     </button>
                 </div>
             </div>

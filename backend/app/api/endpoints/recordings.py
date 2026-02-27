@@ -3,6 +3,7 @@ import os
 import uuid
 import shutil
 import tempfile
+import json
 from pydub import AudioSegment
 import imageio_ffmpeg
 
@@ -20,6 +21,7 @@ from app.models.llm_model import LLMModel
 from app.services.media.asr import aliyun_asr_service
 from app.services.storage.service import storage_service
 from app.services.llm.factory import ModelFactory
+from app.services.rag.engines.lightrag import lightrag_engine
 from agno.agent import Agent
 
 logger = logging.getLogger(__name__)
@@ -58,13 +60,20 @@ async def process_audio_background(recording_id: int, db_session_maker):
             recording.asr_status = "processing"
             await db.commit()
 
-            transcription = await aliyun_asr_service.transcribe_audio(file_url)
+            transcription_result = await aliyun_asr_service.transcribe_audio(file_url)
+            
+            transcription = transcription_result.get("text", "")
+            sentences = transcription_result.get("sentences", [])
+            
             logger.info(
                 f"ASR returned for recording {recording_id}. Transcription length: {len(transcription) if transcription else 0}"
             )
 
-            if transcription:
+            if transcription and transcription_result.get("status") == "SUCCESS":
                 recording.transcription_text = transcription
+                if sentences:
+                    recording.transcription_json = json.dumps(sentences, ensure_ascii=False)
+                
                 recording.asr_status = "completed"
 
                 # 3. Call LLM Summary
@@ -137,15 +146,53 @@ async def process_audio_background(recording_id: int, db_session_maker):
                 
                 logger.info(f"Summary generation completed for recording {recording_id}")
 
-                # 4. Recommendation (Mock)
+                # 4. Recommendation (Real RAG)
                 logger.info(f"Starting recommendation generation for recording {recording_id}")
                 recording.recommendation_status = "processing"
                 await db.commit()
 
-                # Mock Recommendation
-                recording.recommendation_text = f"【相关推荐】\n基于转写内容，为您推荐以下知识库文档：\n1. 《{recording.filename} 相关技术规范》\n2. 《语音识别最佳实践指南》\n3. 《会议记录归档流程》"
-                recording.recommendation_status = "completed"
-                logger.info(f"Recommendation generation completed for recording {recording_id}")
+                try:
+                    # Use summary as query if available, otherwise transcription
+                    query_text = ""
+                    if recording.summary_text and len(recording.summary_text) > 10:
+                        query_text = recording.summary_text
+                    elif recording.transcription_text:
+                        query_text = recording.transcription_text
+
+                    # Truncate query for efficiency and better retrieval
+                    if len(query_text) > 200:
+                        query_text = query_text[:200]
+                    
+                    if not query_text:
+                         query_text = recording.filename or "未知文档"
+
+                    logger.info(f"Using query for recommendation: {query_text}")
+
+                    # Search chunks
+                    # Note: lightrag_engine is synchronous in search_chunks, but we can run it directly 
+                    # as it mainly does vector search which is fast, or wrap in asyncio.to_thread if needed.
+                    # Given it loads JSON cache, to_thread is safer.
+                    results = await asyncio.to_thread(lightrag_engine.search_chunks, query=query_text, top_k=5)
+                    
+                    # Format results to JSON
+                    recommendation_data = []
+                    for item in results:
+                         recommendation_data.append({
+                             "id": item.get("doc_id"),
+                             "title": item.get("title", "未知文档"),
+                             "preview": item.get("preview", ""),
+                             "score": item.get("score", 0),
+                             "file_path": item.get("file_path", "")
+                         })
+                    
+                    recording.recommendation_text = json.dumps(recommendation_data, ensure_ascii=False)
+                    recording.recommendation_status = "completed"
+                    logger.info(f"Recommendation generation completed. Found {len(recommendation_data)} items.")
+
+                except Exception as e:
+                    logger.error(f"Recommendation generation failed: {e}")
+                    recording.recommendation_text = "[]" # Empty JSON array on failure
+                    recording.recommendation_status = "failed"
             else:
                 logger.warning(f"ASR failed (empty transcription) for recording {recording_id}")
                 recording.transcription_text = "转写失败"
@@ -321,6 +368,7 @@ async def upload_recording(
         summary_status="pending",
         recommendation_status="pending",
         transcription_text="处理中...",
+        transcription_json=None,
         summary_text="处理中...",
         recommendation_text="处理中...",
     )
