@@ -24,6 +24,7 @@ class Recording(Base):
     recommendation_status = Column(String, default="pending")  # pending, processing, completed, failed
 
     transcription_text = Column(Text, nullable=True)
+    transcription_json = Column(Text, nullable=True)
     summary_text = Column(Text, nullable=True)
     recommendation_text = Column(Text, nullable=True)
 

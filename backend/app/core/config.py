@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: Optional[str] = None
+
+
 
     TASK_MODE_CACHE_TTL_SECONDS: int = 30
     TASK_MODE_LOG_RETENTION_NORMAL_DAYS: int = 30

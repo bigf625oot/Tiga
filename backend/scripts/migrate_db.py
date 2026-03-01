@@ -159,6 +159,18 @@ if os.path.exists(db_path):
         except Exception as e:
             print(f"Error adding parent_id: {e}")
 
+    # Check Recordings table
+    cursor.execute("PRAGMA table_info(recordings)")
+    rec_columns = [info[1] for info in cursor.fetchall()]
+
+    if "transcription_json" not in rec_columns:
+        print("Adding transcription_json column to recordings...")
+        try:
+            cursor.execute("ALTER TABLE recordings ADD COLUMN transcription_json TEXT")
+            print("Added transcription_json")
+        except Exception as e:
+            print(f"Error adding transcription_json: {e}")
+
     if "is_deleted" not in kd_columns:
         print("Adding is_deleted column to knowledge_documents...")
         try:

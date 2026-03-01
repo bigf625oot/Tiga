@@ -357,8 +357,8 @@
                                     <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
                                     <span class="text-xs font-bold text-slate-700">可视化图表</span>
                                 </div>
-                                <div class="h-72 w-full bg-slate-50 rounded-xl p-2 border border-slate-100">
-                                    <v-chart class="chart" :option="msg.chart_config || getMessageChart(msg.content)" autoresize />
+                                <div class="h-80 w-full bg-white rounded-xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <v-chart class="chart" :option="processChartOption(msg.chart_config || getMessageChart(msg.content))" autoresize />
                                 </div>
                             </div>
                         </div>
@@ -1083,6 +1083,129 @@ const getMessageChart = (content) => {
         }
     }
     return null;
+};
+
+const processChartOption = (rawOption) => {
+    if (!rawOption) return {};
+    // Clone option to avoid mutating the original
+    const option = JSON.parse(JSON.stringify(rawOption));
+    
+    // 1. Color Palette (Modern, soft colors)
+    option.color = [
+        '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', 
+        '#14b8a6', '#10b981', '#84cc16', '#f59e0b', 
+        '#f97316', '#ef4444', '#ec4899', '#8b5cf6'
+    ];
+    
+    // 2. Grid (Ensure labels are visible)
+    if (!option.grid) {
+        option.grid = {
+            top: '15%',
+            bottom: '12%',
+            left: '3%',
+            right: '4%',
+            containLabel: true
+        };
+    } else {
+        option.grid.containLabel = true;
+        option.grid.bottom = '12%'; // Ensure space for legend
+    }
+    
+    // 3. Legend (Bottom, centered)
+    if (option.legend) {
+        option.legend.type = 'scroll'; // Allow scrolling if too many items
+        option.legend.bottom = 0;
+        option.legend.left = 'center';
+        option.legend.orient = 'horizontal';
+        option.legend.itemWidth = 10;
+        option.legend.itemHeight = 10;
+        option.legend.textStyle = {
+            color: '#64748b',
+            fontSize: 11
+        };
+        // Remove legend padding/border if any
+        delete option.legend.padding;
+        delete option.legend.borderWidth;
+    }
+    
+    // 4. Tooltip (Modern style)
+    if (!option.tooltip) {
+        option.tooltip = {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' }
+        };
+    }
+    // Force tooltip style
+    option.tooltip.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+    option.tooltip.borderColor = '#e2e8f0';
+    option.tooltip.textStyle = { color: '#1e293b', fontSize: 12 };
+    option.tooltip.padding = [8, 12];
+    option.tooltip.extraCssText = 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border-radius: 8px;';
+
+    // 5. Title (Top center, subtle)
+    if (option.title) {
+        const titleStyle = { color: '#1e293b', fontSize: 14, fontWeight: 600 };
+        const subtextStyle = { color: '#64748b', fontSize: 11 };
+        
+        const applyTitleStyle = (t) => {
+             if (!t.textStyle) t.textStyle = titleStyle;
+             else Object.assign(t.textStyle, titleStyle);
+             
+             if (!t.subtextStyle) t.subtextStyle = subtextStyle;
+             else Object.assign(t.subtextStyle, subtextStyle);
+             
+             // Only set default position if not specified
+             if (t.left === undefined && t.right === undefined && t.top === undefined && t.bottom === undefined) {
+                 t.left = 'center';
+                 t.top = 10;
+             }
+        };
+
+        if (Array.isArray(option.title)) {
+             option.title.forEach(applyTitleStyle);
+        } else {
+             applyTitleStyle(option.title);
+        }
+    }
+    
+    // 6. Series specific tweaks
+    if (option.series) {
+        option.series.forEach(s => {
+            // Bar charts: Rounded corners
+            if (s.type === 'bar') {
+                if (!s.itemStyle) s.itemStyle = {};
+                s.itemStyle.borderRadius = [4, 4, 0, 0];
+                s.barMaxWidth = 40;
+            }
+            // Line charts: Smooth curve, symbol style
+            if (s.type === 'line') {
+                s.smooth = true;
+                s.symbol = 'circle';
+                s.symbolSize = 6;
+                if (!s.lineStyle) s.lineStyle = {};
+                s.lineStyle.width = 3;
+            }
+            // Pie charts: Donut style, centered
+            if (s.type === 'pie') {
+                // Use a safer, smaller layout to avoid overlap
+                s.center = ['50%', '55%']; 
+                // Smaller radius to ensure labels have room
+                if (!s.radius) s.radius = ['40%', '60%']; 
+                s.avoidLabelOverlap = true;
+                
+                if (!s.label) s.label = {};
+                // s.label.show = true;
+                // s.label.formatter = '{b}: {c} ({d}%)';
+                
+                if (!s.itemStyle) s.itemStyle = {};
+                s.itemStyle.borderRadius = 5;
+                s.itemStyle.borderColor = '#fff';
+                s.itemStyle.borderWidth = 2;
+            }
+        });
+    }
+
+    return option;
 };
 
 const renderMarkdown = (text) => {
