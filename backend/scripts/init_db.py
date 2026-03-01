@@ -18,6 +18,7 @@ from app.models import (
     knowledge,
     llm_model,
     mcp,
+    node,
     recording,
     service_category,
     skill,

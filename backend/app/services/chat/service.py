@@ -545,10 +545,20 @@ You have access to an advanced Knowledge Graph retrieval system via tools:
     async def _process_stream(self, stream):
         if inspect.isasyncgen(stream):
             async for item in stream:
-                yield item
+                if isinstance(item, str):
+                    yield item
+                elif hasattr(item, "content"):
+                    yield str(item.content) if item.content is not None else ""
+                else:
+                    yield str(item)
         else:
             for item in stream:
-                yield item
+                if isinstance(item, str):
+                    yield item
+                elif hasattr(item, "content"):
+                    yield str(item.content) if item.content is not None else ""
+                else:
+                    yield str(item)
 
     def _format_references(self, references):
         citations = ["\n\nReferences:"]

@@ -58,6 +58,7 @@ async def lifespan(app: FastAPI):
         knowledge,
         llm_model,
         mcp,
+        node,
         recording,
         service_category,
         skill,
@@ -92,9 +93,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize Knowledge Base config: {e}")
 
+    # Start Node Monitoring Task
+    from app.services.openclaw.node_monitor import node_monitor
+    await node_monitor.start()
+
     yield
     # Shutdown: Close connections
     logger.info("Shutting down...")
+    await node_monitor.stop()
 
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json", lifespan=lifespan)

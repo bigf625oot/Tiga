@@ -25,10 +25,14 @@ from app.api.endpoints import (
     relation_fix,
     sandbox,
     tasks,
+    openclaw,
+    nodes,
 )
 from app.api.endpoints.search_agent import news
 
 api_router = APIRouter()
+api_router.include_router(nodes.router, prefix="/nodes", tags=["nodes"])
+api_router.include_router(openclaw.router, prefix="/openclaw", tags=["openclaw"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(sandbox.router, prefix="/sandbox", tags=["sandbox"])
 api_router.include_router(relation_fix.router, prefix="/relation-fix", tags=["relation-fix"])

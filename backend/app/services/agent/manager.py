@@ -223,6 +223,34 @@ class AgentManager:
                 except Exception as e:
                     logger.error(f"Error loading MCP tools: {e}")
 
+            # OpenClaw Tools (Auto-inject if configured)
+            from app.core.config import settings
+            # Inject OpenClaw tools if base_url is present (default is set)
+            # Token is optional for local dev or unsecured gateway
+            if settings.OPENCLAW_BASE_URL:
+                try:
+                    from app.services.openclaw import OpenClawTools
+                    # Inject OpenClaw tools
+                    tools.append(OpenClawTools())
+                    logger.info(f"Injected OpenClaw tools for agent {agent_model.name}")
+                    
+                    oc_instructions = """
+## OpenClaw Capabilities
+You have FULL access to OpenClaw tools for automation tasks. You can and should use them directly:
+1. `oc_web_search` / `oc_web_fetch`: Search and read web content.
+2. `oc_browser`: Control a browser for screenshots, PDF generation, or UI interaction.
+3. `oc_cron`: Create, list, and delete scheduled crawl tasks. USE THIS to create new tasks.
+4. `oc_nodes`: Manage and execute commands on connected nodes.
+5. `oc_message`: Send notifications.
+
+When the user asks to "create a task", "crawl a site", or "configure automation", you MUST use these tools.
+Do not say you cannot access the configuration; instead, use the tools to perform the actions.
+"""
+                    if "OpenClaw Capabilities" not in instructions:
+                        instructions += "\n" + oc_instructions
+                except Exception as e:
+                    logger.error(f"Failed to inject OpenClaw tools: {e}")
+
             # Standard Tools
             # Check if "duckduckgo" is in tools_config AND NOT loaded dynamically (to avoid duplicates)
             # Or if browser skill is enabled

@@ -98,12 +98,40 @@
                                 <PaperClipOutlined />
                              </button>
                              <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                             <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode">
-                                <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
-                                <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-slate-500'">任务模式</span>
-                             </div>
-                             <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                             <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                             
+                             <a-dropdown :trigger="['click']">
+                                <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-slate-100 transition-colors h-full select-none">
+                                    <MessageOutlined v-if="mode === 'chat'" class="text-indigo-600" />
+                                    <ProjectOutlined v-else-if="mode === 'workflow'" class="text-indigo-600" />
+                                    <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
+                                    <span class="text-xs font-medium text-slate-700">
+                                        {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : '自动任务') }}
+                                    </span>
+                                    <DownOutlined class="text-[10px] text-slate-400" />
+                                </div>
+                                <template #overlay>
+                                    <a-menu @click="({ key }) => handleModeChange(key)">
+                                        <a-menu-item key="chat">
+                                            <div class="flex items-center gap-2 min-w-[120px]">
+                                                <MessageOutlined /> <span>对话模式</span>
+                                            </div>
+                                        </a-menu-item>
+                                        <a-menu-item key="workflow">
+                                            <div class="flex items-center gap-2">
+                                                <ProjectOutlined /> <span>智能规划</span>
+                                            </div>
+                                        </a-menu-item>
+                                        <a-menu-item key="auto_task">
+                                            <div class="flex items-center gap-2">
+                                                <img src="/openclaw.svg" class="w-3.5 h-3.5" /> <span>自动任务</span>
+                                            </div>
+                                        </a-menu-item>
+                                    </a-menu>
+                                </template>
+                             </a-dropdown>
+
+                             <div v-if="mode !== 'auto_task'" class="h-4 w-px bg-slate-200 mx-1"></div>
+                             <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                 <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
                                 <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
                              </div>
@@ -202,7 +230,7 @@
 
                     <div class="flex justify-between items-center px-2 pb-1">
                          <div class="flex items-center gap-2 h-8">
-                             <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                             <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                 <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
                                 <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
                              </div>
@@ -227,14 +255,23 @@
 
       <div
         v-if="isDesktop && !isLeftCollapsed && !isRightCollapsed"
-        class="hidden xl:flex w-2 shrink-0 items-stretch justify-center cursor-col-resize bg-slate-50 hover:bg-slate-100 transition-colors"
+        class="hidden xl:flex w-1 shrink-0 items-center justify-center cursor-col-resize bg-transparent z-50 relative group"
         @mousedown="startResize"
       >
-        <div class="w-px bg-slate-200 my-2"></div>
+        <!-- Visual Line -->
+        <div class="w-[1px] h-full bg-slate-200 group-hover:bg-indigo-500 group-hover:w-[2px] transition-all"></div>
+        <!-- Hit Area -->
+        <div class="absolute w-4 h-full bg-transparent -left-1.5 cursor-col-resize"></div>
       </div>
 
       <div v-show="!isRightCollapsed" class="w-full h-[420px] xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-slate-50 z-20 transition-all duration-150 flex flex-col overflow-hidden" :style="rightPaneStyle">
+        <AutoTaskPanel 
+            v-if="isAutoTaskMode" 
+            @run-task="handleRunTask" 
+            @close="isRightCollapsed = true"
+        />
         <WorkspaceTabs
+            v-else
             ref="workspaceTabsRef"
             :sessionId="currentSessionId || ''"
             :agentName="currentAgent?.name || ''"
@@ -303,12 +340,40 @@
                                   <PaperClipOutlined />
                                </button>
                                <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode">
-                                  <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
-                                  <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-slate-500'">任务模式</span>
-                               </div>
-                               <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                               
+                               <a-dropdown :trigger="['click']">
+                                  <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-slate-100 transition-colors h-full select-none">
+                                      <MessageOutlined v-if="mode === 'chat'" class="text-indigo-600" />
+                                      <ProjectOutlined v-else-if="mode === 'workflow'" class="text-indigo-600" />
+                                    <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
+                                    <span class="text-xs font-medium text-slate-700">
+                                        {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : '自动任务') }}
+                                    </span>
+                                    <DownOutlined class="text-[10px] text-slate-400" />
+                                  </div>
+                                  <template #overlay>
+                                      <a-menu @click="({ key }) => handleModeChange(key)">
+                                          <a-menu-item key="chat">
+                                            <div class="flex items-center gap-2 min-w-[120px]">
+                                                <MessageOutlined /> <span>对话模式</span>
+                                            </div>
+                                        </a-menu-item>
+                                        <a-menu-item key="workflow">
+                                            <div class="flex items-center gap-2">
+                                                <ProjectOutlined /> <span>智能规划</span>
+                                            </div>
+                                        </a-menu-item>
+                                        <a-menu-item key="auto_task">
+                                            <div class="flex items-center gap-2">
+                                                <img src="/openclaw.svg" class="w-3.5 h-3.5" /> <span>自动任务</span>
+                                            </div>
+                                        </a-menu-item>
+                                      </a-menu>
+                                  </template>
+                               </a-dropdown>
+
+                               <div v-if="mode !== 'auto_task'" class="h-4 w-px bg-slate-200 mx-1"></div>
+                               <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                   <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
                                   <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
                                </div>
@@ -414,8 +479,8 @@
                                   <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
                                   <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-slate-500'">任务模式</span>
                                </div>
-                               <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                               <div v-if="mode !== 'auto_task'" class="h-4 w-px bg-slate-200 mx-1"></div>
+                               <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                   <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
                                   <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
                                </div>
@@ -512,6 +577,7 @@ import { message } from 'ant-design-vue';
 import MessageList from './MessageList.vue';
 import ReferencesTable from './ReferencesTable.vue';
 import ReferencesCards from './ReferencesCards.vue';
+import AutoTaskPanel from './AutoTaskPanel.vue';
 import WorkspaceTabs from '@/features/workflow/components/WorkspaceTabs.vue';
 import BaseIcon from '@/shared/components/atoms/BaseIcon';
 import DynamicGridBackground from '@/shared/components/molecules/DynamicGridBackground.vue';
@@ -523,7 +589,10 @@ import {
     SearchOutlined,
     ArrowUpOutlined,
     StopOutlined,
-    LoadingOutlined
+    LoadingOutlined,
+    ProjectOutlined,
+    MessageOutlined,
+    DownOutlined
 } from '@ant-design/icons-vue';
 
 const props = defineProps({
@@ -532,9 +601,11 @@ const props = defineProps({
 const emit = defineEmits(['refresh-sessions']);
 
 const workflowStore = useWorkflowStore();
-const isWorkflowMode = ref(false); // Default to chat mode, but user can toggle
+const mode = ref('chat'); // 'chat', 'workflow', 'auto_task'
+const isWorkflowMode = computed(() => mode.value === 'workflow');
+const isAutoTaskMode = computed(() => mode.value === 'auto_task');
 const isNetworkSearchEnabled = ref(true); // Network search toggle
-const useTaskUI = computed(() => isWorkflowMode.value || workflowStore.isRunning || (workflowStore.tasks?.length || 0) > 0);
+const useTaskUI = computed(() => isWorkflowMode.value || isAutoTaskMode.value || workflowStore.isRunning || (workflowStore.tasks?.length || 0) > 0);
 const input = ref('');
 const messages = ref([]);
 const currentSession = ref(null);
@@ -606,8 +677,52 @@ const rightPaneStyle = computed(() => {
     return { flex: `0 0 ${pct}%`, width: `${pct}%`, maxWidth: `${pct}%` };
 });
 
-const toggleWorkflowMode = () => {
-    isWorkflowMode.value = !isWorkflowMode.value;
+const handleModeChange = (newMode) => {
+    mode.value = newMode;
+    if (newMode === 'workflow' || newMode === 'auto_task') {
+        isRightCollapsed.value = false;
+        // Auto-disable network search in auto_task mode
+        if (newMode === 'auto_task') {
+            isNetworkSearchEnabled.value = false;
+        }
+    }
+};
+
+const handleRunTask = async (prompt) => {
+    // Switch to a capable agent if current one is knowledge-only
+    const currentAgentName = currentAgent.value?.name || '';
+    if (currentAgentName.includes('知识') || currentAgentName.includes('查询')) {
+        // Find 'General' agent explicitly, ignoring user preference
+        const generalAgent = agents.value.find(a => a.name && (a.name === '通用' || a.name.includes('通用')));
+        // Fallback: any agent that isn't the current one
+        const targetAgent = generalAgent || agents.value.find(a => a.id !== selectedAgentId.value);
+        
+        if (targetAgent && targetAgent.id !== selectedAgentId.value) {
+            selectedAgentId.value = targetAgent.id;
+            
+            // Force update session agent if session exists
+            if (currentSessionId.value) {
+                 try {
+                    await fetch(`/api/v1/chat/sessions/${currentSessionId.value}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ agent_id: targetAgent.id })
+                    });
+                    if (currentSession.value) currentSession.value.agent_id = targetAgent.id;
+                    message.info(`已切换至"${targetAgent.name}"以执行任务`);
+                } catch (e) {
+                    console.error("Failed to force update session agent", e);
+                }
+            } else {
+                 message.info(`已切换至"${targetAgent.name}"以执行任务`);
+            }
+        }
+    }
+
+    input.value = prompt;
+    nextTick(() => {
+        sendMessage({ enableSearch: false });
+    });
 };
 
 const toggleLeftPane = () => {
@@ -674,7 +789,16 @@ const getPopupContainerForSelect = () => {
 };
 
 const openTaskLogs = () => {
-    workspaceTabsRef.value?.openTaskLogs?.();
+    if (isAutoTaskMode.value) {
+        // In auto task mode, logs might be different, but for now we try to open the same log panel
+        // We need to ensure WorkspaceTabs is mounted or LogDrawer is accessible globally
+        // Currently WorkspaceTabs is hidden in v-else of right pane.
+        // Option 1: Mount LogDrawer outside WorkspaceTabs
+        // Option 2: Just show a message
+        message.info('自动任务模式下的日志请直接在对话流中查看工具调用详情');
+    } else {
+        workspaceTabsRef.value?.openTaskLogs?.();
+    }
 };
 
 const getDefaultAgentId = (list) => {
@@ -714,13 +838,16 @@ onBeforeUnmount(() => {
 
 watch(() => props.sessionId, (newId) => {
     currentSessionId.value = newId;
+    // Reset mode to 'chat' when switching sessions to avoid pollution
+    mode.value = 'chat';
+    isRightCollapsed.value = true;
+    workflowStore.resetWorkflow();
+    
     if (newId) {
         fetchSessionDetails(newId);
     } else {
         currentSession.value = null;
         messages.value = [];
-        workflowStore.resetWorkflow();
-        isWorkflowMode.value = false;
         selectedAttachments.value = [];
         input.value = '';
     }
@@ -923,7 +1050,7 @@ const handleAgentChange = async () => {
     }
 };
 
-const sendMessage = async () => {
+const sendMessage = async (options = {}) => {
     if (isTaskRunning.value) {
         // Handle stop action
         isStopping.value = true;
@@ -1033,12 +1160,50 @@ const sendMessage = async () => {
         return;
     }
 
+    // Auto Task Mode
+    if (isAutoTaskMode.value) {
+        try {
+            const res = await fetch('/api/v1/openclaw/create_task', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ prompt: userMsg })
+            });
+            
+            if (res.ok) {
+                messages.value.push({ 
+                    role: 'assistant', 
+                    content: '任务已创建成功！正在后台执行中，请在右侧面板查看实时状态。',
+                    timestamp: new Date().toISOString()
+                });
+                // Trigger refresh in AutoTaskPanel via event bus or store if needed
+                // But for now, user can manually refresh or wait for polling
+                isRightCollapsed.value = false; // Auto open right pane
+            } else {
+                messages.value.push({ 
+                    role: 'assistant', 
+                    content: '创建任务失败，请稍后重试。',
+                    timestamp: new Date().toISOString()
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            messages.value.push({ 
+                role: 'assistant', 
+                content: '系统错误：无法连接到任务服务。',
+                timestamp: new Date().toISOString()
+            });
+        } finally {
+            isLoading.value = false;
+        }
+        return;
+    }
+
     // Chat Mode
     try {
         const payload = { 
             message: userMsg, 
             attachments: attachmentIds,
-            enable_search: isNetworkSearchEnabled.value 
+            enable_search: options.enableSearch !== undefined ? options.enableSearch : isNetworkSearchEnabled.value 
         };
         const response = await fetch(`/api/v1/chat/sessions/${currentSessionId.value}/chat`, {
             method: 'POST',

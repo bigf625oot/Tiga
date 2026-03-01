@@ -15,6 +15,7 @@ Taichi Agent (内部代号: Tiga) 是一个集成了智能体编排、多模态�
 - [⚙️ 后端服务 (Backend)](#%EF%B8%8F-后端服务-backend)
   - [技术架构](#技术架构)
   - [核心服务](#核心服务)
+  - [OpenClaw 集成](#openclaw-集成)
   - [数据库与存储](#数据库与存储)
   - [环境配置与启动](#环境配置与启动)
   - [Task Mode (任务模式)](#task-mode-任务模式)
@@ -75,6 +76,7 @@ frontend/
 - **Workflow**: 可视化工作流编排，支持任务面板、日志审计与产物编辑。
 - **Media & ASR**: 浏览器端录音与自动语音转文字功能。
 - **Sandbox**: 基于 E2B 的代码执行沙箱，支持 Python/Shell 交互。
+- **OpenClaw Dashboard**: 集成 OpenClaw 网关状态监控、任务管理与节点管理面板。
 
 ### 环境准备与启动
 1.  **安装依赖**:
@@ -104,6 +106,7 @@ frontend/
 - **工具协议**: MCP (Model Context Protocol)
 - **搜索服务**: DuckDuckGo Search (ddgs)
 - **沙箱运行时**: E2B (Firecracker VM)
+- **分布式监控**: OpenClaw Gateway Integration
 - **存储**: Local, AWS S3, Aliyun OSS
 - **工具库**: Pandas, NumPy, Pydantic, NetworkX
 
@@ -115,10 +118,16 @@ frontend/
 - **Media Service**: 音频处理与 ASR 服务。
 - **Analytics (Vanna)**: 自然语言转 SQL 与数据分析可视化。
 - **Sandbox Service**: 集成 E2B 的安全代码执行环境。
+- **OpenClaw Service**: 提供节点监控、定时任务调度与远程网关交互能力。
+
+### OpenClaw 集成
+Taichi Agent 深度集成了 OpenClaw 分布式监控与任务调度系统，采用双通道通信架构：
+1.  **Control Plane (HTTP)**: 基于 `OpenClawHttpClient`，负责配置管理、任务增删改查、节点列表拉取与健康检查。支持静默失败处理，确保核心服务稳定性。
+2.  **Data Plane (WebSocket)**: 基于 `OpenClawWsClient` (Node Monitor)，负责与 Gateway 建立长连接，实现节点心跳维持、实时指令接收与身份认证 (Ed25519 签名)。
 
 ### 数据库与存储
 后端默认使用 SQLite (`recorder_v5.db`)，支持平滑切换至 PostgreSQL 或 MySQL。
-- **主要实体**: Agent, Chat, Workflow, Knowledge, Task (Task Mode), Indicator, UserScript, Skill.
+- **主要实体**: Agent, Chat, Workflow, Knowledge, Task (Task Mode), Indicator, UserScript, Skill, Node (OpenClaw).
 - **Task Mode 持久化**: 专门的任务表结构，记录任务版本、QA 历史与审计日志。
 
 ### 环境配置与启动
@@ -136,6 +145,12 @@ frontend/
     OPENAI_API_KEY=sk-xxxx
     DEEPSEEK_API_KEY=sk-xxxx
     E2B_API_KEY=e2b_xxxx  # 用于沙箱环境
+    
+    # OpenClaw Integration
+    OPENCLAW_BASE_URL=https://gateway.example.com
+    OPENCLAW_GATEWAY_TOKEN=xxxx
+    OPENCLAW_DEVICE_ID=xxxx
+    OPENCLAW_DEVICE_PRIVATE_KEY=xxxx # Base64 encoded Ed25519 key
     
     # Storage
     STORAGE_TYPE=local
@@ -183,6 +198,8 @@ Task Mode 是本项目的一个重要特性，专为长流程、复杂任务设�
   - `/api/v1/knowledge`: 知识库与 RAG
   - `/api/v1/mcp`: MCP 工具集成
   - `/api/v1/sandbox`: 沙箱环境管理
+  - `/api/v1/openclaw`: OpenClaw 网关代理接口
+  - `/api/v1/nodes`: 本地节点管理接口
 
 ---
 

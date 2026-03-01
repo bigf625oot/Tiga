@@ -77,6 +77,18 @@ class Settings(BaseSettings):
     TAVILY_API_KEY: Optional[str] = None
     FIRECRAWL_API_KEY: Optional[str] = None
 
+    # OpenClaw
+    OPENCLAW_BASE_URL: Optional[str] = None  # No default, strictly read from env
+    OPENCLAW_WS_URL: Optional[str] = None
+    OPENCLAW_GATEWAY_TOKEN: Optional[str] = None
+    OPENCLAW_TOKEN: Optional[str] = None
+    OPENCLAW_DEVICE_ID: Optional[str] = None
+    OPENCLAW_DEVICE_PRIVATE_KEY: Optional[str] = None  # Base64 encoded Ed25519 private key
+    OPENCLAW_LLM_MODEL: str = "gpt-3.5-turbo"  # Default model for OpenClaw fallbacks
+    
+    # Proxy
+    NO_PROXY: Optional[str] = None
+
     # DeepSeek
     DEEPSEEK_API_KEY: Optional[str] = None
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
@@ -131,3 +143,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Apply network proxy settings globally
+import os
+if settings.NO_PROXY:
+    os.environ["NO_PROXY"] = settings.NO_PROXY
+    os.environ["no_proxy"] = settings.NO_PROXY
