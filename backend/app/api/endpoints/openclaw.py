@@ -67,7 +67,7 @@ async def list_nodes(service: OpenClawService = Depends(get_service)):
     logger.info("正在请求 OpenClaw 节点列表...")
     
     # 方案1: 通过WebSocket客户端调用（推荐）
-    nodes = await service.list_nodes_via_ws()
+    nodes = await service.list_nodes()
     
     # 方案2: 临时替代 - 通过工具调用获取节点信息
     # nodes = await service.invoke("nodes", {"action": "list"})
@@ -91,14 +91,15 @@ async def list_activities(
     2. 查询 session history
     3. 解析日志文件
     """
-    logger.warning("activities 端点需要自定义实现，暂返回空列表")
+    logger.info("正在获取最近的活动记录...")
     
-    # 临时实现：返回空列表
-    # 实际项目中应该：
-    # 1. 建立 WebSocket 连接订阅事件
-    # 2. 持久化事件到数据库
-    # 3. 从数据库查询
-    return []
+    try:
+        activities = await service.list_activities()
+        logger.info(f"活动记录获取成功，数量: {len(activities)}")
+        return activities
+    except Exception as e:
+        logger.error(f"获取活动记录失败: {str(e)}", exc_info=True)
+        return []
  
 # ⚠️ 修正：OpenClaw Gateway 不提供 RESTful plugins API
 # 插件信息通过 CLI 获取: openclaw plugins list
@@ -130,11 +131,13 @@ async def get_stats(service: OpenClawService = Depends(get_service)):
     """
     logger.info("正在提取 OpenClaw 性能统计数据...")
     
-    # 通过WebSocket调用 health 方法
-    # stats = await service.call_ws_method("health", {"probe": True})
-    
-    # 临时实现：返回空列表
-    return []
+    try:
+        stats = await service.get_stats()
+        logger.info(f"统计数据获取成功: {len(stats)} 条记录")
+        return stats
+    except Exception as e:
+        logger.error(f"获取统计数据失败: {str(e)}", exc_info=True)
+        return []
  
 # 使用 /tools/invoke 创建任务
 @router.post("/create_task")

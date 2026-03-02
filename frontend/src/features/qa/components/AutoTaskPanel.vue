@@ -196,7 +196,7 @@ const fetchStats = async () => {
 const fetchNodes = async () => {
   nodesLoading.value = true;
   try {
-    const res = await fetch('/api/v1/nodes/');
+    const res = await fetch('/api/v1/openclaw/nodes');
     if (res.ok) {
         const data = await res.json();
         nodes.value = data.map((n: any) => ({
@@ -234,6 +234,7 @@ onMounted(() => {
   pollInterval = setInterval(() => {
     fetchActivities();
     fetchStats();
+    fetchNodes();
   }, 30000);
 });
 
