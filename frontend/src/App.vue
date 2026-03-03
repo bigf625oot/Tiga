@@ -1020,12 +1020,18 @@ const deleteSession = async (id) => {
     try {
         await api.delete(`/chat/sessions/${id}`);
         sessions.value = sessions.value.filter(s => s.id !== id);
-        if (currentSessionId.value === id) {
+        
+        // Reset current session if it was deleted or if it's no longer in the list
+        if (currentSessionId.value === id || !sessions.value.find(s => s.id === currentSessionId.value)) {
             currentSessionId.value = null;
         }
+        
         message.success("删除成功");
     } catch (e) {
+        console.error("Delete session error:", e);
         message.error("删除失败");
+        // Re-fetch sessions to ensure UI is in sync
+        fetchSessions();
     }
 };
 

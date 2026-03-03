@@ -62,6 +62,7 @@
 </template>
 
 <script lang="ts" setup>
+import { api } from '@/core/api/client';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { CloseOutlined, LineChartOutlined, DollarOutlined, FileTextOutlined, CameraOutlined, ReadOutlined, BarChartOutlined, BellOutlined, AimOutlined } from '@ant-design/icons-vue';
 import TaskManagement from './TaskManagement.vue';
@@ -160,16 +161,12 @@ const handleCreateTask = (prompt: string) => {
 const fetchActivities = async () => {
   activitiesLoading.value = true;
   try {
-    const res = await fetch('/api/v1/openclaw/activities');
-    if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-            activities.value = data;
-        } else {
-             activities.value = [];
-        }
+    const res = await api.get('/openclaw/activities');
+    const data = res.data;
+    if (data && data.length > 0) {
+        activities.value = data;
     } else {
-        activities.value = [];
+         activities.value = [];
     }
   } catch (e) {
     console.error(e);
@@ -181,12 +178,10 @@ const fetchActivities = async () => {
 
 const fetchStats = async () => {
   try {
-    const res = await fetch('/api/v1/openclaw/stats');
-    if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-            stats.value = data;
-        }
+    const res = await api.get('/openclaw/stats');
+    const data = res.data;
+    if (data && data.length > 0) {
+        stats.value = data;
     }
   } catch (e) {
     console.error(e);
@@ -196,16 +191,12 @@ const fetchStats = async () => {
 const fetchNodes = async () => {
   nodesLoading.value = true;
   try {
-    const res = await fetch('/api/v1/nodes/');
-    if (res.ok) {
-        const data = await res.json();
-        nodes.value = data.map((n: any) => ({
-            ...n,
-            address: n.ip_address || n.address || 'Unknown'
-        }));
-    } else {
-        nodes.value = [];
-    }
+    const res = await api.get('/nodes/');
+    const data = res.data;
+    nodes.value = data.map((n: any) => ({
+        ...n,
+        address: n.ip_address || n.address || 'Unknown'
+    }));
   } catch (e) {
     console.error(e);
     nodes.value = [];

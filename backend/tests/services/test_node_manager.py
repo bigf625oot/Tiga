@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timedelta
-from app.services.openclaw.node_manager import NodeManager
+from app.services.openclaw.node.manager.node_manager_service import NodeManager
 from app.models.node import Node, NodeStatus, NodeMetric, Alert, AlertLevel
 from app.schemas.node import NodeCreate, NodeMetricCreate
 
@@ -21,7 +21,7 @@ def mock_db_session():
 def node_manager():
     # Reset instance to ensure fresh state
     NodeManager._instance = None
-    with patch("app.services.openclaw.node_manager.OpenClawService") as mock_service:
+    with patch("app.services.openclaw.gateway.gateway.gateway_service.OpenClawService") as mock_service:
         manager = NodeManager.get_instance()
         manager.openclaw_service = mock_service.return_value
         yield manager

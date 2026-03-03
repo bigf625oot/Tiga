@@ -1,7 +1,7 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.services.openclaw.gateway_service import OpenClawService
+from app.services.openclaw.gateway.gateway.gateway_service import OpenClawService
 from app.schemas.openclaw import OpenClawNode
 
 MOCK_NODES_JSON = json.dumps({
@@ -24,7 +24,7 @@ MOCK_PLUGINS_JSON = json.dumps({
 
 @pytest.fixture
 def mock_tools():
-    with patch("app.services.openclaw.gateway_service.OpenClawTools") as MockTools:
+    with patch("app.services.openclaw.gateway.gateway.gateway_service.OpenClawTools") as MockTools:
         instance = MockTools.return_value
         instance.oc_nodes_async = AsyncMock(return_value=MOCK_NODES_JSON)
         instance.oc_cron_async = AsyncMock(return_value=MOCK_JOBS_JSON)

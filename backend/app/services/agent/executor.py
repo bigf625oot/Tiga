@@ -1,58 +1,70 @@
+from abc import ABC, abstractmethod
+from typing import AsyncGenerator, Any, Dict, List, Optional
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.agent_plan import AgentTask, TaskStatus
-from app.services.agent.manager import AgentManager
 
 logger = logging.getLogger(__name__)
 
-class ExecutorAgent:
-    def __init__(self, agent_manager: AgentManager, db: AsyncSession):
-        self.agent_manager = agent_manager
-        self.db = db
+class BaseAgentExecutor(ABC):
+    @abstractmethod
+    async def execute(self, message: str, **kwargs) -> Any:
+        pass
 
-    async def execute_task(self, task: AgentTask) -> str:
-        """
-        Executes a specific AgentTask.
-        1. Loads the appropriate Agno Agent based on task.assigned_agent_role.
-        2. Runs the agent with task.description.
-        3. Updates the task status and result in DB.
-        """
-        logger.info(f"Executing task {task.id}: {task.name}")
-        
-        # 1. Update status to IN_PROGRESS
-        task.status = TaskStatus.IN_PROGRESS
-        await self.db.commit()
+    @abstractmethod
+    async def stream(self, message: str, **kwargs) -> AsyncGenerator[str, None]:
+        pass
 
-        try:
-            # 2. Find suitable agent
-            # For now, we hardcode some role -> agent_id mappings or use a default one.
-            # In a real system, we'd query the 'agents' table for `role=task.assigned_agent_role`.
-            
-            # Use a default agent ID or the first available one for simplicity in Phase 1
-            # We assume agent_manager has a way to get a default agent or search by role.
-            # Since manager.py doesn't have `get_agent_by_role`, we'll just pick a default one if possible.
-            # But `create_agno_agent` needs an ID.
-            
-            # HACK: For now, we just use a placeholder result to simulate execution
-            # In Phase 2, we will integrate `manager.create_agno_agent` here.
-            
-            result = f"Executed task '{task.name}' successfully. (Simulated)"
-            
-            # If it's a coding task, we might want to call the Sandbox tool (Phase 2)
-            if task.assigned_agent_role == "coder":
-                result += "\n[Code execution result would appear here]"
-            elif task.assigned_agent_role == "researcher":
-                result += "\n[Search results would appear here]"
+class ChatAgentExecutor(BaseAgentExecutor):
+    def __init__(self, session_id: str):
+        from app.workflow.app_workflow import AppWorkflow
+        self.workflow = AppWorkflow(session_id=session_id, mode="static")
 
-            # 3. Update task success
-            task.result = result
-            task.status = TaskStatus.COMPLETED
-            await self.db.commit()
-            return result
+    async def execute(self, message: str, **kwargs) -> Any:
+        return await self.workflow.run(message, **kwargs)
 
-        except Exception as e:
-            logger.error(f"Task execution failed: {e}")
-            task.error = str(e)
-            task.status = TaskStatus.FAILED
-            await self.db.commit()
-            raise e
+    async def stream(self, message: str, **kwargs) -> AsyncGenerator[str, None]:
+        async for event in self.workflow.run_stream(message, **kwargs):
+            yield event
+
+class WorkflowAgentExecutor(BaseAgentExecutor):
+    def __init__(self, session_id: str):
+        from app.workflow.app_workflow import AppWorkflow
+        self.workflow = AppWorkflow(session_id=session_id, mode="dynamic")
+
+    async def execute(self, message: str, **kwargs) -> Any:
+        return await self.workflow.run(message, **kwargs)
+
+    async def stream(self, message: str, **kwargs) -> AsyncGenerator[str, None]:
+        async for event in self.workflow.run_stream(message, **kwargs):
+            yield event
+
+class AutoTaskAgentExecutor(BaseAgentExecutor):
+    def __init__(self, session_id: str):
+        # For now, we reuse AppWorkflow with auto_task mode if supported, 
+        # or we will implement specific logic later.
+        # Assuming AppWorkflow might be extended or we use a different service.
+        # But based on current AppWorkflow, it only supports static/dynamic.
+        # So we might need to implement this.
+        # For now, let's treat it similar to Workflow but maybe with different params?
+        from app.workflow.app_workflow import AppWorkflow
+        self.workflow = AppWorkflow(session_id=session_id, mode="auto_task")
+
+    async def execute(self, message: str, **kwargs) -> Any:
+        # TODO: Implement AutoTask specific sync execution
+        return await self.workflow.run(message, **kwargs)
+
+    async def stream(self, message: str, **kwargs) -> AsyncGenerator[str, None]:
+        # TODO: Implement AutoTask specific stream execution
+        async for event in self.workflow.run_stream(message, **kwargs):
+            yield event
+
+def get_executor(mode: str, session_id: str) -> BaseAgentExecutor:
+    if mode == "chat" or mode == "static": # "static" is the internal name in AppWorkflow for simple chat
+        return ChatAgentExecutor(session_id)
+    elif mode == "workflow" or mode == "dynamic": # "dynamic" is internal name for planner
+        return WorkflowAgentExecutor(session_id)
+    elif mode == "auto_task":
+        return AutoTaskAgentExecutor(session_id)
+    else:
+        # Default to Chat
+        logger.warning(f"Unknown mode {mode}, defaulting to ChatAgentExecutor")
+        return ChatAgentExecutor(session_id)

@@ -179,6 +179,16 @@ MIT License
   - vanna/ : SQL 生成与数据查询服务（原 vanna 模块）。
 - media/ : 多媒体服务
   - asr.py : 语音转文字服务（原 aliyun_asr_service ）。
+  - `TaskParsingError` 异常处理：
+    OpenClaw 的任务解析模块现在更加严格。如果遇到 `TaskParsingError`，调用方可以检查 `retry_count` 和 `validation_error` 来决定是提示用户修改输入还是降级处理（例如使用默认参数）。
+    ```python
+    try:
+        task_data = await parse_task_intent(prompt, db)
+    except TaskParsingError as e:
+        logger.error(f"Failed to parse task: {e.validation_error}")
+        # 降级策略或返回用户友好错误
+    ```
+
 - metrics/ : 系统监控
   - service.py : 系统指标记录服务。
 - utils/ : 通用工具

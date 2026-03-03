@@ -4,8 +4,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.workflow.app_workflow import AppWorkflow
-from app.crud.crud_chat import chat as crud_chat
+from app.services.agent.executor import get_executor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,9 +30,9 @@ async def run_workflow(request: WorkflowRunRequest, db: AsyncSession = Depends(g
         history_msgs = await crud_chat.get_history(db, request.session_id)
         history = [{"role": m.role, "content": m.content} for m in history_msgs]
         
-        workflow = AppWorkflow(session_id=request.session_id, mode=request.mode)
-        result = await workflow.run(
-            user_message=request.message,
+        executor = get_executor(request.mode, request.session_id)
+        result = await executor.execute(
+            message=request.message,
             agent_id=request.agent_id,
             history=history,
             **request.params
@@ -57,11 +56,12 @@ async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = De
         history_msgs = await crud_chat.get_history(db, request.session_id)
         history = [{"role": m.role, "content": m.content} for m in history_msgs]
         
-        workflow = AppWorkflow(session_id=request.session_id, mode=request.mode)
+        executor = get_executor(request.mode, request.session_id)
+        
         # 执行工作流并返回流式事件
         async def event_generator():
-            async for event in workflow.run_stream(
-                user_message=request.message,
+            async for event in executor.stream(
+                message=request.message,
                 agent_id=request.agent_id,
                 history=history,
                 **request.params

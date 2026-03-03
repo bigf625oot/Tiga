@@ -35,6 +35,12 @@ class OpenClawPlugin(BaseModel):
 class CreateTaskRequest(BaseModel):
     prompt: str
 
+class ToolsInvokeRequest(BaseModel):
+    tool: str
+    args: Dict[str, Any]
+    session_key: Optional[str] = None
+    sessionKey: Optional[str] = None # For compatibility
+
 class OpenClawHealth(BaseModel):
     available: bool
     version: Optional[str] = None

@@ -144,7 +144,7 @@
 
               <!-- Activities List -->
               <div class="space-y-3 pl-12 transition-all duration-300 origin-top overflow-hidden"
-                   :style="{ maxHeight: expandedTimeGroups.has(group.time) ? '1000px' : '0', opacity: expandedTimeGroups.has(group.time) ? '1' : '0', marginBottom: expandedTimeGroups.has(group.time) ? '0' : '-10px' }">
+                   v-show="expandedTimeGroups.has(group.time)">
                 <div v-for="act in group.activities" :key="act.id" class="relative">
                    <div class="bg-white border border-slate-100 rounded-xl p-3 hover:shadow-md hover:border-indigo-100 transition-all duration-200 cursor-pointer group/card flex gap-3" @click="handleActivityClick(act)">
                       <!-- Icon -->
@@ -156,15 +156,15 @@
                       <div class="flex-1 min-w-0">
                          <div class="flex items-center gap-2 mb-1">
                             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md" :class="getActivityTagClass(act.type)">{{ getActivityLabel(act.type) }}</span>
-                            <span class="text-[10px] text-slate-400">{{ act.duration || '0s' }}</span>
+                            <span class="text-[10px] text-slate-400">{{ act.last_run || '刚刚' }}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-md" 
+                                  :class="act.status === 'FAILED' ? 'bg-red-50 text-red-500' : (act.status === 'DISPATCHED' ? 'bg-blue-50 text-blue-500' : 'bg-slate-50 text-slate-500')">
+                                {{ act.status }}
+                            </span>
                          </div>
                          <p class="text-xs text-slate-700 font-medium leading-relaxed m-0 line-clamp-2 group-hover/card:text-indigo-600 transition-colors">
-                            {{ act.message }}
+                            {{ act.description || act.name }}
                          </p>
-                         <div class="flex items-center gap-2 mt-1.5" v-if="act.dataSize">
-                            <div class="w-1 h-1 rounded-full bg-slate-300"></div>
-                            <span class="text-[10px] text-slate-400">{{ act.dataSize }}</span>
-                         </div>
                       </div>
                    </div>
                 </div>
@@ -204,7 +204,7 @@ const emit = defineEmits(['create-task', 'refresh-activities', 'run-task']);
 const inputValue = ref('');
 const inputRef = ref<HTMLTextAreaElement | null>(null);
 const showAllTemplates = ref(false);
-const expandedTimeGroups = ref<Set<string>>(new Set(['10分钟前', '1小时前']));
+const expandedTimeGroups = ref<Set<string>>(new Set(['1小时内', '今天']));
 const isCreatingTask = ref(false);
 
 const displayedTemplates = computed(() => {
@@ -212,55 +212,46 @@ const displayedTemplates = computed(() => {
 });
 
 // Group activities logic
-const activityGroups = computed(() => {
-  const rawActivities = props.activities;
-
-  // Simple grouping logic
-  const groups: any[] = [];
-  const now = Date.now();
-  
-  // Helper to parse date
-  const getTimestamp = (act: any) => {
-      if (act.timestamp) return act.timestamp;
+  const activityGroups = computed(() => {
+    const getTimestamp = (act: any) => {
+      if (act.timestamp) return new Date(act.timestamp).getTime();
       if (act.last_run) return new Date(act.last_run).getTime();
+      if (act.created_at) return new Date(act.created_at).getTime();
       return 0;
-  };
+    };
 
-  // 10 mins ago
-  const recent = rawActivities.filter(a => {
-     const ts = getTimestamp(a);
-     if (!ts) return false;
-     const diff = now - ts;
-     return diff < 1000 * 60 * 60;
+    const rawActivities = props.activities || [];
+    const now = Date.now();
+    const oneHour = 1000 * 60 * 60;
+    const oneDay = oneHour * 24;
+
+    const recent: any[] = [];
+    const hourAgo: any[] = [];
+    const earlier: any[] = [];
+
+    rawActivities.forEach(a => {
+      const ts = getTimestamp(a);
+      if (!ts) {
+        earlier.push(a);
+        return;
+      }
+      const diff = now - ts;
+      if (diff < oneHour) {
+        recent.push(a);
+      } else if (diff < oneDay) {
+        hourAgo.push(a);
+      } else {
+        earlier.push(a);
+      }
+    });
+
+    const groups: any[] = [];
+    if (recent.length) groups.push({ time: "1小时内", activities: recent });
+    if (hourAgo.length) groups.push({ time: "今天", activities: hourAgo });
+    if (earlier.length) groups.push({ time: "更早之前", activities: earlier });
+
+    return groups;
   });
-  if (recent.length) {
-    groups.push({ time: "10分钟前", activities: recent });
-  }
-
-  // 1 hour ago
-  const hourAgo = rawActivities.filter(a => {
-     const ts = getTimestamp(a);
-     if (!ts) return false;
-     const diff = now - ts;
-     return diff >= 1000 * 60 * 60 && diff < 1000 * 60 * 60 * 24;
-  });
-  if (hourAgo.length) {
-    groups.push({ time: "1小时前", activities: hourAgo });
-  }
-
-  // Earlier
-  const earlier = rawActivities.filter(a => {
-     const ts = getTimestamp(a);
-     if (!ts) return false;
-     const diff = now - ts;
-     return diff >= 1000 * 60 * 60 * 24;
-  });
-  if (earlier.length) {
-    groups.push({ time: "更早之前", activities: earlier });
-  }
-
-  return groups;
-});
 
 const handleTemplateFill = (template: string) => {
   inputValue.value = template;
@@ -287,11 +278,13 @@ const handleCreateTask = async () => {
 };
 
 const toggleTimeGroup = (time: string) => {
-  if (expandedTimeGroups.value.has(time)) {
-    expandedTimeGroups.value.delete(time);
+  const newSet = new Set(expandedTimeGroups.value);
+  if (newSet.has(time)) {
+    newSet.delete(time);
   } else {
-    expandedTimeGroups.value.add(time);
+    newSet.add(time);
   }
+  expandedTimeGroups.value = newSet;
 };
 
 const handleActivityClick = (act: any) => {

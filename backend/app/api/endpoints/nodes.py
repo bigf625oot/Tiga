@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.schemas.node import Node, NodeCreate, NodeUpdate, NodeMetricCreate, Alert, CommandRequest
-from app.services.openclaw.node_manager import node_manager
+from app.services.openclaw.node.manager.node_manager_service import node_manager
 
 # 初始化日志记录器
 logger = logging.getLogger("openclaw.nodes")
@@ -163,7 +163,10 @@ async def dispatch_command(
     """
     向多个节点分发指令。
     """
-    logger.info(f"开始指令分发任务: 指令={request.command}, 目标范围(节点数)={len(request.target_nodes) if request.target_nodes else '按分组/标签'}")
+    # 修复：target_nodes 的长度判断需要处理 None
+    count_str = len(request.target_nodes) if request.target_nodes else '按分组/标签'
+    logger.info(f"开始指令分发任务: 指令={request.command}, 目标范围(节点数)={count_str}")
+    
     try:
         result = await node_manager.dispatch_command(
             db, 
@@ -173,7 +176,12 @@ async def dispatch_command(
             target_group=request.target_group, 
             target_tags=request.target_tags
         )
-        logger.info(f"指令分发完成: {result.get('success_count', 0)} 成功, {result.get('fail_count', 0)} 失败")
+        
+        # 修复：result 字典中可能没有 success_count/fail_count，而是 sent
+        success = result.get('sent', 0)
+        total = result.get('total', 0)
+        failed = total - success
+        logger.info(f"指令分发完成: {success} 成功, {failed} 失败")
         return result
     except Exception as e:
         logger.error(f"指令分发任务执行出错: {str(e)}")

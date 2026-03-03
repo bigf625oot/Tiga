@@ -31,6 +31,16 @@ async def get_current_user_id(authorization: Optional[str] = Header(None)) -> st
     except jwt.PyJWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
+async def get_current_user_id_optional(authorization: Optional[str] = Header(None)) -> Optional[str]:
+    if not authorization:
+        return None
+    try:
+        token = authorization.replace("Bearer ", "")
+        payload = jwt.decode(token, options={"verify_signature": False})
+        return payload.get("sub")
+    except:
+        return None
+
 async def get_current_user_tools(
     tool_id: str = Path(..., description="The ID of the tool"),
     user_id: str = Depends(get_current_user_id),

@@ -94,19 +94,48 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize Knowledge Base config: {e}")
 
     # Start Node Monitoring Task
-    from app.services.openclaw.node_monitor import node_monitor
+    from app.services.openclaw.node.monitor.node_monitor_service import node_monitor
     await node_monitor.start()
+
+    # Start Task Worker
+    from app.services.openclaw.task.worker.task_worker_service import task_worker
+    await task_worker.start()
+
+    # Initialize Redis Streams
+    from app.core.task_stream import task_stream
+    await task_stream.ensure_infrastructure()
+    logger.info("Redis Task Stream infrastructure initialized.")
 
     yield
     # Shutdown: Close connections
     logger.info("Shutting down...")
+    await task_worker.stop()
     await node_monitor.stop()
 
+
+import time
+import uuid
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+class TraceIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        trace_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request.state.trace_id = trace_id
+        start_time = time.time()
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        response.headers["X-Request-ID"] = trace_id
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json", lifespan=lifespan)
 
 # Global Exception Handler
 app.add_exception_handler(Exception, global_exception_handler)
+
+# Trace ID Middleware
+app.add_middleware(TraceIDMiddleware)
 
 # Set all CORS enabled origins
 app.add_middleware(

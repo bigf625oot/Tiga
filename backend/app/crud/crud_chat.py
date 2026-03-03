@@ -21,7 +21,7 @@ class CRUDChat:
         return result.scalars().all()
 
     async def create(self, db: AsyncSession, obj_in: ChatSessionCreate) -> ChatSession:
-        db_obj = ChatSession(title=obj_in.title or "New Chat", agent_id=obj_in.agent_id)
+        db_obj = ChatSession(title=obj_in.title or "New Chat", agent_id=obj_in.agent_id, mode=obj_in.mode or "chat")
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
@@ -40,6 +40,8 @@ class CRUDChat:
             db_obj.title = obj_in.title
         if obj_in.agent_id is not None:
             db_obj.agent_id = obj_in.agent_id
+        if obj_in.mode is not None:
+            db_obj.mode = obj_in.mode
         if obj_in.workflow_state is not None:
             db_obj.workflow_state = obj_in.workflow_state
         await db.commit()

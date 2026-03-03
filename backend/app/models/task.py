@@ -40,6 +40,31 @@ class SubTask(Base):
     worker_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    version = Column(Integer, nullable=False, default=1)
+
+    __mapper_args__ = {
+        "version_id_col": version
+    }
+
+    def validate_transition(self, new_status: str):
+        if self.status == new_status:
+            return
+
+        allowed = {
+            "PENDING": ["QUEUED", "FAILED", "RUNNING"],
+            "QUEUED": ["RUNNING", "FAILED"],
+            "RUNNING": ["COMPLETED", "FAILED"],
+            "FAILED": ["PENDING", "QUEUED"], # Retry
+            "COMPLETED": []
+        }
+        
+        if self.status not in allowed:
+            # If status is unknown (e.g. legacy data), allow transition to FAILED/PENDING to recover?
+            # Or just raise error.
+            raise ValueError(f"Unknown current status: {self.status}")
+
+        if new_status not in allowed[self.status]:
+             raise ValueError(f"Invalid state transition from {self.status} to {new_status}")
 
     parent_task = relationship("ExecutionTask", back_populates="sub_tasks")
     execution_logs = relationship("ExecutionLog", back_populates="sub_task", cascade="all, delete-orphan")

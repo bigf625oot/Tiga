@@ -19,6 +19,8 @@ from agno.models.openai import OpenAIChat
 from openai import OpenAI
 from app.services.agent.tools.duckduckgo import DuckDuckGoTools
 from app.services.agent.tools.runner import run_reasoning_tool_loop
+from app.core.agent_pool import agent_pool
+from app.services.agent.stream_processor import parse_thinking_stream
 from datetime import datetime
 
 class ChatService:
@@ -34,45 +36,54 @@ class ChatService:
         ab_variant: Optional[str] = None,
         attachments: Optional[List[int]] = None
     ) -> AsyncGenerator[str, None]:
-        
-        # 1. Get Session
-        logger.info(f"[CHAT] Starting chat for session={session_id}")
-        session = await crud_chat.get(db, session_id)
-        if not session:
-            logger.error(f"[CHAT] Session {session_id} not found")
-            yield "Error: Session not found"
-            return
+        try:
+            # 1. Get Session
+            logger.info(f"[CHAT] Starting chat for session={session_id}")
+            session = await crud_chat.get(db, session_id)
+            if not session:
+                logger.error(f"[CHAT] Session {session_id} not found")
+                yield "Error: Session not found"
+                return
 
-        # 2. Save User Message
-        logger.debug(f"[CHAT] User message: {message[:50]}...")
-        user_msg = await crud_chat.create_message(db, session_id, "user", message)
+            # 2. Save User Message
+            logger.debug(f"[CHAT] User message: {message[:50]}...")
+            user_msg = await crud_chat.create_message(db, session_id, "user", message)
 
-        # 3. Initialize Agent
-        agent = None
-        agent_obj = None
-        target_agent_runner = None
-        fallback_agent_runner = None
-        deepseek_like = False
-
-        if session.agent_id:
-            agent, agent_obj = await self._load_agent(db, session.agent_id, session_id, enable_search)
+            # 3. Initialize Agent (with Cache)
+            agent = None
+            agent_obj = None
+            target_agent_runner = None
+            fallback_agent_runner = None
+            deepseek_like = False
+            
+            cache_key = f"{session_id}:{session.mode if session else 'chat'}"
+            cached_data = agent_pool.get(cache_key)
+            
+            if cached_data:
+                agent, agent_obj, deepseek_like = cached_data
+                logger.info(f"[CHAT] Used cached agent for {session_id}")
+            else:
+                if session.agent_id:
+                    agent, agent_obj = await self._load_agent(db, session.agent_id, session_id, enable_search)
+                    if agent:
+                        deepseek_like = self._detect_deepseek(agent, agent_obj)
+                else:
+                    agent, agent_obj, deepseek_like = await self._create_default_agent(
+                        db, session_id, message, user_msg, enable_search, session.mode
+                    )
+                
+                if agent:
+                    agent_pool.put(cache_key, (agent, agent_obj, deepseek_like))
+            
             if not agent:
-                 yield "Error: Failed to load agent."
-                 return
-        else:
-            agent, agent_obj, target_agent_runner, fallback_agent_runner, deepseek_like = await self._create_default_agent(db, session_id, message, user_msg, enable_search)
-            if not agent:
-                 yield "Error: Failed to initialize default agent."
+                 yield "Error: Failed to initialize agent."
                  return
 
-        # 4. DeepSeek Logic for Custom Agent
-        if session.agent_id and agent:
-            deepseek_like = self._detect_deepseek(agent, agent_obj)
+            # 4. Build History & Runners
             agno_history = await self._build_history(db, session_id, user_msg, deepseek_like)
             
             if deepseek_like:
-                target_agent_runner = None
-                logger.info("[CHAT] Using specialized DeepSeek/Tool runner path")
+                target_agent_runner = None # Use deepseek loop
             else:
                 async def _standard_runner():
                     return await agent.arun(message, stream=True, messages=agno_history)
@@ -84,40 +95,39 @@ class ChatService:
                 target_agent_runner = _standard_runner
                 fallback_agent_runner = _fallback_runner
 
-        # 5. RAG Retrieval (Optional)
-        references = []
-        structured_refs = []
-        filtered_out = []
-        retrieval_note = None
-        
-        allowed_names, strict_enabled = await self._get_allowed_docs(db, agent_obj, attachments, strict_mode)
-        
-        if strict_enabled and allowed_names:
-            retrieval_note = "根据绑定文档检索"
+            # 5. RAG Retrieval (Optional)
+            references = []
+            structured_refs = []
+            filtered_out = []
+            retrieval_note = None
+            
+            allowed_names, strict_enabled = await self._get_allowed_docs(db, agent_obj, attachments, strict_mode)
+            
+            if strict_enabled and allowed_names:
+                retrieval_note = "根据绑定文档检索"
 
-        try:
-            if hasattr(kb_service, "search"):
-                import asyncio
-                refs, filtered = await asyncio.to_thread(
-                    kb_service.search,
-                    query=message,
-                    allowed_names=allowed_names if strict_enabled else None,
-                    min_score=threshold,
-                    top_k=5,
-                )
-                references = refs or []
-                filtered_out = filtered or []
-                structured_refs = await self._build_structured_refs(db, references)
-        except Exception as se:
-            logger.warning(f"Retrieval failed: {se}")
+            try:
+                if hasattr(kb_service, "search"):
+                    import asyncio
+                    refs, filtered = await asyncio.to_thread(
+                        kb_service.search,
+                        query=message,
+                        allowed_names=allowed_names if strict_enabled else None,
+                        min_score=threshold,
+                        top_k=5,
+                    )
+                    references = refs or []
+                    filtered_out = filtered or []
+                    structured_refs = await self._build_structured_refs(db, references)
+            except Exception as se:
+                logger.warning(f"Retrieval failed: {se}")
 
-        # 6. Stream Execution
-        full_response = ""
-        reasoning_content = ""
-        has_started_reasoning = False
-        has_ended_reasoning = False
+            # 6. Stream Execution with CoT Parsing
+            full_response = ""
+            reasoning_content = ""
+            has_started_reasoning = False
+            has_ended_reasoning = False
 
-        try:
             stream = []
             if target_agent_runner:
                 try:
@@ -125,7 +135,6 @@ class ChatService:
                     if inspect.isawaitable(stream):
                         stream = await stream
                 except Exception as e:
-                     # Fallback logic
                      if fallback_agent_runner:
                          stream = fallback_agent_runner()
                          if inspect.isawaitable(stream):
@@ -133,24 +142,25 @@ class ChatService:
                      else:
                          raise e
             else:
-                 # DeepSeek Tool Loop
                  stream = self._run_deepseek_loop(agent, message, enable_search, agno_history)
 
-            async for item in self._process_stream(stream):
-                 # Handle reasoning tags
-                 if item.startswith("<think>") or item.startswith("\n</think>"):
-                      if item.startswith("<think>"):
+            stream_gen = self._process_stream(stream)
+            
+            async for item in parse_thinking_stream(stream_gen):
+                 if item["type"] == "think":
+                      if not has_started_reasoning:
                            has_started_reasoning = True
-                           yield item
-                      else:
-                           has_ended_reasoning = True
-                           yield item
-                 elif has_started_reasoning and not has_ended_reasoning:
-                      reasoning_content += item
-                      yield item
+                           yield "<think>\n"
+                      
+                      reasoning_content += item["content"]
+                      yield item["content"]
                  else:
-                      full_response += item
-                      yield item
+                      if has_started_reasoning and not has_ended_reasoning:
+                           has_ended_reasoning = True
+                           yield "\n</think>\n"
+                      
+                      full_response += item["content"]
+                      yield item["content"]
             
             # Close reasoning if needed
             if has_started_reasoning and not has_ended_reasoning:
@@ -173,14 +183,13 @@ class ChatService:
                 "strict_mode": strict_enabled,
                 "ab_variant": ab_variant
             }
-            # Clean empty keys
             meta = {k: v for k, v in meta.items() if v}
             
             await self._save_assistant_message(db, session_id, full_response, meta)
 
         except Exception as e:
             logger.error(f"Chat execution failed: {e}", exc_info=True)
-            yield f"Error: {str(e)}"
+            yield f"Error: Internal Server Error - {str(e)}"
 
     async def _load_agent(self, db, agent_id, session_id, enable_search):
         try:
@@ -192,11 +201,7 @@ class ChatService:
             logger.error(f"Failed to load agent {agent_id}: {e}")
             return None, None
 
-    async def _create_default_agent(self, db, session_id, message, user_msg, enable_search):
-        # ... Implementation of default agent creation (extracted from original chat.py) ...
-        # For brevity, I will simplify this in the first pass or copy the logic.
-        # Let's copy the logic to ensure fidelity.
-        
+    async def _create_default_agent(self, db, session_id, message, user_msg, enable_search, mode="chat"):
         # 1. Find active model
         res = await db.execute(
             select(LLMModel)
@@ -205,15 +210,13 @@ class ChatService:
         )
         active_model = res.scalars().first()
         
-        target_agent_runner = None
-        fallback_agent_runner = None
         deepseek_like = False
         agent = None
         agent_obj = None # No DB object for default agent
 
         if active_model:
              # Create temp agent
-             default_tools = self._get_default_tools()
+             default_tools = self._get_default_tools(mode)
              model_instance = ModelFactory.create_model(active_model)
              is_reasoning = ModelFactory.should_use_agno_reasoning(active_model)
              
@@ -228,26 +231,15 @@ class ChatService:
              
              if default_tools:
                  agent.instructions += "\n" + self._get_kb_instructions()
+                 if settings.OPENCLAW_BASE_URL and mode == "auto_task":
+                      agent.instructions += "\n" + self._get_openclaw_instructions()
                  
              # Detect DeepSeek
              deepseek_like = self._detect_deepseek_model(active_model)
              
-             # History
-             agno_history = await self._build_history(db, session_id, user_msg, deepseek_like)
-             
-             async def _runner():
-                 return await agent.arun(message, stream=True, messages=agno_history)
-             
-             async def _fallback():
-                 res = await agent.arun(message, stream=False, messages=agno_history)
-                 return [res]
-                 
-             target_agent_runner = _runner
-             fallback_agent_runner = _fallback
-             
         elif agent_manager.has_global_api_key():
              # Fallback to OpenAI
-             default_tools = self._get_default_tools()
+             default_tools = self._get_default_tools(mode)
              agent = AgnoAgent(
                  name="Global Default Agent",
                  model=OpenAIChat(id="gpt-4o", api_key=settings.OPENAI_API_KEY),
@@ -257,21 +249,12 @@ class ChatService:
              )
              if default_tools:
                  agent.instructions += "\n" + self._get_kb_instructions()
-                 
-             agno_history = await self._build_history(db, session_id, user_msg, False)
+                 if settings.OPENCLAW_BASE_URL and mode == "auto_task":
+                      agent.instructions += "\n" + self._get_openclaw_instructions()
              
-             async def _runner():
-                 return await agent.arun(message, stream=True, messages=agno_history)
-             async def _fallback():
-                 res = await agent.arun(message, stream=False, messages=agno_history)
-                 return [res]
-                 
-             target_agent_runner = _runner
-             fallback_agent_runner = _fallback
-             
-        return agent, agent_obj, target_agent_runner, fallback_agent_runner, deepseek_like
+        return agent, agent_obj, deepseek_like
 
-    def _get_default_tools(self):
+    def _get_default_tools(self, mode="chat"):
         tools = []
         try:
             from app.services.rag.engines.lightrag import lightrag_engine
@@ -280,6 +263,16 @@ class ChatService:
                 tools.extend([search_knowledge_base, query_knowledge_graph])
         except Exception:
             pass
+            
+        # [Fix] Inject OpenClaw tools ONLY if mode is 'auto_task' and configured
+        if settings.OPENCLAW_BASE_URL and mode == "auto_task":
+            try:
+                from app.services.openclaw import OpenClawTools
+                tools.append(OpenClawTools())
+                logger.info("[CHAT] Injected OpenClaw tools for Default Agent (Auto Task Mode)")
+            except Exception as e:
+                logger.error(f"[CHAT] Failed to inject OpenClaw tools: {e}")
+                
         return tools
 
     def _get_kb_instructions(self):
@@ -291,6 +284,20 @@ You have access to an advanced Knowledge Graph retrieval system via tools:
    - Use `mode='local'` for specific entities.
    - Use `mode='global'` for high-level summaries.
    - Use `mode='mix'` (default) for best hybrid results.
+"""
+
+    def _get_openclaw_instructions(self):
+        return """
+## OpenClaw Capabilities
+You have FULL access to OpenClaw tools for automation tasks. You can and should use them directly:
+1. `oc_web_search` / `oc_web_fetch`: Search and read web content.
+2. `oc_browser`: Control a browser for screenshots, PDF generation, or UI interaction.
+3. `oc_cron`: Create, list, and delete scheduled crawl tasks. USE THIS to create new tasks.
+4. `oc_nodes`: Manage and execute commands on connected nodes.
+5. `oc_message`: Send notifications.
+
+When the user asks to "create a task", "crawl a site", or "configure automation", you MUST use these tools.
+Do not say you cannot access the configuration; instead, use the tools to perform the actions.
 """
 
     def _detect_deepseek(self, agent, agent_obj):
@@ -340,7 +347,9 @@ You have access to an advanced Knowledge Graph retrieval system via tools:
                 elif deepseek_like:
                     msg_dict["reasoning_content"] = ""
             agno_history.append(msg_dict)
-        return agno_history
+            
+        from app.core.context_utils import get_optimized_context
+        return get_optimized_context(agno_history)
 
     async def _get_allowed_docs(self, db, agent_obj, attachments, strict_mode):
         doc_ids = []

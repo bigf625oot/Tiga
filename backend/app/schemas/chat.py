@@ -26,6 +26,7 @@ class ChatMessageResponse(ChatMessageBase):
 class ChatSessionBase(BaseModel):
     title: Optional[str] = None
     agent_id: Optional[str] = None
+    mode: Optional[str] = "chat"
     workflow_state: Optional[Dict[str, Any]] = None
 
 
@@ -36,6 +37,7 @@ class ChatSessionCreate(ChatSessionBase):
 class ChatSessionUpdate(BaseModel):
     title: Optional[str] = None
     agent_id: Optional[str] = None
+    mode: Optional[str] = None
     workflow_state: Optional[Dict[str, Any]] = None
 
 

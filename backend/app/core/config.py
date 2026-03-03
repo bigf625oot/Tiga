@@ -89,6 +89,7 @@ class Settings(BaseSettings):
     OPENCLAW_DEVICE_ID: Optional[str] = None
     OPENCLAW_DEVICE_PRIVATE_KEY: Optional[str] = None  # Base64 encoded Ed25519 private key
     OPENCLAW_LLM_MODEL: str = "gpt-3.5-turbo"  # Default model for OpenClaw fallbacks
+    OPENCLAW_VERIFY_SSL: bool = True # Default to True, can be disabled via env
     
     # Proxy
     NO_PROXY: Optional[str] = None
@@ -143,7 +144,11 @@ class Settings(BaseSettings):
     NEO4J_PASSWORD: Optional[str] = None
 
     class Config:
-        env_file = ".env"
+        # Support loading from .env in backend directory regardless of cwd
+        # Try multiple locations: current dir, backend/, or parent/backend/
+        env_file = [".env", "backend/.env", "../backend/.env"]
+        env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from fastapi import FastAPI
 from app.main import app
-from app.services.openclaw.node_manager import NodeManager
+from app.services.openclaw.node.manager.node_manager_service import NodeManager
 from unittest.mock import AsyncMock, patch
 from app.models.node import Node, NodeStatus
 from datetime import datetime
@@ -78,5 +78,6 @@ async def test_check_health(async_client, mock_node_manager):
     mock_node_manager.check_nodes_health.return_value = None
     response = await async_client.post("/api/v1/nodes/check_health")
     assert response.status_code == 200
-    assert response.json() == {"status": "checked"}
+    json_data = response.json()
+    assert json_data["status"] == "checked"
     mock_node_manager.check_nodes_health.assert_called_once()

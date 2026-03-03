@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import List
-from app.services.openclaw.node_manager import NodeManager
+from app.services.openclaw.node.manager.node_manager_service import NodeManager
 from app.models.node import Node, NodeStatus
 
 @pytest.fixture
@@ -18,10 +18,11 @@ def mock_db_session():
 def node_manager():
     # Reset instance
     NodeManager._instance = None
-    with patch("app.services.openclaw.node_manager.OpenClawService") as mock_service:
-        manager = NodeManager.get_instance()
-        manager.openclaw_service = mock_service.return_value
-        yield manager
+    with patch("app.services.openclaw.gateway.gateway.gateway_service.OpenClawService") as mock_service:
+        with patch("app.services.openclaw.node.monitor.node_monitor_service.node_monitor") as mock_monitor:
+            manager = NodeManager.get_instance()
+            manager.openclaw_service = mock_service.return_value
+            yield manager
 
 @pytest.mark.asyncio
 async def test_update_node_group(node_manager, mock_db_session):
@@ -61,7 +62,7 @@ async def test_dispatch_command_by_group(node_manager, mock_db_session):
     mock_db_session.execute.return_value.scalars.return_value.all.return_value = [node1, node2]
     
     # Mock node_monitor and ws_client
-    with patch("app.services.openclaw.node_monitor.node_monitor") as mock_monitor:
+    with patch("app.services.openclaw.node.monitor.node_monitor_service.node_monitor") as mock_monitor:
         mock_monitor.running = True
         mock_monitor.client.is_connected = True
         mock_monitor.client.request = AsyncMock(return_value={"status": "ok"})
@@ -101,7 +102,7 @@ async def test_dispatch_command_by_tags(node_manager, mock_db_session):
     mock_db_session.execute.return_value.scalars.return_value.all.return_value = [node1, node2, node3]
     
     # Mock node_monitor
-    with patch("app.services.openclaw.node_monitor.node_monitor") as mock_monitor:
+    with patch("app.services.openclaw.node.monitor.node_monitor_service.node_monitor") as mock_monitor:
         mock_monitor.running = True
         mock_monitor.client.is_connected = True
         mock_monitor.client.request = AsyncMock(return_value={"status": "ok"})

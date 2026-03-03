@@ -1,16 +1,37 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Any
 from app.crud.crud_task import task as crud_task
 from app.crud.crud_task import sub_task as crud_sub_task
-from app.core.queue import TaskQueue
-from app.schemas.task import SubTaskUpdate
+from app.core.task_stream import TaskStream
+from app.schemas.task import SubTaskUpdate, TaskUpdate
+import logging
 
 logger = logging.getLogger(__name__)
 
 class Scheduler:
     def __init__(self):
-        self.queue = TaskQueue()
+        self.stream = TaskStream()
+
+    def _resolve_context_variables(self, context: Any, outputs: Dict[str, Any]) -> Any:
+        """
+        Recursively resolve {{task_name.output}} variables in context.
+        outputs: {task_name: output_dict}
+        """
+        if isinstance(context, dict):
+            return {k: self._resolve_context_variables(v, outputs) for k, v in context.items()}
+        elif isinstance(context, list):
+            return [self._resolve_context_variables(item, outputs) for item in context]
+        elif isinstance(context, str):
+            if "{{" in context and "}}" in context:
+                try:
+                    from jinja2 import Template
+                    return Template(context).render(**outputs)
+                except Exception as e:
+                    logger.warning(f"Failed to render template {context}: {e}")
+                    return context
+            return context
+        return context
 
     async def check_ready_tasks(self, db: AsyncSession, parent_task_id: str):
         """
@@ -40,19 +61,29 @@ class Scheduler:
                         break
                 
                 if is_ready:
+                    # Resolve inputs using dependency outputs
+                    dependency_outputs = {}
+                    for dep_name in dependencies:
+                        dep_task = next((dt for dt in sub_tasks if dt.name == dep_name), None)
+                        if dep_task and dep_task.output_result:
+                            dependency_outputs[dep_name] = dep_task.output_result
+                            
+                    resolved_input = self._resolve_context_variables(t.input_context, dependency_outputs)
+
                     # Update status in DB
+                    # We optionally update input_context in DB if we want to persist resolved state
+                    # But usually we keep template. Let's just pass resolved to worker.
                     await crud_sub_task.update(db, t, SubTaskUpdate(status='QUEUED'))
                     
                     # Push to Redis Queue
-                    # We push minimal info needed for worker
                     task_payload = {
                         "sub_task_id": t.id,
                         "parent_task_id": t.parent_id,
                         "task_type": t.task_type,
-                        "input_context": t.input_context,
+                        "input_context": resolved_input,
                         "name": t.name
                     }
-                    await self.queue.push(task_payload)
+                    await self.stream.push_task(task_payload)
                     logger.info(f"Task {t.name} ({t.id}) queued for execution.")
                     queued_count += 1
         
@@ -61,10 +92,6 @@ class Scheduler:
             # Update parent task status
             parent_task = await crud_task.get(db, parent_task_id)
             if parent_task and parent_task.status != 'COMPLETED':
-                 # Use a schema or direct update? CRUD uses schema usually
-                 # But here we can't easily import TaskUpdate due to circular imports?
-                 # No, schemas are fine.
-                 from app.schemas.task import TaskUpdate
                  await crud_task.update(db, parent_task, TaskUpdate(status='COMPLETED'))
                  logger.info(f"Parent task {parent_task_id} COMPLETED.")
 

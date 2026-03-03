@@ -18,7 +18,7 @@
 
     <div v-else-if="!nodes.length" class="flex flex-col items-center justify-center py-16 text-slate-400">
        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-          <DisconnectOutlined class="text-2xl text-slate-300" />
+          <component :is="DisconnectOutlined" class="text-2xl text-slate-300" />
        </div>
        <span class="text-xs">暂无在线节点</span>
        <button class="mt-4 text-xs text-indigo-600 font-medium hover:underline" @click="$emit('refresh')">刷新重试</button>
@@ -28,7 +28,7 @@
       <div 
         v-for="node in nodes" 
         :key="node.id" 
-        class="group relative bg-white rounded-xl border transition-all duration-200 hover:shadow-md overflow-hidden"
+        class="group relative bg-white rounded-xl border transition-all duration-200 hover:shadow-md overflow-hidden cursor-pointer"
         :class="node.status === 'online' ? 'border-slate-200 hover:border-indigo-300' : 'border-slate-100 opacity-80'"
         @click="$emit('select', node)"
       >
@@ -89,7 +89,7 @@
               :disabled="node.status !== 'online'"
               @click="node.status === 'online' && $emit('run-command', node.id, 'check')"
             >
-              <CheckCircleOutlined /> 状态检查
+              <component :is="CheckCircleOutlined" /> 状态检查
             </button>
              <button 
               class="flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
@@ -97,7 +97,7 @@
               :disabled="node.status !== 'online'"
               @click="node.status === 'online' && $emit('run-command', node.id, 'screenshot')"
             >
-              <CameraOutlined /> 截图
+              <component :is="CameraOutlined" /> 截图
             </button>
          </div>
       </div>

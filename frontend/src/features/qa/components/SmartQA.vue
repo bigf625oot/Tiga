@@ -573,6 +573,7 @@ import { ref, nextTick, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { marked } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { api } from '@/core/api/client';
 import { message } from 'ant-design-vue';
 import MessageList from './MessageList.vue';
 import ReferencesTable from './ReferencesTable.vue';
@@ -677,13 +678,26 @@ const rightPaneStyle = computed(() => {
     return { flex: `0 0 ${pct}%`, width: `${pct}%`, maxWidth: `${pct}%` };
 });
 
-const handleModeChange = (newMode) => {
+const handleModeChange = async (newMode) => {
     mode.value = newMode;
     if (newMode === 'workflow' || newMode === 'auto_task') {
         isRightCollapsed.value = false;
         // Auto-disable network search in auto_task mode
         if (newMode === 'auto_task') {
             isNetworkSearchEnabled.value = false;
+        }
+    }
+    
+    // Update session mode if session exists
+    if (currentSessionId.value) {
+        try {
+            await fetch(`/api/v1/chat/sessions/${currentSessionId.value}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: newMode })
+            });
+        } catch (e) {
+            console.error("Failed to update session mode", e);
         }
     }
 };
@@ -1021,6 +1035,16 @@ const fetchSessionDetails = async (id) => {
             selectedAgentId.value = data.agent_id || '';
             messages.value = data.messages || [];
             
+            // Set mode from session
+            if (data.mode) {
+                mode.value = data.mode;
+                if (mode.value === 'auto_task' || mode.value === 'workflow') {
+                    isRightCollapsed.value = false;
+                }
+            } else {
+                mode.value = 'chat';
+            }
+            
             // Initialize workflow state (prefer backend state, fallback to local storage)
             workflowStore.initWorkflow(id, data.workflow_state);
             
@@ -1125,7 +1149,8 @@ const sendMessage = async (options = {}) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 title: (userMsg && userMsg.slice(0, 20)) || '新对话',
-                agent_id: selectedAgentId.value || null 
+                agent_id: selectedAgentId.value || null,
+                mode: mode.value
             }),
             signal: abortController.value.signal
         });
@@ -1163,13 +1188,16 @@ const sendMessage = async (options = {}) => {
     // Auto Task Mode
     if (isAutoTaskMode.value) {
         try {
-            const res = await fetch('/api/v1/openclaw/create_task', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ prompt: userMsg })
-            });
+            const res = await api.post('/openclaw/create_task', { prompt: userMsg });
             
-            if (res.ok) {
+            if (res.data && res.data.status === 'SKIPPED') {
+                 const chatResponse = res.data.chat_response || res.data.message || '收到，但我不知道该说什么。';
+                 messages.value.push({ 
+                    role: 'assistant', 
+                    content: chatResponse,
+                    timestamp: new Date().toISOString()
+                });
+            } else {
                 messages.value.push({ 
                     role: 'assistant', 
                     content: '任务已创建成功！正在后台执行中，请在右侧面板查看实时状态。',
@@ -1178,18 +1206,16 @@ const sendMessage = async (options = {}) => {
                 // Trigger refresh in AutoTaskPanel via event bus or store if needed
                 // But for now, user can manually refresh or wait for polling
                 isRightCollapsed.value = false; // Auto open right pane
-            } else {
-                messages.value.push({ 
-                    role: 'assistant', 
-                    content: '创建任务失败，请稍后重试。',
-                    timestamp: new Date().toISOString()
-                });
             }
         } catch (e) {
             console.error(e);
+            let errorMsg = '系统错误：无法连接到任务服务。';
+            if (e.response && e.response.data && e.response.data.detail) {
+                 errorMsg = `创建任务失败: ${e.response.data.detail}`;
+            }
             messages.value.push({ 
                 role: 'assistant', 
-                content: '系统错误：无法连接到任务服务。',
+                content: errorMsg,
                 timestamp: new Date().toISOString()
             });
         } finally {

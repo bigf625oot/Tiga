@@ -46,6 +46,10 @@ class CRUDSubTask:
 
     async def update(self, db: AsyncSession, db_obj: SubTask, obj_in: SubTaskUpdate) -> SubTask:
         update_data = obj_in.model_dump(exclude_unset=True)
+        
+        if "status" in update_data:
+            db_obj.validate_transition(update_data["status"])
+            
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         db.add(db_obj)

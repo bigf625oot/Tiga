@@ -346,6 +346,33 @@ if os.path.exists(db_path):
         print(f"Error creating task mode tables: {e}")
 
     conn.commit()
+    
+    # --- OpenClaw Task & SubTask Versioning ---
+    print("Checking OpenClaw Task & SubTask versioning...")
+    
+    # OpenClaw Tasks
+    try:
+        cursor.execute("PRAGMA table_info(openclaw_tasks)")
+        oct_columns = [info[1] for info in cursor.fetchall()]
+        if "version" not in oct_columns:
+            print("Adding version column to openclaw_tasks...")
+            cursor.execute("ALTER TABLE openclaw_tasks ADD COLUMN version INTEGER DEFAULT 1")
+            print("Added version to openclaw_tasks")
+    except Exception as e:
+        print(f"Error updating openclaw_tasks: {e}")
+
+    # Sub Tasks
+    try:
+        cursor.execute("PRAGMA table_info(sub_tasks)")
+        st_columns = [info[1] for info in cursor.fetchall()]
+        if "version" not in st_columns:
+            print("Adding version column to sub_tasks...")
+            cursor.execute("ALTER TABLE sub_tasks ADD COLUMN version INTEGER DEFAULT 1")
+            print("Added version to sub_tasks")
+    except Exception as e:
+        print(f"Error updating sub_tasks: {e}")
+
+    conn.commit()
     conn.close()
 else:
     print(f"Database {db_path} not found.")
