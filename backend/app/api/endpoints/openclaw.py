@@ -179,7 +179,7 @@ async def list_nodes(
     logger.info("正在请求 OpenClaw 节点列表...")
     
     # 方案1: 通过WebSocket客户端调用（推荐）
-    nodes = await service.list_nodes_via_ws()
+    nodes = await service.list_nodes()
     
     if not nodes:
         # 方案2: 回退查询数据库
@@ -204,6 +204,67 @@ async def list_nodes(
     
     logger.info(f"节点获取成功，当前节点数: {len(nodes)}")
     return nodes
+ 
+# ⚠️ 修正：OpenClaw Gateway 不提供 activities 端点
+# 建议通过 session 查询或日志订阅实现
+@router.get("/activities", response_model=List[OpenClawActivity])
+async def list_activities(
+    limit: int = 50,
+    service: OpenClawService = Depends(get_service)
+):
+    """
+    获取最近的活动记录
+    
+    注意：OpenClaw Gateway 不提供直接的 activities API
+    建议通过以下方式实现：
+    1. 订阅 WebSocket 事件获取实时活动
+    2. 查询 session history
+    3. 解析日志文件
+    """
+    logger.warning("activities 端点需要自定义实现，暂返回空列表")
+    
+    # 临时实现：返回空列表
+    # 实际项目中应该：
+    # 1. 建立 WebSocket 连接订阅事件
+    # 2. 持久化事件到数据库
+    # 3. 从数据库查询
+    return []
+ 
+# ⚠️ 修正：OpenClaw Gateway 不提供 RESTful plugins API
+# 插件信息通过 CLI 获取: openclaw plugins list
+@router.get("/plugins", response_model=List[OpenClawPlugin])
+async def list_plugins(service: OpenClawService = Depends(get_service)):
+    """
+    列出已加载的插件
+    
+    注意：OpenClaw Gateway 不提供 HTTP 端点获取插件列表
+    需要通过 CLI 调用或 WebSocket 订阅
+    
+    参考: [Plugin SDK](26-plugin-sdk-and-development)
+    """
+    logger.warning("plugins 端点需要通过 CLI 或 WebSocket 获取")
+    
+    # 临时实现：调用 CLI 或使用缓存
+    # plugins = await service.run_cli_command(["openclaw", "plugins", "list"])
+    
+    return []
+ 
+# stats 信息通过 WebSocket health 方法获取
+@router.get("/stats", response_model=List[OpenClawStat])
+async def get_stats(service: OpenClawService = Depends(get_service)):
+    """
+    获取系统统计数据
+    
+    注意：OpenClaw Gateway 通过 WebSocket health 方法返回统计信息
+    参考: [health.ts](src/gateway/server-methods/health.ts#L10-L38)
+    """
+    logger.info("正在提取 OpenClaw 性能统计数据...")
+    
+    # 通过WebSocket调用 health 方法
+    # stats = await service.call_ws_method("health", {"probe": True})
+    
+    # 临时实现：返回空列表
+    return []
  
 # 使用 /tools/invoke 创建任务
 @router.post("/create_task")

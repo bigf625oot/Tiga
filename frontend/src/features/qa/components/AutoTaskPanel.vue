@@ -191,12 +191,16 @@ const fetchStats = async () => {
 const fetchNodes = async () => {
   nodesLoading.value = true;
   try {
-    const res = await api.get('/nodes/');
-    const data = res.data;
-    nodes.value = data.map((n: any) => ({
-        ...n,
-        address: n.ip_address || n.address || 'Unknown'
-    }));
+    const res = await fetch('/api/v1/nodes/');
+    if (res.ok) {
+        const data = await res.json();
+        nodes.value = data.map((n: any) => ({
+            ...n,
+            address: n.ip_address || n.address || 'Unknown'
+        }));
+    } else {
+        nodes.value = [];
+    }
   } catch (e) {
     console.error(e);
     nodes.value = [];
@@ -225,6 +229,7 @@ onMounted(() => {
   pollInterval = setInterval(() => {
     fetchActivities();
     fetchStats();
+    fetchNodes();
   }, 30000);
 });
 
