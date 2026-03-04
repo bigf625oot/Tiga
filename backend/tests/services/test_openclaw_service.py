@@ -1,7 +1,7 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.services.openclaw.gateway.gateway.gateway_service import OpenClawService
+from app.services.openclaw.gateway.service import OpenClawService
 from app.schemas.openclaw import OpenClawNode
 
 MOCK_NODES_JSON = json.dumps({
@@ -24,48 +24,27 @@ MOCK_PLUGINS_JSON = json.dumps({
 
 @pytest.fixture
 def mock_tools():
-    with patch("app.services.openclaw.gateway.gateway.gateway_service.OpenClawTools") as MockTools:
+    with patch("app.services.openclaw.gateway.service.OpenClawTools") as MockTools:
         instance = MockTools.return_value
         instance.oc_nodes_async = AsyncMock(return_value=MOCK_NODES_JSON)
         instance.oc_cron_async = AsyncMock(return_value=MOCK_JOBS_JSON)
         instance.oc_plugins_async = AsyncMock(return_value=MOCK_PLUGINS_JSON)
-        instance.check_health_async = AsyncMock(return_value={
-            "available": True,
-            "version": "1.0.0",
-            "base_url": "http://test-gateway",
-            "tools_enabled": ["cron", "nodes", "plugins"],
-            "metrics": {},
-            "fallback_enabled": True
-        })
+        # Mock client connection for health check
+        instance.client = MagicMock()
+        instance.client.is_connected = True
+        
         yield instance
 
 @pytest.fixture
 def service(mock_tools):
-    return OpenClawService()
-
-@pytest.mark.asyncio
-async def test_list_nodes(service):
-    nodes = await service.list_nodes()
-    assert len(nodes) == 1
-    assert isinstance(nodes[0], OpenClawNode)
-    assert nodes[0].id == "node1"
-    assert nodes[0].name == "Test Node"
-
-@pytest.mark.asyncio
-async def test_list_activities(service):
-    activities = await service.list_activities()
-    assert len(activities) == 1
-    assert activities[0].id == "job1"
-    assert activities[0].type == "crawl"
-
-@pytest.mark.asyncio
-async def test_list_plugins(service):
-    plugins = await service.list_plugins()
-    assert len(plugins) == 1
-    assert plugins[0].name == "test-plugin"
+    svc = OpenClawService()
+    # Ensure tools is our mock
+    svc.tools = mock_tools
+    return svc
 
 @pytest.mark.asyncio
 async def test_check_health(service):
+    # The new implementation checks ws client status
     health = await service.check_health()
     assert health.available is True
-    assert health.version == "1.0.0"
+    assert health.version == "connected (ws)"

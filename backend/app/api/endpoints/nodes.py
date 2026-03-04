@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.schemas.node import Node, NodeCreate, NodeUpdate, NodeMetricCreate, Alert, CommandRequest
-from app.services.openclaw.node.manager.node_manager_service import node_manager
+from app.services.openclaw.node.manager import node_manager
 
 # 初始化日志记录器
 logger = logging.getLogger("openclaw.nodes")

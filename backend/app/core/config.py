@@ -82,10 +82,13 @@ class Settings(BaseSettings):
     FIRECRAWL_API_KEY: Optional[str] = None
 
     # OpenClaw
-    OPENCLAW_BASE_URL: Optional[str] = None  # No default, strictly read from env
-    OPENCLAW_WS_URL: Optional[str] = None
+    OPENCLAW_BASE_URL: Optional[str] = None  # ws:// or wss:// only
+    OPENCLAW_WS_URL: Optional[str] = None  # ws:// or wss:// only
     OPENCLAW_GATEWAY_TOKEN: Optional[str] = None
     OPENCLAW_TOKEN: Optional[str] = None
+    OPENCLAW_AGNO_KEY: Optional[str] = None
+    OPENCLAW_AGNO_SECRET: Optional[str] = None
+    OPENCLAW_ROUTING_SECRET: Optional[str] = None
     OPENCLAW_DEVICE_ID: Optional[str] = None
     OPENCLAW_DEVICE_PRIVATE_KEY: Optional[str] = None  # Base64 encoded Ed25519 private key
     OPENCLAW_LLM_MODEL: str = "gpt-3.5-turbo"  # Default model for OpenClaw fallbacks

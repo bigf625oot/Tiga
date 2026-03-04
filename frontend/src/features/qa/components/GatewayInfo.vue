@@ -52,10 +52,27 @@
           </div>
 
           <div class="p-4">
+            <div class="text-xs font-medium text-slate-500 mb-1">连接状态</div>
+            <div class="text-sm text-slate-800">
+              {{ info.ws_connected === true ? 'WebSocket 已连接' : info.ws_connected === false ? 'WebSocket 未连接' : '未知' }}
+            </div>
+          </div>
+
+          <div class="p-4">
+            <div class="text-xs font-medium text-slate-500 mb-1">最近断链原因</div>
+            <div class="text-sm text-slate-800 font-mono break-all">{{ info.last_disconnect_context || '暂无' }}</div>
+          </div>
+
+          <div class="p-4">
+            <div class="text-xs font-medium text-slate-500 mb-1">重连次数</div>
+            <div class="text-sm text-slate-800">{{ info.reconnect_count ?? 0 }}</div>
+          </div>
+
+          <div class="p-4">
             <div class="text-xs font-medium text-slate-500 mb-1">网关令牌 (Token)</div>
             <div class="flex items-center gap-2">
                <div class="text-sm text-slate-800 font-mono break-all flex-1">
-                 {{ showToken ? info.gateway_token : '•'.repeat(20) }}
+                 {{ showToken ? (info.gateway_token || '已隐藏') : '•'.repeat(20) }}
                </div>
                <button @click="showToken = !showToken" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
                  {{ showToken ? '隐藏' : '显示' }}
@@ -67,7 +84,7 @@
             <div class="text-xs font-medium text-slate-500 mb-1">默认会话密钥 (Session Secret)</div>
             <div class="flex items-center gap-2">
                <div class="text-sm text-slate-800 font-mono break-all flex-1">
-                 {{ showSecret ? info.session_secret : '•'.repeat(20) }}
+                 {{ showSecret ? (info.session_secret || '已隐藏') : '•'.repeat(20) }}
                </div>
                <button @click="showSecret = !showSecret" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
                  {{ showSecret ? '隐藏' : '显示' }}
@@ -93,7 +110,19 @@
 import { ref, onMounted } from 'vue';
 import { ReloadOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 
-const info = ref<any>({});
+interface GatewayInfoData {
+  gateway_url?: string | null;
+  websocket_url?: string | null;
+  gateway_token?: string | null;
+  session_secret?: string | null;
+  status?: string;
+  version?: string | null;
+  ws_connected?: boolean | null;
+  last_disconnect_context?: string | null;
+  reconnect_count?: number | null;
+}
+
+const info = ref<GatewayInfoData>({});
 const loading = ref(false);
 const error = ref('');
 const showToken = ref(false);

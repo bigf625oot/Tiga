@@ -7,24 +7,27 @@
 author: xucao
 date: 2026-03-03
 """
+from importlib import import_module
+from typing import Any
 
-from .gateway.gateway.gateway_service import OpenClawService
-from .gateway.agent.tools import OpenClawTools
-from .node.manager.node_manager_service import NodeManager, node_manager
-from .node.monitor.node_monitor_service import NodeMonitor, node_monitor
-from .node.auth.node_auth_service import DeviceIdentityManager
+_EXPORTS = {
+    "OpenClawService": ("app.services.openclaw.gateway.service", "OpenClawService"),
+    "OpenClawTools": ("app.services.openclaw.gateway.tools", "OpenClawTools"),
+    "NodeManager": ("app.services.openclaw.node.manager", "NodeManager"),
+    "node_manager": ("app.services.openclaw.node.manager", "node_manager"),
+    "NodeMonitor": ("app.services.openclaw.node.monitor", "NodeMonitor"),
+    "node_monitor": ("app.services.openclaw.node.monitor", "node_monitor"),
+    "DeviceIdentityManager": ("app.services.openclaw.node.auth", "DeviceIdentityManager"),
+}
 
-__all__ = [
-    "OpenClawService",
-    "OpenClawTools",
-    "NodeManager",
-    "node_manager",
-    "NodeMonitor",
-    "node_monitor",
-    "DeviceIdentityManager",
-    "__version_info__",
-    "__author__",
-    "__description__",
-    "__success_response__",
-]
+__all__ = list(_EXPORTS.keys())
 
+
+def __getattr__(name: str) -> Any:
+    if name not in _EXPORTS:
+        raise AttributeError(name)
+    module_path, attr_name = _EXPORTS[name]
+    module = import_module(module_path)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value

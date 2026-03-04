@@ -56,3 +56,6 @@ class OpenClawInfo(BaseModel):
     session_secret: Optional[str] = None
     status: str
     version: Optional[str] = None
+    ws_connected: Optional[bool] = None
+    last_disconnect_context: Optional[str] = None
+    reconnect_count: Optional[int] = None

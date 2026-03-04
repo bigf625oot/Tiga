@@ -13,7 +13,7 @@ from app.schemas.openclaw import (
     OpenClawNode, OpenClawActivity, OpenClawStat, OpenClawPlugin,
     CreateTaskRequest, OpenClawHealth, OpenClawInfo, ToolsInvokeRequest
 )
-from app.services.openclaw.gateway.gateway.gateway_service import OpenClawService
+from app.services.openclaw.gateway.service import OpenClawService
 
 s_logger = get_structured_logger("openclaw.api")
 
@@ -25,8 +25,8 @@ async def get_service():
     try:
         yield service
     finally:
-        logger.debug("正在关闭 OpenClawService 实例连接...")
-        await service.close()
+        logger.debug("正在关闭 OpenClawService 实例连接... reason=request_scope_cleanup")
+        await service.close(reason="request_scope_cleanup")
  
 @router.get("/health", response_model=OpenClawHealth)
 async def check_health(service: OpenClawService = Depends(get_service)):
@@ -38,10 +38,10 @@ async def check_health(service: OpenClawService = Depends(get_service)):
     logger.info("收到健康检查请求...")
     try:
         health_status = await service.check_health()
-        if health_status.get("available"):
+        if health_status.available:
             logger.info(f"OpenClaw 状态正常")
         else:
-            logger.warning(f"OpenClaw 响应异常: {health_status.get('error')}")
+            logger.warning(f"OpenClaw 响应异常: available={health_status.available}, version={health_status.version}")
         return health_status
     except Exception as e:
         logger.error(f"健康检查执行失败: {str(e)}", exc_info=True)

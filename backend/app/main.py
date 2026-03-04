@@ -94,11 +94,11 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize Knowledge Base config: {e}")
 
     # Start Node Monitoring Task
-    from app.services.openclaw.node.monitor.node_monitor_service import node_monitor
+    from app.services.openclaw.node.monitor import node_monitor
     await node_monitor.start()
 
     # Start Task Worker
-    from app.services.openclaw.task.worker.task_worker_service import task_worker
+    from app.services.openclaw.task.execution import task_worker
     await task_worker.start()
 
     # Initialize Redis Streams

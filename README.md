@@ -147,7 +147,7 @@ Taichi Agent 深度集成了 OpenClaw 分布式监控与任务调度系统，采
     E2B_API_KEY=e2b_xxxx  # 用于沙箱环境
     
     # OpenClaw Integration
-    OPENCLAW_BASE_URL=https://gateway.example.com
+    OPENCLAW_BASE_URL=wss://gateway.example.com
     OPENCLAW_GATEWAY_TOKEN=xxxx
     OPENCLAW_DEVICE_ID=xxxx
     OPENCLAW_DEVICE_PRIVATE_KEY=xxxx # Base64 encoded Ed25519 key

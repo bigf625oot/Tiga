@@ -1,4 +1,4 @@
-from .http.client import OpenClawHttpClient
-from .ws.client import OpenClawWsClient
+from .agno import AgnoGatewayClient
+from .node import OpenClawWsClient
 
-__all__ = ["OpenClawHttpClient", "OpenClawWsClient"]
+__all__ = ["AgnoGatewayClient", "OpenClawWsClient"]
