@@ -1,0 +1,19 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g opacity="0.8">
+    <!-- Edges -->
+    <path d="M100 50 L50 140" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M100 50 L150 140" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M50 140 L150 140" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M100 50 L100 110" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round"/>
+    
+    <!-- Nodes -->
+    <circle cx="100" cy="50" r="16" fill="#94A3B8"/>
+    <circle cx="50" cy="140" r="14" fill="#CBD5E1"/>
+    <circle cx="150" cy="140" r="14" fill="#CBD5E1"/>
+    <circle cx="100" cy="110" r="10" fill="#E2E8F0"/>
+    
+    <!-- Decorative floating particles -->
+    <circle cx="70" cy="80" r="4" fill="#F1F5F9"/>
+    <circle cx="130" cy="90" r="3" fill="#F1F5F9"/>
+  </g>
+</svg>
