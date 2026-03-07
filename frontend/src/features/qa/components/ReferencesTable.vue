@@ -1,7 +1,7 @@
 <template>
   <div class="w-full">
-    <div v-if="loading" class="p-4 text-center text-slate-500">加载中...</div>
-    <div v-else-if="items.length === 0" class="p-4 text-center text-slate-400">暂无数据</div>
+    <div v-if="loading" class="p-4 text-center text-muted-foreground">加载中...</div>
+    <div v-else-if="items.length === 0" class="p-4 text-center text-muted-foreground">暂无数据</div>
     <a-table
       v-else
       :columns="columns"
@@ -9,7 +9,7 @@
       :pagination="pagination"
       :row-key="rowKey"
       @change="handleChange"
-      class="rounded-xl border border-slate-200 overflow-hidden"
+      class="rounded-lg border border-slate-200 overflow-hidden"
     />
   </div>
 </template>

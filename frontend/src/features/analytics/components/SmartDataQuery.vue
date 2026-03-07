@@ -4,17 +4,17 @@
     <div class="bg-white flex flex-col flex-shrink-0 overflow-hidden" :style="{ width: leftWidth + 'px' }">
         <!-- Toggle -->
         <div class="p-4">
-          <div class="inline-flex p-1 bg-slate-100 rounded-lg">
+          <div class="inline-flex p-1 bg-muted rounded-lg">
             <button
               @click="leftTab = 'sessions'"
               :class="leftTab === 'sessions' ? 'bg-white shadow text-slate-900' : 'text-slate-600'"
-              class="px-3 py-1.5 text-xs rounded-md transition-colors"
+              class="p-4 py-1.5 text-xs rounded-md transition-colors"
               aria-label="会话"
             >会话</button>
             <button
               @click="leftTab = 'config'"
               :class="leftTab === 'config' ? 'bg-white shadow text-slate-900' : 'text-slate-600'"
-              class="px-3 py-1.5 text-xs rounded-md transition-colors"
+              class="p-4 py-1.5 text-xs rounded-md transition-colors"
               aria-label="数据库配置"
             >数据库配置</button>
           </div>
@@ -22,11 +22,11 @@
         
         <!-- Sessions Panel -->
         <div v-show="leftTab === 'sessions'" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-          <div class="flex items-center gap-2 mb-3 sticky top-0 bg-white z-10 pb-2">
+          <div class="flex items-center gap-2 m-4 sticky top-0 bg-white z-10 pb-2">
             <a-input v-model:value="sessionSearch" placeholder="搜索会话..." allowClear />
             <button 
               @click="handleCreateSession"
-              class="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center justify-center"
+              class="p-2 rounded-lg bg-primary text-white hover:bg-blue-700 transition-colors flex items-center justify-center"
               title="新建会话"
               aria-label="新建会话"
             >
@@ -35,30 +35,30 @@
               </svg>
             </button>
           </div>
-          <div class="text-[11px] text-slate-500 mb-2">共 {{ filteredSessions.length }} 个会话</div>
+          <div class="text-[11px] text-muted-foreground mb-2">共 {{ filteredSessions.length }} 个会话</div>
           <div class="space-y-1">
             <div
               v-for="s in filteredSessions"
               :key="s.id"
               @click="selectSession(s.id)"
-              class="group px-3 py-2 rounded-lg cursor-pointer transition-all"
-              :class="[activeSessionId === s.id ? 'bg-blue-50' : 'hover:bg-slate-50']"
+              class="group p-4 py-2 rounded-lg cursor-pointer transition-all"
+              :class="[activeSessionId === s.id ? 'bg-primary/10' : 'hover:bg-muted/50']"
             >
               <div class="flex items-center justify-between">
                 <div class="text-sm font-medium text-slate-800 truncate">
                   <span v-if="s.is_pinned" class="text-amber-600 mr-1">★</span>{{ s.title || '未命名会话' }}
-                  <span v-if="s.is_archived" class="ml-2 text-[10px] text-slate-500">已归档</span>
+                  <span v-if="s.is_archived" class="ml-2 text-[10px] text-muted-foreground">已归档</span>
                 </div>
-                <div class="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-blue-600 flex gap-2">
+                <div class="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-primary flex gap-2">
                   <a @click.stop="handleRenameSession(s)">重命名</a>
                   <a @click.stop="togglePin(s)">{{ s.is_pinned ? '取消置顶' : '置顶' }}</a>
                   <a @click.stop="toggleArchive(s)">{{ s.is_archived ? '取消归档' : '归档' }}</a>
                   <a class="text-red-500" @click.stop="handleDeleteSession(s)">删除</a>
                 </div>
               </div>
-              <div class="mt-0.5 flex items-center text-[11px] text-slate-500">
+              <div class="mt-0.5 flex items-center text-[11px] text-muted-foreground">
                 <span class="truncate">{{ s.last_message_preview || '暂无消息' }}</span>
-                <span class="ml-auto flex-none pl-2 text-slate-400">{{ formatRelative(s.updated_at || s.created_at) }}</span>
+                <span class="ml-auto flex-none pl-2 text-muted-foreground">{{ formatRelative(s.updated_at || s.created_at) }}</span>
               </div>
             </div>
           </div>
@@ -66,8 +66,8 @@
 
         <!-- Config Panel -->
         <div v-show="leftTab === 'config'" class="p-6 overflow-y-auto custom-scrollbar">
-        <h2 class="text-lg font-bold mb-6 flex items-center gap-2">
-            <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+        <h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
+            <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
             数据库配置
         </h2>
         
@@ -93,7 +93,7 @@
             </template>
             
             <template v-else>
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-3 gap-4">
                     <div class="col-span-2">
                         <a-form-item label="主机地址" name="host">
                             <a-input v-model:value="config.host" placeholder="localhost" />
@@ -118,18 +118,18 @@
                 <div class="pt-2">
                     <div 
                         @click="showAdvanced = !showAdvanced" 
-                        class="flex items-center gap-1 text-xs text-blue-600 cursor-pointer hover:text-blue-700 select-none font-medium"
+                        class="flex items-center gap-1 text-xs text-primary cursor-pointer hover:text-blue-700 select-none font-medium"
                     >
                         <span>更多连接配置</span>
                         <svg class="w-3 h-3 transition-transform duration-200" :class="showAdvanced ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     
-                    <div v-show="showAdvanced" class="mt-4 space-y-4 p-4 bg-slate-50 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div v-show="showAdvanced" class="mt-4 space-y-4 p-4 bg-muted/50 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200">
                         <a-form-item label="数据库名称" name="database">
                             <a-input v-model:value="config.database" placeholder="选填，默认连接postgres/mysql" />
                         </a-form-item>
                         
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 gap-4">
                             <a-form-item label="连接超时 (秒)" name="timeout">
                                 <a-input-number v-model:value="config.timeout" class="w-full" :min="1" />
                             </a-form-item>
@@ -159,7 +159,7 @@
                 </div>
             </template>
             
-            <div class="flex flex-col gap-3 pt-4 mt-4">
+            <div class="flex flex-col gap-4 pt-4 mt-4">
                 <a-button @click="testConnection" :loading="testing" class="w-full" :disabled="connecting">
                     <template #icon>
                         <svg class="w-4 h-4 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -167,25 +167,25 @@
                     测试连接
                 </a-button>
                 
-                <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-blue-600" :disabled="testing">
+                <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-primary" :disabled="testing">
                     保存配置并连接
                 </a-button>
             </div>
         </a-form>
         
         <!-- Status Messages -->
-        <div v-if="testResult" class="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
+        <div v-if="testResult" class="mt-4 p-4 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
             <component :is="testResult.success ? 'CheckCircleOutlined' : 'CloseCircleOutlined'" class="mt-0.5" />
             <span class="break-all">{{ testResult.message }}</span>
         </div>
         
-        <div class="mt-8 p-4 bg-blue-50 text-blue-700 text-xs rounded-xl leading-relaxed">
-            <p class="font-bold mb-2 flex items-center gap-1">
+        <div class="mt-8 p-4 bg-primary/10 text-blue-700 text-xs rounded-lg leading-relaxed">
+            <p class="font-semibold mb-2 flex items-center gap-1">
                 <InfoCircleOutlined /> 使用提示
             </p>
             <p>连接成功后，您可以直接使用自然语言查询数据。</p>
             <p class="mt-2 font-medium">示例指令：</p>
-            <ul class="list-disc pl-4 mt-1 space-y-1 text-blue-600">
+            <ul class="list-disc pl-4 mt-1 space-y-1 text-primary">
                 <li>"查询最近10笔销售记录"</li>
                 <li>"统计各类目的销售总额"</li>
                 <li>"绘制月度销售趋势图"</li>
@@ -205,10 +205,10 @@
       
     <!-- Chat Area -->
     <div class="flex-1 flex flex-col h-full bg-white relative">
-        <div class="px-6 py-3 flex items-center gap-3 sticky top-0 bg-white/90 backdrop-blur z-10">
+        <div class="px-6 p-4 flex items-center gap-4 sticky top-0 bg-white/90 backdrop-blur z-10">
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-semibold text-slate-800 truncate">{{ currentSession?.title || '未命名会话' }}</div>
-                <div class="text-[11px] text-slate-500 truncate">
+                <div class="text-[11px] text-muted-foreground truncate">
                     <span v-if="currentSession" :title="formatAbsolute(currentSession.updated_at || currentSession.created_at)">
                         最近活跃：{{ formatRelative(currentSession.updated_at || currentSession.created_at) }}
                     </span>
@@ -216,16 +216,16 @@
                 </div>
             </div>
             <div v-if="currentSession" class="flex items-center gap-2 text-[11px]">
-                <a @click="handleRenameSession(currentSession)" class="text-blue-600">重命名</a>
-                <a @click="togglePin(currentSession)" class="text-blue-600">{{ currentSession.is_pinned ? '取消置顶' : '置顶' }}</a>
-                <a @click="toggleArchive(currentSession)" class="text-blue-600">{{ currentSession.is_archived ? '取消归档' : '归档' }}</a>
+                <a @click="handleRenameSession(currentSession)" class="text-primary">重命名</a>
+                <a @click="togglePin(currentSession)" class="text-primary">{{ currentSession.is_pinned ? '取消置顶' : '置顶' }}</a>
+                <a @click="toggleArchive(currentSession)" class="text-primary">{{ currentSession.is_archived ? '取消归档' : '归档' }}</a>
                 <a @click="handleDeleteSession(currentSession)" class="text-red-500">删除</a>
             </div>
         </div>
         <!-- Messages -->
         <div class="flex-1 overflow-y-auto p-6 space-y-6" ref="messagesContainer">
-             <div v-if="messages.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400">
-                <div class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-sm mb-6">
+             <div v-if="messages.length === 0" class="h-full flex flex-col items-center justify-center text-muted-foreground">
+                <div class="w-20 h-20 bg-white rounded-lg flex items-center justify-center shadow-sm mb-6">
                     <svg class="w-10 h-10 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                 </div>
                 <h3 class="text-lg font-semibold text-slate-700 mb-2">智能问数助手</h3>
@@ -235,34 +235,34 @@
             <div v-for="(msg, index) in messages" :key="msg._id || index" 
                  :class="['flex gap-4 max-w-4xl mx-auto', msg.role === 'user' ? 'flex-row-reverse' : '']">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
-                     :class="msg.role === 'user' ? 'bg-blue-600' : 'bg-white'">
-                     <span v-if="msg.role === 'user'" class="text-white text-xs font-bold">Me</span>
+                     :class="msg.role === 'user' ? 'bg-primary' : 'bg-white'">
+                     <span v-if="msg.role === 'user'" class="text-white text-xs font-semibold">Me</span>
                      <svg v-else class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                 </div>
-                <div :class="['rounded-2xl shadow-sm text-sm leading-relaxed max-w-[90%] overflow-hidden', 
-                              msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm px-5 py-3.5' : 'bg-white text-slate-700 rounded-tl-sm w-full border border-slate-100']">
+                <div :class="['rounded-lg shadow-sm text-sm leading-relaxed max-w-[90%] overflow-hidden', 
+                              msg.role === 'user' ? 'bg-primary text-white rounded-tr-sm p-6 p-4.5' : 'bg-white text-slate-700 rounded-tl-sm w-full border border-border']">
                     <div v-if="msg.role === 'assistant'" class="flex flex-col">
                         <!-- 1. Process Nodes (Collapsible) -->
-                        <div class="border-b border-slate-100">
+                        <div class="border-b border-border">
                             <button 
                                 @click="toggleProcess(msg._id)"
-                                class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                class="w-full flex items-center justify-between px-4 py-2.5 bg-muted/50 hover:bg-muted transition-colors"
                             >
                                 <div class="flex items-center gap-2 text-xs font-medium text-slate-600">
                                     <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                                     <span>思考过程</span>
                                 </div>
                                 <svg 
-                                    class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200"
+                                    class="w-3.5 h-3.5 text-muted-foreground transition-transform duration-200"
                                     :class="isProcessExpanded(msg._id) ? 'rotate-180' : ''"
                                     fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 >
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            <div v-show="isProcessExpanded(msg._id)" class="bg-slate-50 px-4 py-3 border-t border-slate-100 animate-in slide-in-from-top-1">
+                            <div v-show="isProcessExpanded(msg._id)" class="bg-muted/50 px-4 p-4 border-t border-border animate-in slide-in-from-top-1">
                                 <div class="space-y-3">
-                                    <div v-for="(step, sIdx) in (msg.steps || [])" :key="step.step" class="flex gap-3">
+                                    <div v-for="(step, sIdx) in (msg.steps || [])" :key="step.step" class="flex gap-4">
                                         <div class="flex flex-col items-center">
                                             <div class="w-2 h-2 rounded-full mt-1.5" 
                                                  :class="sIdx === (msg.steps || []).length - 1 && isStreaming ? 'bg-blue-500 animate-pulse' : 'bg-blue-500'"></div>
@@ -271,15 +271,15 @@
                                         <div class="pb-2 min-w-0 flex-1">
                                             <div class="text-xs font-medium text-slate-700 flex justify-between">
                                                 <span>步骤 {{ step.step }}</span>
-                                                <span class="text-slate-400 font-normal">{{ formatRelative(step.timestamp) }}</span>
+                                                <span class="text-muted-foreground font-normal">{{ formatRelative(step.timestamp) }}</span>
                                             </div>
-                                            <div class="text-[11px] text-slate-500 mt-0.5 break-words whitespace-pre-wrap font-mono bg-white border border-slate-200 p-2 rounded shadow-sm" 
+                                            <div class="text-[11px] text-muted-foreground mt-0.5 break-words whitespace-pre-wrap font-mono bg-white border border-slate-200 p-2 rounded shadow-sm" 
                                                  v-if="step.content">
                                                 {{ typeof step.content === 'object' ? JSON.stringify(step.content, null, 2) : step.content.trim() }}
                                             </div>
                                         </div>
                                     </div>
-                                    <div v-if="(!msg.steps || msg.steps.length === 0) && isStreaming" class="text-xs text-slate-400 italic px-2">
+                                    <div v-if="(!msg.steps || msg.steps.length === 0) && isStreaming" class="text-xs text-muted-foreground italic px-2">
                                         正在初始化流程...
                                     </div>
                                 </div>
@@ -294,11 +294,11 @@
                                 <div class="space-y-4">
                                     <div class="h-4 bg-slate-200 rounded w-1/4"></div>
                                     <div class="border border-slate-200 rounded-lg overflow-hidden">
-                                        <div class="h-10 bg-slate-100 border-b border-slate-200"></div>
+                                        <div class="h-10 bg-muted border-b border-slate-200"></div>
                                         <div class="p-4 space-y-3">
-                                            <div class="h-3 bg-slate-100 rounded w-full"></div>
-                                            <div class="h-3 bg-slate-100 rounded w-full"></div>
-                                            <div class="h-3 bg-slate-100 rounded w-3/4"></div>
+                                            <div class="h-3 bg-muted rounded w-full"></div>
+                                            <div class="h-3 bg-muted rounded w-full"></div>
+                                            <div class="h-3 bg-muted rounded w-3/4"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -306,17 +306,17 @@
                                 <!-- Chart Skeleton -->
                                 <div class="space-y-4">
                                     <div class="h-4 bg-slate-200 rounded w-1/5"></div>
-                                    <div class="h-64 bg-slate-50 rounded-xl border border-slate-200"></div>
+                                    <div class="h-64 bg-muted/50 rounded-lg border border-slate-200"></div>
                                 </div>
                             </div>
 
                             <!-- Toolbar -->
-                            <div class="flex items-center justify-between mb-3" v-if="msg.sql_query && (msg.content || !isStreaming)">
-                                <div class="text-xs text-slate-400 font-medium">查询结果</div>
-                                <div class="flex bg-slate-100 p-0.5 rounded-lg">
+                            <div class="flex items-center justify-between m-4" v-if="msg.sql_query && (msg.content || !isStreaming)">
+                                <div class="text-xs text-muted-foreground font-medium">查询结果</div>
+                                <div class="flex bg-muted p-0.5 rounded-lg">
                                     <button 
                                         @click="setMsgViewMode(msg._id, 'table')"
-                                        :class="getMsgViewMode(msg._id) === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                                        :class="getMsgViewMode(msg._id) === 'table' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
                                         class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
                                     >
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7-8v8m14-8v8M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
@@ -324,7 +324,7 @@
                                     </button>
                                     <button 
                                         @click="setMsgViewMode(msg._id, 'sql')"
-                                        :class="getMsgViewMode(msg._id) === 'sql' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                                        :class="getMsgViewMode(msg._id) === 'sql' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
                                         class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
                                     >
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
@@ -345,10 +345,10 @@
                                 
                                 <!-- SQL View -->
                                 <div v-show="getMsgViewMode(msg._id) === 'sql'" class="relative group/sql">
-                                    <pre class="p-3 text-xs text-slate-800 bg-slate-50 rounded-lg border border-slate-200 overflow-x-auto font-mono"><code>{{ msg.sql_query }}</code></pre>
+                                    <pre class="p-4 text-xs text-slate-800 bg-muted/50 rounded-lg border border-slate-200 overflow-x-auto font-mono"><code>{{ msg.sql_query }}</code></pre>
                                     <button
                                       @click="copySql(msg.sql_query)"
-                                      class="absolute top-2 right-2 p-1.5 rounded-md bg-white shadow-sm border border-slate-200 text-slate-500 opacity-0 group-hover/sql:opacity-100 transition-opacity hover:text-blue-600"
+                                      class="absolute top-2 right-2 p-1.5 rounded-md bg-white shadow-sm border border-slate-200 text-muted-foreground opacity-0 group-hover/sql:opacity-100 transition-opacity hover:text-primary"
                                       title="复制 SQL"
                                     >
                                       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 4h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -357,12 +357,12 @@
                             </div>
 
                             <!-- 3. Chart Content (Bottom) -->
-                            <div v-if="msg.chart_config || getMessageChart(msg.content)" class="mt-5 pt-5 border-t border-slate-100">
-                                <div class="flex items-center gap-2 mb-3">
+                            <div v-if="msg.chart_config || getMessageChart(msg.content)" class="m-6 p-6 border-t border-border">
+                                <div class="flex items-center gap-2 m-4">
                                     <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
-                                    <span class="text-xs font-bold text-slate-700">可视化图表</span>
+                                    <span class="text-xs font-semibold text-slate-700">可视化图表</span>
                                 </div>
-                                <div class="h-80 w-full bg-white rounded-xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <div class="h-80 w-full bg-white rounded-lg p-4 border border-border shadow-sm hover:shadow-md transition-shadow duration-200">
                                     <ChartFrame class="chart" :option="processChartOption(msg.chart_config || getMessageChart(msg.content))" />
                                 </div>
                             </div>
@@ -377,7 +377,7 @@
                  <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
                      <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                  </div>
-                 <div class="bg-white rounded-2xl rounded-tl-sm px-5 py-3.5 shadow-sm flex items-center gap-2">
+                 <div class="bg-white rounded-lg rounded-tl-sm p-6 p-4.5 shadow-sm flex items-center gap-2">
                     <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span>
                     <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
                     <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
@@ -396,13 +396,13 @@
                       ref="textareaRef"
                       rows="3"
                       placeholder="输入您的问题..."
-                      class="w-full pl-4 pr-28 py-3.5 bg-transparent border border-slate-200 rounded-xl outline-none resize-none text-sm text-slate-700 placeholder-slate-400 transition-all max-h-48 overflow-y-auto focus:border-blue-400"
+                      class="w-full pl-4 pr-28 p-4.5 bg-transparent border border-slate-200 rounded-lg outline-none resize-none text-sm text-slate-700 placeholder-slate-400 transition-all max-h-48 overflow-y-auto focus:border-blue-400"
                       :disabled="isLoading"
                     ></textarea>
                     <div class="absolute right-2 bottom-2 flex items-center gap-2">
                         <button 
                           @click="templatesOpen = !templatesOpen"
-                          class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                          class="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200"
                           title="图表生成向导"
                         >
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -410,7 +410,7 @@
                         <button 
                           @click="sendMessage"
                           class="p-2 rounded-lg transition-all duration-200"
-                          :class="input.trim() && !isLoading ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' : 'text-slate-300 cursor-not-allowed'"
+                          :class="input.trim() && !isLoading ? 'text-primary hover:text-blue-700 hover:bg-primary/10' : 'text-slate-300 cursor-not-allowed'"
                           :disabled="isLoading || !input.trim()"
                           aria-label="发送"
                         >
@@ -424,13 +424,13 @@
                 <!-- Icon Toolbar -->
                 <div class="flex items-center justify-between mt-2">
                     <div class="relative">
-                        <div v-if="templatesOpen" class="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 p-2 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                            <div class="text-xs font-bold text-slate-500 px-2 py-1 mb-1">推荐图表查询</div>
+                        <div v-if="templatesOpen" class="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-xl border border-border p-2 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div class="text-xs font-semibold text-muted-foreground px-2 py-1 mb-1">推荐图表查询</div>
                             <button 
                                 v-for="t in templates" 
                                 :key="t.name"
                                 @click="insertTemplate(t.content)"
-                                class="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors flex items-center justify-between group"
+                                class="w-full text-left p-4 py-2 rounded-lg text-xs hover:bg-primary/10 text-slate-700 hover:text-blue-700 transition-colors flex items-center justify-between group"
                             >
                                 <span>{{ t.name }}</span>
                                 <svg class="w-3 h-3 opacity-0 group-hover:opacity-100 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -438,11 +438,11 @@
                         </div>
                     </div>
 
-                    <div class="text-[10px] text-slate-400">
+                    <div class="text-[10px] text-muted-foreground">
                       <span>{{ input.length }}/2000</span>
                     </div>
                 </div>
-                <p class="text-center text-[10px] text-slate-400 mt-2">智能问数 ·Tiga AI驱动</p>
+                <p class="text-center text-[10px] text-muted-foreground mt-2">智能问数 ·Tiga AI驱动</p>
             </div>
         </div>
     </div>

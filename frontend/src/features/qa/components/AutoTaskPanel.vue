@@ -1,26 +1,26 @@
 <template>
-  <div class="h-full flex flex-col bg-white border-l border-slate-100 shadow-xl shadow-slate-200/50 relative z-10 font-sans">
+  <div class="h-full flex flex-col bg-white border-l border-border shadow-xl shadow-slate-200/50 relative z-10 font-sans">
     <!-- Header -->
-    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-white/95 backdrop-blur-sm sticky top-0 z-20">
+    <div class="p-6 py-4 border-b border-border flex justify-between items-center bg-white/95 backdrop-blur-sm sticky top-0 z-20">
       <div class="flex items-center gap-4">
         <div>
-          <h3 class="font-bold text-slate-900 text-base m-0 tracking-tight">自动任务工作台</h3>
-          <p class="text-xs text-slate-500 m-0">自动化任务管理</p>
+          <h3 class="font-semibold text-slate-900 text-base m-0 tracking-tight">自动任务工作台</h3>
+          <p class="text-xs text-muted-foreground m-0">自动化任务管理</p>
         </div>
-        <div class="bg-slate-100 p-0.5 rounded-lg flex items-center ml-4">
+        <div class="bg-muted p-0.5 rounded-lg flex items-center ml-4">
           <button 
             v-for="tab in ['host', 'task', 'node']" 
             :key="tab"
             @click="activeTab = tab"
-            class="px-3 py-1 text-xs font-medium rounded-md transition-all duration-200"
-            :class="activeTab === tab ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+            class="p-4 py-1 text-xs font-medium rounded-md transition-all duration-200"
+            :class="activeTab === tab ? 'bg-white text-indigo-600 shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
           >
             {{ tab === 'host' ? 'GateWay' : (tab === 'task' ? '任务' : '节点') }}
           </button>
         </div>
       </div>
       <button 
-        class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+        class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground hover:text-slate-600 transition-colors"
         @click="$emit('close')"
       >
         <CloseOutlined class="text-xs" />

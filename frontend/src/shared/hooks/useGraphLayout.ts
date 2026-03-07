@@ -67,7 +67,7 @@ export function useGraphLayout(nodes: Ref<Record<string, IGraphNode>>) {
               color: "#666666",
               margin: 4,
               background: {
-                  visible: true,
+                  visible: false,
                   color: "#ffffff",
                   padding: {
                       vertical: 1,

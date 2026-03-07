@@ -1,10 +1,10 @@
 <template>
-    <div class="absolute top-4 right-4 z-10 flex gap-2 bg-white/80 p-1 rounded-lg border border-gray-200 shadow-sm backdrop-blur-sm">
+    <div class="absolute top-4 right-4 z-10 flex gap-2 bg-white/80 dark:bg-slate-800/80 p-1 rounded-lg border border-border dark:border-slate-700 shadow-sm backdrop-blur-sm transition-colors">
       <a-tooltip title="力导向布局 (Force)">
         <a-button 
           type="text" 
           size="small" 
-          :class="{ 'bg-blue-50 text-blue-600': currentLayout === 'force' }"
+          :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === 'force', 'text-slate-600 dark:text-slate-400': currentLayout !== 'force' }"
           @click="$emit('switchLayout', 'force')"
         >
           <template #icon>
@@ -16,7 +16,7 @@
         <a-button 
           type="text" 
           size="small" 
-          :class="{ 'bg-blue-50 text-blue-600': currentLayout === 'grid' }"
+          :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === 'grid', 'text-slate-600 dark:text-slate-400': currentLayout !== 'grid' }"
           @click="$emit('switchLayout', 'grid')"
         >
           <template #icon>
@@ -28,7 +28,7 @@
         <a-button 
           type="text" 
           size="small" 
-          :class="{ 'bg-blue-50 text-blue-600': currentLayout === 'circle' }"
+          :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === 'circle', 'text-slate-600 dark:text-slate-400': currentLayout !== 'circle' }"
           @click="$emit('switchLayout', 'circle')"
         >
           <template #icon>
@@ -40,7 +40,7 @@
         <a-button 
           type="text" 
           size="small" 
-          :class="{ 'bg-blue-50 text-blue-600': currentLayout === '3d' }"
+          :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === '3d', 'text-slate-600 dark:text-slate-400': currentLayout !== '3d' }"
           @click="$emit('switchLayout', '3d')"
         >
           <template #icon>

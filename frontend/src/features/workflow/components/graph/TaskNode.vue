@@ -8,12 +8,12 @@
         <component :is="statusIcon" class="w-3 h-3 text-white" />
       </div>
       <div class="flex-1 min-w-0">
-        <div class="font-bold text-xs truncate">{{ data.label }}</div>
-        <div class="text-[10px] text-slate-500 capitalize">{{ data.status }}</div>
+        <div class="font-semibold text-xs truncate">{{ data.label }}</div>
+        <div class="text-[10px] text-muted-foreground capitalize">{{ data.status }}</div>
       </div>
     </div>
 
-    <div v-if="data.status === 'running'" class="h-1 bg-slate-100 rounded-full overflow-hidden mt-1">
+    <div v-if="data.status === 'running'" class="h-1 bg-muted rounded-full overflow-hidden mt-1">
         <div class="h-full bg-blue-500 animate-pulse" :style="{ width: (data.progress || 0) + '%' }"></div>
     </div>
 

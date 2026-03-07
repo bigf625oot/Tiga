@@ -1,10 +1,10 @@
 <template>
   <div class="h-full flex flex-col relative bg-white overflow-hidden">
     <!-- Toolbar -->
-    <div class="h-10 border-b border-slate-200 flex items-center px-4 justify-between bg-slate-50">
+    <div class="h-10 border-b border-slate-200 flex items-center px-4 justify-between bg-muted/50">
         <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">Code Editor</span>
-            <span v-if="isReadOnly" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-500">READ ONLY</span>
+            <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Code Editor</span>
+            <span v-if="isReadOnly" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-muted-foreground">READ ONLY</span>
         </div>
         <div class="flex items-center gap-2">
             <button 
@@ -64,11 +64,11 @@
                     <div v-if="block.type === 'html'" v-html="block.content"></div>
                     
                     <!-- Vue Component Preview -->
-                    <div v-else-if="block.type === 'vue'" class="my-6 border border-slate-200 rounded-lg overflow-hidden bg-slate-50/50 shadow-sm transition-all hover:shadow-md">
-                        <div class="px-4 py-2 border-b border-slate-200 bg-slate-100/50 flex justify-between items-center">
-                            <span class="text-xs font-medium text-slate-500">Vue Preview</span>
+                    <div v-else-if="block.type === 'vue'" class="my-6 border border-slate-200 rounded-lg overflow-hidden bg-muted/50/50 shadow-sm transition-all hover:shadow-md">
+                        <div class="px-4 py-2 border-b border-slate-200 bg-muted/50 flex justify-between items-center">
+                            <span class="text-xs font-medium text-muted-foreground">Vue Preview</span>
                             <div class="flex gap-2">
-                                <button class="text-xs text-slate-400 hover:text-indigo-600 transition-colors" @click="block.showCode = !block.showCode">
+                                <button class="text-xs text-muted-foreground hover:text-indigo-600 transition-colors" @click="block.showCode = !block.showCode">
                                     {{ block.showCode ? '隐藏代码' : '查看代码' }}
                                 </button>
                             </div>
@@ -81,20 +81,20 @@
                             </ErrorBoundary>
                         </div>
                         
-                        <div v-if="block.showCode" class="border-t border-slate-200 bg-slate-50 p-4 overflow-x-auto">
+                        <div v-if="block.showCode" class="border-t border-slate-200 bg-muted/50 p-4 overflow-x-auto">
                             <pre class="text-xs m-0 font-mono text-slate-600">{{ block.rawCode }}</pre>
                         </div>
                     </div>
                 </template>
                 
-                <div v-if="parsedBlocks.length === 0 && !localValue" class="flex flex-col items-center justify-center h-full min-h-[300px] text-slate-400 select-none absolute inset-0">
-                    <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+                <div v-if="parsedBlocks.length === 0 && !localValue" class="flex flex-col items-center justify-center h-full min-h-[300px] text-muted-foreground select-none absolute inset-0">
+                    <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-4 border border-border">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-slate-300">
                             <path d="M16 18L22 12L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M8 6L2 12L8 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <p class="text-sm font-medium text-slate-500">等待 LLM 生成代码...</p>
+                    <p class="text-sm font-medium text-muted-foreground">等待 LLM 生成代码...</p>
                 </div>
             </div>
         </div>
@@ -156,7 +156,7 @@ const ErrorBoundary = defineComponent({
       return false;
     });
     return () => error.value 
-        ? h('div', { class: 'text-red-500 text-sm bg-red-50 p-3 rounded border border-red-100' }, [
+        ? h('div', { class: 'text-red-500 text-sm bg-red-50 p-4 rounded border border-red-100' }, [
             h('strong', '组件渲染错误: '),
             h('span', error.value.message || String(error.value))
           ]) 

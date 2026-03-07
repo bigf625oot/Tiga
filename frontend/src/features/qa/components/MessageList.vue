@@ -1,10 +1,7 @@
 <template>
   <div class="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar scroll-smooth" ref="containerRef">
     <div v-for="(group, gIdx) in messageGroups" :key="gIdx" class="flex flex-col gap-1">
-      <!-- Time Separator (Optional) -->
-      <div v-if="group.showTime" class="flex justify-center my-4">
-        <span class="text-xs text-slate-300 bg-slate-50/50 px-2 py-0.5 rounded-full">{{ formatGroupTime(group.timestamp) }}</span>
-      </div>
+
 
       <!-- Messages in Group -->
       <ChatCard 
@@ -23,7 +20,7 @@
 
     <!-- Loading Indicator -->
     <div v-if="isLoading" class="flex gap-4 ml-10 mt-2">
-        <div class="px-4 py-3 bg-slate-50 rounded-2xl rounded-tl-sm text-slate-400 text-xs flex items-center gap-1">
+        <div class="px-4 p-4 bg-muted/50 rounded-lg rounded-tl-sm text-muted-foreground text-xs flex items-center gap-1">
             <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0s"></span>
             <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
             <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>

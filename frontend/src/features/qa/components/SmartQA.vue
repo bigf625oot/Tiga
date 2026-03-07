@@ -8,8 +8,8 @@
     :animation-speed="20"
   >
     <div v-if="useTaskUI" class="h-full flex flex-col">
-      <div class="flex-none px-6 py-3 border-b border-figma-border flex justify-between items-center bg-white/80 backdrop-blur-sm z-30">
-          <div class="flex items-center gap-3 min-w-0">
+      <div class="flex-none px-6 p-4 border-b border-figma-border flex justify-between items-center bg-white/80 backdrop-blur-sm z-30">
+          <div class="flex items-center gap-4 min-w-0">
               <div class="relative w-[36px] h-[36px] flex items-center justify-center shrink-0">
                   <a-progress type="circle" :percent="workflowStore.progress" :size="36" :strokeWidth="4" :showInfo="false" strokeColor="#6366f1" trailColor="#e2e8f0" class="!m-0 !p-0" />
                   <div class="absolute inset-0 m-auto w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm overflow-hidden">
@@ -19,19 +19,19 @@
               </div>
 
               <div class="min-w-0">
-                  <h2 class="font-bold text-figma-text text-sm m-0 leading-tight truncate">
+                  <h2 class="font-semibold text-figma-text text-sm m-0 leading-tight truncate">
                       {{ currentSession?.title || '新任务' }}
                   </h2>
                   <div class="flex items-center gap-1 text-sm text-figma-notation truncate" v-if="currentAgent">
                       <span>当前智能体:</span>
-                      <span class="font-medium text-blue-600 truncate">{{ currentAgent.name }}</span>
+                      <span class="font-medium text-primary truncate">{{ currentAgent.name }}</span>
                   </div>
               </div>
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
               <button
-                  class="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 transition-colors flex items-center justify-center"
+                  class="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors flex items-center justify-center"
                   title="查看系统日志"
                   @click="openTaskLogs"
               >
@@ -39,7 +39,7 @@
               </button>
 
               <button
-                  class="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 transition-colors flex items-center justify-center"
+                  class="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors flex items-center justify-center"
                   title="折叠/展开聊天区"
                   @click="toggleLeftPane"
               >
@@ -48,7 +48,7 @@
               </button>
 
               <button
-                  class="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 transition-colors flex items-center justify-center"
+                  class="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors flex items-center justify-center"
                   title="折叠/展开任务区"
                   @click="toggleRightPane"
               >
@@ -67,14 +67,14 @@
                     <div class="w-[94px] h-[94px] flex items-center justify-center mb-2">
                         <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain" />
                     </div>
-                    <h1 class="text-[32px] font-bold text-[#2A2F3C] text-center m-0">让我们创造点厉害的东西！</h1>
+                    <h1 class="text-[32px] font-semibold text-[#2A2F3C] text-center m-0">让我们创造点厉害的东西！</h1>
                 </div>
                 
                 <!-- Centered Input Area -->
-                <div class="w-full relative flex flex-col gap-2 border border-slate-200 rounded-xl p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+                <div class="w-full relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
                     <!-- Attachments Preview -->
                     <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                        <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
+                        <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
                             <PaperClipOutlined />
                             <span class="max-w-[100px] truncate">{{ att.name }}</span>
                             <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
@@ -87,27 +87,27 @@
                         @keydown="onInputKeydown"
                         rows="1"
                         :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
                         :disabled="isLoading"
                         @input="adjustHeight"
                     ></textarea>
 
                     <div class="flex justify-between items-center px-2 pb-1">
                          <div class="flex items-center gap-2 h-8">
-                             <button @click="openAttachmentModal" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
+                             <button @click="openAttachmentModal" class="p-1.5 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
                                 <PaperClipOutlined />
                              </button>
                              <div class="h-4 w-px bg-slate-200 mx-1"></div>
                              
                              <a-dropdown :trigger="['click']">
-                                <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-slate-100 transition-colors h-full select-none">
+                                <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-muted transition-colors h-full select-none">
                                     <MessageOutlined v-if="mode === 'chat'" class="text-indigo-600" />
                                     <ProjectOutlined v-else-if="mode === 'workflow'" class="text-indigo-600" />
                                     <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
                                     <span class="text-xs font-medium text-slate-700">
                                         {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : '自动任务') }}
                                     </span>
-                                    <DownOutlined class="text-[10px] text-slate-400" />
+                                    <DownOutlined class="text-[10px] text-muted-foreground" />
                                 </div>
                                 <template #overlay>
                                     <a-menu @click="({ key }) => handleModeChange(key)">
@@ -133,12 +133,12 @@
                              <div v-if="mode !== 'auto_task'" class="h-4 w-px bg-slate-200 mx-1"></div>
                              <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                 <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
+                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
                              </div>
                          </div>
                          
-                         <div class="flex items-center gap-3 h-8">
-                             <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
+                         <div class="flex items-center gap-4 h-8">
+                             <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
                                 <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-4 h-4 object-cover rounded-full" />
                                 <img v-else src="/tiga.svg" class="w-4 h-4" />
                                 <a-select 
@@ -158,35 +158,35 @@
                              <button 
                                 @click="sendMessage" 
                                 class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
                                 :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                              >
-                                <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
-                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
-                                <ArrowUpOutlined v-else class="text-sm font-bold" />
+                                <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
+                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
+                                <ArrowUpOutlined v-else class="text-sm font-semibold" />
                              </button>
                          </div>
                     </div>
                 </div>
 
                 <!-- Scripts Section -->
-                <div v-if="userScripts.length > 0" class="flex flex-col gap-3 px-1 w-full animate-fade-in-up">
-                    <span class="text-sm font-medium text-[#495363] px-3">用户快捷提示语</span>
+                <div v-if="userScripts.length > 0" class="flex flex-col gap-4 px-1 w-full animate-fade-in-up">
+                    <span class="text-sm font-medium text-[#495363] p-4">用户快捷提示语</span>
                     <div class="flex gap-4 overflow-x-auto py-4 custom-scrollbar px-2">
                         <div 
                             v-for="s in userScripts" 
                             :key="s.id" 
-                            class="w-[220px] h-[140px] flex-shrink-0 flex flex-col justify-between p-5 bg-gradient-to-br from-white via-white to-indigo-50/60 rounded-2xl border border-slate-100 hover:border-indigo-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden" 
+                            class="w-[220px] h-[140px] flex-shrink-0 flex flex-col justify-between p-6 bg-gradient-to-br from-white via-white to-indigo-50/60 rounded-lg border border-border hover:border-indigo-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden" 
                             @click="sendQuickMessage(s.content)"
                         >
                             <div class="absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-purple-100/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                             <div class="flex flex-col gap-2 relative z-10">
-                                <p class="text-xs text-slate-500 group-hover:text-slate-600 line-clamp-3 leading-relaxed transition-colors duration-300">
+                                <p class="text-xs text-muted-foreground group-hover:text-slate-600 line-clamp-3 leading-relaxed transition-colors duration-300">
                                     {{ s.content }}
                                 </p>
                             </div>
-                            <div class="relative z-10 flex items-center justify-between mt-1 pt-3 border-t border-slate-50 group-hover:border-slate-100 transition-colors duration-300">
-                                <span class="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors duration-300 truncate">{{ s.title }}</span>
+                            <div class="relative z-10 flex items-center justify-between mt-1 p-4 border-t border-slate-50 group-hover:border-border transition-colors duration-300">
+                                <span class="text-sm font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors duration-300 truncate">{{ s.title }}</span>
                             </div>
                         </div>
                     </div>
@@ -205,12 +205,12 @@
         />
 
         <!-- Input Area (Fixed Bottom for Chat) -->
-        <div v-if="messages.length > 0" class="flex-none w-full py-3 px-4 bg-white z-30 border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+        <div v-if="messages.length > 0" class="flex-none w-full p-4 px-4 bg-white z-30 border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
             <div class="max-w-4xl mx-auto relative">
-                <div class="relative flex flex-col gap-2 border border-slate-200 rounded-xl p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
+                <div class="relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
                     <!-- Attachments Preview -->
                     <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                        <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
+                        <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
                             <PaperClipOutlined />
                             <span class="max-w-[100px] truncate">{{ att.name }}</span>
                             <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
@@ -223,7 +223,7 @@
                         @keydown="onInputKeydown"
                         rows="1"
                         :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
                         :disabled="isLoading"
                         @input="adjustHeight"
                     ></textarea>
@@ -232,19 +232,19 @@
                          <div class="flex items-center gap-2 h-8">
                              <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                 <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
+                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
                              </div>
                          </div>
-                         <div class="flex items-center gap-3 h-8">
+                         <div class="flex items-center gap-4 h-8">
                              <button 
                                 @click="sendMessage" 
                                 class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
                                 :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                              >
-                                <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
-                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
-                                <ArrowUpOutlined v-else class="text-sm font-bold" />
+                                <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
+                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
+                                <ArrowUpOutlined v-else class="text-sm font-semibold" />
                              </button>
                          </div>
                     </div>
@@ -264,7 +264,7 @@
         <div class="absolute w-4 h-full bg-transparent -left-1.5 cursor-col-resize"></div>
       </div>
 
-      <div v-show="!isRightCollapsed" class="w-full h-[420px] xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-slate-50 z-20 transition-all duration-150 flex flex-col overflow-hidden" :style="rightPaneStyle">
+      <div v-show="!isRightCollapsed" class="w-full h-[420px] xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-muted/50 z-20 transition-all duration-150 flex flex-col overflow-hidden" :style="rightPaneStyle">
         <AutoTaskPanel 
             v-if="isAutoTaskMode" 
             @run-task="handleRunTask" 
@@ -284,8 +284,8 @@
 
     <div v-else class="h-full flex flex-col bg-transparent overflow-hidden relative">
       <div class="flex-1 flex flex-col h-full bg-transparent relative min-w-0">
-          <div v-if="messages.length > 0" class="px-6 py-3 border-b border-figma-border flex justify-between items-center bg-white/80 backdrop-blur-sm z-10">
-              <div class="flex items-center gap-3 group flex-1">
+          <div v-if="messages.length > 0 && !embedded" class="px-6 p-4 border-b border-figma-border flex justify-between items-center bg-white/80 backdrop-blur-sm z-10">
+              <div class="flex items-center gap-4 group flex-1">
                   <div class="relative w-[36px] h-[36px] flex items-center justify-center">
                       <a-progress type="circle" :percent="workflowStore.progress" :size="36" :strokeWidth="4" :showInfo="false" strokeColor="#6366f1" trailColor="#e2e8f0" class="!m-0 !p-0" />
                       <div class="absolute inset-0 m-auto w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm overflow-hidden">
@@ -294,12 +294,12 @@
                       </div>
                   </div>
                   <div class="min-w-0">
-                      <h2 class="font-bold text-figma-text text-sm m-0 leading-tight truncate">
+                      <h2 class="font-semibold text-figma-text text-sm m-0 leading-tight truncate">
                           {{ currentSession?.title || '新任务' }}
                       </h2>
                       <div class="flex items-center gap-1 text-sm text-figma-notation truncate" v-if="currentAgent">
                           <span>当前智能体:</span>
-                          <span class="font-medium text-blue-600 truncate">{{ currentAgent.name }}</span>
+                          <span class="font-medium text-primary truncate">{{ currentAgent.name }}</span>
                       </div>
                   </div>
               </div>
@@ -311,12 +311,13 @@
                       <div class="w-[94px] h-[94px] flex items-center justify-center mb-2">
                           <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain" />
                       </div>
-                      <h1 class="text-[32px] font-bold text-[#2A2F3C] text-center m-0">让我们创造点厉害的东西！</h1>
+                      <h1 v-if="!embedded" class="text-[32px] font-semibold text-[#2A2F3C] text-center m-0">让我们创造点厉害的东西！</h1>
+                      <h1 v-else class="text-xl font-semibold text-[#2A2F3C] text-center m-0">有什么可以帮您？</h1>
                   </div>
                   
-                  <div class="w-full relative flex flex-col gap-2 border border-slate-200 rounded-xl p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+                  <div class="w-full relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
                       <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                          <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
+                          <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
                               <PaperClipOutlined />
                               <span class="max-w-[100px] truncate">{{ att.name }}</span>
                               <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
@@ -329,27 +330,27 @@
                           @keydown="onInputKeydown"
                           rows="1"
                           :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
                         :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
                       <div class="flex justify-between items-center px-2 pb-1">
                            <div class="flex items-center gap-2 h-8">
-                               <button @click="openAttachmentModal" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
+                               <button @click="openAttachmentModal" class="p-1.5 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
                                   <PaperClipOutlined />
                                </button>
                                <div class="h-4 w-px bg-slate-200 mx-1"></div>
                                
-                               <a-dropdown :trigger="['click']">
-                                  <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-slate-100 transition-colors h-full select-none">
+                               <a-dropdown :trigger="['click']" v-if="!embedded">
+                                  <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-muted transition-colors h-full select-none">
                                       <MessageOutlined v-if="mode === 'chat'" class="text-indigo-600" />
                                       <ProjectOutlined v-else-if="mode === 'workflow'" class="text-indigo-600" />
                                     <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
                                     <span class="text-xs font-medium text-slate-700">
                                         {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : '自动任务') }}
                                     </span>
-                                    <DownOutlined class="text-[10px] text-slate-400" />
+                                    <DownOutlined class="text-[10px] text-muted-foreground" />
                                   </div>
                                   <template #overlay>
                                       <a-menu @click="({ key }) => handleModeChange(key)">
@@ -372,15 +373,15 @@
                                   </template>
                                </a-dropdown>
 
-                               <div v-if="mode !== 'auto_task'" class="h-4 w-px bg-slate-200 mx-1"></div>
+                               <div v-if="mode !== 'auto_task' && !embedded" class="h-4 w-px bg-slate-200 mx-1"></div>
                                <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                   <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
+                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
                                </div>
                            </div>
                            
-                           <div class="flex items-center gap-3 h-8">
-                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
+                           <div class="flex items-center gap-4 h-8">
+                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
                                   <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-4 h-4 object-cover rounded-full" />
                                   <img v-else src="/tiga.svg" class="w-4 h-4" />
                                   <a-select 
@@ -401,34 +402,34 @@
                                <button 
                                   @click="sendMessage" 
                                   class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
                                   :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
-                                  <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
-                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
-                                  <ArrowUpOutlined v-else class="text-sm font-bold" />
+                                  <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
+                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
+                                  <ArrowUpOutlined v-else class="text-sm font-semibold" />
                                </button>
                            </div>
                       </div>
                   </div>
 
-                  <div v-if="userScripts.length > 0" class="flex flex-col gap-3 px-1 w-full animate-fade-in-up">
-                      <span class="text-sm font-medium text-[#495363] px-3">用户快捷提示语</span>
+                  <div v-if="userScripts.length > 0" class="flex flex-col gap-4 px-1 w-full animate-fade-in-up">
+                      <span class="text-sm font-medium text-[#495363] p-4">用户快捷提示语</span>
                       <div class="flex gap-4 overflow-x-auto py-4 custom-scrollbar px-2">
                         <div 
                             v-for="s in userScripts" 
                             :key="s.id" 
-                            class="w-[220px] h-[140px] flex-shrink-0 flex flex-col justify-between p-5 bg-gradient-to-br from-white via-white to-indigo-50/60 rounded-2xl border border-slate-100 hover:border-indigo-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden" 
+                            class="w-[220px] h-[140px] flex-shrink-0 flex flex-col justify-between p-6 bg-gradient-to-br from-white via-white to-indigo-50/60 rounded-lg border border-border hover:border-indigo-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden" 
                             @click="sendQuickMessage(s.content)"
                         >
                             <div class="absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-purple-100/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                             <div class="flex flex-col gap-2 relative z-10">
-                                <p class="text-xs text-slate-500 group-hover:text-slate-600 line-clamp-3 leading-relaxed transition-colors duration-300">
+                                <p class="text-xs text-muted-foreground group-hover:text-slate-600 line-clamp-3 leading-relaxed transition-colors duration-300">
                                     {{ s.content }}
                                 </p>
                             </div>
-                            <div class="relative z-10 flex items-center justify-between mt-1 pt-3 border-t border-slate-50 group-hover:border-slate-100 transition-colors duration-300">
-                                <span class="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors duration-300 truncate">{{ s.title }}</span>
+                            <div class="relative z-10 flex items-center justify-between mt-1 p-4 border-t border-slate-50 group-hover:border-border transition-colors duration-300">
+                                <span class="text-sm font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors duration-300 truncate">{{ s.title }}</span>
                             </div>
                         </div>
                       </div>
@@ -447,11 +448,11 @@
               @open-doc-space="handleOpenDocSpace"
           />
 
-          <div v-if="messages.length > 0" class="flex-none w-full py-3 px-4 bg-white z-30 border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+          <div v-if="messages.length > 0" class="flex-none w-full p-4 px-4 bg-white z-30 border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
               <div class="max-w-4xl mx-auto relative">
-                  <div class="relative flex flex-col gap-2 border border-slate-200 rounded-xl p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
+                  <div class="relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
                       <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                          <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
+                          <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
                               <PaperClipOutlined />
                               <span class="max-w-[100px] truncate">{{ att.name }}</span>
                               <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
@@ -464,30 +465,30 @@
                           @keydown="onInputKeydown"
                           rows="1"
                           :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-slate-400 bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
                         :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
                       <div class="flex justify-between items-center px-2 pb-1">
                            <div class="flex items-center gap-2 h-8">
-                               <button @click="openAttachmentModal" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
+                               <button @click="openAttachmentModal" class="p-1.5 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
                                   <PaperClipOutlined />
                                </button>
                                <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode">
+                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode" v-if="!embedded">
                                   <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
-                                  <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-slate-500'">任务模式</span>
+                                  <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-muted-foreground'">任务模式</span>
                                </div>
-                               <div v-if="mode !== 'auto_task'" class="h-4 w-px bg-slate-200 mx-1"></div>
+                               <div v-if="mode !== 'auto_task' && !embedded" class="h-4 w-px bg-slate-200 mx-1"></div>
                                <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
                                   <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-slate-500'">联网搜索</span>
+                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
                                </div>
                            </div>
 
-                           <div class="flex items-center gap-3 h-8">
-                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
+                           <div class="flex items-center gap-4 h-8">
+                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
                                   <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-4 h-4 object-cover rounded-full" />
                                   <img v-else src="/tiga.svg" class="w-4 h-4" />
                                   <a-select 
@@ -508,12 +509,12 @@
                                <button 
                                   @click="sendMessage" 
                                   class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'"
+                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
                                   :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
-                                  <LoadingOutlined v-if="isStopping" class="text-sm font-bold" />
-                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-bold" />
-                                  <ArrowUpOutlined v-else class="text-sm font-bold" />
+                                  <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
+                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
+                                  <ArrowUpOutlined v-else class="text-sm font-semibold" />
                                </button>
                            </div>
                       </div>
@@ -533,18 +534,18 @@
                     <p class="ant-upload-hint">支持 PDF, DOCX, PPTX, XLSX, TXT 格式，最大 50MB</p>
                 </a-upload-dragger>
                 <div v-if="localFileList.length > 0" class="mt-4 max-h-40 overflow-y-auto space-y-2 custom-scrollbar">
-                    <div v-for="file in localFileList" :key="file.uid" class="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100">
+                    <div v-for="file in localFileList" :key="file.uid" class="flex items-center justify-between p-2 bg-muted/50 rounded border border-border">
                         <div class="flex items-center gap-2 truncate">
-                            <PaperClipOutlined class="text-slate-400" />
+                            <PaperClipOutlined class="text-muted-foreground" />
                             <span class="text-sm text-slate-700 truncate max-w-[300px]">{{ file.name }}</span>
-                            <span class="text-xs text-slate-400">({{ (file.size / 1024).toFixed(1) }} KB)</span>
+                            <span class="text-xs text-muted-foreground">({{ (file.size / 1024).toFixed(1) }} KB)</span>
                         </div>
-                        <DeleteOutlined class="text-slate-400 hover:text-red-500 cursor-pointer" @click="removeLocalFile(file)" />
+                        <DeleteOutlined class="text-muted-foreground hover:text-red-500 cursor-pointer" @click="removeLocalFile(file)" />
                     </div>
                 </div>
             </a-tab-pane>
             <a-tab-pane key="knowledge" tab="知识库文档">
-                <div class="flex flex-col gap-3 h-[400px]">
+                <div class="flex flex-col gap-4 h-[400px]">
                     <div class="flex gap-2">
                         <a-input v-model:value="knowledgeSearchKeyword" placeholder="搜索文档名称..." allowClear>
                             <template #prefix><SearchOutlined /></template>
@@ -603,7 +604,8 @@ import {
 } from '@ant-design/icons-vue';
 
 const props = defineProps({
-    sessionId: { type: String, default: null }
+    sessionId: { type: String, default: null },
+    embedded: { type: Boolean, default: false }
 });
 const emit = defineEmits(['refresh-sessions']);
 
@@ -1410,12 +1412,12 @@ const renderMarkdown = (text, isAssistant = false) => {
                 
                 const parsedThink = marked.parse(content || '正在检索思考中...');
                 thinkHtml += `
-                <details class="mb-3 bg-amber-50/50 rounded-lg border border-amber-100 overflow-hidden group" ${isPartial ? 'open' : ''}>
-                    <summary class="px-3 py-1.5 text-xs font-medium text-amber-600/70 cursor-pointer hover:bg-amber-50 flex items-center gap-2 select-none transition-colors">
+                <details class="m-4 bg-amber-50/50 rounded-lg border border-amber-100 overflow-hidden group" ${isPartial ? 'open' : ''}>
+                    <summary class="p-4 py-1.5 text-xs font-medium text-amber-600/70 cursor-pointer hover:bg-amber-50 flex items-center gap-2 select-none transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
                         思考过程
                     </summary>
-                    <div class="px-3 py-2 text-xs text-slate-600 border-t border-amber-100/50 bg-white/50 leading-relaxed">
+                    <div class="p-4 py-2 text-xs text-slate-600 border-t border-amber-100/50 bg-white/50 leading-relaxed">
                         ${parsedThink}
                     </div>
                 </details>`;

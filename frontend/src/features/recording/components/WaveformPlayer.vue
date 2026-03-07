@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full bg-white border-t border-slate-200 px-6 py-3 flex items-center gap-4 select-none">
+  <div class="w-full bg-white border-t border-slate-200 px-6 p-4 flex items-center gap-4 select-none">
     <!-- Play/Pause Button -->
     <button 
       @click="togglePlay"
@@ -14,7 +14,7 @@
     </button>
 
     <!-- Time Display -->
-    <div class="text-xs font-mono text-slate-500 w-24 text-center shrink-0">
+    <div class="text-xs font-mono text-muted-foreground w-24 text-center shrink-0">
       {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
     </div>
 
@@ -50,7 +50,7 @@
     <div class="relative shrink-0">
       <button 
         @click="showSpeedMenu = !showSpeedMenu"
-        class="px-2 py-1 rounded text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors w-12 text-center"
+        class="px-2 py-1 rounded text-xs font-medium text-slate-600 hover:bg-muted transition-colors w-12 text-center"
       >
         {{ playbackRate }}x
       </button>
@@ -58,14 +58,14 @@
       <!-- Speed Menu -->
       <div 
         v-if="showSpeedMenu"
-        class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-100 py-1 min-w-[80px] z-50 animate-[fadeIn_0.1s_ease-out]"
+        class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-border py-1 min-w-[80px] z-50 animate-[fadeIn_0.1s_ease-out]"
       >
         <button 
           v-for="rate in [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]" 
           :key="rate"
           @click="changeSpeed(rate)"
-          class="block w-full px-3 py-1.5 text-xs text-left hover:bg-slate-50 transition-colors"
-          :class="{ 'text-brand-primary font-bold bg-brand-primary/5': rate === playbackRate, 'text-slate-700': rate !== playbackRate }"
+          class="block w-full p-4 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors"
+          :class="{ 'text-brand-primary font-semibold bg-brand-primary/5': rate === playbackRate, 'text-slate-700': rate !== playbackRate }"
         >
           {{ rate }}x
         </button>

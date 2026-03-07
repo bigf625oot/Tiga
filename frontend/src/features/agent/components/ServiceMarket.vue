@@ -1,28 +1,28 @@
 <template>
-  <div class="h-full flex bg-slate-50">
+  <div class="h-full flex bg-muted/50">
     <!-- Collapsible Sidebar -->
     <div 
       class="bg-white border-r border-slate-200 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out z-20 shadow-sm"
       :class="isSidebarCollapsed ? 'w-20' : 'w-64'"
     >
       <!-- Sidebar Header -->
-      <div class="p-5 flex items-center justify-between border-b border-slate-50 h-[73px]">
-        <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" :class="{'opacity-0 w-0': isSidebarCollapsed}">
-          <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-blue-200 shadow-md flex-shrink-0">
+      <div class="p-6 flex items-center justify-between border-b border-slate-50 h-[73px]">
+        <div class="flex items-center gap-4 overflow-hidden whitespace-nowrap" :class="{'opacity-0 w-0': isSidebarCollapsed}">
+          <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-blue-200 shadow-md flex-shrink-0">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
           <div>
-            <h2 class="text-base font-bold text-slate-800">工具市场</h2>
-            <p class="text-[10px] text-slate-400 font-medium">Tool Market</p>
+            <h2 class="text-base font-semibold text-slate-800">工具市场</h2>
+            <p class="text-[10px] text-muted-foreground font-medium">Tool Market</p>
           </div>
         </div>
         
         <!-- Toggle Button -->
         <button 
           @click="isSidebarCollapsed = !isSidebarCollapsed"
-          class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors mx-auto"
+          class="p-1.5 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-slate-600 transition-colors mx-auto"
           :title="isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'"
         >
           <svg class="w-5 h-5 transition-transform duration-300" :class="{'rotate-180': isSidebarCollapsed}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -32,18 +32,18 @@
       </div>
 
       <!-- Categories List -->
-      <div class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
+      <div class="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
         <div 
           v-for="item in menuItems" 
           :key="item.id"
           @click="activeCategory = item.id"
-          class="group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 relative"
-          :class="activeCategory === item.id ? 'bg-blue-50/80 text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'"
+          class="group flex items-center gap-4 p-4 py-2.5 rounded-lg cursor-pointer transition-all duration-200 relative"
+          :class="activeCategory === item.id ? 'bg-primary/10/80 text-primary shadow-sm' : 'text-slate-600 hover:bg-muted/50 hover:text-slate-900'"
           :title="isSidebarCollapsed ? item.label : ''"
         >
           <!-- Category Icon (Placeholder or specific based on ID) -->
           <div class="w-6 h-6 flex items-center justify-center flex-shrink-0 transition-colors" 
-            :class="activeCategory === item.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'">
+            :class="activeCategory === item.id ? 'text-primary' : 'text-muted-foreground group-hover:text-slate-600'">
             <svg v-if="item.id === 'all'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
@@ -64,26 +64,26 @@
           </span>
           
           <span v-if="item.count && !isSidebarCollapsed" 
-            class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full transition-colors"
-            :class="activeCategory === item.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'">
+            class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full transition-colors"
+            :class="activeCategory === item.id ? 'bg-blue-100 text-primary' : 'bg-muted text-muted-foreground'">
             {{ item.count }}
           </span>
           
           <!-- Tooltip on hover when collapsed -->
-          <div v-if="isSidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+          <div v-if="isSidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 m-4 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
             {{ item.label }}
           </div>
         </div>
       </div>
 
       <!-- Quick Actions (Optional, simplified for collapsed) -->
-      <div class="p-4 border-t border-slate-100" v-if="!isSidebarCollapsed">
-        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100/50">
-          <h4 class="text-xs font-bold text-blue-800 mb-1">找不到需要的工具？</h4>
-          <p class="text-[10px] text-blue-600/80 mb-3 leading-relaxed">尝试创建一个自定义工具来扩展您的工作流。</p>
+      <div class="p-4 border-t border-border" v-if="!isSidebarCollapsed">
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100/50">
+          <h4 class="text-xs font-semibold text-blue-800 mb-1">找不到需要的工具？</h4>
+          <p class="text-[10px] text-primary/80 m-4 leading-relaxed">尝试创建一个自定义工具来扩展您的工作流。</p>
           <button 
             @click="showCreateToolModal = true"
-            class="w-full py-1.5 bg-white text-blue-600 text-xs font-bold rounded-lg border border-blue-200 shadow-sm hover:shadow hover:border-blue-300 transition-all flex items-center justify-center gap-1.5"
+            class="w-full py-1.5 bg-white text-primary text-xs font-semibold rounded-lg border border-blue-200 shadow-sm hover:shadow hover:border-blue-300 transition-all flex items-center justify-center gap-1.5"
           >
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -105,9 +105,9 @@
               v-model="searchQuery"
               type="text" 
               placeholder="搜索工具、插件或技能..." 
-              class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white focus:outline-none transition-all placeholder:text-slate-400"
+              class="w-full pl-11 pr-4 py-2.5 bg-muted/50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white focus:outline-none transition-all placeholder:text-muted-foreground"
             />
-            <svg class="w-5 h-5 text-slate-400 absolute left-3.5 top-2.5 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-5 h-5 text-muted-foreground absolute left-3.5 top-2.5 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -117,8 +117,8 @@
             <button 
               v-for="tag in [{id: 'all', label: '全部'}, {id: 'hot', label: '热门'}, {id: 'new', label: '最新'}, {id: 'official', label: '官方'}]" 
               :key="tag.id"
-              class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
-              :class="activeFilter === tag.id ? 'bg-slate-800 text-white shadow-md shadow-slate-200' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50'"
+              class="p-4.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+              :class="activeFilter === tag.id ? 'bg-slate-800 text-white shadow-md shadow-slate-200' : 'bg-white text-muted-foreground border border-slate-200 hover:border-slate-300 hover:text-slate-700 hover:bg-muted/50'"
               @click="activeFilter = tag.id"
             >
               {{ tag.label }}
@@ -128,7 +128,7 @@
 
         <div class="flex items-center gap-4">
           <!-- Refresh Button -->
-          <button @click="refreshData" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="刷新数据">
+          <button @click="refreshData" class="p-2 text-muted-foreground hover:text-slate-600 hover:bg-muted rounded-lg transition-colors" title="刷新数据">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -137,7 +137,7 @@
           <!-- Primary Create Button -->
           <button 
             @click="showCreateToolModal = true"
-            class="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all active:scale-95"
+            class="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all active:scale-95"
           >
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -148,44 +148,44 @@
       </div>
 
       <!-- Content Grid -->
-      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-slate-50/50">
+      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-muted/50/50">
         <!-- Skeleton Loader -->
         <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div v-for="n in 8" :key="n" class="border border-slate-100 rounded-2xl p-5 bg-white h-[260px] flex flex-col animate-pulse shadow-sm">
+          <div v-for="n in 8" :key="n" class="border border-border rounded-lg p-6 bg-white h-[260px] flex flex-col animate-pulse shadow-sm">
             <div class="flex gap-4 mb-4">
-              <div class="w-14 h-14 bg-slate-100 rounded-xl"></div>
+              <div class="w-14 h-14 bg-muted rounded-lg"></div>
               <div class="flex-1 space-y-2 py-1">
-                <div class="h-4 bg-slate-100 rounded w-3/4"></div>
+                <div class="h-4 bg-muted rounded w-3/4"></div>
                 <div class="flex gap-2">
-                  <div class="h-5 w-12 bg-slate-100 rounded"></div>
-                  <div class="h-5 w-12 bg-slate-100 rounded"></div>
+                  <div class="h-5 w-12 bg-muted rounded"></div>
+                  <div class="h-5 w-12 bg-muted rounded"></div>
                 </div>
               </div>
             </div>
             <div class="space-y-2 flex-1">
-              <div class="h-3 bg-slate-100 rounded w-full"></div>
-              <div class="h-3 bg-slate-100 rounded w-5/6"></div>
-              <div class="h-3 bg-slate-100 rounded w-4/6"></div>
+              <div class="h-3 bg-muted rounded w-full"></div>
+              <div class="h-3 bg-muted rounded w-5/6"></div>
+              <div class="h-3 bg-muted rounded w-4/6"></div>
             </div>
             <div class="mt-4 pt-4 border-t border-slate-50">
-              <div class="flex justify-between mb-3">
-                <div class="h-3 w-16 bg-slate-100 rounded"></div>
-                <div class="h-3 w-12 bg-slate-100 rounded"></div>
+              <div class="flex justify-between m-4">
+                <div class="h-3 w-16 bg-muted rounded"></div>
+                <div class="h-3 w-12 bg-muted rounded"></div>
               </div>
-              <div class="h-8 bg-slate-100 rounded-lg w-full"></div>
+              <div class="h-8 bg-muted rounded-lg w-full"></div>
             </div>
           </div>
         </div>
 
-        <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-slate-400">
-          <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+        <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-muted-foreground">
+          <div class="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
             <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-slate-700 mb-2">未找到相关服务</h3>
-          <p class="text-sm text-slate-500 max-w-xs text-center leading-relaxed">尝试调整搜索关键词或筛选条件，也可以点击右上角"添加工具"创建新的服务。</p>
-          <button @click="searchQuery = ''; activeFilter = 'all'" class="mt-6 text-blue-600 font-medium hover:underline text-sm">清除筛选条件</button>
+          <h3 class="text-lg font-semibold text-slate-700 mb-2">未找到相关服务</h3>
+          <p class="text-sm text-muted-foreground max-w-xs text-center leading-relaxed">尝试调整搜索关键词或筛选条件，也可以点击右上角"添加工具"创建新的服务。</p>
+          <button @click="searchQuery = ''; activeFilter = 'all'" class="mt-6 text-primary font-medium hover:underline text-sm">清除筛选条件</button>
         </div>
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
@@ -205,7 +205,7 @@
       <!-- Floating Action Button (Mobile Only) -->
       <button 
         @click="showCreateToolModal = true"
-        class="sm:hidden absolute bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-all z-30"
+        class="sm:hidden absolute bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-all z-30"
       >
         <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -216,14 +216,14 @@
 
   <!-- Create/Edit Tool Modal -->
   <div v-if="showCreateToolModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all" @click="closeModal">
-    <div class="bg-white rounded-xl shadow-2xl w-[640px] max-w-[95vw] max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" @click.stop>
+    <div class="bg-white rounded-lg shadow-2xl w-[640px] max-w-[95vw] max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" @click.stop>
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/50/50">
         <div>
-          <h3 class="text-lg font-bold text-slate-800">{{ isEditing ? '编辑工具' : '创建新工具' }}</h3>
-          <p class="text-xs text-slate-500 mt-0.5">{{ isEditing ? '修改已有的 AI 助手工具配置' : '配置并发布你的 AI 助手工具' }}</p>
+          <h3 class="text-lg font-semibold text-slate-800">{{ isEditing ? '编辑工具' : '创建新工具' }}</h3>
+          <p class="text-xs text-muted-foreground mt-0.5">{{ isEditing ? '修改已有的 AI 助手工具配置' : '配置并发布你的 AI 助手工具' }}</p>
         </div>
-        <button @click="closeModal" class="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 transition-colors">
+        <button @click="closeModal" class="text-muted-foreground hover:text-slate-600 p-1 rounded-md hover:bg-muted transition-colors">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -241,17 +241,17 @@
             <div class="grid grid-cols-2 gap-4">
               <div 
                 @click="newToolForm.type = 'skill'"
-                class="relative p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3"
-                :class="newToolForm.type === 'skill' ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'"
+                class="relative p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start gap-4"
+                :class="newToolForm.type === 'skill' ? 'border-blue-500 bg-primary/10/50' : 'border-slate-200 hover:border-slate-300 hover:bg-muted/50'"
               >
-                <div class="p-2 rounded-lg" :class="newToolForm.type === 'skill' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'">
+                <div class="p-2 rounded-lg" :class="newToolForm.type === 'skill' ? 'bg-blue-100 text-primary' : 'bg-muted text-muted-foreground'">
                   <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                   </svg>
                 </div>
                 <div>
                   <div class="font-medium text-slate-800">Agent Skill</div>
-                  <div class="text-xs text-slate-500 mt-1 leading-relaxed">基于自然语言指令的轻量级技能，适用于文本处理和逻辑分析。</div>
+                  <div class="text-xs text-muted-foreground mt-1 leading-relaxed">基于自然语言指令的轻量级技能，适用于文本处理和逻辑分析。</div>
                 </div>
                 <div v-if="newToolForm.type === 'skill'" class="absolute top-3 right-3 text-blue-500">
                   <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -262,17 +262,17 @@
 
               <div 
                 @click="newToolForm.type = 'mcp'"
-                class="relative p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3"
-                :class="newToolForm.type === 'mcp' ? 'border-purple-500 bg-purple-50/50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'"
+                class="relative p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start gap-4"
+                :class="newToolForm.type === 'mcp' ? 'border-purple-500 bg-purple-50/50' : 'border-slate-200 hover:border-slate-300 hover:bg-muted/50'"
               >
-                <div class="p-2 rounded-lg" :class="newToolForm.type === 'mcp' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'">
+                <div class="p-2 rounded-lg" :class="newToolForm.type === 'mcp' ? 'bg-purple-100 text-purple-600' : 'bg-muted text-muted-foreground'">
                   <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div>
                   <div class="font-medium text-slate-800">MCP Server</div>
-                  <div class="text-xs text-slate-500 mt-1 leading-relaxed">标准化的模型上下文协议服务，支持复杂工具调用和资源访问。</div>
+                  <div class="text-xs text-muted-foreground mt-1 leading-relaxed">标准化的模型上下文协议服务，支持复杂工具调用和资源访问。</div>
                 </div>
                 <div v-if="newToolForm.type === 'mcp'" class="absolute top-3 right-3 text-purple-500">
                   <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -284,7 +284,7 @@
           </div>
 
           <!-- Basic Info Grid -->
-          <div class="grid grid-cols-2 gap-5">
+          <div class="grid grid-cols-2 gap-6">
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">
                 名称 <span class="text-red-500">*</span>
@@ -293,7 +293,7 @@
                 v-model="newToolForm.name" 
                 type="text" 
                 placeholder="例如：codemap" 
-                class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 text-sm" 
+                class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-muted-foreground text-sm" 
               />
             </div>
             <div class="space-y-2">
@@ -304,13 +304,13 @@
                 v-model="newToolForm.version" 
                 type="text" 
                 placeholder="1.0.0" 
-                class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 text-sm" 
+                class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-muted-foreground text-sm" 
               />
             </div>
           </div>
 
           <!-- Category or MCP Type -->
-          <div class="grid gap-5" :class="newToolForm.type === 'mcp' ? 'grid-cols-2' : 'grid-cols-1'">
+          <div class="grid gap-6" :class="newToolForm.type === 'mcp' ? 'grid-cols-2' : 'grid-cols-1'">
             <div v-if="newToolForm.type === 'mcp'" class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">MCP 类型</label>
               <div class="relative">
@@ -318,7 +318,7 @@
                   <option value="stdio">STDIO (Standard Input/Output)</option>
                   <option value="sse">SSE (Server-Sent Events)</option>
                 </select>
-                <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-500">
+                <div class="absolute inset-y-0 right-0 flex items-center p-4 pointer-events-none text-muted-foreground">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
@@ -334,7 +334,7 @@
                     {{ cat.label }}
                   </option>
                 </select>
-                <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-500">
+                <div class="absolute inset-y-0 right-0 flex items-center p-4 pointer-events-none text-muted-foreground">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
@@ -350,7 +350,7 @@
               v-model="newToolForm.description" 
               rows="3" 
               placeholder="简要描述该工具的功能、用途及特点..." 
-              class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm placeholder:text-slate-400"
+              class="w-full px-4 p-4 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm placeholder:text-muted-foreground"
             ></textarea>
           </div>
 
@@ -358,18 +358,18 @@
           <div v-if="newToolForm.type === 'skill'" class="space-y-5">
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">导入配置 (可选)</label>
-              <div class="group bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-blue-500 hover:bg-blue-50/30 transition-all cursor-pointer relative">
+              <div class="group bg-muted/50 border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-primary/10/30 transition-all cursor-pointer relative">
                 <input type="file" @change="handleFileUpload" accept=".zip,.skill" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
                 <div class="space-y-3 pointer-events-none">
-                  <div class="w-12 h-12 mx-auto rounded-full bg-slate-200 group-hover:bg-blue-100 group-hover:text-blue-600 flex items-center justify-center transition-colors text-slate-400">
+                  <div class="w-12 h-12 mx-auto rounded-full bg-slate-200 group-hover:bg-blue-100 group-hover:text-primary flex items-center justify-center transition-colors text-muted-foreground">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                   </div>
                   <div class="text-sm text-slate-600">
-                    <span class="font-semibold text-blue-600">点击上传</span> 或将文件拖拽到此处
+                    <span class="font-semibold text-primary">点击上传</span> 或将文件拖拽到此处
                   </div>
-                  <p class="text-xs text-slate-400">支持 .zip 或 .skill 格式文件，将自动解析 SKILL.md</p>
+                  <p class="text-xs text-muted-foreground">支持 .zip 或 .skill 格式文件，将自动解析 SKILL.md</p>
                 </div>
               </div>
             </div>
@@ -383,13 +383,13 @@
                   v-model="newToolForm.content" 
                   rows="8" 
                   placeholder="当这个 Skill 被触发时，你希望模型遵循哪些规则或信息..." 
-                  class="w-full px-4 py-3 font-mono text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-y placeholder:text-slate-400"
+                  class="w-full px-4 p-4 font-mono text-sm bg-muted/50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-y placeholder:text-muted-foreground"
                 ></textarea>
-                <div class="absolute right-3 top-3 text-xs text-slate-400 bg-white/80 px-2 py-1 rounded backdrop-blur-sm border border-slate-100">
+                <div class="absolute right-3 top-3 text-xs text-muted-foreground bg-white/80 px-2 py-1 rounded backdrop-blur-sm border border-border">
                   Markdown
                 </div>
               </div>
-              <p class="text-xs text-slate-500 flex items-center gap-1">
+              <p class="text-xs text-muted-foreground flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -407,10 +407,10 @@
               <textarea 
                 v-model="newToolForm.mcp_config" 
                 rows="6" 
-                class="w-full px-4 py-3 font-mono text-sm bg-slate-900 text-slate-50 border border-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-all resize-y"
+                class="w-full px-4 p-4 font-mono text-sm bg-slate-900 text-slate-50 border border-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-all resize-y"
                 spellcheck="false"
               ></textarea>
-              <div class="absolute right-3 top-3 text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded border border-slate-700">
+              <div class="absolute right-3 top-3 text-xs text-muted-foreground bg-slate-800 px-2 py-1 rounded border border-slate-700">
                 JSON
               </div>
             </div>
@@ -419,21 +419,21 @@
       </div>
 
       <!-- Footer -->
-      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-        <div class="text-xs text-slate-400">
+      <div class="px-6 py-4 border-t border-border bg-muted/50 flex justify-between items-center">
+        <div class="text-xs text-muted-foreground">
           <span v-if="newToolForm.type === 'skill'">带 <span class="text-red-400">*</span> 为必填项</span>
         </div>
-        <div class="flex gap-3">
+        <div class="flex gap-4">
           <button 
             @click="closeModal" 
-            class="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors shadow-sm"
+            class="p-6 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-muted/50 hover:text-slate-900 rounded-lg transition-colors shadow-sm"
           >
             取消
           </button>
           <button 
             @click="createTool" 
             :disabled="isSubmitting" 
-            class="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            class="p-6 py-2.5 text-sm font-medium text-white bg-primary hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

@@ -30,8 +30,10 @@ from app.api.endpoints import (
     agent,
 )
 from app.api.endpoints.search_agent import news
+from app.services.pathway.api import router as pathway_router
 
 api_router = APIRouter()
+api_router.include_router(pathway_router, prefix="/pathway", tags=["pathway"])
 api_router.include_router(nodes.router, prefix="/nodes", tags=["nodes"])
 api_router.include_router(openclaw.router, prefix="/openclaw", tags=["openclaw"])
 api_router.include_router(agent.router, prefix="/agent", tags=["agent-gateway"])

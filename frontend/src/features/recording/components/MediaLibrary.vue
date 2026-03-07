@@ -4,13 +4,13 @@
     <div class="px-10 pt-12 pb-6">
       <div class="flex justify-between items-end">
         <div>
-          <h2 class="text-4xl font-bold text-[#1D1D1F] tracking-tight mb-2">音视频库</h2>
+          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">音视频库</h2>
           <p class="text-[#86868B] text-lg font-medium">管理和分析您的媒体资源。</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex gap-4">
           <button 
             @click="triggerUpload" 
-            class="bg-[#0071e3] text-white px-5 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
+            class="bg-[#0071e3] text-white p-6 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
           >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             上传
@@ -25,8 +25,8 @@
       
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
         <div v-for="i in 10" :key="i" class="bg-white rounded-[24px] border border-slate-200 overflow-hidden h-[280px]">
-            <div class="aspect-video bg-slate-50 animate-pulse"></div>
-            <div class="p-5 space-y-3">
+            <div class="aspect-video bg-muted/50 animate-pulse"></div>
+            <div class="p-6 space-y-3">
                  <a-skeleton active :title="false" :paragraph="{ rows: 1, width: '80%' }" />
                  <a-skeleton active :title="false" :paragraph="{ rows: 1, width: '40%' }" />
             </div>
@@ -34,7 +34,7 @@
       </div>
 
       <div v-else-if="files.length === 0" class="flex flex-col items-center justify-center py-40 text-[#86868B]">
-        <div class="w-20 h-20 bg-slate-50 rounded-[24px] flex items-center justify-center mb-6 border border-slate-100">
+        <div class="w-20 h-20 bg-muted/50 rounded-[24px] flex items-center justify-center mb-6 border border-border">
             <svg class="w-10 h-10 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
         </div>
         <span class="text-lg font-semibold text-[#1D1D1F]">暂无内容</span>
@@ -63,10 +63,10 @@
                  
                  <!-- Status Badge -->
                  <div class="absolute top-3 right-3 z-20">
-                    <span v-if="file.asr_status === 'completed'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/80 backdrop-blur-md text-[#34C759] shadow-sm border border-black/5">
+                    <span v-if="file.asr_status === 'completed'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/80 backdrop-blur-md text-[#34C759] shadow-sm border border-black/5">
                         已转写
                     </span>
-                    <span v-else-if="file.asr_status === 'processing'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/80 backdrop-blur-md text-[#0071e3] shadow-sm border border-black/5">
+                    <span v-else-if="file.asr_status === 'processing'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/80 backdrop-blur-md text-[#0071e3] shadow-sm border border-black/5">
                         <svg class="animate-spin -ml-0.5 mr-1 h-2.5 w-2.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         转写中
                     </span>
@@ -74,7 +74,7 @@
             </div>
 
             <!-- Content Area -->
-            <div class="p-5 flex-1 flex flex-col">
+            <div class="p-6 flex-1 flex flex-col">
                 <div class="mb-2">
                     <h4 class="font-semibold text-[#1D1D1F] text-[15px] line-clamp-1 leading-snug mb-1" :title="file.filename">{{ file.filename }}</h4>
                     <div class="flex items-center gap-2 text-sm text-[#86868B] font-medium">
@@ -87,7 +87,7 @@
                 <!-- Actions (Visible on Hover) -->
                 <div class="mt-auto pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
                     <div class="flex gap-1">
-                        <button @click="openRenameModal(file)" class="p-1.5 text-[#86868B] hover:text-[#0071e3] hover:bg-blue-50 rounded-lg transition-colors" title="重命名">
+                        <button @click="openRenameModal(file)" class="p-1.5 text-[#86868B] hover:text-[#0071e3] hover:bg-primary/10 rounded-lg transition-colors" title="重命名">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                         </button>
                         <a-popconfirm
@@ -104,7 +104,7 @@
 
                     <button 
                         @click="parseToGraph(file)" 
-                        class="text-sm font-semibold text-[#0071e3] hover:text-[#0077ED] hover:bg-blue-50 px-2.5 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        class="text-sm font-semibold text-[#0071e3] hover:text-[#0077ED] hover:bg-primary/10 px-2.5 py-1.5 rounded-full transition-colors flex items-center gap-1"
                         v-if="file.asr_status === 'completed'"
                     >
                         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>

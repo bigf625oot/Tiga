@@ -1,19 +1,19 @@
 <template>
-  <div class="h-full flex flex-col bg-slate-50 relative">
-    <div v-if="showHeader" class="bg-white px-4 py-3 border-b border-slate-100 flex justify-between items-center shadow-sm z-10">
+  <div class="h-full flex flex-col bg-muted/50 relative">
+    <div v-if="showHeader" class="bg-white px-4 p-4 border-b border-border flex justify-between items-center shadow-sm z-10">
         <div class="flex items-center gap-2 min-w-0">
            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
                <FileTextOutlined class="text-emerald-600" />
            </div>
            <div class="min-w-0">
-              <div class="text-sm font-bold text-slate-800 leading-none">文档空间</div>
-              <div class="mt-1 text-xs text-slate-400 truncate">共 {{ documents.length }} 篇</div>
+              <div class="text-sm font-semibold text-slate-800 leading-none">文档空间</div>
+              <div class="mt-1 text-xs text-muted-foreground truncate">共 {{ documents.length }} 篇</div>
            </div>
         </div>
         
         <button
            v-if="documents.length"
-           class="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+           class="text-xs px-2 py-1 rounded bg-muted text-slate-600 hover:bg-slate-200 transition-colors"
            @click="clearDocs"
         >
            清空

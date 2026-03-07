@@ -1,11 +1,11 @@
 <template>
-  <div class="flex-1 overflow-y-auto p-5 space-y-8 custom-scrollbar bg-slate-50/30">
+  <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-muted/50/30">
       
       <!-- Today's Tasks Statistics -->
       <section>
         <div class="mb-4">
-          <h4 class="text-sm font-bold text-slate-900 tracking-tight m-0">今日任务</h4>
-          <p class="text-[11px] text-slate-500 mt-0.5 m-0">实时监控任务状态</p>
+          <h4 class="text-sm font-semibold text-slate-900 tracking-tight m-0">今日任务</h4>
+          <p class="text-[11px] text-muted-foreground mt-0.5 m-0">实时监控任务状态</p>
         </div>
         <div class="grid grid-cols-3 gap-4">
           <StatCard
@@ -18,25 +18,25 @@
 
       <!-- Input Area -->
       <section id="task-input" :class="{'opacity-100 translate-y-0': inputValue, 'opacity-0 -translate-y-4 pointer-events-none absolute': !inputValue}" class="transition-all duration-300 ease-in-out">
-        <div class="border border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm rounded-2xl overflow-hidden">
-          <div class="p-3 pb-2 border-b border-indigo-50/50 flex items-center gap-2">
+        <div class="border border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm rounded-lg overflow-hidden">
+          <div class="p-4 pb-2 border-b border-indigo-50/50 flex items-center gap-2">
             <div class="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-600 text-white">
               <ThunderboltFilled class="text-xs" />
             </div>
             <span class="text-sm font-medium text-indigo-900">创建任务</span>
           </div>
-          <div class="p-3 space-y-3">
+          <div class="p-4 space-y-3">
             <textarea
               ref="inputRef"
               v-model="inputValue"
               rows="3"
-              class="w-full resize-none border border-indigo-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white text-xs rounded-xl p-3 outline-none transition-all"
+              class="w-full resize-none border border-indigo-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white text-xs rounded-lg p-4 outline-none transition-all"
               placeholder="输入任务描述..."
             ></textarea>
             <div class="flex justify-end gap-2">
               <button
                 @click="inputValue = ''"
-                class="h-8 text-xs px-4 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                class="h-8 text-xs px-4 text-muted-foreground hover:text-slate-700 hover:bg-muted rounded-lg transition-colors"
               >
                 取消
               </button>
@@ -57,28 +57,28 @@
       <section>
         <div class="flex items-end justify-between mb-4">
           <div>
-            <h4 class="text-sm font-bold text-slate-900 tracking-tight m-0">自动化模板</h4>
-            <p class="text-[11px] text-slate-500 mt-0.5 m-0">快速创建任务</p>
+            <h4 class="text-sm font-semibold text-slate-900 tracking-tight m-0">自动化模板</h4>
+            <p class="text-[11px] text-muted-foreground mt-0.5 m-0">快速创建任务</p>
           </div>
-          <div class="flex bg-slate-100 p-0.5 rounded-lg">
+          <div class="flex bg-muted p-0.5 rounded-lg">
             <button
               @click="showAllTemplates = false"
-              class="px-3 py-1 rounded-md text-xs font-medium transition-all"
-              :class="!showAllTemplates ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              class="p-4 py-1 rounded-md text-xs font-medium transition-all"
+              :class="!showAllTemplates ? 'bg-white text-indigo-600 shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
             >
               常用
             </button>
             <button
               @click="showAllTemplates = true"
-              class="px-3 py-1 rounded-md text-xs font-medium transition-all"
-              :class="showAllTemplates ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              class="p-4 py-1 rounded-md text-xs font-medium transition-all"
+              :class="showAllTemplates ? 'bg-white text-indigo-600 shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
             >
               全部
             </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-4">
           <TemplateCard
             v-for="template in displayedTemplates"
             :key="template.title"
@@ -92,11 +92,11 @@
       <section>
         <div class="flex justify-between items-center mb-4">
           <div>
-            <h4 class="text-sm font-bold text-slate-900 tracking-tight m-0">最近活动</h4>
-            <p class="text-[11px] text-slate-500 mt-0.5 m-0">任务执行记录</p>
+            <h4 class="text-sm font-semibold text-slate-900 tracking-tight m-0">最近活动</h4>
+            <p class="text-[11px] text-muted-foreground mt-0.5 m-0">任务执行记录</p>
           </div>
           <button 
-            class="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-indigo-500 transition-colors"
+            class="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-indigo-500 transition-colors"
             :class="{ 'animate-spin': activitiesLoading }"
             @click="$emit('refresh-activities')"
           >
@@ -104,14 +104,14 @@
           </button>
         </div>
         
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div class="bg-white rounded-lg border border-border shadow-sm p-4">
           <div v-if="activitiesLoading" class="space-y-4">
              <a-skeleton active :paragraph="{ rows: 2 }" avatar />
              <a-skeleton active :paragraph="{ rows: 1 }" avatar />
           </div>
           
-          <div v-else-if="!activityGroups.length" class="flex flex-col items-center justify-center py-12 text-slate-400">
-             <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+          <div v-else-if="!activityGroups.length" class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+             <div class="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center m-4">
                 <InboxOutlined class="text-2xl text-slate-300" />
              </div>
              <span class="text-xs">暂无活动记录</span>
@@ -119,13 +119,13 @@
           
           <div v-else class="relative">
             <!-- Global Timeline Line -->
-            <div class="absolute left-4 top-4 bottom-4 w-0.5 bg-slate-100"></div>
+            <div class="absolute left-4 top-4 bottom-4 w-0.5 bg-muted"></div>
 
             <div v-for="(group, idx) in activityGroups" :key="group.time" class="relative mb-6 last:mb-0">
               <!-- Time Header -->
               <div 
                 @click="toggleTimeGroup(group.time)"
-                class="flex items-center gap-3 cursor-pointer py-1 hover:bg-slate-50 rounded-lg transition-colors relative z-10 mb-3"
+                class="flex items-center gap-4 cursor-pointer py-1 hover:bg-muted/50 rounded-lg transition-colors relative z-10 m-4"
               >
                 <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm transition-transform duration-200"
                      :class="expandedTimeGroups.has(group.time) ? 'bg-indigo-500 rotate-0' : 'bg-slate-300 -rotate-90'">
@@ -133,11 +133,11 @@
                 </div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-bold text-slate-900 m-0">{{ group.time }}</h3>
-                    <span class="text-[10px] text-slate-400 font-normal">{{ group.activities.length }}个任务</span>
+                    <h3 class="text-sm font-semibold text-slate-900 m-0">{{ group.time }}</h3>
+                    <span class="text-[10px] text-muted-foreground font-normal">{{ group.activities.length }}个任务</span>
                   </div>
                 </div>
-                <div class="w-6 h-6 flex items-center justify-center rounded-full bg-slate-50 text-slate-400">
+                <div class="w-6 h-6 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
                     <DownOutlined class="text-[10px] transition-transform duration-200" :class="{ 'rotate-180': expandedTimeGroups.has(group.time) }" />
                 </div>
               </div>
@@ -146,7 +146,7 @@
               <div class="space-y-3 pl-12 transition-all duration-300 origin-top overflow-hidden"
                    v-show="expandedTimeGroups.has(group.time)">
                 <div v-for="act in group.activities" :key="act.id" class="relative">
-                   <div class="bg-white border border-slate-100 rounded-xl p-3 hover:shadow-md hover:border-indigo-100 transition-all duration-200 cursor-pointer group/card flex gap-3" @click="handleActivityClick(act)">
+                   <div class="bg-white border border-border rounded-lg p-4 hover:shadow-md hover:border-indigo-100 transition-all duration-200 cursor-pointer group/card flex gap-4" @click="handleActivityClick(act)">
                       <!-- Icon -->
                       <div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors" :class="getActivityIconClass(act.type)">
                          <component :is="getActivityIcon(act.type)" />
@@ -155,10 +155,10 @@
                       <!-- Content -->
                       <div class="flex-1 min-w-0">
                          <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md" :class="getActivityTagClass(act.type)">{{ getActivityLabel(act.type) }}</span>
-                            <span class="text-[10px] text-slate-400">{{ act.last_run || '刚刚' }}</span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" :class="getActivityTagClass(act.type)">{{ getActivityLabel(act.type) }}</span>
+                            <span class="text-[10px] text-muted-foreground">{{ act.last_run || '刚刚' }}</span>
                             <span class="text-[10px] px-1.5 py-0.5 rounded-md" 
-                                  :class="act.status === 'FAILED' ? 'bg-red-50 text-red-500' : (act.status === 'DISPATCHED' ? 'bg-blue-50 text-blue-500' : 'bg-slate-50 text-slate-500')">
+                                  :class="act.status === 'FAILED' ? 'bg-red-50 text-red-500' : (act.status === 'DISPATCHED' ? 'bg-primary/10 text-blue-500' : 'bg-muted/50 text-muted-foreground')">
                                 {{ act.status }}
                             </span>
                          </div>
@@ -311,7 +311,7 @@ const getActivityIconClass = (type: string) => {
   if (t.includes('抓取') || t.includes('crawl')) return 'bg-emerald-100 text-emerald-600';
   if (t.includes('监控') || t.includes('monitor')) return 'bg-purple-100 text-purple-600';
   if (t.includes('截图') || t.includes('screenshot')) return 'bg-orange-100 text-orange-600';
-  return 'bg-slate-100 text-slate-500';
+  return 'bg-muted text-muted-foreground';
 };
 
 const getActivityTagClass = (type: string) => {
@@ -319,7 +319,7 @@ const getActivityTagClass = (type: string) => {
   if (t.includes('抓取') || t.includes('crawl')) return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
   if (t.includes('监控') || t.includes('monitor')) return 'bg-purple-50 text-purple-600 border border-purple-100';
   if (t.includes('截图') || t.includes('screenshot')) return 'bg-orange-50 text-orange-600 border border-orange-100';
-  return 'bg-slate-50 text-slate-500 border border-slate-100';
+  return 'bg-muted/50 text-muted-foreground border border-border';
 };
 
 const getActivityLabel = (type: string) => {

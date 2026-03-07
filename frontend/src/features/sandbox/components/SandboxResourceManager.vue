@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col p-4 bg-white rounded-lg shadow-sm border border-slate-200">
-    <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center">
+    <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center">
       <DashboardOutlined class="mr-2" /> 资源监控
     </h3>
     
@@ -16,10 +16,10 @@
       </div>
 
       <!-- Process List -->
-      <div class="flex-1 overflow-auto border-t border-slate-100 pt-2">
-        <h4 class="text-xs font-semibold text-slate-500 mb-2">活跃进程</h4>
+      <div class="flex-1 overflow-auto border-t border-border pt-2">
+        <h4 class="text-xs font-semibold text-muted-foreground mb-2">活跃进程</h4>
         <table class="w-full text-xs text-left">
-            <thead class="text-slate-400 font-medium">
+            <thead class="text-muted-foreground font-medium">
                 <tr>
                     <th class="pb-1">PID</th>
                     <th class="pb-1">CMD</th>

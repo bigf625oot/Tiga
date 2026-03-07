@@ -1,53 +1,127 @@
 /** @type {import('tailwindcss').Config} */
+import animate from "tailwindcss-animate"
+
 export default {
+  darkMode: ["class"],
   content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-  ],
+    './pages/**/*.{ts,tsx,vue}',
+    './components/**/*.{ts,tsx,vue}',
+    './app/**/*.{ts,tsx,vue}',
+    './src/**/*.{ts,tsx,vue}',
+	],
+  prefix: "",
   theme: {
-    extend: {
-      colors: {
-        'brand-primary': '#0052D9', // Main Brand Color
-        'brand-gradient-start': '#0052D9',
-        'brand-gradient-end': '#0052FF',
-        'brand-action': '#FF3355', // Key Action Color
-        'figma-bg': '#F9FAFB',
-        'figma-card': '#FFFFFF',
-        'figma-text-primary': '#1F2937',
-        'figma-text-secondary': '#6B7280',
-        'figma-border': '#E5E7EB',
-        'figma-hover': '#F3F4F6',
-        'figma-gray': '#E8E8E8',
-        'figma-notation': '#858B9B',
-        'figma-line': '#E5E6EB',
-        'figma-disable': '#BCC1CD',
-        'figma-heading': '#2A2F3C',
-        'figma-subhead': '#495363',
-        'figma-avatar-bg': '#E6EFFF',
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
       },
+    },
+    extend: {
       fontFamily: {
         sans: [
-          '"PingFang SC"',
-          '"SF Pro SC"',
-          '"SF Pro Display"',
-          '"SF Pro Text"',
-          '"SF Pro Icons"',
-          '"Helvetica Neue"',
-          'Helvetica',
+          'SF Pro Display',
+          'SF Pro Text',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
           'Arial',
-          'sans-serif'
+          'sans-serif',
         ],
-        din: ['"DIN Alternate"', 'DIN', 'sans-serif'],
       },
+      // User requested font sizes: 12/14/16/18/20/24px
       fontSize: {
-        // 整体调大字号，解决在 Mac 上显示过小的问题
-        xs: ['0.8125rem', { lineHeight: '1.125rem' }], // 13px
-        sm: ['0.9375rem', { lineHeight: '1.375rem' }], // 15px
-        base: ['1rem', { lineHeight: '1.5rem' }],      // 16px
-        lg: ['1.125rem', { lineHeight: '1.75rem' }],   // 18px
-        xl: ['1.25rem', { lineHeight: '1.75rem' }],    // 20px
+        xs: ['12px', { lineHeight: '1.4' }],
+        sm: ['14px', { lineHeight: '1.5' }],
+        base: ['16px', { lineHeight: '1.6' }],
+        lg: ['18px', { lineHeight: '1.6' }],
+        xl: ['20px', { lineHeight: '1.4' }],
+        '2xl': ['24px', { lineHeight: '1.4' }],
+      },
+      // User requested font weights: 400/500/600/700
+      fontWeight: {
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+        bold: '700',
+      },
+      // User requested line heights: 1.4-1.6
+      lineHeight: {
+        tight: '1.4',
+        normal: '1.5',
+        relaxed: '1.6',
+      },
+      // User requested spacing: 4px base (2/4/8/12/16/24/32/48px)
+      // Tailwind default spacing is 4px (0.25rem), so 0.5=2px, 1=4px, 2=8px, 3=12px, 4=16px, 6=24px, 8=32px, 12=48px
+      // This is standard, but we ensure it matches
+      spacing: {
+        '0.5': '2px',
+        '1': '4px',
+        '2': '8px',
+        '3': '12px',
+        '4': '16px',
+        '6': '24px',
+        '8': '32px',
+        '12': '48px',
+      },
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: 0 },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: 0 },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
       },
     },
   },
-  plugins: [],
+  plugins: [animate],
 }

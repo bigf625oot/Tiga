@@ -3,11 +3,11 @@
     <!-- 1. Header Container -->
     <header class="h-16 bg-white border-b border-figma-border flex items-center justify-between px-6 shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-4 min-w-0">
-            <button @click="$emit('back')" class="w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors" aria-label="返回">
+            <button @click="$emit('back')" class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors" aria-label="返回">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </button>
             <div class="flex flex-col min-w-0">
-                <h1 class="text-lg font-bold text-figma-heading leading-tight truncate max-w-md" :title="recording.filename">{{ recording.filename }}</h1>
+                <h1 class="text-lg font-semibold text-figma-heading leading-tight truncate max-w-md" :title="recording.filename">{{ recording.filename }}</h1>
                 <div class="flex items-center gap-2 text-xs text-figma-text-secondary mt-0.5">
                     <span>{{ formatDate(recording.created_at) }}</span>
                     <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
@@ -19,7 +19,7 @@
         </div>
         
         <div class="flex items-center gap-2">
-             <button class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-sm font-medium shadow-sm hover:bg-brand-gradient-end transition-all flex items-center gap-2" @click="handleShare">
+             <button class="p-4 py-1.5 rounded-lg bg-brand-primary text-white text-sm font-medium shadow-sm hover:bg-brand-gradient-end transition-all flex items-center gap-2" @click="handleShare">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
                 分享
             </button>
@@ -27,19 +27,19 @@
             <div class="h-6 w-px bg-slate-200 mx-1"></div>
 
             <a-tooltip title="导出文档">
-                <button class="w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                 </button>
             </a-tooltip>
             
             <a-tooltip title="下载音频">
-                <button class="w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 </button>
             </a-tooltip>
             
             <a-tooltip title="删除录音">
-                <button class="w-9 h-9 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+                <button class="w-9 h-9 rounded-lg hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
             </a-tooltip>
@@ -49,7 +49,7 @@
     <!-- 2. Main Content Container -->
     <main class="flex-1 flex flex-col min-h-0 relative bg-white">
         <!-- Player Section (Moved to top) -->
-        <div class="border-b border-slate-100 bg-slate-50/50">
+        <div class="border-b border-border bg-muted/50/50">
             <WaveformPlayer 
                 :src="recording.play_url" 
                 :seekTime="seekTime"
@@ -62,18 +62,18 @@
                 <template #rightExtra>
                     <div class="flex items-center gap-4">
                         <!-- Font Size Controls -->
-                        <div class="flex items-center bg-slate-100 rounded-lg p-0.5">
-                            <button @click="adjustFontSize(-2)" class="px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-white rounded transition-colors" title="减小字号">A-</button>
-                            <span class="text-[10px] text-slate-400 px-1 select-none">{{ fontSize }}</span>
-                            <button @click="adjustFontSize(2)" class="px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-white rounded transition-colors" title="增大字号">A+</button>
+                        <div class="flex items-center bg-muted rounded-lg p-0.5">
+                            <button @click="adjustFontSize(-2)" class="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-slate-700 hover:bg-white rounded transition-colors" title="减小字号">A-</button>
+                            <span class="text-[10px] text-muted-foreground px-1 select-none">{{ fontSize }}</span>
+                            <button @click="adjustFontSize(2)" class="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-slate-700 hover:bg-white rounded transition-colors" title="增大字号">A+</button>
                         </div>
 
                         <div v-if="activeKey === 'transcript'" class="flex items-center gap-2 border-l border-slate-200 pl-4">
                             <template v-if="isEditing">
-                                <button @click="isEditing = false" class="text-xs text-slate-500 hover:text-slate-700 px-3 py-1 rounded transition-colors">
+                                <button @click="isEditing = false" class="text-xs text-muted-foreground hover:text-slate-700 p-4 py-1 rounded transition-colors">
                                     取消
                                 </button>
-                                <button @click="saveTranscript" class="text-xs bg-brand-primary text-white hover:bg-brand-gradient-end px-3 py-1 rounded shadow-sm transition-all font-medium">
+                                <button @click="saveTranscript" class="text-xs bg-brand-primary text-white hover:bg-brand-gradient-end p-4 py-1 rounded shadow-sm transition-all font-medium">
                                     保存
                                 </button>
                             </template>
@@ -124,7 +124,7 @@
 
                 <a-tab-pane key="summary" tab="智能摘要" class="h-full overflow-y-auto custom-scrollbar">
                     <div v-if="isSummaryLoading" class="space-y-4 animate-pulse max-w-none w-full py-8 px-4">
-                        <div class="h-32 bg-slate-100 rounded-xl"></div>
+                        <div class="h-32 bg-muted rounded-lg"></div>
                     </div>
                     <div v-else class="max-w-none w-full mt-4 px-4">
                         
@@ -136,13 +136,13 @@
                 
                 <a-tab-pane key="recommendation" tab="内容推荐" class="h-full overflow-y-auto custom-scrollbar">
                      <div v-if="isRecommendationLoading" class="max-w-none w-full mt-4 px-4">
-                        <div class="h-4 w-32 bg-slate-100 rounded mb-4 animate-pulse"></div>
+                        <div class="h-4 w-32 bg-muted rounded mb-4 animate-pulse"></div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                            <div v-for="i in 8" :key="i" class="flex items-center gap-2 p-1.5 border border-slate-100 rounded-md animate-pulse">
-                                <div class="w-6 h-6 rounded bg-slate-100 shrink-0"></div>
+                            <div v-for="i in 8" :key="i" class="flex items-center gap-2 p-1.5 border border-border rounded-md animate-pulse">
+                                <div class="w-6 h-6 rounded bg-muted shrink-0"></div>
                                 <div class="flex-1 min-w-0 space-y-1">
-                                    <div class="h-3 bg-slate-100 rounded w-3/4"></div>
-                                    <div class="h-2 bg-slate-100 rounded w-1/4"></div>
+                                    <div class="h-3 bg-muted rounded w-3/4"></div>
+                                    <div class="h-2 bg-muted rounded w-1/4"></div>
                                 </div>
                             </div>
                         </div>
@@ -153,7 +153,7 @@
                         <div class="space-y-6">
                             <!-- 2. Related Documents Cards -->
                             <div v-if="relatedDocs.length > 0">
-                                <h4 class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide scale-90 origin-left">相关知识库文档</h4>
+                                <h4 class="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide scale-90 origin-left">相关知识库文档</h4>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                                     <div 
                                         v-for="(doc, idx) in relatedDocs" 
@@ -162,7 +162,7 @@
                                         @click="handleDocClick(doc)"
                                     >
                                         <!-- File Icon -->
-                                        <div class="w-6 h-6 rounded bg-blue-50 flex items-center justify-center shrink-0 text-brand-primary">
+                                        <div class="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0 text-brand-primary">
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                                 <polyline points="14 2 14 8 20 8"></polyline>
@@ -172,7 +172,7 @@
                                         <div class="flex-1 min-w-0 flex items-center gap-2">
                                             <h5 class="text-[11px] font-medium text-slate-900 truncate group-hover:text-brand-primary transition-colors flex-1" :title="doc.title">{{ doc.title }}</h5>
                                             <div class="flex items-center gap-1 shrink-0">
-                                                <span class="px-1 py-[1px] rounded-[2px] bg-slate-100 text-[9px] text-slate-500 font-medium leading-none scale-90">{{ doc.type || 'DOC' }}</span>
+                                                <span class="px-1 py-[1px] rounded-[2px] bg-muted text-[9px] text-muted-foreground font-medium leading-none scale-90">{{ doc.type || 'DOC' }}</span>
                                             </div>
                                         </div>
                                         
@@ -183,8 +183,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div v-else class="flex flex-col items-center justify-center py-20 text-slate-400">
-                                <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                            <div v-else class="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                                <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-4">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-slate-300">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -214,8 +214,8 @@
                     <a-select-option value="edit">允许编辑</a-select-option>
                 </a-select>
             </div>
-            <div class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <span class="text-sm text-slate-500 truncate mr-2">{{ shareLink }}</span>
+            <div class="flex items-center justify-between bg-muted/50 p-4 rounded-lg border border-slate-200">
+                <span class="text-sm text-muted-foreground truncate mr-2">{{ shareLink }}</span>
                 <button class="text-brand-primary text-sm font-medium hover:underline">复制</button>
             </div>
             <div class="flex items-center gap-2">
@@ -364,7 +364,7 @@ const getStatusColor = (status) => {
         case 'completed': return 'text-green-500';
         case 'processing': return 'text-blue-500';
         case 'failed': return 'text-red-500';
-        default: return 'text-slate-400';
+        default: return 'text-muted-foreground';
     }
 };
 

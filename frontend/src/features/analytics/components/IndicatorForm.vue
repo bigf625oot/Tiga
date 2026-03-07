@@ -8,7 +8,7 @@
           v-model="form.group" 
           type="text" 
           placeholder="例如：财务指标" 
-          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         >
       </div>
 
@@ -18,7 +18,7 @@
           v-model="form.name" 
           type="text" 
           placeholder="例如：营业收入" 
-          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         >
       </div>
 
@@ -29,7 +29,7 @@
           type="text" 
           placeholder="例如：Revenue, 营收" 
           maxlength="50"
-          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         >
       </div>
 
@@ -39,7 +39,7 @@
           v-model="form.code" 
           type="text" 
           placeholder="例如：REV_001" 
-          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         >
       </div>
 
@@ -65,7 +65,7 @@
           v-model="form.unit" 
           type="text" 
           placeholder="例如：万元, %, 个" 
-          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         >
       </div>
     </div>
@@ -77,7 +77,7 @@
         v-model="form.formula" 
         type="text" 
         placeholder="例如：营业收入 - 营业成本" 
-        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+        class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
       >
     </div>
 
@@ -88,14 +88,14 @@
           v-model="form.threshold_min" 
           type="text" 
           placeholder="最小值" 
-          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         >
-        <span class="text-slate-400">-</span>
+        <span class="text-muted-foreground">-</span>
         <input 
           v-model="form.threshold_max" 
           type="text" 
           placeholder="最大值" 
-          class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         >
       </div>
     </div>
@@ -106,21 +106,21 @@
         v-model="form.description" 
         rows="3" 
         placeholder="详细描述该指标的定义、业务场景..." 
-        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+        class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
       ></textarea>
     </div>
 
     <!-- Prompt Generation -->
-    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-      <div class="flex justify-between items-center mb-3">
-        <label class="text-sm font-bold text-slate-800 flex items-center gap-2">
-          <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+    <div class="bg-muted/50 p-4 rounded-lg border border-slate-200">
+      <div class="flex justify-between items-center m-4">
+        <label class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           智能 Prompt 模板
         </label>
         <button 
           @click="generatePrompt" 
           :disabled="generatingPrompt || !form.name"
-          class="text-xs px-3 py-1.5 bg-white border border-slate-200 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+          class="text-xs p-4 py-1.5 bg-white border border-slate-200 text-primary rounded-lg font-medium hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
         >
           <svg v-if="generatingPrompt" class="animate-spin w-3 h-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
           {{ generatingPrompt ? '生成中...' : '自动生成' }}
@@ -130,13 +130,13 @@
         v-model="form.prompt_template" 
         rows="6" 
         placeholder="点击“自动生成”或手动输入 Prompt 模板..." 
-        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+        class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
       ></textarea>
       <div class="flex justify-end mt-2">
          <button 
           v-if="form.prompt_template"
           @click="previewPrompt"
-          class="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1"
+          class="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
         >
           <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           预览效果
@@ -145,17 +145,17 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+    <div class="flex justify-end gap-4 pt-4 border-t border-border">
       <button 
         @click="$emit('cancel')" 
-        class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+        class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-muted/50 transition-colors"
       >
         取消
       </button>
       <button 
         @click="handleSubmit" 
         :disabled="submitting"
-        class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-600/20"
+        class="px-6 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-600/20"
       >
         <svg v-if="submitting" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
         {{ submitting ? '保存中...' : '确认保存' }}
@@ -172,7 +172,7 @@
       destroyOnClose
     >
       <div class="py-4">
-        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm font-mono whitespace-pre-wrap max-h-[400px] overflow-y-auto">
+        <div class="bg-muted/50 p-4 rounded-lg border border-slate-200 text-sm font-mono whitespace-pre-wrap max-h-[400px] overflow-y-auto">
           {{ form.prompt_template }}
         </div>
       </div>

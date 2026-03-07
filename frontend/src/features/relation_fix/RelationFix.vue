@@ -4,7 +4,7 @@
     <div class="px-10 pt-12 pb-6 flex-shrink-0">
       <div class="flex justify-between items-end">
         <div>
-          <h2 class="text-4xl font-bold text-[#1D1D1F] tracking-tight mb-2">关系修复</h2>
+          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">关系修复</h2>
           <p class="text-[#86868B] text-lg font-medium">检测并修复知识图谱中的关系缺失。</p>
         </div>
       </div>
@@ -28,7 +28,7 @@
       </div>
 
       <!-- Right Content (Graph) -->
-      <div class="flex-1 relative bg-slate-50">
+      <div class="flex-1 relative bg-muted/50">
         <!-- Skeleton Loading State -->
         <div v-if="loading" class="absolute inset-0 z-30 bg-white p-8 flex flex-col items-center justify-center">
              <div class="w-full h-full max-w-4xl mx-auto flex flex-col gap-8 items-center justify-center opacity-50">
@@ -60,7 +60,7 @@
             <button 
               class="w-7 h-7 inline-flex items-center justify-center rounded-md text-[#2a2f3c] bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
               @click="showLogs = !showLogs"
-              :class="{ 'bg-blue-100 text-blue-600': showLogs }"
+              :class="{ 'bg-blue-100 text-primary': showLogs }"
               title="操作日志"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -71,7 +71,7 @@
         <!-- Logs Drawer / Overlay -->
         <div v-if="showLogs" class="absolute bottom-16 right-4 w-96 max-h-64 bg-black/80 text-white text-xs p-2 rounded overflow-y-auto font-mono pointer-events-auto shadow-lg z-20">
           <div class="flex justify-between items-center mb-1 pb-1 border-b border-white/20">
-              <span class="font-bold">操作日志</span>
+              <span class="font-semibold">操作日志</span>
               <button @click="loadLogs" class="text-blue-300 hover:text-blue-100">刷新</button>
           </div>
           <div v-if="logs.length === 0" class="text-gray-400 italic p-2 text-center">暂无日志</div>

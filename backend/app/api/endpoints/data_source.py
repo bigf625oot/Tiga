@@ -1,13 +1,15 @@
-from typing import Any, List
+from typing import Any, List, Optional
+import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.crud.crud_data_source import data_source as crud_data_source
-from app.schemas.data_source import DataSourceCreate, DataSourceOut, DataSourceTest, DataSourceUpdate
-from app.services.data.vanna.models import DbConnectionConfig
-from app.services.data.vanna.service import data_query_service
+from app.schemas.data_source import DataSourceCreate, DataSourceOut, DataSourceTest, DataSourceUpdate, DataSourceTestResult
+from app.strategies import get_strategy
+from app.models.domain import MetadataModel, DataChunk
 
 router = APIRouter()
 
@@ -33,38 +35,30 @@ async def create_data_source(
     """
     Create new data source.
     """
-    # Optional: Test connection before saving?
-    # For now, we assume user tested it via /test endpoint
     return await crud_data_source.create(db, obj_in=data_source_in)
 
 
-@router.post("/test", response_model=bool)
+@router.post("/test", response_model=DataSourceTestResult)
 async def test_connection(
     *,
     config: DataSourceTest,
 ) -> Any:
     """
-    Test database connection.
+    Test connection using strategy pattern.
     """
-    # Convert schema to service config
-    service_config = DbConnectionConfig(
-        type=config.type.lower(),
-        host=config.host,
-        port=config.port,
-        user=config.username,
-        password=config.password,
-        database=config.database,
-        db_schema=config.db_schema,
-    )
-
     try:
-        # We need to implement this method in service
-        success = data_query_service.test_connection(service_config)
-        if not success:
-            raise HTTPException(status_code=400, detail="Connection failed")
-        return True
+        # Construct config dict from input
+        cfg = config.model_dump()
+        
+        # Determine strategy
+        strategy = get_strategy(config.type, cfg)
+        return await strategy.test_connection()
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Connection failed: {str(e)}")
+        return {
+            "success": False,
+            "error_type": "UNKNOWN",
+            "message": f"Connection failed: {str(e)}"
+        }
 
 
 @router.put("/{id}", response_model=DataSourceOut)
@@ -98,36 +92,85 @@ async def delete_data_source(
     return await crud_data_source.delete(db, id)
 
 
-@router.post("/{id}/connect")
-async def connect_data_source(
-    *,
-    db: AsyncSession = Depends(deps.get_db),
+def _get_strategy_config(ds: Any) -> dict:
+    cfg = {
+        "host": ds.host,
+        "port": ds.port,
+        "username": ds.username,
+        "password_encrypted": ds.password_encrypted,
+        "database": ds.database,
+        "db_schema": ds.db_schema,
+        "url": ds.url,
+        "api_key_encrypted": ds.encrypted_api_key,
+        "private_key_encrypted": ds.encrypted_private_key,
+        "token_encrypted": ds.encrypted_token,
+    }
+    if ds.config:
+        cfg.update(ds.config)
+    return cfg
+
+
+@router.get("/{id}/metadata", response_model=List[MetadataModel])
+async def fetch_metadata(
     id: int,
+    db: AsyncSession = Depends(deps.get_db),
 ) -> Any:
     """
-    Connect to a specific data source (set as active).
+    Fetch metadata from the data source.
     """
-    data_source_obj = await crud_data_source.get(db, id)
-    if not data_source_obj:
+    ds = await crud_data_source.get(db, id)
+    if not ds:
         raise HTTPException(status_code=404, detail="Data source not found")
-
-    # Decrypt password
-    from app.core.security import decrypt_password
-
-    password = decrypt_password(data_source_obj.password_encrypted) if data_source_obj.password_encrypted else None
-
-    config = DbConnectionConfig(
-        type=data_source_obj.type.lower(),
-        host=data_source_obj.host,
-        port=data_source_obj.port,
-        user=data_source_obj.username,
-        password=password,
-        database=data_source_obj.database,
-        db_schema=data_source_obj.db_schema,
-    )
-
+    
+    cfg = _get_strategy_config(ds)
+        
     try:
-        data_query_service.connect_db(config)
-        return {"message": f"Successfully connected to {data_source_obj.name}"}
+        strategy = get_strategy(ds.type, cfg)
+        return await strategy.fetch_metadata()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to connect: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Metadata fetch failed: {str(e)}")
+
+
+@router.get("/{id}/data")
+async def fetch_data(
+    id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(deps.get_db),
+    limit: int = 1000,
+    offset: int = 0,
+    endpoint: Optional[str] = None, # For API
+    filename: Optional[str] = None, # For SFTP
+    table_name: Optional[str] = None, # For Database
+) -> StreamingResponse:
+    """
+    Stream data from the data source.
+    Returns NDJSON (Newline Delimited JSON).
+    """
+    ds = await crud_data_source.get(db, id)
+    if not ds:
+        raise HTTPException(status_code=404, detail="Data source not found")
+        
+    cfg = _get_strategy_config(ds)
+    
+    # Pass kwargs for strategy-specific parameters
+    kwargs = {
+        "limit": limit,
+        "offset": offset,
+        "endpoint": endpoint,
+        "filename": filename,
+        "table_name": table_name
+    }
+    # Filter out None values
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
+
+    async def data_generator():
+        try:
+            strategy = get_strategy(ds.type, cfg)
+            async for chunk in strategy.fetch_data(**kwargs):
+                # Serialize chunk to JSON and yield line
+                yield json.dumps(chunk.model_dump(), default=str) + "\n"
+        except Exception as e:
+            # In a real stream, we might want to yield a specific error object
+            yield json.dumps({"error": str(e)}) + "\n"
+
+    return StreamingResponse(data_generator(), media_type="application/x-ndjson")

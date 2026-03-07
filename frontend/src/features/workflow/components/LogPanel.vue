@@ -1,14 +1,14 @@
 <template>
   <div class="h-full flex flex-col bg-slate-900 text-slate-300 font-mono text-xs overflow-hidden rounded-lg">
     <div class="px-4 py-2 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-      <span class="font-bold text-slate-100">系统日志</span>
-      <span class="text-slate-500">{{ logs.length }} 条记录</span>
+      <span class="font-semibold text-slate-100">系统日志</span>
+      <span class="text-muted-foreground">{{ logs.length }} 条记录</span>
     </div>
     <div class="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar" ref="logContainer">
        <EmptyLogState v-if="logs.length === 0" :isDarkMode="true" />
        <div v-else v-for="(log, idx) in logs" :key="idx" class="flex gap-2 hover:bg-slate-800/50 p-0.5 rounded">
-          <span class="text-slate-500 shrink-0">[{{ formatTime(log.timestamp) }}]</span>
-          <span :class="levelColor(log.level)" class="shrink-0 w-16 uppercase font-bold text-[10px] pt-0.5">{{ log.level }}</span>
+          <span class="text-muted-foreground shrink-0">[{{ formatTime(log.timestamp) }}]</span>
+          <span :class="levelColor(log.level)" class="shrink-0 w-16 uppercase font-semibold text-[10px] pt-0.5">{{ log.level }}</span>
           <span v-if="log.step" class="text-indigo-400 shrink-0">[{{ log.step }}]</span>
           <span class="break-all whitespace-pre-wrap">{{ log.message }}</span>
        </div>

@@ -15,7 +15,7 @@
         <button 
             @click="toggleTheme" 
             class="w-7 h-7 flex items-center justify-center rounded transition-colors mr-1 cursor-pointer"
-            :class="isDarkMode ? 'text-slate-400 hover:text-amber-400 hover:bg-slate-800' : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-100'"
+            :class="isDarkMode ? 'text-muted-foreground hover:text-amber-400 hover:bg-slate-800' : 'text-muted-foreground hover:text-indigo-600 hover:bg-muted'"
             title="切换主题"
         >
             <component :is="isDarkMode ? 'Sunny' : 'Moon'" class="w-4 h-4" />
@@ -37,8 +37,8 @@
     
     <div class="h-full flex flex-col font-mono text-xs transition-colors duration-300" :class="isDarkMode ? 'text-slate-300' : 'text-slate-600'">
       <!-- Toolbar -->
-      <div class="flex items-center gap-3 p-4 border-b transition-all duration-300" 
-           :class="isDarkMode ? 'border-slate-800/50 bg-slate-900/30 backdrop-blur-sm' : 'border-slate-100 bg-white/60 backdrop-blur-sm'">
+      <div class="flex items-center gap-4 p-4 border-b transition-all duration-300" 
+           :class="isDarkMode ? 'border-slate-800/50 bg-slate-900/30 backdrop-blur-sm' : 'border-border bg-white/60 backdrop-blur-sm'">
           <a-input 
               v-model:value="searchQuery" 
               placeholder="搜索日志..." 
@@ -49,7 +49,7 @@
               :bordered="false"
           >
               <template #prefix>
-                  <SearchOutlined :class="isDarkMode ? 'text-cyan-500/70' : 'text-slate-400'" />
+                  <SearchOutlined :class="isDarkMode ? 'text-cyan-500/70' : 'text-muted-foreground'" />
               </template>
           </a-input>
           <a-select 
@@ -62,7 +62,7 @@
           >
               <a-select-option value="all">全部</a-select-option>
               <a-select-option value="info">
-                <span :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">信息</span>
+                <span :class="isDarkMode ? 'text-blue-400' : 'text-primary'">信息</span>
               </a-select-option>
               <a-select-option value="warning">
                 <span :class="isDarkMode ? 'text-amber-400' : 'text-amber-600'">警告</span>
@@ -80,10 +80,10 @@
          <EmptyLogState v-if="filteredLogs.length === 0" :isDarkMode="isDarkMode" />
          <div v-else v-for="(log, idx) in filteredLogs" :key="idx" 
               class="flex gap-2 p-1 rounded-md transition-colors group border border-transparent"
-              :class="isDarkMode ? 'hover:bg-slate-800/80 hover:border-slate-800' : 'hover:bg-slate-100 hover:border-slate-200'"
+              :class="isDarkMode ? 'hover:bg-slate-800/80 hover:border-slate-800' : 'hover:bg-muted hover:border-slate-200'"
          >
             <span class="shrink-0 select-none w-[85px] tabular-nums opacity-60">[{{ formatTime(log.timestamp) }}]</span>
-            <span :class="getLevelClass(log.level)" class="shrink-0 w-12 uppercase font-bold text-[10px] pt-0.5 select-none text-center rounded-[3px]">{{ log.level }}</span>
+            <span :class="getLevelClass(log.level)" class="shrink-0 w-12 uppercase font-semibold text-[10px] pt-0.5 select-none text-center rounded-[3px]">{{ log.level }}</span>
             <span v-if="log.step" class="shrink-0 select-none font-medium" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">[{{ log.step }}]</span>
             <span class="break-all whitespace-pre-wrap selection:bg-indigo-500/30 flex-1 leading-relaxed">{{ translateLog(log.message) }}</span>
          </div>
@@ -190,7 +190,7 @@ const getLevelClass = (l) => {
             case 'warn':
             case 'warning': return 'text-amber-700 bg-amber-50 border border-amber-100';
             case 'success': return 'text-emerald-700 bg-emerald-50 border border-emerald-100';
-            default: return 'text-blue-700 bg-blue-50 border border-blue-100';
+            default: return 'text-blue-700 bg-primary/10 border border-blue-100';
         }
     }
 };

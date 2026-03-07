@@ -1,0 +1,32 @@
+name: "example_job"
+sources:
+  - type: "kafka"
+    config:
+      topic: "events"
+      bootstrap_servers: "localhost:9092"
+      format: "json"
+      columns:
+        user_id: "str"
+        amount: "float"
+        timestamp: "int"
+
+operators:
+  - type: "map"
+    config:
+      columns:
+        user_id: "user_id"
+        amount: "amount * 100"
+  - type: "cast"
+    config:
+      columns:
+        amount: "int"
+
+sinks:
+  - type: "clickhouse"
+    config:
+      host: "localhost"
+      table: "processed_events"
+      columns: ["user_id", "amount", "timestamp"]
+
+settings:
+  monitoring_port: 8081

@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="resource-card cursor-pointer bg-white border border-slate-200 rounded-lg p-3 my-2 flex items-center gap-3 hover:shadow-md transition-all group select-none relative overflow-hidden"
+    class="resource-card cursor-pointer bg-white border border-slate-200 rounded-lg p-4 my-2 flex items-center gap-4 hover:shadow-md transition-all group select-none relative overflow-hidden"
     @click="$emit('click', id)"
   >
     <!-- Icon Container -->
@@ -21,11 +21,11 @@
     <!-- Content -->
     <div class="flex-1 min-w-0 text-left">
       <h4 class="text-sm font-semibold text-slate-800 truncate mb-0.5 leading-tight">{{ title }}</h4>
-      <p class="text-xs text-slate-500 m-0">{{ subtitle }}</p>
+      <p class="text-xs text-muted-foreground m-0">{{ subtitle }}</p>
     </div>
 
     <!-- Action Icon -->
-    <div class="text-slate-400 group-hover:text-blue-500 transition-colors">
+    <div class="text-muted-foreground group-hover:text-blue-500 transition-colors">
         <!-- Arrow for Doc -->
         <svg v-if="type === 'doc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -55,7 +55,7 @@ defineEmits<{
 
 const iconClasses = computed(() => {
     if (props.type === 'doc') {
-        return 'bg-blue-50 text-blue-600 group-hover:bg-blue-100';
+        return 'bg-primary/10 text-primary group-hover:bg-blue-100';
     }
     return 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100';
 });

@@ -110,6 +110,7 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "your-secret-key-here"  # Change this in production!
+    MASTER_KEY: Optional[str] = None  # 32-byte base64 key for data source encryption
 
     # Retrieval Config
     RETRIEVAL_BACKEND: str = "local"

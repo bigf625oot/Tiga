@@ -5,7 +5,7 @@
          class="fixed z-50"
          :style="{ left: position.x + 'px', top: position.y + 'px' }"
          @mousedown="startDrag">
-      <div class="bg-white/95 backdrop-blur-md w-[360px] box-border px-8 py-10 rounded-3xl shadow-2xl border border-white/80 relative text-center select-none animate-[fadeIn_0.3s_ease-out] cursor-move">
+      <div class="bg-white/95 backdrop-blur-md w-[360px] box-border px-8 py-10 rounded-lg shadow-2xl border border-white/80 relative text-center select-none animate-[fadeIn_0.3s_ease-out] cursor-move">
         <button class="absolute top-5 right-5 cursor-pointer text-gray-400 hover:text-gray-800 hover:bg-gray-100/50 rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 hover:rotate-90" @mousedown.stop @click="$emit('close')">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -27,14 +27,14 @@
             </div>
         </div>
         
-        <h2 class="text-xl text-gray-900 mb-3 font-bold tracking-tight">录音纪要</h2>
+        <h2 class="text-xl text-gray-900 m-4 font-semibold tracking-tight">录音纪要</h2>
         <div class="text-sm text-gray-500 mb-8 leading-relaxed">
             实时转文字<br>
             录音结束后查看会议总结
         </div>
 
         <!-- Settings Controls -->
-        <div class="flex gap-3 mb-6 justify-center" @mousedown.stop>
+        <div class="flex gap-4 mb-6 justify-center" @mousedown.stop>
             <a-select v-model:value="format" style="width: 120px" class="text-left">
                 <a-select-option value="mp3">MP3 格式</a-select-option>
                 <a-select-option value="wav">WAV 格式</a-select-option>
@@ -45,7 +45,7 @@
             </a-select>
         </div>
 
-        <button class="w-full py-3.5 rounded-xl border-none text-base font-semibold cursor-pointer transition-all duration-200 mb-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:-translate-y-px hover:shadow-xl hover:brightness-105 active:translate-y-0 active:shadow-md" @mousedown.stop @click="startRecording">开始录音</button>
+        <button class="w-full p-4.5 rounded-lg border-none text-base font-semibold cursor-pointer transition-all duration-200 mb-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:-translate-y-px hover:shadow-xl hover:brightness-105 active:translate-y-0 active:shadow-md" @mousedown.stop @click="startRecording">开始录音</button>
       </div>
     </div>
 
@@ -54,12 +54,12 @@
          class="fixed z-50"
          :style="{ left: position.x + 'px', top: position.y + 'px' }"
          @mousedown="startDrag">
-      <div class="bg-white/95 backdrop-blur-md w-[360px] box-border px-8 py-10 rounded-3xl shadow-2xl border border-white/80 relative text-center select-none animate-[fadeIn_0.3s_ease-out] cursor-move">
+      <div class="bg-white/95 backdrop-blur-md w-[360px] box-border px-8 py-10 rounded-lg shadow-2xl border border-white/80 relative text-center select-none animate-[fadeIn_0.3s_ease-out] cursor-move">
          <!-- Header -->
         <div class="flex justify-between items-start mb-8">
             <div class="flex items-center gap-2">
                  <div class="w-2.5 h-2.5 bg-brand-primary rounded-full animate-pulse"></div>
-                 <span class="text-brand-primary font-bold text-lg">{{ isPaused ? '已暂停' : '录音转写中...' }}</span>
+                 <span class="text-brand-primary font-semibold text-lg">{{ isPaused ? '已暂停' : '录音转写中...' }}</span>
             </div>
             <div class="flex items-center gap-1" @mousedown.stop>
                 <button class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" @click="stopRecording">
@@ -77,11 +77,11 @@
         </div>
 
         <!-- Timer -->
-        <div class="text-3xl font-bold text-gray-800 mb-8 font-din tabular-nums">{{ timerText }}</div>
+        <div class="text-3xl font-semibold text-gray-800 mb-8 font-din tabular-nums">{{ timerText }}</div>
 
         <!-- Controls -->
         <div class="flex justify-center gap-6" @mousedown.stop>
-             <button class="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 bg-amber-50 text-amber-500 hover:bg-amber-100 border border-amber-200" @click="togglePause">
+             <button class="w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-200 bg-amber-50 text-amber-500 hover:bg-amber-100 border border-amber-200" @click="togglePause">
                 <svg v-if="!isPaused" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <rect x="6" y="5" width="4" height="14" rx="1"></rect>
                     <rect x="14" y="5" width="4" height="14" rx="1"></rect>
@@ -90,7 +90,7 @@
                      <path d="M8 5v14l11-7z"></path>
                 </svg>
             </button>
-            <button class="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 bg-red-50 text-red-500 hover:bg-red-100 border border-red-200" @click="stopRecording">
+            <button class="w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-200 bg-red-50 text-red-500 hover:bg-red-100 border border-red-200" @click="stopRecording">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <rect x="6" y="6" width="12" height="12" rx="2"></rect>
                 </svg>

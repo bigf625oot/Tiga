@@ -1,0 +1,43 @@
+{
+  "typography": {
+    "fontSizes": {
+      "xs": "12px",
+      "sm": "14px",
+      "base": "16px",
+      "lg": "18px",
+      "xl": "20px",
+      "2xl": "24px"
+    },
+    "fontWeights": {
+      "normal": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "lineHeights": {
+      "tight": 1.4,
+      "normal": 1.5,
+      "relaxed": 1.6
+    }
+  },
+  "spacing": {
+    "base": "4px",
+    "scale": [2, 4, 8, 12, 16, 24, 32, 48]
+  },
+  "colors": {
+    "primary": "hsl(var(--primary))",
+    "secondary": "hsl(var(--secondary))",
+    "destructive": "hsl(var(--destructive))",
+    "muted": "hsl(var(--muted))",
+    "accent": "hsl(var(--accent))",
+    "popover": "hsl(var(--popover))",
+    "card": "hsl(var(--card))",
+    "background": "hsl(var(--background))",
+    "foreground": "hsl(var(--foreground))"
+  },
+  "borderRadius": {
+    "lg": "var(--radius)",
+    "md": "calc(var(--radius) - 2px)",
+    "sm": "calc(var(--radius) - 4px)"
+  }
+}

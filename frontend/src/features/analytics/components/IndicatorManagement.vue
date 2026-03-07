@@ -3,7 +3,7 @@
     <!-- Header / Actions -->
     <div class="flex justify-between items-center mb-4 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
       <div class="flex items-center gap-4">
-        <h2 class="text-lg font-bold text-slate-800">指标管理</h2>
+        <h2 class="text-lg font-semibold text-slate-800">指标管理</h2>
         <div class="flex items-center gap-2">
           <el-input
             v-model="searchQuery"
@@ -47,7 +47,7 @@
         <el-table-column prop="group" label="指标分组" width="180" sortable />
         <el-table-column prop="name" label="指标名称" width="200" sortable>
           <template #default="scope">
-            <span class="font-medium text-blue-600 cursor-pointer" @click="openDialog('edit', scope.row)">
+            <span class="font-medium text-primary cursor-pointer" @click="openDialog('edit', scope.row)">
               {{ scope.row.name }}
             </span>
           </template>
@@ -74,7 +74,7 @@
       </el-table>
 
       <!-- Pagination -->
-      <div class="p-4 border-t border-slate-100 flex justify-end">
+      <div class="p-4 border-t border-border flex justify-end">
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
@@ -152,10 +152,10 @@
             :percentage="importProgress" 
             :status="importProgress === 100 ? 'success' : ''" 
           />
-          <div v-else class="bg-slate-50 p-4 rounded border border-slate-200">
+          <div v-else class="bg-muted/50 p-4 rounded border border-slate-200">
             <div class="flex gap-4 mb-2">
-              <span class="text-green-600 font-bold">成功: {{ importResult.success }}</span>
-              <span class="text-red-600 font-bold">失败: {{ importResult.failed }}</span>
+              <span class="text-green-600 font-semibold">成功: {{ importResult.success }}</span>
+              <span class="text-red-600 font-semibold">失败: {{ importResult.failed }}</span>
             </div>
             <div v-if="importResult.errors.length > 0" class="max-h-40 overflow-y-auto text-xs text-red-500 space-y-1">
               <div v-for="(err, idx) in importResult.errors" :key="idx">{{ err }}</div>
@@ -181,8 +181,8 @@
           :closable="false"
         />
 
-        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 max-h-[400px] overflow-y-auto font-mono text-sm whitespace-pre-wrap select-text">
-          <div v-if="generatingPrompt" class="flex flex-col items-center justify-center py-8 text-slate-400">
+        <div class="bg-muted/50 p-4 rounded-lg border border-slate-200 max-h-[400px] overflow-y-auto font-mono text-sm whitespace-pre-wrap select-text">
+          <div v-if="generatingPrompt" class="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <el-icon class="is-loading mb-2" :size="24"><Loading /></el-icon>
             <span>正在生成 Prompt...</span>
           </div>

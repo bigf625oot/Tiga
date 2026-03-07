@@ -5,12 +5,12 @@
     <div class="px-0 pt-0 pb-6">
       <div class="flex justify-between items-end">
         <div>
-          <h2 class="text-4xl font-bold text-[#1D1D1F] tracking-tight mb-2">图谱导入</h2>
+          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">图谱导入</h2>
           <p class="text-[#86868B] text-lg font-medium">配置结构化数据到知识图谱的映射与导入任务。</p>
         </div>
         <button 
           @click="openCreateModal"
-          class="bg-[#0071e3] text-white px-5 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
+          class="bg-[#0071e3] text-white p-6 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
           新建配置
@@ -23,8 +23,8 @@
       
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
         <div v-for="i in 5" :key="i" class="bg-white rounded-[24px] border border-slate-200 overflow-hidden h-[280px]">
-            <div class="aspect-video bg-slate-50 animate-pulse"></div>
-            <div class="p-5 space-y-3">
+            <div class="aspect-video bg-muted/50 animate-pulse"></div>
+            <div class="p-6 space-y-3">
                  <a-skeleton active :title="false" :paragraph="{ rows: 1, width: '80%' }" />
                  <a-skeleton active :title="false" :paragraph="{ rows: 2, width: '100%' }" />
             </div>
@@ -32,7 +32,7 @@
       </div>
 
       <div v-else-if="configs.length === 0" class="flex flex-col items-center justify-center py-40 text-[#86868B]">
-        <div class="w-20 h-20 bg-slate-50 rounded-[24px] flex items-center justify-center mb-6 border border-slate-100">
+        <div class="w-20 h-20 bg-muted/50 rounded-[24px] flex items-center justify-center mb-6 border border-border">
             <svg class="w-10 h-10 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
         </div>
         <span class="text-lg font-semibold text-[#1D1D1F]">暂无配置</span>
@@ -61,7 +61,7 @@
             </div>
 
             <!-- Content Area -->
-            <div class="p-5 flex-1 flex flex-col">
+            <div class="p-6 flex-1 flex flex-col">
                 <div class="mb-2">
                     <h4 class="font-semibold text-[#1D1D1F] text-[15px] line-clamp-1 leading-snug mb-1" :title="config.name">{{ config.name }}</h4>
                     <div class="flex items-center gap-2 text-sm text-[#86868B] font-medium">
@@ -73,7 +73,7 @@
                 <!-- Actions (Visible on Hover) -->
                 <div class="mt-auto pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
                     <div class="flex gap-1">
-                        <button @click="openEditModal(config)" class="p-1.5 text-[#86868B] hover:text-[#0071e3] hover:bg-blue-50 rounded-lg transition-colors" title="编辑">
+                        <button @click="openEditModal(config)" class="p-1.5 text-[#86868B] hover:text-[#0071e3] hover:bg-primary/10 rounded-lg transition-colors" title="编辑">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                         </button>
                         <a-popconfirm
@@ -123,7 +123,7 @@
                     :disabled="dataSources.length === 0"
                 >
                     <template #notFoundContent>
-                        <div class="text-xs text-slate-400 p-2 text-center">
+                        <div class="text-xs text-muted-foreground p-2 text-center">
                             暂无已保存的数据库连接<br/>
                             请先在"数据库"页面添加
                         </div>
@@ -137,13 +137,13 @@
                 <div class="flex justify-between items-center mb-1">
                     <label class="block text-sm font-medium text-slate-700">
                         配置内容 (JSON)
-                        <span class="text-xs text-slate-400 font-normal ml-2">包含 database, graph, output, processing 等字段</span>
+                        <span class="text-xs text-muted-foreground font-normal ml-2">包含 database, graph, output, processing 等字段</span>
                     </label>
-                    <div class="flex gap-3 items-center">
+                    <div class="flex gap-4 items-center">
                         <button 
                             @click="handleAIGenerate"
                             :disabled="!selectedDataSourceId || aiGenerating"
-                            class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-medium rounded-lg hover:shadow-md hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="flex items-center gap-1.5 p-4 py-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-medium rounded-lg hover:shadow-md hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <svg v-if="aiGenerating" class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             <svg v-else class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
@@ -151,7 +151,7 @@
                         </button>
                         <button 
                             @click="loadTemplate" 
-                            class="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                            class="text-xs text-primary hover:text-blue-700 hover:underline"
                         >
                             加载默认模板
                         </button>
@@ -161,7 +161,7 @@
                     <textarea
                         v-model="form.config_json"
                         style="font-family: 'Hack', monospace;"
-                        class="w-full h-full p-3 font-mono text-xs leading-relaxed outline-none resize-y bg-slate-50 rounded-lg"
+                        class="w-full h-full p-4 font-mono text-xs leading-relaxed outline-none resize-y bg-muted/50 rounded-lg"
                         placeholder="{ ... }"
                         spellcheck="false"
                         resize="false"

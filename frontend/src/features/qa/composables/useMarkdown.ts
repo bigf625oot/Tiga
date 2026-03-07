@@ -41,14 +41,14 @@ export function useMarkdown() {
         });
 
         // Parse markdown
-        let html = marked.parse(inputText);
+        let html = marked.parse(inputText) as string;
 
         // Post-processing
         // 1. Remove empty paragraphs
         html = html.replace(/<p>\s*<\/p>/g, '');
         
         // 2. Handle [n] citations styling
-        html = html.replace(/\[(\d+)\]/g, (match, p1) => {
+        html = html.replace(/\[(\d+)\]/g, (match: string, p1: string) => {
             return `<span class="citation-link cursor-pointer text-indigo-600 hover:underline font-medium mx-0.5" data-index="${p1}">[${p1}]</span>`;
         });
 

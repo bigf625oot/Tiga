@@ -2,12 +2,12 @@
   <div class="xterm-container h-full w-full bg-slate-900 rounded-md overflow-hidden relative" ref="terminalRef">
     <div class="absolute top-2 right-2 z-10 flex gap-2">
       <a-tooltip title="Clear Terminal">
-        <button @click="clear" class="text-slate-400 hover:text-white transition-colors">
+        <button @click="clear" class="text-muted-foreground hover:text-white transition-colors">
           <ClearOutlined />
         </button>
       </a-tooltip>
       <a-tooltip title="Copy All">
-        <button @click="copyAll" class="text-slate-400 hover:text-white transition-colors">
+        <button @click="copyAll" class="text-muted-foreground hover:text-white transition-colors">
           <CopyOutlined />
         </button>
       </a-tooltip>

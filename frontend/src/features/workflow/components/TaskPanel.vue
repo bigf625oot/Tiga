@@ -48,12 +48,12 @@
                            @click="currentStepIndex = idx"
                       >
                           <div class="flex justify-between items-start mb-2">
-                              <h4 class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{{ task.name || `Task #${idx + 1}` }}</h4>
-                              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wide">
+                              <h4 class="font-semibold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{{ task.name || `Task #${idx + 1}` }}</h4>
+                              <span class="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-slate-200 uppercase tracking-wide">
                                   {{ detectLanguage(task) }}
                               </span>
                           </div>
-                          <p class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded border border-slate-100 line-clamp-3">
+                          <p class="text-xs text-muted-foreground font-mono bg-muted/50 p-2 rounded border border-border line-clamp-3">
                               {{ task.logs.join('\n') || 'No output' }}
                           </p>
                       </div>
@@ -94,19 +94,19 @@
               </div>
           </template>
           
-          <div v-else class="h-full w-full flex items-center justify-center bg-slate-50/20">
+          <div v-else class="h-full w-full flex items-center justify-center bg-muted/50/20">
                <div v-if="store.isRunning" class="w-full max-w-md p-8 flex flex-col items-center select-none">
                    <!-- AI Loading Animation -->
                    <div class="relative w-24 h-24 mb-6">
                        <div class="absolute inset-0 border-t-4 border-indigo-500 rounded-full animate-spin"></div>
                        <div class="absolute inset-2 border-r-4 border-purple-500 rounded-full animate-[spin_3s_linear_infinite_reverse]"></div>
                        <div class="absolute inset-4 border-b-4 border-pink-500 rounded-full animate-[spin_2s_linear_infinite]"></div>
-                       <div class="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold text-indigo-600 animate-pulse">AI</div>
+                       <div class="absolute inset-0 flex items-center justify-center font-mono text-xs font-semibold text-indigo-600 animate-pulse">AI</div>
                    </div>
-                   <p class="text-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 font-bold animate-pulse">
+                   <p class="text-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 font-semibold animate-pulse">
                        {{ t('aiGenerating') }}
                    </p>
-                   <p class="text-center text-slate-400 text-xs mt-2 font-mono">
+                   <p class="text-center text-muted-foreground text-xs mt-2 font-mono">
                        Processing autonomous logic...
                    </p>
                </div>
@@ -120,13 +120,13 @@
     
     <!-- Log Navigation Footer (Player Style) -->
     <div v-if="totalSteps > 0" class="px-4 py-2 bg-white border-t border-slate-200 z-20">
-        <div class="flex items-center gap-3 max-w-2xl mx-auto">
+        <div class="flex items-center gap-4 max-w-2xl mx-auto">
             <!-- Controls Group -->
-            <div class="flex items-center gap-0.5 p-0.5 bg-slate-100 rounded-lg border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-0.5 p-0.5 bg-muted rounded-lg border border-slate-200 shadow-sm">
                 <button 
                     @click="prevStep" 
                     :disabled="currentStepIndex <= 0"
-                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
+                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
                     title="上一步"
                 >
                     <LeftOutlined :style="{ fontSize: '10px' }" />
@@ -134,7 +134,7 @@
                 <button 
                     @click="nextStep" 
                     :disabled="currentStepIndex >= totalSteps - 1"
-                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
+                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
                     title="下一步"
                 >
                     <RightOutlined :style="{ fontSize: '10px' }" />
@@ -142,8 +142,8 @@
             </div>
 
             <!-- Slider Group -->
-            <div class="flex-1 flex items-center gap-3 bg-slate-50 px-3 py-0.5 rounded-lg border border-slate-200 h-8">
-                <span class="text-[10px] font-medium text-slate-400 font-mono min-w-[1.2rem] text-right">{{ currentStepIndex + 1 }}</span>
+            <div class="flex-1 flex items-center gap-4 bg-muted/50 p-4 py-0.5 rounded-lg border border-slate-200 h-8">
+                <span class="text-[10px] font-medium text-muted-foreground font-mono min-w-[1.2rem] text-right">{{ currentStepIndex + 1 }}</span>
                 <a-slider 
                     v-model:value="currentStepIndex" 
                     :min="0" 
@@ -153,13 +153,13 @@
                     :tooltipOpen="false"
                     size="small"
                 />
-                <span class="text-[10px] font-medium text-slate-400 font-mono min-w-[1.2rem]">{{ totalSteps || 0 }}</span>
+                <span class="text-[10px] font-medium text-muted-foreground font-mono min-w-[1.2rem]">{{ totalSteps || 0 }}</span>
             </div>
 
             <!-- Log Button -->
             <button 
                 @click="openLogDrawer"
-                class="w-7 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-500 transition-colors log-trigger"
+                class="w-7 h-6 flex items-center justify-center rounded hover:bg-muted text-muted-foreground transition-colors log-trigger"
                 title="View Logs"
             >
                 <FileTextOutlined :style="{ fontSize: '12px' }" />
@@ -168,7 +168,7 @@
     </div>
 
     <!-- Control Bar (only when running) -->
-    <div v-if="store.isRunning" class="px-4 py-2 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+    <div v-if="store.isRunning" class="px-4 py-2 bg-muted/50 border-t border-border flex justify-between items-center text-xs text-muted-foreground">
         <div class="flex items-center gap-2">
             <span class="relative flex h-2 w-2">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>

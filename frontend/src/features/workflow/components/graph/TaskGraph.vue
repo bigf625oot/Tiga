@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full bg-slate-50">
+  <div class="h-full w-full bg-muted/50">
     <VueFlow
       v-model="elements"
       :default-zoom="1"

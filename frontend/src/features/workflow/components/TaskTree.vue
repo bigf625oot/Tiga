@@ -1,13 +1,13 @@
 <template>
   <div class="task-tree font-sans h-full">
-    <div v-if="tasks.length === 0" class="flex flex-col items-center justify-center h-full text-slate-500 text-sm gap-3">
+    <div v-if="tasks.length === 0" class="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-4">
       <img src="/bot.svg" alt="Waiting" class="w-16 h-16 opacity-50 grayscale" />
       <span>等待任务规划...</span>
     </div>
     <div v-else class="space-y-2">
       <div v-for="task in tasks" :key="task.id" class="task-item">
         <!-- Task Header -->
-        <div class="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+        <div class="flex items-center gap-4 p-4 bg-white border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
            <!-- Status Indicator -->
            <div class="absolute left-0 top-0 bottom-0 w-1" :class="statusColor(task.status)"></div>
            
@@ -26,11 +26,11 @@
               </div>
 
               <!-- Description -->
-              <div v-if="task.description" class="text-xs text-slate-500 mb-2 line-clamp-2" :title="task.description">
+              <div v-if="task.description" class="text-xs text-muted-foreground mb-2 line-clamp-2" :title="task.description">
                   {{ task.description }}
               </div>
 
-              <div class="flex items-center gap-3 text-[10px] text-slate-400">
+              <div class="flex items-center gap-4 text-[10px] text-muted-foreground">
                  <!-- Time -->
                  <div class="flex items-center gap-1">
                      <ClockCircleOutlined />
@@ -47,14 +47,14 @@
               </div>
 
               <!-- Progress Bar if running -->
-              <div v-if="task.status === 'running'" class="mt-2 h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div v-if="task.status === 'running'" class="mt-2 h-1 bg-muted rounded-full overflow-hidden">
                  <div class="h-full bg-blue-500 animate-pulse" style="width: 60%"></div>
               </div>
            </div>
         </div>
         
         <!-- Children (Recursive) -->
-        <div v-if="task.children && task.children.length" class="pl-6 mt-2 border-l-2 border-slate-100 ml-4">
+        <div v-if="task.children && task.children.length" class="pl-6 mt-2 border-l-2 border-border ml-4">
             <TaskTree :tasks="task.children" />
         </div>
       </div>
@@ -114,8 +114,8 @@ const priorityClass = (p) => {
     switch(p) {
         case 'high': return 'bg-red-100 text-red-600';
         case 'medium': return 'bg-amber-100 text-amber-600';
-        case 'low': return 'bg-blue-100 text-blue-600';
-        default: return 'bg-slate-100 text-slate-500';
+        case 'low': return 'bg-blue-100 text-primary';
+        default: return 'bg-muted text-muted-foreground';
     }
 };
 

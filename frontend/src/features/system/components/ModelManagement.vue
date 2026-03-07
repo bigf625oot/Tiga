@@ -3,11 +3,11 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <div class="flex items-center gap-2">
-        <h2 class="text-lg font-bold text-slate-800">模型列表</h2>
+        <h2 class="text-lg font-semibold text-slate-800">模型列表</h2>
       </div>
       <button 
         @click="openCreateModal"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm shadow-blue-600/20"
+        class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm shadow-blue-600/20"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         <span>添加模型</span>
@@ -15,7 +15,7 @@
     </div>
 
     <!-- List -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <a-table :columns="columns" :data-source="models" :loading="loading" :pagination="false">
             <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'provider'">
@@ -55,24 +55,24 @@
     <div v-if="modalVisible" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex justify-end">
         <div class="w-[600px] h-full bg-white shadow-2xl flex flex-col animate-slide-in-right">
             <!-- Header -->
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 class="text-lg font-bold text-slate-800">{{ isEdit ? '编辑模型' : '添加模型' }}</h3>
-                <button @click="modalVisible = false" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50">
+            <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-white">
+                <h3 class="text-lg font-semibold text-slate-800">{{ isEdit ? '编辑模型' : '添加模型' }}</h3>
+                <button @click="modalVisible = false" class="p-2 text-muted-foreground hover:text-slate-600 rounded-lg hover:bg-muted/50">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
 
             <!-- Body -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/50/50">
+                <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">模型名称 <span class="text-red-500">*</span></label>
-                        <input v-model="formState.name" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="例如: GPT-4o">
+                        <label class="block text-xs font-medium text-muted-foreground mb-1">模型名称 <span class="text-red-500">*</span></label>
+                        <input v-model="formState.name" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="例如: GPT-4o">
                     </div>
                     
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">提供商 <span class="text-red-500">*</span></label>
-                        <select v-model="formState.provider" @change="handleProviderChange" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white">
+                        <label class="block text-xs font-medium text-muted-foreground mb-1">提供商 <span class="text-red-500">*</span></label>
+                        <select v-model="formState.provider" @change="handleProviderChange" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white">
                             <option value="openai">OpenAI</option>
                             <option value="aliyun">Aliyun (通义千问)</option>
                             <option value="deepseek">DeepSeek</option>
@@ -84,8 +84,8 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">模型类型 <span class="text-red-500">*</span></label>
-                        <select v-model="formState.model_type" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white">
+                        <label class="block text-xs font-medium text-muted-foreground mb-1">模型类型 <span class="text-red-500">*</span></label>
+                        <select v-model="formState.model_type" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white">
                             <option value="text">文本 (Text)</option>
                             <option value="embedding">嵌入 (Embedding)</option>
                             <option value="multimodal">多模态 (Multimodal)</option>
@@ -95,12 +95,12 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">模型ID <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-medium text-muted-foreground mb-1">模型ID <span class="text-red-500">*</span></label>
                         <div class="flex gap-2">
                              <select 
                                 v-if="!isCustomModel"
                                 v-model="formState.model_id" 
-                                class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white"
+                                class="flex-1 p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white"
                              >
                                 <option value="" disabled>选择模型ID</option>
                                 <option v-for="opt in currentModelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -108,39 +108,39 @@
                              <input 
                                 v-else
                                 v-model="formState.model_id" 
-                                class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors"
+                                class="flex-1 p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors"
                                 placeholder="输入自定义模型ID"
                             >
-                            <button @click="isCustomModel = !isCustomModel" class="text-blue-600 text-xs font-medium hover:underline whitespace-nowrap px-2">
+                            <button @click="isCustomModel = !isCustomModel" class="text-primary text-xs font-medium hover:underline whitespace-nowrap px-2">
                                 {{ isCustomModel ? '选择列表' : '手动输入' }}
                             </button>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">API Key</label>
-                        <input type="password" v-model="formState.api_key" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="sk-...">
+                        <label class="block text-xs font-medium text-muted-foreground mb-1">API Key</label>
+                        <input type="password" v-model="formState.api_key" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="sk-...">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Base URL</label>
-                        <input v-model="formState.base_url" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="可选, 例如: https://api.openai.com/v1">
+                        <label class="block text-xs font-medium text-muted-foreground mb-1">Base URL</label>
+                        <input v-model="formState.base_url" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="可选, 例如: https://api.openai.com/v1">
                     </div>
 
                     <div class="flex items-center gap-2">
-                         <span class="text-xs font-medium text-slate-500">状态</span>
+                         <span class="text-xs font-medium text-muted-foreground">状态</span>
                          <button 
                             @click="formState.is_active = !formState.is_active"
                             class="w-10 h-5 rounded-full transition-colors relative"
-                            :class="formState.is_active ? 'bg-blue-600' : 'bg-slate-200'"
+                            :class="formState.is_active ? 'bg-primary' : 'bg-slate-200'"
                          >
                             <span class="absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform" :class="formState.is_active ? 'translate-x-5' : ''"></span>
                          </button>
-                         <span class="text-xs text-slate-500">{{ formState.is_active ? '启用' : '禁用' }}</span>
+                         <span class="text-xs text-muted-foreground">{{ formState.is_active ? '启用' : '禁用' }}</span>
                     </div>
 
-                    <div class="pt-4 border-t border-slate-100">
-                        <button @click="handleTestConnection" :disabled="testing" class="w-full py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                    <div class="pt-4 border-t border-border">
+                        <button @click="handleTestConnection" :disabled="testing" class="w-full py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:text-primary hover:border-blue-300 hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
                              <svg v-if="testing" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                              <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                              <span>测试连接</span>
@@ -150,8 +150,8 @@
             </div>
 
             <!-- Footer -->
-            <div class="px-6 py-4 border-t border-slate-200 bg-white flex justify-end gap-3">
-                <button @click="modalVisible = false" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors">取消</button>
+            <div class="px-6 py-4 border-t border-slate-200 bg-white flex justify-end gap-4">
+                <button @click="modalVisible = false" class="px-4 py-2 text-slate-600 hover:bg-muted rounded-lg text-sm font-medium transition-colors">取消</button>
                 <button @click="handleSubmit" class="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm" :disabled="submitting">
                     <span v-if="submitting">保存中...</span>
                     <span v-else>保存配置</span>

@@ -5,7 +5,7 @@
     <div class="px-10 pt-12 pb-6">
       <div class="flex flex-col gap-6">
         <div>
-          <h2 class="text-4xl font-bold text-[#1D1D1F] tracking-tight mb-2">知识库</h2>
+          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">知识库</h2>
           <p class="text-[#86868B] text-lg font-medium">企业级知识沉淀与管理。</p>
         </div>
 
@@ -38,15 +38,15 @@
         <div class="flex justify-between items-center mb-4">
             <!-- Left: Search and File Count/Title -->
             <div class="flex items-center gap-4 flex-1">
-                 <span class="text-base font-medium text-[#2a2f3c] cursor-pointer hover:text-blue-600 transition-colors" @click="viewGlobalGraph" title="查看全局知识图谱">全部文件</span>
-                 <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white w-[330px]">
-                     <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                 <span class="text-base font-medium text-[#2a2f3c] cursor-pointer hover:text-primary transition-colors" @click="viewGlobalGraph" title="查看全局知识图谱">全部文件</span>
+                 <div class="flex items-center gap-2 p-4 py-1.5 rounded-lg bg-white w-[330px]">
+                     <svg class="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                      <input type="text" placeholder="请输入名称或关键词进行搜索" class="flex-1 text-sm outline-none text-[#2a2f3c] placeholder-[#bcc1cd]">
                  </div>
             </div>
 
             <!-- Right: Actions -->
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-4">
                  <input 
                     type="file" 
                     ref="fileInput" 
@@ -56,7 +56,7 @@
                 >
                 <button 
                     @click="$refs.fileInput.click()"
-                    class="flex items-center gap-1 px-4 py-1.5 bg-[#171717] text-white rounded-xl text-sm hover:bg-slate-800 transition-colors"
+                    class="flex items-center gap-1 px-4 py-1.5 bg-[#171717] text-white rounded-lg text-sm hover:bg-slate-800 transition-colors"
                     :disabled="uploading"
                 >
                     <span v-if="uploading">上传中...</span>
@@ -64,13 +64,13 @@
                 </button>
                 <button 
                     @click="openNewFolder"
-                    class="flex items-center gap-1 px-4 py-1.5 border border-[#c9cdd4] text-[#2a2f3c] rounded-xl text-sm hover:bg-slate-50 transition-colors"
+                    class="flex items-center gap-1 px-4 py-1.5 border border-[#c9cdd4] text-[#2a2f3c] rounded-lg text-sm hover:bg-muted/50 transition-colors"
                 >
                     新建文件夹
                 </button>
                 <button 
                     @click="confirmCleanVector"
-                    class="flex items-center gap-1 px-4 py-1.5 border border-red-300 text-red-600 rounded-xl text-sm hover:bg-red-50 transition-colors"
+                    class="flex items-center gap-1 px-4 py-1.5 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition-colors"
                     :disabled="cleaningVector"
                     title="清空向量库（不影响图谱与文件）"
                 >
@@ -86,8 +86,8 @@
              <div class="flex items-center gap-2 text-sm text-[#2a2f3c]">
                  <div v-for="(crumb, index) in breadcrumbs" :key="index" class="flex items-center gap-2">
                      <span 
-                        class="cursor-pointer hover:text-blue-600 transition-colors font-medium"
-                        :class="index === breadcrumbs.length - 1 ? 'text-[#171717] font-bold' : 'text-[#858b9b]'"
+                        class="cursor-pointer hover:text-primary transition-colors font-medium"
+                        :class="index === breadcrumbs.length - 1 ? 'text-[#171717] font-semibold' : 'text-[#858b9b]'"
                         @click="navigateToBreadcrumb(index)"
                      >
                          {{ crumb.name }}
@@ -97,9 +97,9 @@
              </div>
 
              <!-- Batch Actions -->
-             <div v-if="selectedFiles.length > 0" class="flex items-center gap-2 bg-[#f9f9fa] px-3 py-1 rounded-lg">
-                 <span class="text-xs text-slate-500">已选 {{ selectedFiles.length }} 项</span>
-                 <button @click="openMoveModal" class="text-xs text-blue-600 hover:text-blue-700 font-medium px-2">移动</button>
+             <div v-if="selectedFiles.length > 0" class="flex items-center gap-2 bg-[#f9f9fa] p-4 py-1 rounded-lg">
+                 <span class="text-xs text-muted-foreground">已选 {{ selectedFiles.length }} 项</span>
+                 <button @click="openMoveModal" class="text-xs text-primary hover:text-blue-700 font-medium px-2">移动</button>
                  <button @click="batchDelete" class="text-xs text-red-600 hover:text-red-700 font-medium px-2">删除</button>
              </div>
         </div>
@@ -114,50 +114,50 @@
             <Loading v-if="loading && files.length === 0" type="skeleton-list" />
             <div v-else class="min-w-full">
                 <!-- Table Header -->
-                <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded px-3 text-[14px] font-medium text-[#2a2f3c]">
+                <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded p-4 text-[14px] font-medium text-[#2a2f3c]">
                     <div class="w-[40px] flex items-center justify-center">
-                        <input type="checkbox" :checked="allSelected" :indeterminate="indeterminate" @change="toggleSelectAll" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <input type="checkbox" :checked="allSelected" :indeterminate="indeterminate" @change="toggleSelectAll" class="rounded border-slate-300 text-primary focus:ring-blue-500">
                     </div>
                     <div class="flex-1 flex items-center gap-2 relative">
                         <span>文件名称</span>
                         <div class="flex flex-col gap-0.5">
-                             <svg class="w-2 h-1 text-slate-400" fill="none" viewBox="0 0 10 5" stroke="currentColor"><path d="M5 0L10 5H0L5 0Z" fill="currentColor"/></svg>
-                             <svg class="w-2 h-1 text-slate-400" fill="none" viewBox="0 0 10 5" stroke="currentColor"><path d="M5 5L0 0H10L5 5Z" fill="currentColor"/></svg>
+                             <svg class="w-2 h-1 text-muted-foreground" fill="none" viewBox="0 0 10 5" stroke="currentColor"><path d="M5 0L10 5H0L5 0Z" fill="currentColor"/></svg>
+                             <svg class="w-2 h-1 text-muted-foreground" fill="none" viewBox="0 0 10 5" stroke="currentColor"><path d="M5 5L0 0H10L5 5Z" fill="currentColor"/></svg>
                         </div>
                         <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
                     </div>
-                    <div class="w-[100px] px-3 relative">
+                    <div class="w-[100px] p-4 relative">
                         <span>大小</span>
                         <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
                     </div>
-                    <div class="w-[180px] px-3 relative">
+                    <div class="w-[180px] p-4 relative">
                         <span>上传/创建时间</span>
                         <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
                     </div>
-                    <div class="w-[180px] px-3 relative flex items-center gap-2">
+                    <div class="w-[180px] p-4 relative flex items-center gap-2">
                         <span>解析方式</span>
-                        <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
                     </div>
-                    <div class="w-[100px] px-3">
+                    <div class="w-[100px] p-4">
                         <span>操作</span>
                     </div>
                 </div>
 
                 <!-- Table Body -->
                 <div class="flex flex-col">
-                    <div v-if="files.length === 0 && !uploading" class="py-12 flex flex-col items-center justify-center text-slate-400 text-[14px]">
+                    <div v-if="files.length === 0 && !uploading" class="py-12 flex flex-col items-center justify-center text-muted-foreground text-[14px]">
                         暂无文件
                     </div>
                     
                     <div 
                         v-for="file in files" 
                         :key="file.id" 
-                        class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 px-3 text-[14px] text-[#2a2f3c]"
+                        class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 p-4 text-[14px] text-[#2a2f3c]"
                     >
                         <!-- Checkbox -->
                         <div class="w-[40px] flex items-center justify-center" @click.stop>
-                            <input type="checkbox" :checked="selectedFiles.includes(file.id)" @change="toggleSelect(file.id)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <input type="checkbox" :checked="selectedFiles.includes(file.id)" @change="toggleSelect(file.id)" class="rounded border-slate-300 text-primary focus:ring-blue-500">
                         </div>
 
                         <!-- Name -->
@@ -172,36 +172,36 @@
                                  </svg>
                                  <img v-else :src="getFileIcon(file.filename)" class="w-full h-full object-contain" alt="icon" />
                              </div>
-                             <span class="truncate hover:text-blue-600 transition-colors" :class="{'font-medium': file.is_folder}">{{ file.filename }}</span>
+                             <span class="truncate hover:text-primary transition-colors" :class="{'font-medium': file.is_folder}">{{ file.filename }}</span>
                         </div>
                         
                         <!-- Size -->
-                        <div class="w-[100px] px-3 text-slate-500">
+                        <div class="w-[100px] p-4 text-muted-foreground">
                             {{ file.is_folder ? '-' : formatSize(file.file_size) }}
                         </div>
                         
                         <!-- Time -->
-                        <div class="w-[180px] px-3 text-slate-500">
+                        <div class="w-[180px] p-4 text-muted-foreground">
                             {{ file.is_folder ? '-' : formatDate(file.created_at) }}
                         </div>
                         
                         <!-- Status -->
-                        <div class="w-[180px] px-3">
+                        <div class="w-[180px] p-4">
                             <template v-if="!file.is_folder">
                                 <!-- Progress Bar for active states -->
                                 <div v-if="['上传中', '解析中'].includes(file.status_text)" class="w-full pr-4">
                                     <div class="flex justify-between items-center mb-1.5">
-                                        <span class="text-xs text-blue-600 font-medium">
+                                        <span class="text-xs text-primary font-medium">
                                             {{ file.status_text }}
                                         </span>
-                                        <span class="text-[10px] text-slate-400">
+                                        <span class="text-[10px] text-muted-foreground">
                                             <template v-if="file.progress !== null && file.progress !== undefined">
                                                 {{ file.progress }}%
                                             </template>
                                             <template v-else>进行中</template>
                                         </span>
                                     </div>
-                                    <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                          <div 
                                             class="h-full bg-blue-500 rounded-full relative overflow-hidden"
                                             :style="{ width: (file.progress !== null && file.progress !== undefined) ? (file.progress + '%') : '100%' }"
@@ -212,7 +212,7 @@
                                 </div>
                                 
                                 <!-- Standard Badge for other states -->
-                                <div v-else class="flex items-center gap-2 px-2 py-1 bg-slate-100 rounded border border-slate-200 w-fit">
+                                <div v-else class="flex items-center gap-2 px-2 py-1 bg-muted rounded border border-slate-200 w-fit">
                                     <span class="w-2 h-2 rounded-full" 
                                         :class="{
                                             'bg-green-500': file.status_text === '已完成',
@@ -224,27 +224,27 @@
                                     </span>
                                 </div>
                             </template>
-                            <span v-else class="text-slate-400">-</span>
+                            <span v-else class="text-muted-foreground">-</span>
                         </div>
                         
                         <!-- Actions -->
-                        <div class="w-[100px] px-3 flex items-center gap-3">
+                        <div class="w-[100px] p-4 flex items-center gap-4">
                             <button 
                                 v-if="!file.is_folder && file.status_text === '已完成'"
                                 @click="viewGraph(file)" 
-                                class="text-slate-400 hover:text-blue-600" 
+                                class="text-muted-foreground hover:text-primary" 
                                 title="查看知识图谱"
                             >
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
                             </button>
-                            <button @click="deleteFile(file.id)" class="text-slate-400 hover:text-red-600" title="删除文件">
+                            <button @click="deleteFile(file.id)" class="text-muted-foreground hover:text-red-600" title="删除文件">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                         </div>
                     </div>
                     
                     <!-- Load More Spinner -->
-                    <div v-if="loadingMore" class="py-4 flex justify-center text-slate-400 text-sm">
+                    <div v-if="loadingMore" class="py-4 flex justify-center text-muted-foreground text-sm">
                         加载中...
                     </div>
                 </div>
@@ -287,7 +287,7 @@
                     v-model="newFolderName"
                     type="text" 
                     placeholder="请输入文件夹名称" 
-                    class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                    class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-muted-foreground"
                 />
             </div>
         </a-modal>
@@ -300,13 +300,13 @@
             destroyOnClose
         >
             <div class="flex flex-col gap-4">
-                <p class="text-sm text-slate-500">将选中的 {{ selectedFiles.length }} 个项目移动到：</p>
+                <p class="text-sm text-muted-foreground">将选中的 {{ selectedFiles.length }} 个项目移动到：</p>
                 <div class="max-h-[300px] overflow-y-auto border border-slate-200 rounded-lg">
                      <div 
                         v-for="folder in availableFolders" 
                         :key="folder.value"
-                        class="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-2"
-                        :class="{'bg-blue-50 text-blue-600': targetFolderId === folder.value}"
+                        class="px-4 py-2 hover:bg-muted/50 cursor-pointer flex items-center gap-2"
+                        :class="{'bg-primary/10 text-primary': targetFolderId === folder.value}"
                         @click="targetFolderId = folder.value"
                      >
                          <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">

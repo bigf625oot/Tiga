@@ -4,27 +4,27 @@
         <div class="flex flex-col gap-6 px-8 pt-8 pb-4">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-4">
-                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">录音纪要</h1>
-                    <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-xs font-medium border border-slate-200">{{ files.length }} 个文件</span>
+                    <h1 class="text-2xl font-semibold text-slate-900 tracking-tight">录音纪要</h1>
+                    <span class="px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium border border-slate-200">{{ files.length }} 个文件</span>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex gap-4">
                      <div class="relative group">
                         <input 
                             type="text" 
                             placeholder="搜索录音标题或内容..." 
-                            class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm w-72 transition-all focus:w-80 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm placeholder:text-slate-400"
+                            class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm w-72 transition-all focus:w-80 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm placeholder:text-muted-foreground"
                         >
-                        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <svg class="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                      </div>
                 </div>
             </div>
             
             <!-- Tags / Filters -->
             <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                <button class="px-5 py-2 rounded-full bg-slate-900 text-white text-sm font-medium shadow-md shadow-slate-900/10 transition-all hover:translate-y-px active:translate-y-0">全部</button>
-                <button class="px-5 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm">最近7天</button>
-                <button class="px-5 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm">我的项目</button>
-                <button class="px-5 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm flex items-center gap-1.5">
+                <button class="p-6 py-2 rounded-full bg-slate-900 text-white text-sm font-medium shadow-md shadow-slate-900/10 transition-all hover:translate-y-px active:translate-y-0">全部</button>
+                <button class="p-6 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-muted/50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm">最近7天</button>
+                <button class="p-6 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-muted/50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm">我的项目</button>
+                <button class="p-6 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-muted/50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
                     星标
                 </button>
@@ -34,8 +34,8 @@
         <!-- Content Area -->
         <div class="flex-1 overflow-y-auto px-8 pb-32">
             <!-- Loading State -->
-            <div v-if="loading" class="flex flex-col items-center justify-center h-64 text-slate-400">
-                <svg class="animate-spin h-8 w-8 mb-3 text-blue-600" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <div v-if="loading" class="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <svg class="animate-spin h-8 w-8 m-4 text-primary" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 <span class="text-sm font-medium">加载数据中...</span>
             </div>
 
@@ -59,16 +59,16 @@
                         </g>
                     </svg>
                 </div>
-                <h3 class="text-xl font-bold text-slate-800 mb-3">暂无录音记录</h3>
-                <p class="text-slate-500 max-w-sm text-center leading-relaxed mb-8">
+                <h3 class="text-xl font-semibold text-slate-800 m-4">暂无录音记录</h3>
+                <p class="text-muted-foreground max-w-sm text-center leading-relaxed mb-8">
                     您可以点击下方按钮开始新的录音，或导入现有的音频文件生成智能纪要。
                 </p>
                 <div class="flex gap-4">
-                    <button @click="openRecorder" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-medium shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                    <button @click="openRecorder" class="px-6 py-2.5 bg-primary text-white rounded-lg font-medium shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
                         开始录音
                     </button>
-                    <button @click="triggerUpload" class="px-6 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-2">
+                    <button @click="triggerUpload" class="px-6 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-lg font-medium hover:bg-muted/50 hover:border-slate-300 transition-all flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                         导入音频
                     </button>
@@ -78,41 +78,41 @@
             <!-- Card Grid -->
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <!-- Folder Navigation -->
-                <div v-if="currentFolderId" @click="goUp" class="group relative bg-white rounded-2xl p-6 border-2 border-dashed border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[200px]">
-                    <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
+                <div v-if="currentFolderId" @click="goUp" class="group relative bg-white rounded-lg p-6 border-2 border-dashed border-slate-200 hover:border-blue-500 hover:bg-primary/10/30 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="w-14 h-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                     </div>
-                    <span class="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">返回上一级</span>
+                    <span class="font-semibold text-slate-700 group-hover:text-primary transition-colors">返回上一级</span>
                 </div>
 
                 <!-- File Cards -->
                 <div v-for="file in files" :key="file.id" 
-                    class="group relative bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] hover:border-blue-500/20 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[200px]"
+                    class="group relative bg-white rounded-lg p-6 border border-border shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] hover:border-blue-500/20 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[200px]"
                     @click="handleItemClick(file)"
                 >
                     <!-- Card Header -->
                     <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-3.5 overflow-hidden">
+                        <div class="flex items-center gap-4.5 overflow-hidden">
                              <div :class="[
-                                'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border',
-                                file.is_folder ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                                'w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm border',
+                                file.is_folder ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-primary/10 text-primary border-blue-100'
                             ]">
                                 <svg v-if="file.is_folder" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                                 <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                             </div>
                             <div class="flex flex-col overflow-hidden">
-                                <h3 class="font-bold text-slate-800 truncate text-base mb-1 group-hover:text-blue-600 transition-colors" :title="file.filename">{{ file.filename }}</h3>
-                                <span class="text-xs text-slate-500 font-medium">{{ formatDate(file.created_at) }}</span>
+                                <h3 class="font-semibold text-slate-800 truncate text-base mb-1 group-hover:text-primary transition-colors" :title="file.filename">{{ file.filename }}</h3>
+                                <span class="text-xs text-muted-foreground font-medium">{{ formatDate(file.created_at) }}</span>
                             </div>
                         </div>
                         
                         <!-- More Actions (Hover) -->
-                        <div class="opacity-0 group-hover:opacity-100 transition-all absolute top-4 right-4 flex gap-1 bg-white shadow-sm border border-slate-100 rounded-lg p-1" @click.stop>
-                             <button class="w-8 h-8 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-blue-600 transition-all" title="重命名" @click="openRenameModal(file)">
+                        <div class="opacity-0 group-hover:opacity-100 transition-all absolute top-4 right-4 flex gap-1 bg-white shadow-sm border border-border rounded-lg p-1" @click.stop>
+                             <button class="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-primary transition-all" title="重命名" @click="openRenameModal(file)">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
                             <a-popconfirm title="确定要删除吗?" ok-text="确认" cancel-text="取消" @confirm="deleteRecording(file.id)">
-                                <button class="w-8 h-8 rounded-md flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all" title="删除">
+                                <button class="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all" title="删除">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                             </a-popconfirm>
@@ -120,7 +120,7 @@
                     </div>
 
                     <!-- Waveform Placeholder / Status -->
-                    <div v-if="!file.is_folder" class="flex-1 flex items-center justify-center my-3 relative bg-slate-50 rounded-xl overflow-hidden group-hover:bg-blue-50/50 transition-colors border border-slate-100/50">
+                    <div v-if="!file.is_folder" class="flex-1 flex items-center justify-center m-4 relative bg-muted/50 rounded-lg overflow-hidden group-hover:bg-primary/10/50 transition-colors border border-border/50">
                         <!-- Static Waveform Visual -->
                         <div class="flex items-center gap-1 h-10 opacity-40 group-hover:opacity-60 transition-opacity">
                              <div v-for="i in 24" :key="i" 
@@ -131,7 +131,7 @@
                         
                         <!-- Play Overlay -->
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 bg-white/10 backdrop-blur-[1px]">
-                            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 hover:scale-110 transition-transform">
+                            <div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-blue-600/30 hover:scale-110 transition-transform">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                             </div>
                         </div>
@@ -139,21 +139,21 @@
                     <div v-else class="flex-1"></div>
 
                     <!-- Card Footer -->
-                    <div class="flex justify-between items-center mt-2 pt-3 border-t border-slate-50">
-                        <span v-if="!file.is_folder" class="text-xs font-bold font-din text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{{ formatDuration(file.duration) }}</span>
-                        <span v-else class="text-xs text-slate-400 font-medium">文件夹</span>
+                    <div class="flex justify-between items-center mt-2 p-4 border-t border-slate-50">
+                        <span v-if="!file.is_folder" class="text-xs font-semibold font-din text-muted-foreground bg-muted px-2 py-1 rounded-md">{{ formatDuration(file.duration) }}</span>
+                        <span v-else class="text-xs text-muted-foreground font-medium">文件夹</span>
 
                         <!-- Status Badge -->
                          <div v-if="!file.is_folder" class="flex items-center gap-1.5">
-                            <div v-if="file.summary_status === 'completed'" class="flex items-center gap-1.5 text-[11px] font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
+                            <div v-if="file.summary_status === 'completed'" class="flex items-center gap-1.5 text-[11px] font-semibold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
                                 <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                 已完成
                             </div>
-                             <div v-else-if="file.summary_status === 'processing'" class="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                             <div v-else-if="file.summary_status === 'processing'" class="flex items-center gap-1.5 text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-blue-100">
                                 <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                 处理中
                             </div>
-                            <div v-else-if="file.summary_status === 'failed'" class="flex items-center gap-1.5 text-[11px] font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-100">
+                            <div v-else-if="file.summary_status === 'failed'" class="flex items-center gap-1.5 text-[11px] font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-100">
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                                 失败
                             </div>
@@ -170,23 +170,23 @@
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:rotate-90 transition-transform duration-300"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
                 <template #overlay>
-                    <a-menu class="!rounded-2xl !p-2 !min-w-[180px] !shadow-xl !border !border-slate-100">
-                        <a-menu-item key="record" @click="openRecorder" class="!rounded-xl !mb-1 !py-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></div>
-                                <span class="font-bold text-slate-700">发起录音</span>
+                    <a-menu class="!rounded-lg !p-2 !min-w-[180px] !shadow-xl !border !border-border">
+                        <a-menu-item key="record" @click="openRecorder" class="!rounded-lg !mb-1 !p-4">
+                            <div class="flex items-center gap-4">
+                                <div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></div>
+                                <span class="font-semibold text-slate-700">发起录音</span>
                             </div>
                         </a-menu-item>
-                        <a-menu-item key="upload" @click="triggerUpload" class="!rounded-xl !mb-1 !py-3">
-                            <div class="flex items-center gap-3">
+                        <a-menu-item key="upload" @click="triggerUpload" class="!rounded-lg !mb-1 !p-4">
+                            <div class="flex items-center gap-4">
                                 <div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></div>
-                                <span class="font-bold text-slate-700">导入音频</span>
+                                <span class="font-semibold text-slate-700">导入音频</span>
                             </div>
                         </a-menu-item>
-                        <a-menu-item key="folder" @click="createFolder" class="!rounded-xl !py-3">
-                            <div class="flex items-center gap-3">
+                        <a-menu-item key="folder" @click="createFolder" class="!rounded-lg !p-4">
+                            <div class="flex items-center gap-4">
                                 <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg></div>
-                                <span class="font-bold text-slate-700">新建文件夹</span>
+                                <span class="font-semibold text-slate-700">新建文件夹</span>
                             </div>
                         </a-menu-item>
                     </a-menu>

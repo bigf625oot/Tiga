@@ -9,4 +9,5 @@ export interface IGraphViewerProps {
   showScopeToggle?: boolean;
   showToolbar?: boolean;
   loading?: boolean;
+  darkMode?: boolean;
 }

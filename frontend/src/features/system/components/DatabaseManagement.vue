@@ -4,12 +4,12 @@
     <div class="px-10 pt-12 pb-6">
       <div class="flex justify-between items-end">
         <div>
-          <h2 class="text-4xl font-bold text-[#1D1D1F] tracking-tight mb-2">数据库</h2>
+          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">数据库</h2>
           <p class="text-[#86868B] text-lg font-medium">管理数据库连接配置，支持 MySQL, PostgreSQL 等多种数据库。</p>
         </div>
         <button 
           @click="openCreateModal" 
-          class="bg-[#0071e3] text-white px-5 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
+          class="bg-[#0071e3] text-white p-6 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
           新建连接
@@ -22,33 +22,33 @@
       
       <!-- Connection List -->
       <div class="h-full flex flex-col w-full">
-        <div class="bg-white rounded-xl  overflow-hidden flex-1 flex flex-col p-4">
+        <div class="bg-white rounded-lg  overflow-hidden flex-1 flex flex-col p-4">
            <!-- Header -->
-           <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded px-3 text-[14px] font-medium text-[#2a2f3c]">
+           <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded p-4 text-[14px] font-medium text-[#2a2f3c]">
               <div class="flex-1 flex items-center gap-2 relative">
                   <span>连接名称/Host</span>
                   <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
               </div>
-              <div class="w-[100px] px-3 relative">
+              <div class="w-[100px] p-4 relative">
                   <span>类型</span>
                   <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
               </div>
-              <div class="w-[80px] px-3 relative">
+              <div class="w-[80px] p-4 relative">
                   <span>端口</span>
                   <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
               </div>
-              <div class="w-[120px] px-3 relative">
+              <div class="w-[120px] p-4 relative">
                   <span>用户</span>
                   <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
               </div>
-              <div class="w-[220px] px-3 text-right">
+              <div class="w-[220px] p-4 text-right">
                   <span>操作</span>
               </div>
            </div>
            
            <!-- List Content -->
            <div class="overflow-y-auto flex-1 mt-2">
-             <div v-if="loading" class="flex flex-col px-3">
+             <div v-if="loading" class="flex flex-col p-4">
                 <div v-for="i in 3" :key="i" class="flex items-center border-b border-slate-50 py-4 gap-4">
                     <a-skeleton-avatar active size="small" shape="square" />
                     <a-skeleton active :title="false" :paragraph="{ rows: 1, width: '100%' }" class="flex-1" />
@@ -56,27 +56,27 @@
              </div>
              <!-- Mock Data or Real Data if available. Since backend seems to have single config, we show it if exists -->
              <div v-else-if="!currentConfig.host && !currentConfig.path" class="flex flex-col items-center justify-center py-20 text-[#86868B]">
-                <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
+                <div class="w-16 h-16 bg-muted/50 rounded-lg flex items-center justify-center mb-4 border border-border">
                     <svg class="w-8 h-8 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
                 </div>
                 <span class="text-sm font-medium opacity-80">暂无连接配置</span>
              </div>
              <div v-else class="flex flex-col">
-                <div class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 px-3 text-sm text-[#2a2f3c] group">
+                <div class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 p-4 text-sm text-[#2a2f3c] group">
                    <div class="flex-1 flex items-center gap-2 overflow-hidden">
                         <div class="w-6 h-6 flex items-center justify-center bg-white rounded">
-                            <svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                            <svg class="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
                         </div>
                         <span class="truncate text-[14px]">{{ currentConfig.name || currentConfig.host || currentConfig.path }}</span>
                    </div>
-                   <div class="w-[100px] px-3">
-                      <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs border border-slate-200">{{ currentConfig.type }}</span>
+                   <div class="w-[100px] p-4">
+                      <span class="px-2 py-0.5 rounded bg-muted text-slate-600 text-xs border border-slate-200">{{ currentConfig.type }}</span>
                    </div>
-                   <div class="w-[80px] px-3 text-slate-500">{{ currentConfig.port || '-' }}</div>
-                   <div class="w-[120px] px-3 text-slate-500">{{ currentConfig.user || '-' }}</div>
-                   <div class="w-[220px] px-3 flex justify-end items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <a-button type="text" size="small" @click="viewTables" class="!px-0 !h-auto !text-slate-500 hover:!text-blue-600">查看表</a-button>
-                      <a-button type="text" size="small" @click="editConfig" class="!px-0 !h-auto !text-slate-500 hover:!text-blue-600">编辑</a-button>
+                   <div class="w-[80px] p-4 text-muted-foreground">{{ currentConfig.port || '-' }}</div>
+                   <div class="w-[120px] p-4 text-muted-foreground">{{ currentConfig.user || '-' }}</div>
+                   <div class="w-[220px] p-4 flex justify-end items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a-button type="text" size="small" @click="viewTables" class="!px-0 !h-auto !text-muted-foreground hover:!text-primary">查看表</a-button>
+                      <a-button type="text" size="small" @click="editConfig" class="!px-0 !h-auto !text-muted-foreground hover:!text-primary">编辑</a-button>
                       <a-button type="text" size="small" danger class="!px-0 !h-auto">删除</a-button>
                    </div>
                 </div>
@@ -94,21 +94,21 @@
         :footer="null"
         class="tables-preview-modal"
     >
-        <div class="flex h-[600px] -mx-6 -mb-6 mt-2 border-t border-slate-100">
+        <div class="flex h-[600px] -mx-6 -mb-6 mt-2 border-t border-border">
             <!-- Table List Sidebar -->
-            <div class="w-[240px] border-r border-slate-100 overflow-y-auto bg-slate-50 p-2">
+            <div class="w-[240px] border-r border-border overflow-y-auto bg-muted/50 p-2">
                 <div v-if="loadingTables" class="flex justify-center py-10">
                     <a-spin />
                 </div>
-                <div v-else-if="tables.length === 0" class="text-center py-10 text-slate-400 text-sm">
+                <div v-else-if="tables.length === 0" class="text-center py-10 text-muted-foreground text-sm">
                     暂无数据表
                 </div>
                 <div v-else class="space-y-0.5">
                     <div 
                         v-for="t in tables" :key="t"
                         @click="fetchTableData(t)"
-                        class="px-3 py-2 cursor-pointer rounded-lg text-sm truncate transition-colors"
-                        :class="selectedTable === t ? 'bg-white shadow-sm text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-100'"
+                        class="p-4 py-2 cursor-pointer rounded-lg text-sm truncate transition-colors"
+                        :class="selectedTable === t ? 'bg-white shadow-sm text-primary font-medium' : 'text-slate-600 hover:bg-muted'"
                     >
                         {{ t }}
                     </div>
@@ -117,13 +117,13 @@
             
             <!-- Data View -->
             <div class="flex-1 flex flex-col overflow-hidden bg-white">
-                <div v-if="!selectedTable" class="flex-1 flex flex-col items-center justify-center text-slate-400">
-                    <svg class="w-12 h-12 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                <div v-if="!selectedTable" class="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                    <svg class="w-12 h-12 m-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                     <span>请选择左侧数据表查看详情</span>
                 </div>
                 <div v-else class="flex-1 flex flex-col overflow-hidden">
-                    <div class="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-white">
-                        <div class="flex items-center gap-3">
+                    <div class="px-4 p-4 border-b border-border flex justify-between items-center bg-white">
+                        <div class="flex items-center gap-4">
                             <h3 class="font-medium text-base text-slate-800">{{ selectedTable }}</h3>
                             
                             <!-- Graph Conversion Button -->
@@ -133,10 +133,10 @@
                                         @click="convertTableToGraph"
                                         class="p-1.5 rounded-md transition-all relative group flex items-center justify-center border"
                                         :class="[
-                                            (convertStatus.status === 'running' || convertStatus.status === 'pending') ? 'bg-blue-50 border-blue-100 text-blue-600' : 
+                                            (convertStatus.status === 'running' || convertStatus.status === 'pending') ? 'bg-primary/10 border-blue-100 text-primary' : 
                                             convertStatus.status === 'completed' ? 'bg-green-50 border-green-100 text-green-600' :
                                             convertStatus.status === 'failed' ? 'bg-red-50 border-red-100 text-red-600' :
-                                            'bg-white border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200'
+                                            'bg-white border-slate-200 text-muted-foreground hover:text-primary hover:border-blue-200'
                                         ]"
                                         :disabled="convertStatus.status === 'running' || convertStatus.status === 'pending'"
                                     >
@@ -167,7 +167,7 @@
                                 <div v-if="convertStatus.status !== 'idle'" class="flex flex-col">
                                     <div class="text-xs font-medium" 
                                         :class="[
-                                            (convertStatus.status === 'running' || convertStatus.status === 'pending') ? 'text-blue-600' : 
+                                            (convertStatus.status === 'running' || convertStatus.status === 'pending') ? 'text-primary' : 
                                             convertStatus.status === 'completed' ? 'text-green-600' : 
                                             'text-red-600'
                                         ]">
@@ -191,7 +191,7 @@
                                 </a-button>
                             </div>
                         </div>
-                        <span class="text-xs text-slate-400" v-if="tableData.length > 0">显示前 {{ tableData.length }} 条记录</span>
+                        <span class="text-xs text-muted-foreground" v-if="tableData.length > 0">显示前 {{ tableData.length }} 条记录</span>
                     </div>
                     <div class="flex-1 overflow-hidden p-0 relative">
                         <a-table 
@@ -244,7 +244,7 @@
                 </template>
                 
                 <template v-else>
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="grid grid-cols-3 gap-4">
                         <div class="col-span-2">
                             <a-form-item label="主机地址" name="host">
                                 <a-input v-model:value="configForm.host" placeholder="localhost" />
@@ -269,18 +269,18 @@
                     <div class="pt-2">
                         <div 
                             @click="showAdvanced = !showAdvanced" 
-                            class="flex items-center gap-1 text-xs text-blue-600 cursor-pointer hover:text-blue-700 select-none font-medium"
+                            class="flex items-center gap-1 text-xs text-primary cursor-pointer hover:text-blue-700 select-none font-medium"
                         >
                             <span>更多连接配置</span>
                             <svg class="w-3 h-3 transition-transform duration-200" :class="showAdvanced ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </div>
                         
-                        <div v-show="showAdvanced" class="mt-4 space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div v-show="showAdvanced" class="mt-4 space-y-4 p-4 bg-muted/50 rounded-lg border border-border">
                             <a-form-item label="数据库名称" name="database">
                                 <a-input v-model:value="configForm.database" placeholder="选填，默认连接postgres/mysql" />
                             </a-form-item>
                             
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 gap-4">
                                 <a-form-item label="连接超时 (秒)" name="timeout">
                                     <a-input-number v-model:value="configForm.timeout" class="w-full" :min="1" />
                                 </a-form-item>
@@ -310,7 +310,7 @@
                 </template>
                 
                 <!-- Buttons -->
-                <div class="flex flex-col gap-3 pt-4 border-t border-slate-100 mt-4">
+                <div class="flex flex-col gap-4 pt-4 border-t border-border mt-4">
                     <a-button @click="testConnection" :loading="testing" class="w-full" :disabled="connecting">
                         <template #icon>
                             <svg class="w-4 h-4 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -318,14 +318,14 @@
                         测试连接
                     </a-button>
                     
-                    <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-blue-600" :disabled="testing">
+                    <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-primary" :disabled="testing">
                         保存配置并连接
                     </a-button>
                 </div>
             </a-form>
 
              <!-- Status Messages -->
-            <div v-if="testResult" class="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
+            <div v-if="testResult" class="mt-4 p-4 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
                 <span class="mt-0.5 text-lg leading-none">{{ testResult.success ? '✓' : '✗' }}</span>
                 <span class="break-all">{{ testResult.message }}</span>
             </div>
