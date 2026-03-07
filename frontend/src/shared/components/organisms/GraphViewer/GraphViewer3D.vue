@@ -1,5 +1,5 @@
 <template>
-  <div ref="containerRef" class="w-full h-full relative bg-muted/50 dark:bg-slate-900/50 overflow-hidden transition-colors duration-300">
+  <div ref="containerRef" class="w-full h-full relative bg-muted/50 dark:bg-slate-900/50 overflow-hidden transition-colors duration-300 graph-viewer-3d-light-bg">
     <!-- Graph Container -->
     <div ref="graphDiv" class="w-full h-full"></div>
 
@@ -54,7 +54,10 @@ const initGraph = () => {
     
     // Determine background color
     const dark = props.darkMode !== undefined ? props.darkMode : isDark.value;
-    const bgColor = dark ? '#0f172a' : '#f8fafc';
+    // If strict white mode in light is required by style, we should probably set it here too 
+    // or set it to transparent and let CSS handle it.
+    // 3d-force-graph sets canvas background.
+    const bgColor = dark ? '#0f172a' : '#ffffff'; // Changed to #ffffff for light mode
     const textColor = dark ? '#e2e8f0' : '#1e293b';
     const linkColor = dark ? '#475569' : '#999999';
 
@@ -99,7 +102,7 @@ const initGraph = () => {
 watch(isDark, (newVal) => {
     if (Graph) {
         const dark = props.darkMode !== undefined ? props.darkMode : newVal;
-        const bgColor = dark ? '#0f172a' : '#f8fafc';
+        const bgColor = dark ? '#0f172a' : '#ffffff'; // Changed to #ffffff
         const linkColor = dark ? '#475569' : '#999999';
         
         Graph.backgroundColor(bgColor);
@@ -181,3 +184,10 @@ defineExpose({
     focusNode
 });
 </script>
+
+<style scoped>
+/* Requirement: Force white background in light mode */
+:global(html:not(.dark)) .graph-viewer-3d-light-bg {
+    background-color: #ffffff !important;
+}
+</style>

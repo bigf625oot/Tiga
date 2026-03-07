@@ -8,7 +8,7 @@ Each operator is designed to be used within a Pathway pipeline, accepting a `pw.
 configuration dictionary, and returning a transformed `pw.Table`.
 
 Author: Tiga Agent
-Date: 2026-03-06
+Date: 2026-03-08
 """
 
 import re
@@ -19,6 +19,7 @@ import difflib
 from typing import Dict, Any, List, Optional, Union, Callable
 import pathway as pw
 from app.services.pathway.core.exceptions import OperatorError
+from app.services.pathway.operators.registry import OperatorRegistry
 
 # Optional dependencies
 try:
@@ -66,6 +67,18 @@ def apply_operator(table: pw.Table, operator_config: Dict[str, Any]) -> pw.Table
     op_type = operator_config.get("type")
     config = operator_config.get("config", {})
 
+    try:
+        # Try finding operator in registry first
+        operator_func = OperatorRegistry.get_operator(op_type)
+        return operator_func(table, config)
+    except OperatorError:
+        # Fallback to legacy hardcoded logic if not found in registry (though we are registering everything now)
+        pass
+    except Exception as e:
+        # If execution fails, re-raise
+        raise e
+
+    # Fallback/Legacy Logic (Should be redundant if all are registered)
     # Text Processing
     if op_type == "text_process":
         return _apply_text_process(table, config)
@@ -101,6 +114,7 @@ def apply_operator(table: pw.Table, operator_config: Dict[str, Any]) -> pw.Table
 # 1. Text Processing Operators
 # =============================================================================
 
+@OperatorRegistry.register("text_process")
 def _apply_text_process(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     """
     Apply text processing operations.
@@ -219,6 +233,7 @@ def _apply_text_process(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
 # 2. Data Manipulation Operators
 # =============================================================================
 
+@OperatorRegistry.register("data_manipulation")
 def _apply_data_manipulation(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     """
     Apply data manipulation operations.
@@ -298,6 +313,7 @@ def _apply_data_manipulation(table: pw.Table, config: Dict[str, Any]) -> pw.Tabl
 # 3. List Operation Operators
 # =============================================================================
 
+@OperatorRegistry.register("list_operation")
 def _apply_list_operation(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     """
     Apply list operations.
@@ -362,6 +378,7 @@ def _apply_list_operation(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
 # 4. Variable Aggregation Operators
 # =============================================================================
 
+@OperatorRegistry.register("variable_aggregation")
 def _apply_variable_aggregation(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     """
     Apply variable aggregation (groupby, windowing).
@@ -399,7 +416,7 @@ def _apply_variable_aggregation(table: pw.Table, config: Dict[str, Any]) -> pw.T
                 # Assuming simple string concatenation is needed, we can't easily do it in streaming without a window or UDF state.
                 # We'll skip for now or raise.
                 pass 
-
+            
             elif func == "dict_merge":
                 # Merge multiple dicts from group? Or list of dicts?
                 # This assumes table[col] is a list of dicts, or we are reducing over rows.
@@ -425,6 +442,7 @@ def _apply_variable_aggregation(table: pw.Table, config: Dict[str, Any]) -> pw.T
 # Legacy Implementations (Preserved for compatibility)
 # =============================================================================
 
+@OperatorRegistry.register("map")
 def _apply_map(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     try:
         mapping = config.get("columns", {})
@@ -432,6 +450,7 @@ def _apply_map(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     except Exception as e:
         raise OperatorError(f"Map operator failed: {e}")
 
+@OperatorRegistry.register("cast")
 def _apply_cast(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     try:
         casts = config.get("columns", {})
@@ -443,6 +462,7 @@ def _apply_cast(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     except Exception as e:
         raise OperatorError(f"Cast operator failed: {e}")
 
+@OperatorRegistry.register("fillna")
 def _apply_fillna(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     try:
         fill_values = config.get("columns", {})
@@ -453,6 +473,7 @@ def _apply_fillna(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     except Exception as e:
         raise OperatorError(f"Fillna operator failed: {e}")
 
+@OperatorRegistry.register("deduplication")
 def _apply_deduplication(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     try:
         columns = config.get("columns", [])
@@ -462,6 +483,7 @@ def _apply_deduplication(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     except Exception as e:
         raise OperatorError(f"Deduplication operator failed: {e}")
 
+@OperatorRegistry.register("mask_pii")
 def _apply_mask_pii(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     try:
         columns = config.get("columns", [])

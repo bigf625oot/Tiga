@@ -4,6 +4,7 @@ import sys
 from typing import Callable, Dict, Any
 import pathway as pw
 from app.services.pathway.core.exceptions import OperatorError
+from app.services.pathway.operators.registry import OperatorRegistry
 
 def load_udf(file_path: str, function_name: str) -> Callable:
     """Load a UDF from a python file."""
@@ -24,6 +25,7 @@ def load_udf(file_path: str, function_name: str) -> Callable:
     except Exception as e:
         raise OperatorError(f"Failed to load UDF: {e}")
 
+@OperatorRegistry.register("udf")
 def apply_udf(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
     """
     Apply a UDF to the table.

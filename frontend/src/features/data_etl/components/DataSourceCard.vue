@@ -1,11 +1,28 @@
 <template>
   <div 
-    class="rounded-lg border p-4 relative overflow-hidden group transition-all duration-300"
-    :class="isLightMode ? 'bg-white border-border hover:border-blue-400 shadow-sm' : 'bg-[#111827] border-gray-800 hover:border-blue-500/50'"
+    class="rounded-xl border p-5 relative overflow-hidden group transition-all duration-300 flex flex-col gap-5 cursor-pointer"
+    :class="[
+      isLightMode 
+        ? 'bg-white border-slate-200 hover:-translate-y-[2px] hover:shadow-[0_8px_16px_rgba(0,0,0,0.06)]' 
+        : 'bg-[#111827] border-gray-800 hover:border-blue-500/50 hover:-translate-y-[2px] hover:shadow-lg',
+      isSelected 
+        ? (isLightMode ? 'ring-2 ring-blue-500/20 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.1)]' : 'ring-2 ring-blue-500/40')
+        : ''
+    ]"
+    @click="$emit('select', data.id)"
   >
-    <div class="flex justify-between items-start mb-4">
+    <!-- Selected Indicator Strip -->
+    <div 
+      v-if="isSelected"
+      class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"
+    ></div>
+    <!-- Header Section -->
+    <div class="flex justify-between items-start">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <div 
+          class="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20"
+          :class="isLightMode ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-blue-600 to-blue-800'"
+        >
           <svg v-if="data.type === 'sftp'" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
           </svg>
@@ -17,54 +34,63 @@
           </svg>
         </div>
         <div>
-          <h3 class="font-medium text-[15px]" :class="isLightMode ? 'text-gray-900' : 'text-white'">{{ data.name }}</h3>
-          <div class="flex items-center gap-1.5 mt-1">
-            <div class="w-1.5 h-1.5 rounded-full" :class="statusColor"></div>
-            <span class="text-[13px]" :class="statusTextColor">{{ statusText }}</span>
+          <h3 class="font-bold text-[16px] tracking-tight" :class="isLightMode ? 'text-slate-900' : 'text-white'">{{ data.name }}</h3>
+          <div class="flex items-center gap-2 mt-1.5">
+            <div class="relative flex h-2 w-2">
+              <span v-if="data.status === 'healthy'" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2" :class="statusColor"></span>
+            </div>
+            <span class="text-[12px] font-medium uppercase tracking-wide opacity-80" :class="statusTextColor">{{ statusText }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="flex justify-between items-end mb-4">
-      <span class="text-[13px]" :class="isLightMode ? 'text-gray-500' : 'text-gray-500'">实时吞吐</span>
-      <span class="text-[22px] font-din font-semibold text-blue-400 leading-none">{{ data.throughput }}</span>
-    </div>
-
-    <div class="flex justify-between items-center mb-2">
-      <span class="text-[13px]" :class="isLightMode ? 'text-gray-500' : 'text-gray-500'">活跃流水线</span>
-      <span class="text-[14px] font-din" :class="isLightMode ? 'text-gray-600' : 'text-gray-400'">{{ data.active_pipelines }} 个</span>
-    </div>
-
-    <!-- Active Pipeline Card -->
-    <div 
-      v-if="data.current_pipeline" 
-      class="rounded-lg p-4 border flex items-center justify-between group/item cursor-pointer transition-colors relative overflow-hidden"
-      :class="isLightMode ? 'bg-gray-50 border-border hover:bg-gray-100' : 'bg-[#1F2937] border-gray-700/50 hover:bg-[#374151]'"
-    >
-      <!-- Flow Effect -->
-      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -translate-x-full animate-flow pointer-events-none"></div>
-      
-      <!-- Border Flow Effects -->
-      <div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400 to-transparent -translate-x-full animate-border-top"></div>
-      <div class="absolute top-0 right-0 w-[1px] h-full bg-gradient-to-b from-transparent via-blue-400 to-transparent -translate-y-full animate-border-right"></div>
-      <div class="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400 to-transparent translate-x-full animate-border-bottom"></div>
-      <div class="absolute bottom-0 left-0 w-[1px] h-full bg-gradient-to-b from-transparent via-blue-400 to-transparent translate-y-full animate-border-left"></div>
-
-      <div class="flex items-center gap-2 relative z-10">
-        <div class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-        <div>
-          <div class="text-[13px] font-medium" :class="isLightMode ? 'text-gray-700' : 'text-gray-300'">{{ data.current_pipeline.name }}</div>
-          <div class="text-[12px] font-din text-blue-400 mt-0.5">已处理 {{ data.current_pipeline.processed.toLocaleString() }}</div>
+    <!-- Bento Grid Layout -->
+    <div class="grid grid-cols-2 gap-3">
+      <!-- Throughput Box -->
+      <div 
+        class="rounded-xl p-3 flex flex-col justify-between h-20"
+        :class="isLightMode ? 'bg-slate-50' : 'bg-[#1F2937]/50'"
+      >
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">实时吞吐</span>
+        <div class="flex items-end justify-between">
+            <span class="text-[18px] font-inter font-bold tracking-tight text-slate-700 dark:text-gray-200">{{ data.throughput }}</span>
         </div>
       </div>
-      <svg 
-        class="w-4 h-4 transition-colors relative z-10" 
-        :class="isLightMode ? 'text-gray-400 group-hover/item:text-gray-600' : 'text-gray-500 group-hover/item:text-white'"
-        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+
+      <!-- Active Pipeline Box -->
+      <div 
+        class="rounded-xl p-3 flex flex-col justify-between h-20"
+        :class="isLightMode ? 'bg-slate-50' : 'bg-[#1F2937]/50'"
       >
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-      </svg>
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">活跃流水线</span>
+        <div class="flex items-end gap-1">
+            <span class="text-[20px] font-inter font-bold tracking-tight text-slate-700 dark:text-gray-200">{{ data.active_pipelines }}</span>
+            <span class="text-[11px] font-medium text-slate-400 mb-1.5">个</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Task Status (Full Width) -->
+    <div 
+      v-if="data.current_pipeline" 
+      class="rounded-xl p-3 flex items-center justify-between group/item cursor-pointer transition-colors relative overflow-hidden"
+      :class="isLightMode ? 'bg-blue-50/50 hover:bg-blue-50' : 'bg-blue-900/10 hover:bg-blue-900/20'"
+    >
+      <!-- Flow Effect -->
+      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent -translate-x-full animate-flow pointer-events-none"></div>
+
+      <div class="flex items-center gap-3 relative z-10">
+        <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+        <div class="flex flex-col">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-blue-400">正在处理</span>
+            <span class="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{{ data.current_pipeline.name }}</span>
+        </div>
+      </div>
+      <div class="text-right z-10">
+        <div class="text-[14px] font-inter font-bold text-blue-600 dark:text-blue-400">{{ data.current_pipeline.processed.toLocaleString() }}</div>
+      </div>
     </div>
   </div>
 </template>
@@ -76,7 +102,10 @@ import { useTheme } from '@/composables/useTheme';
 
 const props = defineProps<{
   data: DataSource;
+  isSelected?: boolean;
 }>();
+
+defineEmits(['select']);
 
 const { isLightMode } = useTheme();
 

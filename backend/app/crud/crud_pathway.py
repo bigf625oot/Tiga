@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Any
 import json
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from cryptography.fernet import Fernet
 import os
 
@@ -23,7 +24,7 @@ def decrypt_secrets(encrypted_data: str) -> Dict[str, Any]:
     return json.loads(cipher_suite.decrypt(encrypted_data.encode()).decode())
 
 # Source CRUD
-def create_source(db: Session, name: str, type: str, config: Dict, secrets: Dict = None) -> PathwaySource:
+async def create_source(db: AsyncSession, name: str, type: str, config: Dict, secrets: Dict = None) -> PathwaySource:
     db_source = PathwaySource(
         name=name,
         type=type,
@@ -31,47 +32,80 @@ def create_source(db: Session, name: str, type: str, config: Dict, secrets: Dict
         secrets_encrypted=encrypt_secrets(secrets)
     )
     db.add(db_source)
-    db.commit()
-    db.refresh(db_source)
+    await db.commit()
+    await db.refresh(db_source)
     return db_source
 
-def get_source(db: Session, source_id: int) -> Optional[PathwaySource]:
-    return db.query(PathwaySource).filter(PathwaySource.id == source_id).first()
+async def get_source(db: AsyncSession, source_id: int) -> Optional[PathwaySource]:
+    result = await db.execute(select(PathwaySource).filter(PathwaySource.id == source_id))
+    return result.scalars().first()
 
-def get_source_by_name(db: Session, name: str) -> Optional[PathwaySource]:
-    return db.query(PathwaySource).filter(PathwaySource.name == name).first()
+async def get_source_by_name(db: AsyncSession, name: str) -> Optional[PathwaySource]:
+    result = await db.execute(select(PathwaySource).filter(PathwaySource.name == name))
+    return result.scalars().first()
 
-def list_sources(db: Session, skip: int = 0, limit: int = 100) -> List[PathwaySource]:
-    return db.query(PathwaySource).offset(skip).limit(limit).all()
+async def list_sources(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[PathwaySource]:
+    result = await db.execute(select(PathwaySource).offset(skip).limit(limit))
+    return result.scalars().all()
 
-# Job CRUD
-def create_job(db: Session, name: str, source_id: int, operators: List[Dict], sinks: List[Dict]) -> PathwayJob:
+# Job CRUD (Legacy + DAG)
+async def create_job(
+    db: AsyncSession, 
+    name: str, 
+    source_id: Optional[int] = None, 
+    operators: Optional[List[Dict]] = None, 
+    sinks: Optional[List[Dict]] = None,
+    dag_config: Optional[Dict] = None
+) -> PathwayJob:
     db_job = PathwayJob(
         name=name,
         source_id=source_id,
-        operators_config=operators,
-        sinks_config=sinks,
+        operators_config=operators or [],
+        sinks_config=sinks or [],
+        dag_config=dag_config,
         status=PathwayJobStatus.CREATED
     )
     db.add(db_job)
-    db.commit()
-    db.refresh(db_job)
+    await db.commit()
+    await db.refresh(db_job)
     return db_job
 
-def get_job(db: Session, job_id: int) -> Optional[PathwayJob]:
-    return db.query(PathwayJob).filter(PathwayJob.id == job_id).first()
+async def get_job(db: AsyncSession, job_id: int) -> Optional[PathwayJob]:
+    result = await db.execute(select(PathwayJob).filter(PathwayJob.id == job_id))
+    return result.scalars().first()
 
-def get_job_by_name(db: Session, name: str) -> Optional[PathwayJob]:
-    return db.query(PathwayJob).filter(PathwayJob.name == name).first()
+async def get_job_by_name(db: AsyncSession, name: str) -> Optional[PathwayJob]:
+    result = await db.execute(select(PathwayJob).filter(PathwayJob.name == name))
+    return result.scalars().first()
 
-def update_job_status(db: Session, job_id: int, status: str, pid: int = None, error: str = None):
-    job = get_job(db, job_id)
+async def list_jobs(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[PathwayJob]:
+    result = await db.execute(select(PathwayJob).offset(skip).limit(limit))
+    return result.scalars().all()
+
+async def update_job(db: AsyncSession, job_id: int, dag_config: Dict) -> Optional[PathwayJob]:
+    job = await get_job(db, job_id)
+    if job:
+        job.dag_config = dag_config
+        await db.commit()
+        await db.refresh(job)
+    return job
+
+async def delete_job(db: AsyncSession, job_id: int) -> bool:
+    job = await get_job(db, job_id)
+    if job:
+        await db.delete(job)
+        await db.commit()
+        return True
+    return False
+
+async def update_job_status(db: AsyncSession, job_id: int, status: str, pid: int = None, error: str = None):
+    job = await get_job(db, job_id)
     if job:
         job.status = status
         if pid is not None:
             job.pid = pid
         if error is not None:
             job.error_message = error
-        db.commit()
-        db.refresh(job)
+        await db.commit()
+        await db.refresh(job)
     return job

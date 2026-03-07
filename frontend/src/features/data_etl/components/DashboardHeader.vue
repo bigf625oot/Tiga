@@ -1,14 +1,17 @@
 <template>
   <div 
-    class="h-14 flex items-center justify-between px-6 border-b transition-colors duration-300"
-    :class="isLightMode ? 'bg-white border-border' : 'bg-[#0B0C10] border-gray-800'"
+    class="h-16 flex items-center justify-between px-6 border-b transition-colors duration-300 backdrop-blur-md"
+    :class="isLightMode ? 'bg-white/80 border-slate-200' : 'bg-[#0B0C10] border-gray-800'"
   >
     <div class="flex items-center gap-4">
       <h1 
         class="text-[20px] font-semibold tracking-wide transition-colors"
-        :class="isLightMode ? 'text-gray-900' : 'text-white'"
+        :class="isLightMode ? 'text-slate-900' : 'text-white'"
       >图谱实时大盘</h1>
-      <span class="px-1.5 py-0.5 text-[11px] font-semibold bg-[#1E3A8A] text-[#60A5FA] rounded border border-[#1E40AF]">LIVE</span>
+      <span 
+        class="px-1.5 py-0.5 text-[11px] font-semibold rounded border"
+        :class="isLightMode ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-[#1E3A8A] text-[#60A5FA] border-[#1E40AF]'"
+      >LIVE</span>
     </div>
     
     <div class="flex items-center gap-4">

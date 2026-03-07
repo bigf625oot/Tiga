@@ -5,7 +5,7 @@
       selected ? 'ring-2 ring-blue-500' : '',
       isLightMode 
         ? 'bg-white border-border hover:shadow-md' 
-        : 'bg-[#1F2937] border-gray-700 hover:border-gray-600'
+        : 'bg-black border-gray-800 hover:border-gray-700'
     ]"
   >
     <!-- Header -->

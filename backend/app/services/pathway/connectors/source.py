@@ -4,9 +4,14 @@ import pathway as pw
 from app.services.pathway.connectors.base import BaseSource
 from app.services.pathway.core.exceptions import ConnectorError
 from app.services.pathway.connectors.generic_sql import GenericSQLSource
+from app.services.pathway.connectors.bridge import bridge
 
 class KafkaSource(BaseSource):
     def read(self, config: Dict[str, Any]) -> pw.Table:
+        # Resolve config from DB if source_id is present
+        if config.get("source_id"):
+            config = bridge.get_source_config(config.get("source_id"))
+            
         try:
             return pw.io.kafka.read(
                 rdkafka_settings=config.get("rdkafka_settings"),
@@ -19,8 +24,17 @@ class KafkaSource(BaseSource):
 
 class DatabaseSource(BaseSource):
     def read(self, config: Dict[str, Any]) -> pw.Table:
-        # Assuming Postgres for now, can be extended
+        if config.get("source_id"):
+            config = bridge.get_source_config(config.get("source_id"))
+            
         try:
+            # Check for specific driver preference in config or default to postgres
+            # For MySQL, we might need a different pw.io method if available, 
+            # but usually pw.io.mysql or generic sql via connection string works.
+            # Pathway 0.x often uses pw.io.postgres for postgres CDC.
+            
+            # If "mysql" in connection string, we might need to handle differently if Pathway has specific mysql connector
+            # Currently assuming postgres/generic
             return pw.io.postgres.read(
                 connection_string=config.get("connection_string"),
                 table_name=config.get("table_name"),
@@ -31,6 +45,9 @@ class DatabaseSource(BaseSource):
 
 class S3Source(BaseSource):
     def read(self, config: Dict[str, Any]) -> pw.Table:
+        if config.get("source_id"):
+            config = bridge.get_source_config(config.get("source_id"))
+            
         try:
             return pw.io.s3.read(
                 bucket_name=config.get("bucket_name"),
@@ -46,10 +63,10 @@ class S3Source(BaseSource):
 
 class RESTSource(BaseSource):
     def read(self, config: Dict[str, Any]) -> pw.Table:
+        if config.get("source_id"):
+            config = bridge.get_source_config(config.get("source_id"))
+            
         try:
-            # Assuming HTTP polling or similar mechanism
-            # Pathway has limited HTTP source capabilities out-of-the-box in some versions
-            # Here we simulate using a custom connector or assuming pathway supports it
             return pw.io.http.read(
                 url=config.get("url"),
                 method=config.get("method", "GET"),
@@ -60,12 +77,32 @@ class RESTSource(BaseSource):
         except Exception as e:
             raise ConnectorError(f"Failed to read from REST API: {e}")
 
+class FileSystemSource(BaseSource):
+    """
+    Reads from local filesystem (can be used for FTP/SFTP mounted paths).
+    """
+    def read(self, config: Dict[str, Any]) -> pw.Table:
+        if config.get("source_id"):
+            config = bridge.get_source_config(config.get("source_id"))
+            
+        try:
+            return pw.io.fs.read(
+                path=config.get("path"),
+                format=config.get("format", "json"),
+                schema=config.get("schema"),
+                mode=config.get("mode", "streaming") # streaming or static
+            )
+        except Exception as e:
+            raise ConnectorError(f"Failed to read from FileSystem: {e}")
+
 SOURCE_REGISTRY = {
     "kafka": KafkaSource(),
     "database": DatabaseSource(),
     "s3": S3Source(),
     "rest": RESTSource(),
     "generic_sql": GenericSQLSource(),
+    "fs": FileSystemSource(),
+    "filesystem": FileSystemSource()
 }
 
 def get_source(source_type: str) -> BaseSource:

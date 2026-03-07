@@ -7,7 +7,7 @@
         <p class="text-sm text-muted-foreground mt-1">管理和监控所有数据处理流程</p>
       </div>
       <div class="flex items-center gap-4">
-        <Button @click="emit('create')" class="shadow-sm">
+        <Button @click="isCreateDialogOpen = true" class="shadow-sm">
           <Plus class="w-4 h-4 mr-2" />
           新建流水线
         </Button>
@@ -22,7 +22,7 @@
           <Input 
             v-model="searchQuery"
             placeholder="搜索流水线名称..." 
-            class="p-10"
+            class="pl-9"
           />
         </div>
 
@@ -250,26 +250,71 @@
       </div>
     </div>
   </div>
+
+  <Dialog v-model:open="isCreateDialogOpen">
+    <DialogContent class="sm:max-w-[800px]">
+      <DialogHeader>
+        <DialogTitle>新建流水线</DialogTitle>
+        <DialogDescription>
+          选择一个模板快速开始，或创建一个空白流水线。
+        </DialogDescription>
+      </DialogHeader>
+      <div class="grid grid-cols-2 gap-4 py-4">
+        <Card 
+          v-for="template in PIPELINE_TEMPLATES" 
+          :key="template.id"
+          class="cursor-pointer hover:border-primary/50 transition-colors hover:bg-muted/50"
+          @click="selectTemplate(template)"
+        >
+          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle class="text-sm font-medium">
+              {{ template.name }}
+            </CardTitle>
+            <component :is="iconMap[template.icon]" class="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p class="text-xs text-muted-foreground">
+              {{ template.description }}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </DialogContent>
+  </Dialog>
+
+  <AlertDialog v-model:open="isDeleteDialogOpen">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>确认删除</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ isBatchDeleteMode 
+            ? `确定要删除选中的 ${selectedIds.length} 条流水线吗？` 
+            : `确定要删除流水线 "${pipelineToDelete?.name}" 吗？` 
+          }}
+          此操作无法撤销。
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>取消</AlertDialogCancel>
+        <AlertDialogAction @click="executeDelete" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          确认删除
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { message, Modal } from 'ant-design-vue'; // Keep ant design for message/modal as requested? Or replace with shadcn Toast/Dialog?
-// User asked to use shadcn/ui components. I should use shadcn Toast if possible, but message/Modal logic is already there. 
-// For "Interaction walkthrough", it mentions "Toast". shadcn has Toaster. 
-// I will switch to shadcn Toaster later if I can, but let's stick to existing logic for logic parts to minimize breakage, 
-// BUT the prompt says "Refactor... using shadcn/ui components". 
-// I will use shadcn/ui components for layout. For logic like confirm/toast, I'll try to use shadcn if available or stick to AntD for simplicity if shadcn toast setup is complex in this context.
-// Actually, `DataSourceManagement.vue` uses `useToast` from shadcn. I should use that too.
-// I will assume `useToast` is available.
-
+import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 
 import { 
   Plus, Search, Filter, ChevronDown, Trash2, RefreshCw, 
-  ArrowUpDown, MoreHorizontal, Pencil, Copy, Play, Pause 
+  ArrowUpDown, MoreHorizontal, Pencil, Copy, Play, Pause,
+  Network, Database, Sparkles, File, FilePlus
 } from 'lucide-vue-next';
 
 import { Button } from '@/components/ui/button';
@@ -294,13 +339,57 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/toast';
+import { usePipelineStore } from '@/features/etl_editor/composables/usePipelineStore';
+import { NodeType, SourceType, TransformType, SinkType } from '@/features/etl_editor/types/pipeline';
+import { PIPELINE_TEMPLATES, type PipelineTemplate } from '@/features/etl_editor/config/templates';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
 const emit = defineEmits(['create', 'edit']);
 const { toast } = useToast();
+const pipelineStore = usePipelineStore();
+
+const isCreateDialogOpen = ref(false);
+
+const iconMap: Record<string, any> = {
+  'FilePlus': FilePlus,
+  'Network': Network,
+  'Sparkles': Sparkles,
+  'Database': Database
+};
+
+const selectTemplate = (template: PipelineTemplate) => {
+  pipelineStore.initializeTemplate(template.nodes, template.edges);
+  isCreateDialogOpen.value = false;
+  emit('create');
+};
 
 // Types
 interface Pipeline {
@@ -468,21 +557,32 @@ const duplicatePipeline = (pipeline: Pipeline) => {
   toast({ title: '复制成功', description: '新流水线已创建' });
 };
 
+const isDeleteDialogOpen = ref(false);
+const pipelineToDelete = ref<Pipeline | null>(null);
+const isBatchDeleteMode = ref(false);
+
 const confirmDelete = (pipeline: Pipeline) => {
-  // Use browser confirm for now or implement shadcn Dialog based confirmation
-  // To keep it simple and within the file scope without extra component overhead:
-  if(confirm(`确定要删除流水线 "${pipeline.name}" 吗？`)) {
-     pipelines.value = pipelines.value.filter(p => p.id !== pipeline.id);
-     toast({ title: '删除成功', description: '流水线已移除' });
-  }
+  pipelineToDelete.value = pipeline;
+  isBatchDeleteMode.value = false;
+  isDeleteDialogOpen.value = true;
 };
 
 const batchDelete = () => {
-  if(confirm(`确定要删除选中的 ${selectedIds.value.length} 条流水线吗？`)) {
-      pipelines.value = pipelines.value.filter(p => !selectedIds.value.includes(p.id));
-      selectedIds.value = [];
-      toast({ title: '批量删除成功', description: '选中流水线已移除' });
+  isBatchDeleteMode.value = true;
+  isDeleteDialogOpen.value = true;
+};
+
+const executeDelete = () => {
+  if (isBatchDeleteMode.value) {
+    pipelines.value = pipelines.value.filter(p => !selectedIds.value.includes(p.id));
+    selectedIds.value = [];
+    toast({ title: '批量删除成功', description: '选中流水线已移除' });
+  } else if (pipelineToDelete.value) {
+    pipelines.value = pipelines.value.filter(p => p.id !== pipelineToDelete.value?.id);
+    toast({ title: '删除成功', description: '流水线已移除' });
   }
+  isDeleteDialogOpen.value = false;
+  pipelineToDelete.value = null;
 };
 
 // Helpers

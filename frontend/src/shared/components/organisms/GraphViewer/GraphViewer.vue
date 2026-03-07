@@ -1,5 +1,17 @@
 <template>
-  <div class="relative w-full h-full bg-muted/50 dark:bg-slate-900/50 overflow-hidden rounded-lg transition-colors duration-300" ref="containerRef">
+  <div 
+    class="relative w-full h-full bg-muted/50 dark:bg-slate-900/50 overflow-hidden rounded-lg transition-colors duration-300 graph-viewer-light-bg" 
+    ref="containerRef"
+    :style="containerStyle"
+  >
+    <!-- Boundary Warning Toast -->
+    <transition name="fade">
+        <div v-if="boundaryWarning" class="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm border border-amber-200 flex items-center gap-2 z-50">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            节点位置已自动修正（边界限制）
+        </div>
+    </transition>
+
     <!-- Empty State -->
     <div v-if="!hasNodes && !loading" class="absolute inset-0 flex flex-col items-center justify-center z-10">
         <div class="w-[120px] h-[120px] mb-4 opacity-80 dark:opacity-60">
@@ -106,6 +118,7 @@
 
 <script setup lang="ts">
 import { ref, computed, toRefs, onMounted, onUnmounted, nextTick, watch, inject } from 'vue';
+import * as vNG from "v-network-graph";
 import { VNetworkGraph, VEdgeLabel } from "v-network-graph";
 import GraphViewer3D from './GraphViewer3D.vue';
 import { useGraphLayout } from '@/shared/hooks/useGraphLayout';
@@ -117,26 +130,78 @@ import { createGraphLocator, type GraphLocatorAdapter } from '@/features/knowled
 import type { IGraphViewerProps } from './types';
 import type { IGraphNode } from '@/shared/types/graph';
 import { useTheme } from '@/composables/useTheme';
+import { clampNodeCenterPosition } from '@/shared/utils/boundary';
 
 const { isLightMode } = useTheme();
 const isDark = computed(() => !isLightMode.value);
 
-const props = withDefaults(defineProps<IGraphViewerProps>(), {
+const props = withDefaults(defineProps<IGraphViewerProps & { width?: number; height?: number }>(), {
     showToolbar: true,
     showScopeToggle: false,
     scope: 'doc',
     hiddenTypes: () => [],
     colorMap: () => ({}),
     loading: false,
-    // darkMode prop is optional, but we can also use global state
-    darkMode: undefined
+    darkMode: undefined,
+    width: undefined,
+    height: undefined
 });
 
-const emit = defineEmits(['switchScope', 'nodeClick', 'search']);
+const emit = defineEmits(['switchScope', 'nodeClick', 'search', 'boundaryClamp']);
 
 const { nodes } = toRefs(props);
 const hasNodes = computed(() => Object.keys(nodes.value).length > 0);
 const { currentLayout, layouts, configs, zoomLevel, switchLayout } = useGraphLayout(nodes);
+
+// Container Style for Fixed Viewport
+const containerStyle = computed(() => {
+    const style: Record<string, string> = {};
+    if (props.width) style.width = `${props.width}px`;
+    if (props.height) style.height = `${props.height}px`;
+    return style;
+});
+
+// Boundary Logic
+const boundaryWarning = ref(false);
+
+const checkAndClamp = (nodeId: string, x: number, y: number) => {
+    // Only clamp if width/height are set (Fixed Viewport mode)
+    if (props.width === undefined || props.height === undefined) return;
+
+    // Assuming default radius is 20 if not specified (v-network-graph default)
+    const radius = 20; 
+
+    const { x: newX, y: newY, clamped } = clampNodeCenterPosition(
+        x, 
+        y, 
+        radius, 
+        props.width, 
+        props.height
+    );
+
+    if (clamped) {
+        // Emit event
+        emit('boundaryClamp', { nodeId, x: newX, y: newY });
+        
+        // Update layout immediately to restrict movement
+        if (layouts.value.nodes[nodeId]) {
+            layouts.value.nodes[nodeId] = { x: newX, y: newY };
+        }
+        
+        // Show warning debounce
+        boundaryWarning.value = true;
+        setTimeout(() => boundaryWarning.value = false, 2000);
+    }
+};
+
+// Optimization: Only watch if fixed viewport is enabled
+watch(() => layouts.value.nodes, (newNodes) => {
+    if (props.width === undefined || props.height === undefined) return;
+    
+    Object.entries(newNodes).forEach(([id, pos]) => {
+        checkAndClamp(id, pos.x, pos.y);
+    });
+}, { deep: true });
 
 // Unified Configs (Handles both Dark/Light mode and custom overrides)
 const computedConfigs = computed(() => {
@@ -152,20 +217,21 @@ const computedConfigs = computed(() => {
                 ...(base.node?.normal || {}),
                 // Ensure colorMap is used in both modes
                 color: (node: any) => node.color || props.colorMap[node.type] || (dark ? '#60a5fa' : '#4466cc'),
-                strokeWidth: dark ? 1 : 1,
-                strokeColor: dark ? '#1e293b' : '#ffffff',
-                radius: 16,
+                strokeWidth: dark ? 2 : 1.5,
+                strokeColor: dark ? '#0f172a' : '#ffffff',
+                radius: 14,
             },
             hover: {
                 ...(base.node?.hover || {}),
                 color: '#00f260', // Neon Green for hover
-                strokeWidth: 2,
-                strokeColor: '#fff'
+                strokeWidth: 3,
+                strokeColor: '#fff',
+                radius: 16
             },
             label: {
                 ...(base.node?.label || {}),
-                color: dark ? '#cbd5e1' : '#1e293b',
-                fontSize: 11,
+                color: dark ? '#e2e8f0' : '#1e293b',
+                fontSize: 10,
             }
         },
         edge: {
@@ -269,10 +335,20 @@ const handleNodeClick = (nodeId: string) => {
     emit('nodeClick', nodeId);
 };
 
-const eventHandlers = {
-  "node:click": ({ node }: { node: string }) => {
+const eventHandlers: vNG.EventHandlers = {
+  "node:click": ({ node }: vNG.NodeEvent<MouseEvent>) => {
     handleNodeClick(node);
   },
+  "node:pointermove": (data: Record<string, { x: number, y: number }>) => {
+      Object.entries(data).forEach(([nodeId, pos]) => {
+          checkAndClamp(nodeId, pos.x, pos.y);
+      });
+  },
+  "node:dragend": (data: Record<string, { x: number, y: number }>) => {
+      Object.entries(data).forEach(([nodeId, pos]) => {
+          checkAndClamp(nodeId, pos.x, pos.y);
+      });
+  }
 };
 
 // Zoom Actions
@@ -318,8 +394,6 @@ const focusOnSelected = () => {
         focusNode(selectedNodeId.value);
     }
 };
-
-// ...
 
 // Expose methods for parent components
 defineExpose({
@@ -369,5 +443,18 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* No extra styles needed thanks to Tailwind */
+/* Requirement: Force white background in light mode */
+:global(html:not(.dark)) .graph-viewer-light-bg {
+    background-color: #ffffff !important;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

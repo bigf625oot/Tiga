@@ -37,12 +37,17 @@ class PathwayJob(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
     
-    source_id = Column(Integer, ForeignKey("pathway_sources.id"), nullable=False)
+    # Optional FK to source (Legacy jobs used this, DAG jobs might use multiple sources embedded in config)
+    source_id = Column(Integer, ForeignKey("pathway_sources.id"), nullable=True)
     source = relationship("PathwaySource", back_populates="jobs")
     
-    # Operator and Sink configuration
-    operators_config = Column(JSON, nullable=False, default=[])
-    sinks_config = Column(JSON, nullable=False, default=[])
+    # Operator and Sink configuration (Legacy Linear Config)
+    operators_config = Column(JSON, nullable=True, default=[])
+    sinks_config = Column(JSON, nullable=True, default=[])
+    
+    # New: DAG Pipeline Configuration
+    # Stores the frontend graph structure: { "nodes": [...], "edges": [...] }
+    dag_config = Column(JSON, nullable=True)
     
     status = Column(String, default=PathwayJobStatus.CREATED)
     pid = Column(Integer, nullable=True) # Process ID if running locally

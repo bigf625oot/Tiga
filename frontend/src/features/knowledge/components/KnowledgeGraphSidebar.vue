@@ -1,9 +1,9 @@
 <template>
-  <div class="h-full flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 w-80 flex-shrink-0 transition-colors duration-300">
+  <div class="h-full flex flex-col bg-white dark:bg-slate-900/80 dark:backdrop-blur-xl border-r border-slate-200 dark:border-none dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] w-80 flex-shrink-0 transition-colors duration-300">
     <!-- Header -->
-    <div class="p-4 border-b border-slate-100 dark:border-slate-800">
+    <div class="p-4 border-b border-slate-100 dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
       <h3 class="font-medium text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-        <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
+        <span class="w-1 h-4 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></span>
         图谱控制台
       </h3>
       

@@ -9,6 +9,7 @@ type ToasterToast = {
   description?: string
   action?: any
   variant?: 'default' | 'destructive'
+  class?: string
   open?: boolean
 }
 
