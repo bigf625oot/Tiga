@@ -82,11 +82,11 @@
 
     <!-- Desktop Sidebar -->
     <aside 
-      class="hidden md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out relative z-20"
+      class="hidden md:flex flex-col border-r dark:border-none bg-card dark:bg-transparent glass-sidebar transition-all duration-300 ease-in-out relative z-20"
       :class="isSidebarCollapsed ? 'w-[72px]' : 'w-[280px]'"
     >
       <!-- Header / Logo -->
-      <div class="pt-6 pb-6 flex items-center transition-all duration-300 border-b border-border/40" :class="isSidebarCollapsed ? 'px-0 justify-center' : 'p-4 justify-between'">
+      <div class="pt-6 pb-6 flex items-center transition-all duration-300 border-b border-border/40 dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]" :class="isSidebarCollapsed ? 'px-0 justify-center' : 'p-4 justify-between'">
          <div v-if="!isSidebarCollapsed" class="flex items-center gap-4 overflow-hidden flex-shrink-0 ml-1">
             <img :src="isLightMode ? '/logo_light.svg' : '/logo_dark.svg'" alt="TiGA Logo" class="h-6 w-auto flex-shrink-0" />
          </div>
@@ -106,7 +106,7 @@
                  @click="createNewChat" 
                  :variant="isSidebarCollapsed ? 'ghost' : 'default'"
                  :size="isSidebarCollapsed ? 'icon' : 'default'"
-                 class="w-full justify-start gap-2 shadow-sm transition-all"
+                 class="w-full justify-start gap-2 shadow-sm transition-all dark:bg-transparent dark:border dark:border-blue-500 dark:text-blue-500 dark:shadow-[0_0_10px_rgba(59,130,246,0.5)] dark:hover:bg-blue-600 dark:hover:text-white dark:hover:shadow-[0_0_20px_rgba(59,130,246,0.6)]"
                  :class="isSidebarCollapsed ? 'h-10 w-10 justify-center p-0' : ''"
                >
                  <Plus class="h-5 w-5" />
@@ -183,7 +183,7 @@
                  :key="session.id"
                  @click="selectSession(session.id)"
                  class="group relative flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all hover:bg-muted/60"
-                 :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground'"
+                 :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-muted text-foreground shadow-sm dark:glass-sidebar-item-active dark:bg-transparent' : 'text-muted-foreground'"
                >
                   <!-- Progress Circle -->
                   <div class="relative h-8 w-8 flex-shrink-0 flex items-center justify-center">
@@ -267,7 +267,7 @@
                             @click="handleSidebarItemClick(item)"
                             class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all hover:bg-muted/60"
                             :class="[
-                               currentView === item.id ? 'bg-muted text-foreground font-medium' : 'text-muted-foreground',
+                               currentView === item.id ? 'bg-muted text-foreground font-medium dark:glass-sidebar-item-active dark:bg-transparent' : 'text-muted-foreground',
                                isSidebarCollapsed ? 'justify-center px-0' : ''
                             ]"
                           >
@@ -285,9 +285,9 @@
       </div>
 
       <!-- User Profile -->
-      <div class="p-4 border-t border-border/40 mt-auto">
+      <div class="p-4 border-t border-border/40 dark:border-none dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.05)] mt-auto">
          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group" :class="isSidebarCollapsed ? 'justify-center p-0' : ''">
-            <div class="h-9 w-9 rounded-full bg-muted overflow-hidden border border-border shadow-sm">
+            <div class="h-9 w-9 rounded-full bg-muted overflow-hidden border border-border dark:border-none shadow-sm dark:avatar-breathing">
                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="Avatar" class="h-full w-full object-cover" />
             </div>
             <div v-if="!isSidebarCollapsed" class="flex-1 min-w-0">
@@ -659,5 +659,49 @@ onMounted(() => {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Glassmorphism Sidebar Styles */
+.dark .glass-sidebar {
+  background: rgba(15, 23, 42, 0.6); /* Slate-900 with opacity */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: none;
+  box-shadow: 1px 0 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark .glass-sidebar-item-active {
+  background: rgba(255, 255, 255, 0.03);
+  color: #00D1FF;
+  box-shadow: 0 0 15px rgba(0, 209, 255, 0.15), inset 0 0 0 1px rgba(0, 209, 255, 0.1);
+  text-shadow: 0 0 10px rgba(0, 209, 255, 0.3);
+}
+
+.dark .glass-sidebar-item-active svg {
+  color: #00D1FF;
+  filter: drop-shadow(0 0 2px rgba(0, 209, 255, 0.5));
+}
+
+.dark .glass-separator {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  border: none;
+}
+
+/* Breathing Avatar Animation */
+@keyframes breathing-light {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 209, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px rgba(0, 209, 255, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 209, 255, 0.1);
+  }
+}
+
+.dark .avatar-breathing {
+  animation: breathing-light 3s infinite ease-in-out;
 }
 </style>

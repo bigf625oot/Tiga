@@ -1,12 +1,12 @@
 <template>
-  <div class="flex h-full w-full transition-colors duration-300 bg-gray-50 text-gray-900">
+  <div class="flex h-full w-full transition-colors duration-300 bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-gray-100">
     
     <!-- Left Sidebar -->
-    <div class="w-64 flex flex-col border-r transition-colors bg-white border-border">
+    <div class="w-64 flex flex-col border-r dark:border-none transition-colors bg-white dark:bg-slate-900/80 dark:backdrop-blur-xl border-border dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
       <!-- Sidebar Header -->
-      <div class="h-16 flex items-center px-6 border-b transition-colors border-border">
+      <div class="h-16 flex items-center px-6 border-b transition-colors border-border dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
         <div class="flex items-center gap-4">
-          <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+          <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/30">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -27,20 +27,20 @@
           @click="activeTab = item.id"
           class="flex items-center gap-4 px-4 p-4 rounded-lg cursor-pointer transition-all duration-200 group relative overflow-hidden"
           :class="activeTab === item.id 
-            ? 'bg-primary/10 text-primary border border-blue-100 shadow-sm' 
-            : 'text-gray-600 hover:bg-gray-50'"
+            ? 'bg-primary/10 text-primary border border-blue-100 shadow-sm dark:bg-white/5 dark:text-[#00D1FF] dark:border-none dark:shadow-[0_0_15px_rgba(0,209,255,0.15)]' 
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'"
         >
           <!-- Active Indicator Line (Left) -->
-          <div v-if="activeTab === item.id" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-blue-500"></div>
+          <div v-if="activeTab === item.id" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-blue-500 dark:bg-[#00D1FF] dark:shadow-[0_0_8px_#00D1FF]"></div>
 
-          <component :is="item.icon" class="w-5 h-5 flex-shrink-0" :class="activeTab === item.id ? 'text-blue-500' : 'opacity-70 group-hover:opacity-100'" />
+          <component :is="item.icon" class="w-5 h-5 flex-shrink-0" :class="activeTab === item.id ? 'text-blue-500 dark:text-[#00D1FF]' : 'opacity-70 group-hover:opacity-100'" />
           
           <div class="flex flex-col">
             <span class="text-sm font-medium">{{ item.label }}</span>
             <span class="text-[10px] opacity-50">{{ item.subLabel }}</span>
           </div>
 
-          <svg v-if="activeTab === item.id" class="w-4 h-4 ml-auto text-blue-500 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg v-if="activeTab === item.id" class="w-4 h-4 ml-auto text-blue-500 dark:text-[#00D1FF] opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </div>
@@ -53,20 +53,20 @@
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col h-full overflow-hidden relative">
       <!-- Top Bar -->
-      <div class="h-16 px-8 flex items-center justify-between shrink-0 transition-colors bg-white/50 backdrop-blur border-b border-border">
+      <div class="h-16 px-8 flex items-center justify-between shrink-0 transition-colors bg-white/50 dark:bg-slate-900/50 backdrop-blur border-b border-border dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
         <div class="flex items-center gap-4">
-          <h2 class="text-lg font-semibold">模型配置</h2>
+          <h2 class="text-lg font-semibold dark:text-gray-100">模型配置</h2>
           <span class="px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider bg-[#1E3A8A] text-[#60A5FA] border border-[#1E40AF]">ADMIN</span>
         </div>
         
         <div class="flex items-center gap-4">
-          <button class="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-blue-500 text-gray-500">
+          <button class="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-blue-500 text-gray-500 dark:text-gray-400 dark:hover:text-blue-400">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             重置配置
           </button>
-          <button class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+          <button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-gray-400">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -78,6 +78,7 @@
       <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
         <div class="max-w-5xl mx-auto space-y-6">
           
+          <div v-if="activeTab === 'model'" class="space-y-6">
           <!-- Embedding Model Card -->
           <div class="rounded-lg border p-6 transition-all duration-300 bg-white border-border shadow-sm">
             <div class="flex items-center justify-between mb-6">
@@ -249,6 +250,10 @@
               </div>
             </div>
           </div>
+          </div>
+
+          <DatabaseConnectionConfig v-if="activeTab === 'database'" />
+          <AlertRulesConfig v-if="activeTab === 'alert'" />
 
         </div>
       </div>
@@ -258,6 +263,8 @@
 
 <script setup lang="ts">
 import { ref, h } from 'vue';
+import DatabaseConnectionConfig from './components/DatabaseConnectionConfig.vue';
+import AlertRulesConfig from './components/AlertRulesConfig.vue';
 
 const activeTab = ref('model');
 const temperature = ref(0.7);

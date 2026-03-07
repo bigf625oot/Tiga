@@ -18,6 +18,7 @@ const { toasts } = useToast()
         toast.variant === 'destructive'
           ? 'destructive group border-destructive bg-destructive text-destructive-foreground'
           : 'border bg-background text-foreground',
+        toast.class,
       )"
     >
       <div class="grid gap-1">

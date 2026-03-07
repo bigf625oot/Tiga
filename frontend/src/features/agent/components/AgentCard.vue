@@ -1,105 +1,84 @@
 <template>
-  <div 
-    class="group bg-white border border-slate-200 rounded-lg hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex flex-col h-[200px] relative overflow-hidden cursor-pointer"
+  <Card 
+    class="group hover:shadow-lg transition-all duration-300 cursor-pointer border-border bg-card text-card-foreground" 
     @click="$emit('click', agent)"
   >
-    <div class="p-6 flex flex-col h-full">
-      <!-- Header: Icon + Title + Menu -->
-      <div class="flex gap-4 m-4">
-        <!-- Icon -->
-        <div 
-          class="relative flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105"
-          :class="isTemplate ? 'bg-transparent border border-border' : 'bg-white shadow-sm border border-border'"
-        >
-          <img v-if="isImage" :src="agent.icon" class="w-full h-full object-cover" />
-          <component v-else :is="agent.iconComponent" class="w-6 h-6 text-slate-700" />
-        </div>
-        
-        <!-- Title & Tags Area -->
-        <div class="flex-1 min-w-0 flex flex-col py-0.5">
-          <div class="flex justify-between items-start">
-            <h3 class="font-semibold text-slate-800 text-base leading-tight truncate pr-6 group-hover:text-primary transition-colors" :title="agent.name">
-              {{ agent.name }}
-            </h3>
-            
-            <!-- Menu Trigger (Only for non-template agents) -->
-            <div v-if="!isTemplate" class="absolute top-5 right-4" @click.stop>
-              <div class="relative">
-                <button 
-                  @click="toggleMenu"
-                  class="p-1.5 text-muted-foreground hover:text-slate-600 hover:bg-muted rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                  :class="{'opacity-100 bg-muted text-slate-600': showMenu}"
-                >
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                  </svg>
-                </button>
-                
-                <!-- Dropdown Menu -->
-                <div 
-                  v-if="showMenu"
-                  class="absolute right-0 top-full mt-1 w-32 bg-white border border-border rounded-lg shadow-xl z-20 py-1.5 animate-in fade-in zoom-in duration-100 origin-top-right"
-                >
-                  <button 
-                    @click="handleAction('edit')"
-                    class="w-full text-left px-4 py-2 text-xs font-medium text-slate-600 hover:bg-muted/50 hover:text-primary transition-colors flex items-center gap-2"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    编辑配置
-                  </button>
-                  <button 
-                    @click="handleAction('delete')"
-                    class="w-full text-left px-4 py-2 text-xs font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center gap-2"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    删除智能体
-                  </button>
-                </div>
+    <CardHeader class="p-6 pb-2 space-y-0">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-center gap-4">
+           <!-- Icon -->
+           <div 
+             class="h-12 w-12 rounded-lg flex items-center justify-center overflow-hidden border border-border/50 transition-colors"
+             :class="isTemplate ? 'bg-muted/50' : 'bg-primary/5'"
+           >
+               <img v-if="isImage" :src="agent.icon" class="h-full w-full object-cover" />
+               <component v-else :is="agent.iconComponent" class="h-6 w-6 text-foreground/80" />
+           </div>
+           <div class="space-y-1">
+              <CardTitle class="text-base font-semibold leading-none tracking-tight line-clamp-1" :title="agent.name">
+                {{ agent.name }}
+              </CardTitle>
+              <div class="flex items-center">
+                 <Badge 
+                   variant="secondary" 
+                   class="text-xs font-normal h-5 px-1.5" 
+                   v-if="isTemplate"
+                 >
+                   模版
+                 </Badge>
+                 <Badge 
+                   variant="outline" 
+                   class="text-xs font-normal h-5 px-1.5 text-primary bg-primary/5 border-primary/20" 
+                   v-else
+                 >
+                   我的助手
+                 </Badge>
               </div>
-            </div>
-          </div>
-          
-          <div class="mt-1 flex items-center gap-2">
-             <span v-if="isTemplate" class="px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-100">
-               模版
-             </span>
-             <span v-else class="px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-blue-100">
-               我的助手
-             </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Description -->
-      <p class="text-xs text-muted-foreground leading-relaxed line-clamp-3 mb-4 flex-1 h-[4.5em] group-hover:text-slate-600 transition-colors">
-        {{ agent.description || '暂无描述信息...' }}
-      </p>
-
-      <!-- Footer -->
-      <div class="mt-auto p-4 border-t border-slate-50 flex items-center justify-between">
-        <div class="flex items-center gap-1.5">
-           <!-- Status Dot -->
-           <div class="w-2 h-2 rounded-full" :class="agent.is_active !== false ? 'bg-green-500' : 'bg-slate-300'"></div>
-           <span class="text-[10px] text-muted-foreground">{{ agent.is_active !== false ? 'Active' : 'Inactive' }}</span>
+           </div>
         </div>
         
-        <div class="text-[10px] text-muted-foreground font-mono">
-           ID: {{ agent.id ? agent.id.substring(0, 6) : '---' }}
+        <!-- Actions (Dropdown) -->
+        <div v-if="!isTemplate" @click.stop>
+            <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" size="icon" class="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreVertical class="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem @click="$emit('edit', agent)" class="cursor-pointer">
+                        <Edit class="mr-2 h-4 w-4" /> 编辑
+                    </DropdownMenuItem>
+                    <DropdownMenuItem @click="$emit('delete', agent)" class="text-destructive focus:text-destructive cursor-pointer">
+                        <Trash2 class="mr-2 h-4 w-4" /> 删除
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </div>
-    </div>
-    
-    <!-- Click Overlay for closing menu -->
-    <div v-if="showMenu" class="fixed inset-0 z-10" @click.stop="showMenu = false"></div>
-  </div>
+    </CardHeader>
+    <CardContent class="p-6 pt-4 pb-4 h-[88px]">
+       <p class="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+         {{ agent.description || '暂无描述信息...' }}
+       </p>
+    </CardContent>
+    <CardFooter class="p-6 pt-0 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="h-2 w-2 rounded-full" :class="agent.is_active !== false ? 'bg-green-500' : 'bg-muted-foreground/30'" />
+            <span class="text-xs text-muted-foreground font-medium">{{ agent.is_active !== false ? 'Active' : 'Inactive' }}</span>
+        </div>
+        <span class="text-xs text-muted-foreground font-mono opacity-60">ID: {{ agent.id ? agent.id.substring(0, 6) : '---' }}</span>
+    </CardFooter>
+  </Card>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { MoreVertical, Edit, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps({
   agent: {
@@ -109,8 +88,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['click', 'edit', 'delete']);
-
-const showMenu = ref(false);
 
 const isTemplate = computed(() => props.agent.is_template);
 
@@ -125,13 +102,4 @@ const isImage = computed(() => {
     if (value.startsWith('/') || value.startsWith('./') || value.startsWith('../')) return true;
     return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(value);
 });
-
-const toggleMenu = () => {
-  showMenu.value = !showMenu.value;
-};
-
-const handleAction = (action) => {
-  emit(action, props.agent);
-  showMenu.value = false;
-};
 </script>

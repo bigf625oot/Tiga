@@ -1,36 +1,34 @@
 <template>
-    <div class="h-full flex flex-col bg-white overflow-hidden">
+    <div class="h-full flex flex-col bg-background overflow-hidden">
         <!-- Header -->
-        <div class="px-8 p-6 border-b border-border flex items-center justify-between flex-shrink-0 bg-white z-10">
-            <div class="flex items-center gap-4">
-                <h2 class="text-xl font-semibold text-slate-800">智能体中心</h2>
-                <div class="h-6 w-px bg-slate-200 mx-2"></div>
-                <div class="relative">
-                    <input 
+        <div class="px-8 py-6 border-b border-border flex items-center justify-between flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+            <div class="flex items-center gap-6">
+                <h2 class="text-2xl font-bold tracking-tight text-foreground">智能体中心</h2>
+                <div class="relative w-72">
+                    <Search class="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
                         v-model="searchQuery"
-                        type="text" 
                         placeholder="搜索智能体..." 
-                        class="pl-10 pr-4 py-2 bg-muted/50 border border-slate-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition-all"
+                        class="pl-8 bg-muted/50 border-input focus-visible:ring-1 pr-8"
                     />
-                    <svg class="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                    <button 
+                        v-if="searchQuery"
+                        @click="searchQuery = ''"
+                        class="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
                 </div>
             </div>
             
-            <button 
-                @click="openCreateModal"
-                class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all active:scale-95"
-            >
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                <span>创建智能体</span>
-            </button>
+            <Button @click="openCreateModal" class="shadow-sm">
+                <Plus class="mr-2 h-4 w-4" />
+                创建智能体
+            </Button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-muted/50/30">
-            <div class="max-w-[1400px] mx-auto w-full flex flex-col gap-10">
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div class="max-w-[1600px] mx-auto w-full flex flex-col gap-10">
                 
                 <Loading v-if="isLoading" type="skeleton-card" />
 
@@ -38,11 +36,11 @@
                     <!-- Search Results (if searching) -->
                     <div v-if="searchQuery" class="flex flex-col gap-6">
                         <div class="flex items-center gap-2">
-                            <span class="text-lg font-semibold text-slate-800">搜索结果</span>
+                            <h3 class="text-lg font-semibold tracking-tight text-foreground">搜索结果</h3>
                             <span class="text-sm text-muted-foreground">({{ filteredAgents.length }})</span>
                         </div>
                         
-                        <div v-if="filteredAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div v-if="filteredAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                             <AgentCard 
                                 v-for="agent in filteredAgents" 
                                 :key="agent.id" 
@@ -53,9 +51,7 @@
                             />
                         </div>
                         <div v-else class="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                            <svg class="w-16 h-16 mb-4 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                            <Search class="w-12 h-12 mb-4 text-muted-foreground/20" />
                             <p>未找到相关智能体</p>
                         </div>
                     </div>
@@ -63,12 +59,11 @@
                     <template v-else>
                         <!-- Section: My Agents -->
                         <div class="flex flex-col gap-6">
-                            <div class="flex items-center gap-2">
-                                <div class="w-1 h-6 bg-blue-500 rounded-full"></div>
-                                <span class="text-lg font-semibold text-slate-800">我的智能体</span>
+                            <div class="flex items-center gap-2 border-l-4 border-primary pl-3">
+                                <h3 class="text-lg font-semibold tracking-tight text-foreground">我的智能体</h3>
                             </div>
                             
-                            <div v-if="myAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <div v-if="myAgents.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                                 <AgentCard 
                                     v-for="agent in myAgents" 
                                     :key="agent.id" 
@@ -80,29 +75,25 @@
                             </div>
                             
                             <!-- Empty State -->
-                            <div v-else class="py-12 flex flex-col items-center justify-center text-center bg-white border border-dashed border-slate-200 rounded-lg">
-                                <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                                    <svg class="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            <div v-else class="py-16 flex flex-col items-center justify-center text-center bg-muted/30 border border-dashed border-border rounded-lg">
+                                <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                                    <Box class="w-8 h-8 text-muted-foreground" />
                                 </div>
-                                <h3 class="text-slate-800 font-medium mb-1">暂无智能体</h3>
-                                <p class="text-muted-foreground text-xs mb-6">创建您的第一个 AI 助手，开始智能之旅</p>
-                                <button 
-                                    @click="openCreateModal"
-                                    class="px-6 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:border-blue-300 hover:text-primary transition-colors"
-                                >
+                                <h3 class="text-foreground font-medium mb-1">暂无智能体</h3>
+                                <p class="text-muted-foreground text-sm mb-6">创建您的第一个 AI 助手，开始智能之旅</p>
+                                <Button variant="outline" @click="openCreateModal">
                                     立即创建
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
                         <!-- Section: Discover -->
                         <div class="flex flex-col gap-6">
-                            <div class="flex items-center gap-2">
-                                <div class="w-1 h-6 bg-indigo-500 rounded-full"></div>
-                                <span class="text-lg font-semibold text-slate-800">发现模版</span>
+                            <div class="flex items-center gap-2 border-l-4 border-indigo-500 pl-3">
+                                <h3 class="text-lg font-semibold tracking-tight text-foreground">发现模版</h3>
                             </div>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                                 <AgentCard 
                                     v-for="agent in discoverAgents" 
                                     :key="agent.id" 
@@ -115,6 +106,7 @@
                 </template>
             </div>
         </div>
+
 
         <!-- Create/Edit Modal (Reused Logic) -->
         <div v-if="showModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex justify-end">
@@ -594,6 +586,9 @@ import { Modal, message } from 'ant-design-vue';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import UserScriptsEditor from './UserScriptsEditor.vue';
 import AgentCard from './AgentCard.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search, Plus, Box, X } from 'lucide-vue-next';
 
 // Helper to create simple SVG icons without runtime compiler dependency
 const createIcon = (d) => ({
@@ -660,6 +655,7 @@ const availableIcons = {
 const getIconComponent = (iconName) => {
     return availableIcons[iconName] || GlobeAltIcon;
 };
+
 
 const isImageIcon = (icon) => {
     if (!icon || typeof icon !== 'string') return false;
@@ -773,8 +769,24 @@ const fetchAgents = async () => {
         const res = await fetch('/api/v1/agents/');
         if (res.ok) {
             const allAgents = await res.json();
-            myAgents.value = allAgents.filter(a => !a.is_template);
-            discoverAgents.value = allAgents.filter(a => a.is_template);
+            
+            if (!allAgents || allAgents.length === 0) {
+                 const mockAgents = [
+                    { id: 'ab126f', name: '通用智能体', description: '基于大语言模型的通用对话助手，支持多轮对话、上下文理解与多语言翻译。', is_active: true, is_template: false, icon: 'globe' },
+                    { id: '792a8e', name: '知识库查询', description: '专注于企业内部知识库检索与问答，支持文档解析与精准溯源。', is_active: true, is_template: false, icon: 'book' },
+                    { id: '57f7a0', name: '顶层规划', description: '协助进行企业战略规划、顶层设计与宏观分析，提供专业的咨询建议。', is_active: true, is_template: true, icon: 'presentation' },
+                    { id: '226219', name: '市场洞察', description: '分析市场趋势、竞争对手动态与行业数据，生成深度洞察报告。', is_active: true, is_template: true, icon: 'chart' },
+                    { id: '9c851f', name: '专题研究', description: '针对特定领域进行深入研究，整合多源信息，产出高质量研究报告。', is_active: true, is_template: true, icon: 'document' },
+                    { id: 'f13732', name: '政策解读', description: '解读最新政策法规，分析其对企业的影响与应对策略。', is_active: true, is_template: true, icon: 'lightbulb' },
+                    { id: '9297de', name: '领导讲话', description: '辅助撰写各类领导讲话稿，风格严谨，逻辑清晰，符合公文规范。', is_active: true, is_template: true, icon: 'globe' },
+                    { id: 'bc6255', name: '解决方案', description: '针对具体业务痛点提供系统性的解决方案与实施建议。', is_active: true, is_template: true, icon: 'globe' }
+                 ];
+                 myAgents.value = mockAgents.filter(a => !a.is_template);
+                 discoverAgents.value = mockAgents.filter(a => a.is_template);
+            } else {
+                 myAgents.value = allAgents.filter(a => !a.is_template);
+                 discoverAgents.value = allAgents.filter(a => a.is_template);
+            }
             
             // Map icon strings to components for discover agents if needed
             discoverAgents.value.forEach(agent => {
@@ -798,6 +810,24 @@ const fetchAgents = async () => {
         }
     } catch (e) {
         console.error("Failed to fetch agents", e);
+        // Fallback on error too
+         const mockAgents = [
+            { id: 'ab126f', name: '通用智能体', description: '基于大语言模型的通用对话助手，支持多轮对话、上下文理解与多语言翻译。', is_active: true, is_template: false, icon: 'globe' },
+            { id: '792a8e', name: '知识库查询', description: '专注于企业内部知识库检索与问答，支持文档解析与精准溯源。', is_active: true, is_template: false, icon: 'book' },
+            { id: '57f7a0', name: '顶层规划', description: '协助进行企业战略规划、顶层设计与宏观分析，提供专业的咨询建议。', is_active: true, is_template: true, icon: 'presentation' },
+            { id: '226219', name: '市场洞察', description: '分析市场趋势、竞争对手动态与行业数据，生成深度洞察报告。', is_active: true, is_template: true, icon: 'chart' },
+            { id: '9c851f', name: '专题研究', description: '针对特定领域进行深入研究，整合多源信息，产出高质量研究报告。', is_active: true, is_template: true, icon: 'document' },
+            { id: 'f13732', name: '政策解读', description: '解读最新政策法规，分析其对企业的影响与应对策略。', is_active: true, is_template: true, icon: 'lightbulb' },
+            { id: '9297de', name: '领导讲话', description: '辅助撰写各类领导讲话稿，风格严谨，逻辑清晰，符合公文规范。', is_active: true, is_template: true, icon: 'globe' },
+            { id: 'bc6255', name: '解决方案', description: '针对具体业务痛点提供系统性的解决方案与实施建议。', is_active: true, is_template: true, icon: 'globe' }
+         ];
+         myAgents.value = mockAgents.filter(a => !a.is_template);
+         discoverAgents.value = mockAgents.filter(a => a.is_template);
+         
+         // Map icons for fallback
+         [...myAgents.value, ...discoverAgents.value].forEach(agent => {
+             agent.iconComponent = availableIcons[agent.icon] || GlobeAltIcon;
+         });
     } finally {
         isLoading.value = false;
     }

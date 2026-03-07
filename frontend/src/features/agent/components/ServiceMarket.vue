@@ -1,284 +1,231 @@
 <template>
-  <div class="h-full flex bg-muted/50">
+  <div class="h-full flex bg-muted/20 overflow-hidden">
     <!-- Collapsible Sidebar -->
     <div 
-      class="bg-white border-r border-slate-200 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out z-20 shadow-sm"
-      :class="isSidebarCollapsed ? 'w-20' : 'w-64'"
+      class="bg-background border-r flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out z-20"
+      :class="isSidebarCollapsed ? 'w-[60px]' : 'w-64'"
     >
       <!-- Sidebar Header -->
-      <div class="p-6 flex items-center justify-between border-b border-slate-50 h-[73px]">
-        <div class="flex items-center gap-4 overflow-hidden whitespace-nowrap" :class="{'opacity-0 w-0': isSidebarCollapsed}">
-          <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-blue-200 shadow-md flex-shrink-0">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
+      <div class="p-4 flex items-center justify-between border-b h-16">
+        <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" :class="{'opacity-0 w-0': isSidebarCollapsed}">
+          <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm flex-shrink-0">
+            <LayoutGrid class="w-4 h-4" />
           </div>
           <div>
-            <h2 class="text-base font-semibold text-slate-800">工具市场</h2>
+            <h2 class="text-sm font-semibold tracking-tight">工具市场</h2>
             <p class="text-[10px] text-muted-foreground font-medium">Tool Market</p>
           </div>
         </div>
         
         <!-- Toggle Button -->
-        <button 
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          class="h-8 w-8 ml-auto text-muted-foreground"
           @click="isSidebarCollapsed = !isSidebarCollapsed"
-          class="p-1.5 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-slate-600 transition-colors mx-auto"
           :title="isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'"
         >
-          <svg class="w-5 h-5 transition-transform duration-300" :class="{'rotate-180': isSidebarCollapsed}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-          </svg>
-        </button>
+          <ChevronLeft v-if="!isSidebarCollapsed" class="w-4 h-4" />
+          <ChevronRight v-else class="w-4 h-4" />
+        </Button>
       </div>
 
       <!-- Categories List -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-        <div 
+      <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+        <Button
           v-for="item in menuItems" 
           :key="item.id"
+          :variant="activeCategory === item.id ? 'secondary' : 'ghost'"
+          class="w-full justify-start gap-3 px-3 relative"
+          :class="{'justify-center px-0': isSidebarCollapsed}"
           @click="activeCategory = item.id"
-          class="group flex items-center gap-4 p-4 py-2.5 rounded-lg cursor-pointer transition-all duration-200 relative"
-          :class="activeCategory === item.id ? 'bg-primary/10/80 text-primary shadow-sm' : 'text-slate-600 hover:bg-muted/50 hover:text-slate-900'"
           :title="isSidebarCollapsed ? item.label : ''"
         >
-          <!-- Category Icon (Placeholder or specific based on ID) -->
-          <div class="w-6 h-6 flex items-center justify-center flex-shrink-0 transition-colors" 
-            :class="activeCategory === item.id ? 'text-primary' : 'text-muted-foreground group-hover:text-slate-600'">
-            <svg v-if="item.id === 'all'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-            <svg v-else-if="item.id === 'mcp'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <svg v-else-if="item.id === 'skills'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-          </div>
+          <component :is="getCategoryIcon(item.id)" class="w-4 h-4 flex-shrink-0" />
           
-          <span class="font-medium text-sm whitespace-nowrap overflow-hidden transition-all duration-300"
-            :class="isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">
+          <span 
+            class="truncate transition-all duration-300"
+            :class="isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
+          >
             {{ item.label }}
           </span>
           
-          <span v-if="item.count && !isSidebarCollapsed" 
-            class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full transition-colors"
-            :class="activeCategory === item.id ? 'bg-blue-100 text-primary' : 'bg-muted text-muted-foreground'">
+          <Badge 
+            v-if="item.count && !isSidebarCollapsed" 
+            variant="secondary" 
+            class="ml-auto text-[10px] h-5 px-1.5"
+          >
             {{ item.count }}
-          </span>
-          
-          <!-- Tooltip on hover when collapsed -->
-          <div v-if="isSidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 m-4 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-            {{ item.label }}
-          </div>
-        </div>
+          </Badge>
+        </Button>
       </div>
 
-      <!-- Quick Actions (Optional, simplified for collapsed) -->
-      <div class="p-4 border-t border-border" v-if="!isSidebarCollapsed">
-        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100/50">
-          <h4 class="text-xs font-semibold text-blue-800 mb-1">找不到需要的工具？</h4>
-          <p class="text-[10px] text-primary/80 m-4 leading-relaxed">尝试创建一个自定义工具来扩展您的工作流。</p>
-          <button 
+      <!-- Quick Actions -->
+      <div class="p-4 border-t" v-if="!isSidebarCollapsed">
+        <div class="bg-muted/50 rounded-lg p-4 border border-border/50">
+          <h4 class="text-xs font-semibold mb-1 flex items-center gap-1">
+            <Zap class="w-3 h-3 text-yellow-500" />
+            需要新工具？
+          </h4>
+          <p class="text-[10px] text-muted-foreground mb-3 leading-relaxed">自定义工具来扩展您的工作流。</p>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            class="w-full h-8 text-xs bg-background"
             @click="showCreateToolModal = true"
-            class="w-full py-1.5 bg-white text-primary text-xs font-semibold rounded-lg border border-blue-200 shadow-sm hover:shadow hover:border-blue-300 transition-all flex items-center justify-center gap-1.5"
           >
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
+            <Plus class="w-3.5 h-3.5 mr-1.5" />
             立即创建
-          </button>
+          </Button>
         </div>
       </div>
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative" @click="activeMenuId = null">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
       <!-- Header -->
-      <div class="px-8 py-4 bg-white border-b border-slate-200 flex items-center justify-between flex-shrink-0 shadow-sm z-10">
-        <div class="flex items-center gap-6 flex-1">
+      <div class="px-6 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b flex items-center justify-between flex-shrink-0 z-10 sticky top-0">
+        <div class="flex items-center gap-4 flex-1 max-w-2xl">
           <!-- Search Bar -->
-          <div class="relative group max-w-md w-full">
-            <input 
+          <div class="relative w-full max-w-sm">
+            <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
               v-model="searchQuery"
               type="text" 
               placeholder="搜索工具、插件或技能..." 
-              class="w-full pl-11 pr-4 py-2.5 bg-muted/50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white focus:outline-none transition-all placeholder:text-muted-foreground"
+              class="pl-9 bg-muted/40 border-muted-foreground/20 focus-visible:bg-background transition-colors"
             />
-            <svg class="w-5 h-5 text-muted-foreground absolute left-3.5 top-2.5 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
           
           <!-- Filter Tags -->
-          <div class="flex gap-2 hidden md:flex">
-            <button 
+          <div class="flex items-center gap-1 hidden md:flex border-l pl-4 ml-2 h-8">
+            <Button 
               v-for="tag in [{id: 'all', label: '全部'}, {id: 'hot', label: '热门'}, {id: 'new', label: '最新'}, {id: 'official', label: '官方'}]" 
               :key="tag.id"
-              class="p-4.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
-              :class="activeFilter === tag.id ? 'bg-slate-800 text-white shadow-md shadow-slate-200' : 'bg-white text-muted-foreground border border-slate-200 hover:border-slate-300 hover:text-slate-700 hover:bg-muted/50'"
+              :variant="activeFilter === tag.id ? 'secondary' : 'ghost'"
+              size="sm"
+              class="h-8 text-xs px-3"
               @click="activeFilter = tag.id"
             >
               {{ tag.label }}
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
           <!-- Refresh Button -->
-          <button @click="refreshData" class="p-2 text-muted-foreground hover:text-slate-600 hover:bg-muted rounded-lg transition-colors" title="刷新数据">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
+          <Button variant="ghost" size="icon" @click="refreshData" :disabled="isLoading">
+            <RefreshCw class="w-4 h-4" :class="{'animate-spin': isLoading}" />
+          </Button>
 
           <!-- Primary Create Button -->
-          <button 
+          <Button 
             @click="showCreateToolModal = true"
-            class="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all active:scale-95"
+            class="hidden sm:flex gap-2 shadow-sm"
           >
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
+            <Plus class="w-4 h-4" />
             <span>添加工具</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       <!-- Content Grid -->
-      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-muted/50/50">
+      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
         <!-- Skeleton Loader -->
         <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div v-for="n in 8" :key="n" class="border border-border rounded-lg p-6 bg-white h-[260px] flex flex-col animate-pulse shadow-sm">
-            <div class="flex gap-4 mb-4">
-              <div class="w-14 h-14 bg-muted rounded-lg"></div>
-              <div class="flex-1 space-y-2 py-1">
-                <div class="h-4 bg-muted rounded w-3/4"></div>
-                <div class="flex gap-2">
-                  <div class="h-5 w-12 bg-muted rounded"></div>
-                  <div class="h-5 w-12 bg-muted rounded"></div>
-                </div>
+          <div v-for="n in 8" :key="n" class="border rounded-lg p-6 bg-card h-[280px] flex flex-col space-y-4">
+            <div class="flex gap-4">
+              <Skeleton class="h-12 w-12 rounded-lg" />
+              <div class="space-y-2 flex-1">
+                <Skeleton class="h-4 w-3/4" />
+                <Skeleton class="h-4 w-1/2" />
               </div>
             </div>
             <div class="space-y-2 flex-1">
-              <div class="h-3 bg-muted rounded w-full"></div>
-              <div class="h-3 bg-muted rounded w-5/6"></div>
-              <div class="h-3 bg-muted rounded w-4/6"></div>
+              <Skeleton class="h-3 w-full" />
+              <Skeleton class="h-3 w-5/6" />
             </div>
-            <div class="mt-4 pt-4 border-t border-slate-50">
-              <div class="flex justify-between m-4">
-                <div class="h-3 w-16 bg-muted rounded"></div>
-                <div class="h-3 w-12 bg-muted rounded"></div>
-              </div>
-              <div class="h-8 bg-muted rounded-lg w-full"></div>
+            <div class="pt-4 border-t flex justify-between">
+              <Skeleton class="h-3 w-16" />
+              <Skeleton class="h-3 w-12" />
             </div>
+            <Skeleton class="h-9 w-full rounded-md" />
           </div>
         </div>
 
-        <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-muted-foreground">
-          <div class="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
-            <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        <!-- Empty State -->
+        <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-muted-foreground animate-in fade-in duration-500">
+          <div class="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
+            <Search class="w-8 h-8 opacity-50" />
           </div>
-          <h3 class="text-lg font-semibold text-slate-700 mb-2">未找到相关服务</h3>
-          <p class="text-sm text-muted-foreground max-w-xs text-center leading-relaxed">尝试调整搜索关键词或筛选条件，也可以点击右上角"添加工具"创建新的服务。</p>
-          <button @click="searchQuery = ''; activeFilter = 'all'" class="mt-6 text-primary font-medium hover:underline text-sm">清除筛选条件</button>
+          <h3 class="text-lg font-semibold text-foreground mb-2">未找到相关服务</h3>
+          <p class="text-sm max-w-xs text-center leading-relaxed mb-6">
+            尝试调整搜索关键词或筛选条件，也可以创建新的服务。
+          </p>
+          <Button variant="outline" @click="searchQuery = ''; activeFilter = 'all'">
+            清除筛选条件
+          </Button>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+        <!-- Tool Grid -->
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20 animate-in fade-in zoom-in duration-300">
           <ToolCard 
             v-for="item in filteredItems" 
             :key="item.id" 
             :item="item"
-            :active-menu-id="activeMenuId"
-            @toggle-menu="toggleMenu"
             @edit="openEditModal"
             @delete="deleteTool"
             @install="handleInstall"
           />
         </div>
       </div>
-
-      <!-- Floating Action Button (Mobile Only) -->
-      <button 
-        @click="showCreateToolModal = true"
-        class="sm:hidden absolute bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-all z-30"
-      >
-        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
     </div>
   </div>
 
   <!-- Create/Edit Tool Modal -->
-  <div v-if="showCreateToolModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all" @click="closeModal">
-    <div class="bg-white rounded-lg shadow-2xl w-[640px] max-w-[95vw] max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" @click.stop>
-      <!-- Header -->
-      <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/50/50">
-        <div>
-          <h3 class="text-lg font-semibold text-slate-800">{{ isEditing ? '编辑工具' : '创建新工具' }}</h3>
-          <p class="text-xs text-muted-foreground mt-0.5">{{ isEditing ? '修改已有的 AI 助手工具配置' : '配置并发布你的 AI 助手工具' }}</p>
-        </div>
-        <button @click="closeModal" class="text-muted-foreground hover:text-slate-600 p-1 rounded-md hover:bg-muted transition-colors">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+  <Dialog :open="showCreateToolModal" @update:open="(val) => !val && closeModal()">
+    <DialogContent class="sm:max-w-[640px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogHeader class="px-6 py-4 border-b bg-muted/20">
+        <DialogTitle>{{ isEditing ? '编辑工具' : '创建新工具' }}</DialogTitle>
+        <DialogDescription>
+          {{ isEditing ? '修改已有的 AI 助手工具配置' : '配置并发布你的 AI 助手工具' }}
+        </DialogDescription>
+      </DialogHeader>
       
-      <!-- Body -->
       <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
         <div class="space-y-6">
           <!-- Tool Type Selection -->
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-slate-700">
-              工具类型 <span class="text-red-500">*</span>
-            </label>
+          <div class="space-y-3">
+            <Label>工具类型 <span class="text-destructive">*</span></Label>
             <div class="grid grid-cols-2 gap-4">
               <div 
                 @click="newToolForm.type = 'skill'"
-                class="relative p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start gap-4"
-                :class="newToolForm.type === 'skill' ? 'border-blue-500 bg-primary/10/50' : 'border-slate-200 hover:border-slate-300 hover:bg-muted/50'"
+                class="relative p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start gap-4 hover:bg-muted/50"
+                :class="newToolForm.type === 'skill' ? 'border-primary bg-primary/5' : 'border-border'"
               >
-                <div class="p-2 rounded-lg" :class="newToolForm.type === 'skill' ? 'bg-blue-100 text-primary' : 'bg-muted text-muted-foreground'">
-                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                  </svg>
+                <div class="p-2 rounded-lg" :class="newToolForm.type === 'skill' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'">
+                  <Zap class="w-5 h-5" />
                 </div>
                 <div>
-                  <div class="font-medium text-slate-800">Agent Skill</div>
-                  <div class="text-xs text-muted-foreground mt-1 leading-relaxed">基于自然语言指令的轻量级技能，适用于文本处理和逻辑分析。</div>
+                  <div class="font-medium text-sm">Agent Skill</div>
+                  <div class="text-xs text-muted-foreground mt-1 leading-relaxed">基于自然语言指令的轻量级技能。</div>
                 </div>
-                <div v-if="newToolForm.type === 'skill'" class="absolute top-3 right-3 text-blue-500">
-                  <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                  </svg>
-                </div>
+                <Check v-if="newToolForm.type === 'skill'" class="absolute top-3 right-3 w-4 h-4 text-primary" />
               </div>
 
               <div 
                 @click="newToolForm.type = 'mcp'"
-                class="relative p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start gap-4"
-                :class="newToolForm.type === 'mcp' ? 'border-purple-500 bg-purple-50/50' : 'border-slate-200 hover:border-slate-300 hover:bg-muted/50'"
+                class="relative p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start gap-4 hover:bg-muted/50"
+                :class="newToolForm.type === 'mcp' ? 'border-primary bg-primary/5' : 'border-border'"
               >
-                <div class="p-2 rounded-lg" :class="newToolForm.type === 'mcp' ? 'bg-purple-100 text-purple-600' : 'bg-muted text-muted-foreground'">
-                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
+                <div class="p-2 rounded-lg" :class="newToolForm.type === 'mcp' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'">
+                  <Layers class="w-5 h-5" />
                 </div>
                 <div>
-                  <div class="font-medium text-slate-800">MCP Server</div>
-                  <div class="text-xs text-muted-foreground mt-1 leading-relaxed">标准化的模型上下文协议服务，支持复杂工具调用和资源访问。</div>
+                  <div class="font-medium text-sm">MCP Server</div>
+                  <div class="text-xs text-muted-foreground mt-1 leading-relaxed">标准化的模型上下文协议服务。</div>
                 </div>
-                <div v-if="newToolForm.type === 'mcp'" class="absolute top-3 right-3 text-purple-500">
-                  <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                  </svg>
-                </div>
+                <Check v-if="newToolForm.type === 'mcp'" class="absolute top-3 right-3 w-4 h-4 text-primary" />
               </div>
             </div>
           </div>
@@ -286,185 +233,184 @@
           <!-- Basic Info Grid -->
           <div class="grid grid-cols-2 gap-6">
             <div class="space-y-2">
-              <label class="block text-sm font-medium text-slate-700">
-                名称 <span class="text-red-500">*</span>
-              </label>
-              <input 
-                v-model="newToolForm.name" 
-                type="text" 
-                placeholder="例如：codemap" 
-                class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-muted-foreground text-sm" 
-              />
+              <Label>名称 <span class="text-destructive">*</span></Label>
+              <Input v-model="newToolForm.name" placeholder="例如：codemap" />
             </div>
             <div class="space-y-2">
-              <label class="block text-sm font-medium text-slate-700">
-                版本 <span class="text-red-500">*</span>
-              </label>
-              <input 
-                v-model="newToolForm.version" 
-                type="text" 
-                placeholder="1.0.0" 
-                class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-muted-foreground text-sm" 
-              />
+              <Label>版本 <span class="text-destructive">*</span></Label>
+              <Input v-model="newToolForm.version" placeholder="1.0.0" />
             </div>
           </div>
 
           <!-- Category or MCP Type -->
           <div class="grid gap-6" :class="newToolForm.type === 'mcp' ? 'grid-cols-2' : 'grid-cols-1'">
             <div v-if="newToolForm.type === 'mcp'" class="space-y-2">
-              <label class="block text-sm font-medium text-slate-700">MCP 类型</label>
-              <div class="relative">
-                <select v-model="newToolForm.mcp_type" class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm appearance-none cursor-pointer">
-                  <option value="stdio">STDIO (Standard Input/Output)</option>
-                  <option value="sse">SSE (Server-Sent Events)</option>
-                </select>
-                <div class="absolute inset-y-0 right-0 flex items-center p-4 pointer-events-none text-muted-foreground">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+              <Label>MCP 类型</Label>
+              <Select v-model="newToolForm.mcp_type">
+                <SelectTrigger>
+                  <SelectValue placeholder="选择类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stdio">STDIO (Standard Input/Output)</SelectItem>
+                  <SelectItem value="sse">SSE (Server-Sent Events)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div class="space-y-2">
-              <label class="block text-sm font-medium text-slate-700">分类</label>
-              <div class="relative">
-                <select v-model="newToolForm.category" class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm appearance-none cursor-pointer">
-                  <option value="" disabled selected>请选择分类...</option>
-                  <option v-for="cat in menuItems.filter(c => c.id !== 'all')" :key="cat.id" :value="cat.id">
+              <Label>分类</Label>
+              <Select v-model="newToolForm.category">
+                <SelectTrigger>
+                  <SelectValue placeholder="选择分类..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="cat in menuItems.filter(c => c.id !== 'all')" :key="cat.id" :value="cat.id">
                     {{ cat.label }}
-                  </option>
-                </select>
-                <div class="absolute inset-y-0 right-0 flex items-center p-4 pointer-events-none text-muted-foreground">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <!-- Description -->
           <div class="space-y-2">
-            <label class="block text-sm font-medium text-slate-700">描述</label>
+            <Label>描述</Label>
             <textarea 
               v-model="newToolForm.description" 
               rows="3" 
               placeholder="简要描述该工具的功能、用途及特点..." 
-              class="w-full px-4 p-4 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm placeholder:text-muted-foreground"
+              class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
             ></textarea>
           </div>
 
           <!-- Skill Specific: File Upload & Instructions -->
           <div v-if="newToolForm.type === 'skill'" class="space-y-5">
             <div class="space-y-2">
-              <label class="block text-sm font-medium text-slate-700">导入配置 (可选)</label>
-              <div class="group bg-muted/50 border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-primary/10/30 transition-all cursor-pointer relative">
+              <Label>导入配置 (可选)</Label>
+              <div class="group bg-muted/30 border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer relative">
                 <input type="file" @change="handleFileUpload" accept=".zip,.skill" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
                 <div class="space-y-3 pointer-events-none">
-                  <div class="w-12 h-12 mx-auto rounded-full bg-slate-200 group-hover:bg-blue-100 group-hover:text-primary flex items-center justify-center transition-colors text-muted-foreground">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
+                  <div class="w-10 h-10 mx-auto rounded-full bg-muted group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center transition-colors text-muted-foreground">
+                    <Upload class="w-5 h-5" />
                   </div>
-                  <div class="text-sm text-slate-600">
+                  <div class="text-sm text-foreground">
                     <span class="font-semibold text-primary">点击上传</span> 或将文件拖拽到此处
                   </div>
-                  <p class="text-xs text-muted-foreground">支持 .zip 或 .skill 格式文件，将自动解析 SKILL.md</p>
+                  <p class="text-xs text-muted-foreground">支持 .zip 或 .skill 格式文件</p>
                 </div>
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="block text-sm font-medium text-slate-700">
-                指令内容 <span class="text-red-500">*</span>
-              </label>
+              <Label>指令内容 <span class="text-destructive">*</span></Label>
               <div class="relative">
                 <textarea 
                   v-model="newToolForm.content" 
                   rows="8" 
                   placeholder="当这个 Skill 被触发时，你希望模型遵循哪些规则或信息..." 
-                  class="w-full px-4 p-4 font-mono text-sm bg-muted/50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-y placeholder:text-muted-foreground"
+                  class="flex min-h-[160px] w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                 ></textarea>
-                <div class="absolute right-3 top-3 text-xs text-muted-foreground bg-white/80 px-2 py-1 rounded backdrop-blur-sm border border-border">
-                  Markdown
-                </div>
+                <Badge variant="outline" class="absolute right-3 top-3 text-[10px] bg-background/80 backdrop-blur">Markdown</Badge>
               </div>
-              <p class="text-xs text-muted-foreground flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                建议包含命令、使用场景、输出解释及示例
-              </p>
             </div>
           </div>
 
           <!-- MCP Specific: Config -->
           <div v-else class="space-y-2">
-            <label class="block text-sm font-medium text-slate-700">
-              MCP 配置 <span class="text-red-500">*</span>
-            </label>
+            <Label>MCP 配置 <span class="text-destructive">*</span></Label>
             <div class="relative">
               <textarea 
                 v-model="newToolForm.mcp_config" 
                 rows="6" 
-                class="w-full px-4 p-4 font-mono text-sm bg-slate-900 text-slate-50 border border-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition-all resize-y"
+                class="flex min-h-[120px] w-full rounded-md border border-input bg-slate-950 text-slate-50 px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                 spellcheck="false"
               ></textarea>
-              <div class="absolute right-3 top-3 text-xs text-muted-foreground bg-slate-800 px-2 py-1 rounded border border-slate-700">
-                JSON
-              </div>
+              <Badge variant="outline" class="absolute right-3 top-3 text-[10px] bg-slate-900 text-slate-400 border-slate-800">JSON</Badge>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div class="px-6 py-4 border-t border-border bg-muted/50 flex justify-between items-center">
-        <div class="text-xs text-muted-foreground">
-          <span v-if="newToolForm.type === 'skill'">带 <span class="text-red-400">*</span> 为必填项</span>
-        </div>
-        <div class="flex gap-4">
-          <button 
-            @click="closeModal" 
-            class="p-6 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-muted/50 hover:text-slate-900 rounded-lg transition-colors shadow-sm"
-          >
-            取消
-          </button>
-          <button 
-            @click="createTool" 
-            :disabled="isSubmitting" 
-            class="p-6 py-2.5 text-sm font-medium text-white bg-primary hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            {{ isSubmitting ? '处理中...' : (isEditing ? '保存修改' : '确认创建') }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+      <DialogFooter class="px-6 py-4 border-t bg-muted/20">
+        <Button variant="outline" @click="closeModal">取消</Button>
+        <Button @click="createTool" :disabled="isSubmitting">
+          <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
+          {{ isSubmitting ? '处理中...' : (isEditing ? '保存修改' : '确认创建') }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted, reactive, watch } from 'vue';
 import JSZip from 'jszip';
 import ToolCard from './ToolCard.vue';
+import { 
+  Search, 
+  LayoutGrid, 
+  RefreshCw, 
+  Plus, 
+  X, 
+  ChevronLeft, 
+  ChevronRight, 
+  Filter, 
+  Layers, 
+  Settings, 
+  Zap,
+  Loader2,
+  FileText,
+  Upload,
+  Check
+} from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 const menuItems = ref([]);
-
 const activeCategory = ref('all');
 const isSidebarCollapsed = ref(false);
 const searchQuery = ref('');
-const activeFilter = ref('all'); // all, hot, new, official
+const activeFilter = ref('all');
 const isLoading = ref(false);
 const showCreateToolModal = ref(false);
 const isEditing = ref(false);
 const editingId = ref(null);
-const activeMenuId = ref(null);
+const installedTools = ref(new Set());
+const mcpItems = ref([]);
+const skills = ref([]);
+const isSubmitting = ref(false);
 
-// Local storage for installed tools
+const getCategoryIcon = (id) => {
+  switch (id) {
+    case 'all': return LayoutGrid;
+    case 'mcp': return Layers;
+    case 'skills': return Zap;
+    default: return Settings;
+  }
+};
+
+// ... (Logic remains mostly the same, just removing activeMenuId)
+
 const getStoredInstalled = () => {
   try {
     return new Set(JSON.parse(localStorage.getItem('installed_tools') || '[]'));
@@ -472,43 +418,34 @@ const getStoredInstalled = () => {
     return new Set();
   }
 };
-const installedTools = ref(getStoredInstalled());
 
-const mcpItems = ref([]);
-const skills = ref([]);
-const isSubmitting = ref(false);
+installedTools.value = getStoredInstalled();
 
 const handleInstall = async (item) => {
   if (item.installed || item.isInstalling) return;
-  
   item.isInstalling = true;
-  // Simulate network request
   await new Promise(resolve => setTimeout(resolve, 800));
-  
   item.installed = true;
   item.isInstalling = false;
-  
   installedTools.value.add(item.id);
   localStorage.setItem('installed_tools', JSON.stringify([...installedTools.value]));
 };
 
 const newToolForm = reactive({
   name: '',
-  type: 'skill', // 'skill' or 'mcp'
-  scope: 'global', // 'global' or 'project'
+  type: 'skill',
+  scope: 'global',
   version: '1.0.0',
   description: '',
   content: '',
   mcp_type: 'stdio',
   mcp_config: '{\n  "command": "python",\n  "args": ["server.py"]\n}',
-  category: '' // default category
+  category: ''
 });
 
 const closeModal = () => {
   showCreateToolModal.value = false;
-  setTimeout(() => {
-    resetForm();
-  }, 200); // Wait for animation
+  setTimeout(() => resetForm(), 200);
 };
 
 const resetForm = () => {
@@ -524,18 +461,9 @@ const resetForm = () => {
   newToolForm.category = '';
 };
 
-const toggleMenu = (id) => {
-  if (activeMenuId.value === id) {
-    activeMenuId.value = null;
-  } else {
-    activeMenuId.value = id;
-  }
-};
-
 const openEditModal = (item) => {
   isEditing.value = true;
   editingId.value = item.id;
-  
   newToolForm.type = item.type;
   newToolForm.name = item.name;
   newToolForm.version = item.version || '1.0.0';
@@ -546,26 +474,15 @@ const openEditModal = (item) => {
     newToolForm.content = item.content || '';
     newToolForm.scope = item.meta_data?.scope || 'global';
   } else {
-    newToolForm.mcp_type = item.type_code || 'stdio'; // Assuming item has type_code or we map from type
-    // Backend returns 'type' as 'stdio' or 'sse' in MCPServer model, 
-    // but in frontend item.type is overwritten to 'mcp'.
-    // We need to check the original data or store it.
-    // In fetchMcpServers, we spread ...item, so original type should be there but overwritten by type: 'mcp'.
-    // We should fix fetchMcpServers to preserve original type.
-    
-    // Let's assume we fix fetchMcpServers below to store original type in mcp_type
     newToolForm.mcp_type = item.mcp_type || 'stdio';
     newToolForm.mcp_config = JSON.stringify(item.config || {}, null, 2);
   }
-  
   showCreateToolModal.value = true;
 };
 
 const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
-
-  // Reset input value to allow re-uploading the same file if needed
   event.target.value = '';
 
   if (!file.name.endsWith('.zip') && !file.name.endsWith('.skill')) {
@@ -575,14 +492,10 @@ const handleFileUpload = async (event) => {
 
   try {
     const zip = await JSZip.loadAsync(file);
-    
     const files = Object.keys(zip.files);
-    
-    // Helper to find file by name pattern, preferring shallowest path (root level first)
     const findFile = (pattern) => {
       const matches = files.filter(path => pattern.test(path) && !zip.files[path].dir);
       if (matches.length === 0) return null;
-      // Sort by path depth (number of slashes), then by length to prefer shorter names
       matches.sort((a, b) => {
         const depthA = (a.match(/\//g) || []).length;
         const depthB = (b.match(/\//g) || []).length;
@@ -592,9 +505,7 @@ const handleFileUpload = async (event) => {
       return matches[0];
     };
 
-    // Find SKILL.md (case insensitive, any depth)
     const skillMdPath = findFile(/(^|\/)skill\.md$/i);
-    
     if (skillMdPath) {
       const content = await zip.file(skillMdPath).async("string");
       newToolForm.content = content;
@@ -603,7 +514,6 @@ const handleFileUpload = async (event) => {
       alert("在压缩包中未找到 SKILL.md 文件。");
     }
     
-    // Optional: Try to find metadata (manifest.json or package.json)
     const manifestPath = findFile(/(^|\/)(manifest\.json|package\.json)$/i);
     if (manifestPath) {
       try {
@@ -612,11 +522,8 @@ const handleFileUpload = async (event) => {
         if (manifest.name) newToolForm.name = manifest.name;
         if (manifest.version) newToolForm.version = manifest.version;
         if (manifest.description) newToolForm.description = manifest.description;
-      } catch (e) {
-        console.warn("Failed to parse manifest", e);
-      }
+      } catch (e) { console.warn("Failed to parse manifest", e); }
     }
-
   } catch (e) {
     console.error("Error reading file", e);
     alert("解析文件失败，请确认文件格式正确且未损坏");
@@ -628,17 +535,10 @@ const fetchCategories = async () => {
     const res = await fetch('/api/v1/service-categories/');
     if (res.ok) {
       const data = await res.json();
-      // Add 'All' category at the beginning manually if it's not from backend, 
-      // or rely on backend. User said "Only 2 categories", but for UX "All" is usually implied as default view.
-      // Let's stick to backend data. If backend returns only MCP and Skills, we might want to add 'All' locally for aggregation.
       menuItems.value = [{ id: 'all', label: '全部推荐' }, ...data.map(d => ({ id: d.slug, label: d.label }))];
-      
-      // Ensure 'all' is selected by default if not set
       if (!activeCategory.value) activeCategory.value = 'all';
     }
-  } catch (e) {
-    console.error("Failed to fetch categories", e);
-  }
+  } catch (e) { console.error("Failed to fetch categories", e); }
 };
 
 const buildQueryParams = () => {
@@ -654,12 +554,10 @@ const buildQueryParams = () => {
 };
 
 const fetchMcpServers = async () => {
-  // If category is 'skills', don't fetch MCP
   if (activeCategory.value === 'skills') {
     mcpItems.value = [];
     return;
   }
-  
   try {
     const query = buildQueryParams();
     const res = await fetch(`/api/v1/mcp/?${query}`);
@@ -668,27 +566,22 @@ const fetchMcpServers = async () => {
       mcpItems.value = data.map(item => ({
         ...item,
         type: 'mcp',
-        mcp_type: item.type, // Preserve original type (stdio/sse)
+        mcp_type: item.type,
         author: item.author || 'User Configured',
         iconUrl: '/tools/mcp.svg',
-        bgColor: 'bg-purple-50',
         installed: installedTools.value.has(item.id),
         downloads: item.downloads || 0,
         is_official: item.is_official
       }));
     }
-  } catch (e) {
-    console.error("Failed to fetch MCP servers", e);
-  }
+  } catch (e) { console.error("Failed to fetch MCP servers", e); }
 };
 
 const fetchSkills = async () => {
-  // If category is 'mcp', don't fetch Skills
   if (activeCategory.value === 'mcp') {
     skills.value = [];
     return;
   }
-
   try {
     const query = buildQueryParams();
     const res = await fetch(`/api/v1/skills/?${query}`);
@@ -699,15 +592,12 @@ const fetchSkills = async () => {
         type: 'skill',
         author: s.author || 'System', 
         iconUrl: '/tools/skill.svg',
-        bgColor: 'bg-green-50',
         installed: installedTools.value.has(s.id),
         downloads: s.downloads || 0,
         is_official: s.is_official
       }));
     }
-  } catch (e) {
-    console.error("Failed to fetch skills", e);
-  }
+  } catch (e) { console.error("Failed to fetch skills", e); }
 };
 
 const refreshData = async () => {
@@ -716,44 +606,28 @@ const refreshData = async () => {
   isLoading.value = false;
 };
 
-// Watchers to trigger refresh when filters change
-import { watch } from 'vue';
-watch([activeCategory, activeFilter], () => {
-  refreshData();
-});
+watch([activeCategory, activeFilter], () => refreshData());
 
-// Debounced search
 let searchTimeout;
 watch(searchQuery, () => {
   clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    refreshData();
-  }, 500);
+  searchTimeout = setTimeout(() => refreshData(), 500);
 });
 
 const createTool = async () => {
-  // Basic validation
-  if (!newToolForm.name) {
-    alert("请输入工具名称");
+  if (!newToolForm.name || !newToolForm.version) {
+    alert("请完善必要信息");
     return;
   }
-  if (!newToolForm.version) {
-    alert("请输入版本号");
-    return;
-  }
-  
   if (newToolForm.type === 'skill' && !newToolForm.content) {
     alert("请输入技能指令内容");
     return;
   }
 
   isSubmitting.value = true;
-  
   try {
     let url = '';
     let body = {};
-    
-    // Common fields
     const common = {
       name: newToolForm.name,
       description: newToolForm.description,
@@ -762,30 +636,12 @@ const createTool = async () => {
     
     if (newToolForm.type === 'skill') {
       url = isEditing.value ? `/api/v1/skills/${editingId.value}` : '/api/v1/skills/';
-      body = {
-        ...common,
-        version: newToolForm.version,
-        content: newToolForm.content,
-        is_active: true,
-        meta_data: { scope: newToolForm.scope }
-      };
+      body = { ...common, version: newToolForm.version, content: newToolForm.content, is_active: true, meta_data: { scope: newToolForm.scope } };
     } else {
       url = isEditing.value ? `/api/v1/mcp/${editingId.value}` : '/api/v1/mcp/';
       let config = {};
-      try {
-        config = JSON.parse(newToolForm.mcp_config);
-      } catch (e) {
-        alert("Invalid JSON in Config");
-        isSubmitting.value = false;
-        return;
-      }
-      body = {
-        ...common,
-        type: newToolForm.mcp_type,
-        config: config,
-        version: newToolForm.version,
-        is_active: true
-      };
+      try { config = JSON.parse(newToolForm.mcp_config); } catch (e) { alert("Invalid JSON"); isSubmitting.value = false; return; }
+      body = { ...common, type: newToolForm.mcp_type, config: config, version: newToolForm.version, is_active: true };
     }
     
     const res = await fetch(url, {
@@ -801,38 +657,21 @@ const createTool = async () => {
       const err = await res.json();
       alert(`Error: ${err.detail || 'Failed to save'}`);
     }
-  } catch (e) {
-    console.error(e);
-    alert("Network Error");
-  } finally {
-    isSubmitting.value = false;
-  }
+  } catch (e) { console.error(e); alert("Network Error"); } 
+  finally { isSubmitting.value = false; }
 };
 
 const deleteTool = async (item) => {
   if (!confirm(`Are you sure you want to delete ${item.name}?`)) return;
-  
   try {
-    const url = item.type === 'skill' 
-      ? `/api/v1/skills/${item.id}` 
-      : `/api/v1/mcp/${item.id}`;
-      
+    const url = item.type === 'skill' ? `/api/v1/skills/${item.id}` : `/api/v1/mcp/${item.id}`;
     const res = await fetch(url, { method: 'DELETE' });
-    if (res.ok) {
-      refreshData();
-    } else {
-      alert("Failed to delete");
-    }
-  } catch (e) {
-    console.error(e);
-    alert("Network Error");
-  }
+    if (res.ok) refreshData();
+    else alert("Failed to delete");
+  } catch (e) { console.error(e); alert("Network Error"); }
 };
 
-const filteredItems = computed(() => {
-  // Client-side merging only, filtering is done server-side
-  return [...mcpItems.value, ...skills.value];
-});
+const filteredItems = computed(() => [...mcpItems.value, ...skills.value]);
 
 onMounted(async () => {
   await fetchCategories();

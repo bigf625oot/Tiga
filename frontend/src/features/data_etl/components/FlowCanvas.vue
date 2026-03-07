@@ -11,7 +11,7 @@
       :pan-on-drag="true"
       :zoom-on-scroll="true"
       :zoom-on-pinch="true"
-      :fit-view-on-init="true"
+      :fit-view-on-init="false"
       @node-drag-stop="onNodeDragStop"
       @pane-ready="onPaneReady"
       @viewport-change="onViewportChange"
@@ -27,7 +27,7 @@
       
       <!-- Custom Controls -->
       <div 
-        class="absolute top-4 left-1/2 transform -translate-x-1/2 border rounded-lg flex items-center p-1 shadow-lg transition-colors duration-300 z-10"
+        class="absolute top-4 right-4 border rounded-lg flex items-center p-1 shadow-lg transition-colors duration-300 z-10"
         :class="isLightMode ? 'bg-white border-border' : 'bg-[#1F2937] border-gray-700'"
       >
         <button 
@@ -56,15 +56,9 @@
           @click="fitView"
           title="适应视图"
         >
-          [ ]
-        </button>
-        <div class="w-px h-4 mx-1" :class="isLightMode ? 'bg-gray-200' : 'bg-gray-700'"></div>
-        <button 
-          class="p-4 py-1 text-xs hover:opacity-80"
-          :class="isLightMode ? 'text-primary' : 'text-blue-400'"
-          @click="emit('add-node')"
-        >
-          + 添加节点
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
         </button>
       </div>
     </VueFlow>
@@ -136,7 +130,11 @@ watch(() => props.nodes, (newNodes) => {
       source: source.id,
       target: target.id,
       animated: true,
-      style: { stroke: isLightMode.value ? '#CBD5E1' : '#1E3A8A', strokeWidth: 2 },
+      style: { 
+        stroke: isLightMode.value ? '#94a3b8' : '#475569', 
+        strokeWidth: 1.5,
+        strokeDasharray: '5,5',
+      },
       markerEnd: MarkerType.ArrowClosed,
     });
   }
@@ -146,7 +144,12 @@ watch(() => props.nodes, (newNodes) => {
 watch(isLightMode, (light) => {
   edges.value = edges.value.map(e => ({
     ...e,
-    style: { ...e.style, stroke: light ? '#CBD5E1' : '#1E3A8A' }
+    style: { 
+      ...e.style, 
+      stroke: light ? '#94a3b8' : '#475569',
+      strokeWidth: 1.5,
+      strokeDasharray: '5,5',
+    }
   }));
 });
 

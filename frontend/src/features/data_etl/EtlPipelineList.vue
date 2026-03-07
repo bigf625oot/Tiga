@@ -22,7 +22,7 @@
           <Input 
             v-model="searchQuery"
             placeholder="搜索流水线名称..." 
-            class="p-10"
+            class="pl-9"
           />
         </div>
 

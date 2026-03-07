@@ -152,20 +152,21 @@ const computedConfigs = computed(() => {
                 ...(base.node?.normal || {}),
                 // Ensure colorMap is used in both modes
                 color: (node: any) => node.color || props.colorMap[node.type] || (dark ? '#60a5fa' : '#4466cc'),
-                strokeWidth: dark ? 1 : 1,
-                strokeColor: dark ? '#1e293b' : '#ffffff',
-                radius: 16,
+                strokeWidth: dark ? 2 : 1.5,
+                strokeColor: dark ? '#0f172a' : '#ffffff',
+                radius: 14,
             },
             hover: {
                 ...(base.node?.hover || {}),
                 color: '#00f260', // Neon Green for hover
-                strokeWidth: 2,
-                strokeColor: '#fff'
+                strokeWidth: 3,
+                strokeColor: '#fff',
+                radius: 16
             },
             label: {
                 ...(base.node?.label || {}),
-                color: dark ? '#cbd5e1' : '#1e293b',
-                fontSize: 11,
+                color: dark ? '#e2e8f0' : '#1e293b',
+                fontSize: 10,
             }
         },
         edge: {
