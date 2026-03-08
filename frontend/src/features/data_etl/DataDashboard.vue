@@ -24,15 +24,17 @@
             :class="isLightMode ? 'text-slate-500' : 'text-gray-600'"
           >{{ dataSources.length }} 个活跃数据源</div>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-4 custom-scrollbar">
-          <DataSourceCard 
-            v-for="source in dataSources" 
-            :key="source.id" 
-            :data="source"
-            :is-selected="selectedSourceId === source.id"
-            @select="handleSelectSource"
-          />
-        </div>
+        <ScrollArea class="flex-1">
+          <div class="px-6 pt-6 pb-2 space-y-4">
+            <DataSourceCard 
+              v-for="source in dataSources" 
+              :key="source.id" 
+              :data="source"
+              :is-selected="selectedSourceId === source.id"
+              @select="handleSelectSource"
+            />
+          </div>
+        </ScrollArea>
       </div>
 
       <!-- Middle: Canvas & Logs -->
@@ -66,13 +68,15 @@
             :class="isLightMode ? 'text-slate-500' : 'text-gray-600'"
           >{{ storageNodes.length }} 个活跃存储</div>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-4 custom-scrollbar">
-          <StorageCard 
-            v-for="storage in storageNodes" 
-            :key="storage.id" 
-            :data="storage" 
-          />
-        </div>
+        <ScrollArea class="flex-1">
+          <div class="px-6 pt-6 pb-2 space-y-4">
+            <StorageCard 
+              v-for="storage in storageNodes" 
+              :key="storage.id" 
+              :data="storage" 
+            />
+          </div>
+        </ScrollArea>
       </div>
     </div>
   </div>
@@ -80,6 +84,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDashboardMock } from './composables/useDashboardMock';
 import DashboardHeader from './components/DashboardHeader.vue';
 import DataSourceCard from './components/DataSourceCard.vue';
@@ -126,17 +131,4 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #0B0C10;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1F2937;
-  border-radius: 2px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #374151;
-}
 </style>

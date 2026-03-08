@@ -85,7 +85,8 @@
     </div>
 
     <!-- Content Grid -->
-    <div class="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar space-y-8">
+    <ScrollArea class="flex-1">
+      <div class="px-8 pb-8 space-y-8">
       
       <!-- Loading Skeleton -->
       <div v-if="isLoading">
@@ -101,7 +102,7 @@
             <Badge variant="secondary" class="rounded-full px-2">{{ group.items.length }}</Badge>
           </h2>
           
-          <div v-if="group.items.length === 0" class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <div v-if="group.items.length === 0" class="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground">
             <div class="bg-muted/50 p-6 rounded-full mb-4">
               <Search class="w-8 h-8 opacity-50" />
             </div>
@@ -247,7 +248,8 @@
           </Card></div>
         </div>
       </template>
-    </div>
+      </div>
+    </ScrollArea>
 
     <!-- Right Drawer (Sheet) -->
     <Sheet v-model:open="showDrawer">
@@ -326,7 +328,8 @@
           </DialogDescription>
         </DialogHeader>
 
-        <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+        <ScrollArea class="flex-1">
+          <div class="p-6">
           <!-- Step 1: Select Type -->
           <div v-if="currentStep === 1" class="grid grid-cols-2 gap-4">
             <div 
@@ -1192,7 +1195,8 @@
                 </div>
              </template>
           </div>
-        </div>
+          </div>
+        </ScrollArea>
 
         <DialogFooter class="px-6 py-4 border-t bg-muted/20 sm:justify-between">
           <div class="flex items-center gap-4">
@@ -1248,6 +1252,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { SkeletonDataSource } from '@/components/skeletons';
 import { dataSourceApi, type DataSourceCreate } from './api';
@@ -1420,6 +1425,46 @@ const fetchDataSources = async () => {
   isLoading.value = true;
   try {
     const data = await dataSourceApi.list();
+    
+    // Mock Data (if empty)
+    if (data.length === 0) {
+      dataSourceList.value = [
+        {
+          id: 101,
+          name: '示例 SFTP 数据源',
+          type: 'sftp',
+          status: 'running',
+          throughput: '0/s',
+          metrics: { today_files: 0, current_file: null }
+        },
+        {
+          id: 102,
+          name: '示例 政策法规爬虫',
+          type: 'crawler',
+          status: 'running',
+          throughput: '0/s',
+          metrics: { today_count: 0, success_rate: 0 }
+        },
+        {
+          id: 103,
+          name: '示例 生产数据库 (MySQL)',
+          type: 'database',
+          status: 'running',
+          throughput: '0/s',
+          metrics: { table_count: 0, total_records: 0, db_type: 'MySQL' }
+        },
+        {
+          id: 104,
+          name: '示例 外部汇率 API',
+          type: 'api',
+          status: 'running',
+          throughput: '0/s',
+          metrics: { api_calls: 0, data_volume: 0 }
+        }
+      ];
+      return;
+    }
+
     // Map backend data to frontend model if necessary, or just use as is
     // Backend returns snake_case, frontend uses mixed but mostly relies on item properties
     // Let's assume we use backend properties directly and adjust template if needed.
@@ -1838,11 +1883,4 @@ const navigateToEtlDetail = (pipeline: any) => {
 </script>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
-}
 </style>

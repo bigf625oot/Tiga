@@ -443,7 +443,6 @@ const ServiceMarket = defineAsyncComponent(() => import('@/features/agent/compon
 const WorkflowManagement = defineAsyncComponent(() => import('@/features/workflow/components/WorkflowManagement.vue'));
 const DataDashboard = defineAsyncComponent(() => import('@/features/data_etl/DataDashboard.vue'));
 const DataSourceManagement = defineAsyncComponent(() => import('@/features/data_etl/DataSourceManagement.vue'));
-const EtlPipeline = defineAsyncComponent(() => import('@/features/data_etl/EtlPipeline.vue'));
 const EtlPipelineList = defineAsyncComponent(() => import('@/features/data_etl/EtlPipelineList.vue'));
 const EditorLayout = defineAsyncComponent(() => import('@/features/etl_editor/EditorLayout.vue'));
 const SystemSettings = defineAsyncComponent(() => import('@/features/data_etl/SystemSettings.vue'));
