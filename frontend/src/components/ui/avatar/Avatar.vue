@@ -3,9 +3,7 @@ import { type HTMLAttributes, computed } from 'vue'
 import { AvatarRoot, type AvatarRootProps } from 'radix-vue'
 import { cn } from '@/lib/utils'
 
-const props = withDefaults(defineProps<AvatarRootProps & { class?: HTMLAttributes['class'] }>(), {
-  shape: 'circle',
-})
+const props = withDefaults(defineProps<AvatarRootProps & { class?: HTMLAttributes['class'] }>(), {})
 
 const delegatedProps = computed(() => {
   const { class: _, ...delegated } = props

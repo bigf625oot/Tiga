@@ -210,7 +210,7 @@ const removeEdgeMapping = (index: number) => {
                     </div>
                     <Trash2 
                       class="w-3.5 h-3.5 cursor-pointer text-muted-foreground hover:text-destructive transition-colors" 
-                      @click="removeNodeMapping(idx)" 
+                      @click="removeNodeMapping(Number(idx))" 
                     />
                   </div>
                   <div v-if="!nodeMappings.length" class="text-center py-4 text-xs text-muted-foreground bg-muted/5 rounded border border-dashed">
@@ -263,7 +263,7 @@ const removeEdgeMapping = (index: number) => {
                     </div>
                     <Trash2 
                       class="w-3.5 h-3.5 cursor-pointer text-muted-foreground hover:text-destructive transition-colors shrink-0 ml-2" 
-                      @click="removeEdgeMapping(idx)" 
+                      @click="removeEdgeMapping(Number(idx))" 
                     />
                   </div>
                   <div v-if="!edgeMappings.length" class="text-center py-4 text-xs text-muted-foreground bg-muted/5 rounded border border-dashed">

@@ -1,1 +1,0 @@
-export default 'data:image/svg+xml;base64,PHN2Zy8+';

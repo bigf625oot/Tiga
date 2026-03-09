@@ -192,7 +192,7 @@ const validationErrors = computed(() => {
                     {{ type }}
                     <Trash2 
                       class="w-3 h-3 cursor-pointer text-muted-foreground group-hover:text-destructive transition-colors" 
-                      @click="removeEntityType(idx)" 
+                      @click="removeEntityType(Number(idx))" 
                     />
                   </Badge>
                   <span v-if="!(config.entity_types?.length)" class="text-xs text-muted-foreground italic">
@@ -235,7 +235,7 @@ const validationErrors = computed(() => {
                     {{ type }}
                     <Trash2 
                       class="w-3 h-3 cursor-pointer text-muted-foreground group-hover:text-destructive transition-colors" 
-                      @click="removeRelationType(idx)" 
+                      @click="removeRelationType(Number(idx))" 
                     />
                   </Badge>
                   <span v-if="!(config.relation_types?.length)" class="text-xs text-muted-foreground italic">
@@ -278,7 +278,7 @@ const validationErrors = computed(() => {
                     {{ prop }}
                     <Trash2 
                       class="w-3 h-3 cursor-pointer text-muted-foreground group-hover:text-destructive transition-colors" 
-                      @click="removeProperty(idx)" 
+                      @click="removeProperty(Number(idx))" 
                     />
                   </Badge>
                   <span v-if="!(config.properties_to_extract?.length)" class="text-xs text-muted-foreground italic">

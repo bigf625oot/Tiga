@@ -15,7 +15,8 @@ import {
   CheckCircle2, 
   Terminal,
   Plus,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-vue-next';
 
 // --- Monaco Editor Import (Dynamic to avoid SSR issues if any, though this is SPA) ---
@@ -43,6 +44,7 @@ const activeTab = ref('code'); // code, libraries, output
 const executionStatus = ref<'idle' | 'running' | 'success' | 'error'>('idle');
 const executionOutput = ref('');
 const executionTime = ref(0);
+const isConsoleVisible = computed(() => executionStatus.value !== 'idle');
 
 // --- Default Code Template ---
 const defaultCode = `def process(record):
@@ -219,7 +221,7 @@ const validationErrors = computed(() => {
                 </div>
                 <Trash2 
                   class="w-3.5 h-3.5 cursor-pointer text-muted-foreground hover:text-destructive transition-colors" 
-                  @click="removeLibrary(idx)" 
+                  @click="removeLibrary(Number(idx))" 
                 />
               </div>
               <div v-if="!(config.libraries?.length)" class="text-center py-8 text-xs text-muted-foreground">
@@ -232,9 +234,9 @@ const validationErrors = computed(() => {
 
       <!-- Output Console (Always visible at bottom if not idle) -->
       <div 
-        v-if="executionStatus !== 'idle'" 
+        v-if="isConsoleVisible" 
         class="border-t bg-black/95 text-white flex flex-col transition-all duration-300"
-        :class="executionStatus !== 'idle' ? 'h-[160px]' : 'h-0 overflow-hidden'"
+        :class="isConsoleVisible ? 'h-[160px]' : 'h-0 overflow-hidden'"
       >
         <div class="flex items-center justify-between px-3 py-1.5 border-b border-white/10 bg-white/5">
           <div class="flex items-center gap-2 text-[10px] font-medium text-muted-foreground">

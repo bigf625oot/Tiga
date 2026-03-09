@@ -207,7 +207,7 @@ const removeKeyField = (index: number) => {
                   class="pr-1 gap-1"
                 >
                   {{ key }}
-                  <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive" @click="removeKeyField(idx)" />
+                  <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive" @click="removeKeyField(Number(idx))" />
                 </Badge>
               </div>
             </div>
@@ -251,7 +251,7 @@ const removeKeyField = (index: number) => {
                     </div>
                     <Trash2 
                       class="w-3.5 h-3.5 cursor-pointer text-muted-foreground hover:text-destructive transition-colors" 
-                      @click="removeMapping(idx)" 
+                      @click="removeMapping(Number(idx))" 
                     />
                   </div>
                   <div v-if="!mappings.length" class="text-center py-4 text-xs text-muted-foreground bg-muted/5 rounded border border-dashed">

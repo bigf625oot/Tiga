@@ -11,8 +11,8 @@ export const usePipelineStore = defineStore('pipeline', () => {
   const error = ref<string | null>(null);
 
   // Vue Flow State
-  const nodes = ref<Node<NodeData>[]>([]);
-  const edges = ref<Edge[]>([]);
+  const nodes = ref<any[]>([]);
+  const edges = ref<any[]>([]);
   const selectedNodeId = ref<string | null>(null);
 
   const isRunning = computed(() => currentPipeline.value?.status === PipelineStatus.RUNNING);
@@ -67,9 +67,10 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   };
   
-  // @ts-ignore
   const selectedNode = computed<any>(() => {
-    const found = nodes.value.find(n => n.id === selectedNodeId.value);
+    const list = nodes.value as unknown as Array<any>;
+    const id = selectedNodeId.value;
+    const found = list.find((n: any) => n?.id === id);
     return found || null;
   });
 
@@ -85,7 +86,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   };
 
-  const addNode = (node: Node<NodeData>) => {
+  const addNode = (node: any) => {
     nodes.value.push(node);
     // Auto save or mark dirty?
   };
@@ -234,7 +235,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
     return false;
   };
 
-  const initializeTemplate = (templateNodes: Node[], templateEdges: Edge[]) => {
+  const initializeTemplate = (templateNodes: any[], templateEdges: any[]) => {
     currentPipeline.value = null; // Reset current pipeline
     nodes.value = JSON.parse(JSON.stringify(templateNodes));
     edges.value = JSON.parse(JSON.stringify(templateEdges));

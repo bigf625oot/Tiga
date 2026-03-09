@@ -214,7 +214,7 @@ onMounted(() => {
                   <div v-if="discoveredFields.length > 0 && row.type !== 'constant' && row.type !== 'expression'" class="relative">
                     <Select 
                       :model-value="row.source" 
-                      @update:model-value="(v) => updateRow(idx, 'source', v)"
+                      @update:model-value="(v) => updateRow(Number(idx), 'source', v)"
                     >
                       <SelectTrigger class="h-8 text-xs">
                         <SelectValue placeholder="选择字段..." />
@@ -227,7 +227,7 @@ onMounted(() => {
                   <Input 
                     v-else-if="row.type !== 'constant' && row.type !== 'expression'"
                     :model-value="row.source" 
-                    @update:model-value="(v) => updateRow(idx, 'source', v)"
+                    @update:model-value="(v) => updateRow(Number(idx), 'source', v)"
                     placeholder="源字段名" 
                     class="h-8 text-xs font-mono"
                   />
@@ -236,7 +236,7 @@ onMounted(() => {
                   <Input 
                     v-if="row.type === 'expression'"
                     :model-value="row.expression"
-                    @update:model-value="(v) => updateRow(idx, 'expression', v)"
+                    @update:model-value="(v) => updateRow(Number(idx), 'expression', v)"
                     placeholder="e.g. price * 0.8"
                     class="h-8 text-xs font-mono text-blue-600"
                   />
@@ -244,7 +244,7 @@ onMounted(() => {
                   <Input 
                     v-if="row.type === 'constant'"
                     :model-value="row.expression"
-                    @update:model-value="(v) => updateRow(idx, 'expression', v)"
+                    @update:model-value="(v) => updateRow(Number(idx), 'expression', v)"
                     placeholder="固定值"
                     class="h-8 text-xs font-mono text-purple-600"
                   />
@@ -256,7 +256,7 @@ onMounted(() => {
                 <div class="flex justify-center">
                   <Select 
                     :model-value="row.type" 
-                    @update:model-value="(v) => updateRow(idx, 'type', v)"
+                    @update:model-value="(v) => updateRow(Number(idx), 'type', v)"
                   >
                     <SelectTrigger class="h-8 w-[110px] text-xs bg-muted/20 border-dashed">
                       <SelectValue />
@@ -274,7 +274,7 @@ onMounted(() => {
                 <div v-if="row.type === 'cast'" class="mt-1 flex justify-center">
                   <Select 
                     :model-value="row.expression || 'string'" 
-                    @update:model-value="(v) => updateRow(idx, 'expression', v)"
+                    @update:model-value="(v) => updateRow(Number(idx), 'expression', v)"
                   >
                     <SelectTrigger class="h-6 w-[110px] text-[10px]">
                       <SelectValue />
@@ -296,7 +296,7 @@ onMounted(() => {
                   <ArrowRight class="w-3 h-3 text-muted-foreground shrink-0 opacity-50" />
                   <Input 
                     :model-value="row.target" 
-                    @update:model-value="(v) => updateRow(idx, 'target', v)"
+                    @update:model-value="(v) => updateRow(Number(idx), 'target', v)"
                     placeholder="目标字段名" 
                     class="h-8 text-xs font-mono border-primary/20 focus-visible:border-primary"
                   />
@@ -309,7 +309,7 @@ onMounted(() => {
                   variant="ghost" 
                   size="icon" 
                   class="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                  @click="removeRow(idx)"
+                  @click="removeRow(Number(idx))"
                 >
                   <Trash2 class="w-3.5 h-3.5" />
                 </Button>

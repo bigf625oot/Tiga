@@ -212,7 +212,7 @@ const removeMetaField = (index: number) => {
                     class="pr-1 gap-1"
                   >
                     {{ field }}
-                    <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive" @click="removeMetaField(idx)" />
+                    <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive" @click="removeMetaField(Number(idx))" />
                   </Badge>
                   <span v-if="!(config.metadata_fields?.length)" class="text-xs text-muted-foreground italic">
                     暂无元数据字段
