@@ -294,7 +294,7 @@
              <component 
                :is="currentViewComponent" 
                v-bind="currentViewProps" 
-               @back="currentView = 'etl_list'"
+               @back="handleBack"
                @view-detail="viewDetail"
                @navigate="currentView = $event"
                @navigate-to-extraction="handleNavigateToExtraction"
@@ -654,6 +654,14 @@ const knowledgeSidebarItems: SidebarItem[] = [
 const currentSidebarItems = computed<SidebarItem[]>(() => {
     return sidebarTab.value === 'agent' ? agentSidebarItems : knowledgeSidebarItems;
 });
+
+const handleBack = () => {
+    if (currentView.value === 'detail') {
+        currentView.value = 'list';
+    } else {
+        currentView.value = 'etl_list';
+    }
+};
 
 onMounted(() => {
     fetchSessions();

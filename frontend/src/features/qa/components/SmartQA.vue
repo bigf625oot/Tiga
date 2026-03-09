@@ -89,9 +89,7 @@
         <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center px-4 py-8 overflow-y-auto relative custom-scrollbar">
              <div class="w-full max-w-2xl flex flex-col items-center gap-8">
                 <div class="flex flex-col items-center gap-4">
-                    <div class="w-24 h-24 flex items-center justify-center mb-2 bg-muted/20 rounded-full p-4">
-                        <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain opacity-90" />
-                    </div>
+                    <TechAnimation :width="200" :height="200" class="mb-4" />
                     <h1 class="text-3xl font-bold tracking-tight text-foreground text-center">让我们创造点厉害的东西！</h1>
                 </div>
                 
@@ -368,9 +366,7 @@
           <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center px-4 py-8 overflow-y-auto relative custom-scrollbar">
                <div class="w-full max-w-2xl flex flex-col items-center gap-8">
                   <div class="flex flex-col items-center gap-4">
-                      <div class="w-24 h-24 flex items-center justify-center mb-2 bg-muted/20 rounded-full p-4">
-                          <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain opacity-90" />
-                      </div>
+                      <TechAnimation :width="200" :height="200" class="mb-4" />
                       <h1 v-if="!embedded" class="text-3xl font-bold tracking-tight text-foreground text-center">让我们创造点厉害的东西！</h1>
                       <h1 v-else class="text-xl font-semibold text-foreground text-center">有什么可以帮您？</h1>
                   </div>
@@ -734,6 +730,7 @@ import { marked } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { api } from '@/core/api/client';
+import TechAnimation from './TechAnimation.vue';
 import MessageList from './MessageList.vue';
 import ReferencesTable from './ReferencesTable.vue';
 import ReferencesCards from './ReferencesCards.vue';

@@ -1,281 +1,428 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import axios from 'axios'
+import { Search, Loader2, ChevronDown, SlidersHorizontal, AlertCircle, X, ExternalLink, Calendar, Globe } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { useToast } from '@/components/ui/toast/use-toast'
+
+// Types
+interface SearchResult {
+  title: string
+  url: string
+  content: string
+  source: string
+  news_time: string
+  tier: 'core' | 'crawler' | 'authoritative' | 'tavily' | 'global' | 'aliyun'
+}
+
+interface AdvancedForm {
+  groupTag: string
+  constraints: string
+  timeRange: string
+  requirements: string
+  enabledTiers: string[]
+}
+
+// State
+const query = ref('')
+const loading = ref(false)
+const error = ref('')
+const results = ref<SearchResult[]>([])
+const hasSearched = ref(false)
+const showAdvanced = ref(false)
+
+// Options
+const useGovSites = ref(true)
+const useAuthSites = ref(true)
+
+const advancedForm = ref<AdvancedForm>({
+  groupTag: '',
+  constraints: '',
+  timeRange: '不限',
+  requirements: '',
+  enabledTiers: ['crawler', 'tavily', 'aliyun']
+})
+
+const timeRangeOptions = ['不限', '最近一天', '最近一周', '最近一月', '最近一年']
+
+const api = axios.create({
+  baseURL: '/api/v1'
+})
+
+const { toast } = useToast()
+
+// Computed
+const hasResults = computed(() => results.value.length > 0)
+const isSearchDisabled = computed(() => loading.value || !query.value.trim())
+
+// Methods
+const getTierLabel = (tier: string) => {
+  const map: Record<string, string> = {
+    'core': '政府官网',
+    'crawler': '政府官网',
+    'authoritative': '权威媒体',
+    'tavily': '权威媒体',
+    'global': '全网检索',
+    'aliyun': '全网检索'
+  }
+  return map[tier] || tier
+}
+
+const getTierVariant = (tier: string): "default" | "secondary" | "destructive" | "outline" => {
+  if (tier === 'core' || tier === 'crawler') return 'destructive'
+  if (tier === 'authoritative' || tier === 'tavily') return 'secondary' // Using secondary for purple-ish feel if customized, or default
+  return 'outline'
+}
+
+const handleSearch = async () => {
+  if (!query.value.trim()) return
+  
+  loading.value = true
+  error.value = ''
+  results.value = []
+  hasSearched.value = true
+  
+  try {
+    const hasAdvancedInput = advancedForm.value.groupTag || 
+                             advancedForm.value.constraints || 
+                             advancedForm.value.requirements || 
+                             (advancedForm.value.timeRange && advancedForm.value.timeRange !== '不限')
+
+    if (showAdvanced.value || hasAdvancedInput) {
+      let extraRequirements: string[] = []
+      if (useGovSites.value) extraRequirements.push("优先来源于政府官网的信息")
+      if (useAuthSites.value) extraRequirements.push("优先来源于权威媒体的报道")
+      
+      const baseRequirements = advancedForm.value.requirements || ''
+      const finalRequirements = [baseRequirements, ...extraRequirements].filter(Boolean).join('，')
+
+      const payload = {
+        keywords: [query.value],
+        group_tag: advancedForm.value.groupTag || '通用',
+        keyword_constraints: advancedForm.value.constraints || '',
+        result_requirements: finalRequirements,
+        time_range: advancedForm.value.timeRange === '不限' ? null : advancedForm.value.timeRange,
+        max_char_limit: 1000,
+        enabled_tiers: advancedForm.value.enabledTiers
+      }
+      
+      const res = await api.post('/news_search/custom_search', payload)
+      
+      if (res.data.success) {
+        results.value = res.data.data.results
+        if (results.value.length === 0) {
+          toast({
+            title: "未找到结果",
+            description: "请尝试调整关键词或搜索条件",
+            variant: "default",
+          })
+        }
+      } else {
+        throw new Error(res.data.message || '搜索失败')
+      }
+    } else {
+      const govSites = useGovSites.value ? ["gov.cn", "miit.gov.cn"] : []
+      
+      const payload = {
+        keywords: [query.value],
+        gov_sites: govSites,
+        authoritative_sites: useAuthSites.value ? undefined : [],
+        max_results: 20
+      }
+      
+      const res = await api.post('/news_search/search', payload)
+      
+      if (res.data.success) {
+        results.value = res.data.data.results
+        if (results.value.length === 0) {
+          toast({
+            title: "未找到结果",
+            description: "请尝试调整关键词",
+            variant: "default",
+          })
+        }
+      } else {
+        throw new Error(res.data.message || '搜索失败')
+      }
+    }
+  } catch (e: any) {
+    const errorMsg = e.response?.data?.detail || e.message || '网络请求失败'
+    error.value = errorMsg
+    toast({
+      title: "搜索出错",
+      description: errorMsg,
+      variant: "destructive",
+    })
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+const clearResults = () => {
+  results.value = []
+  hasSearched.value = false
+  query.value = ''
+}
+</script>
+
 <template>
-  <div class="max-w-[1000px] mx-auto p-4">
-        <!-- Intro State -->
-    <div v-if="!loading && !hasSearched" class="text-center py-10">
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6">
-            <svg class="w-10 h-10 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </div>
-        <h3 class="text-xl font-semibold text-slate-800 mb-2">全网智能检索</h3>
-        <p class="text-muted-foreground max-w-md mx-auto">聚合全网信息，为您提供精准的行业情报。</p>
+  <div class="w-full max-w-5xl mx-auto p-4 md:p-6 space-y-8 min-h-[calc(100vh-4rem)]">
+    <!-- Header / Intro -->
+    <div v-if="!hasResults && !loading" class="text-center py-12 md:py-20 animate-in fade-in zoom-in duration-500">
+      <div class="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-primary/10 rounded-full mb-6 ring-4 ring-primary/5">
+        <Globe class="w-8 h-8 md:w-10 md:h-10 text-primary" />
+      </div>
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight mb-3 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        全网智能检索
+      </h1>
+      <p class="text-muted-foreground max-w-lg mx-auto text-sm md:text-base leading-relaxed">
+        聚合政府官网、权威媒体及全网信息，为您提供精准的行业情报与深度洞察。
+      </p>
     </div>
-    <!-- Search Box Area -->
-    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-8">
-        <div class="flex gap-4">
-            <div class="flex-1 relative">
-                <input 
-                    v-model="query" 
-                    @keyup.enter="handleSearch" 
-                    type="text" 
-                    placeholder="输入关键词，例如：'2024年工业互联网发展趋势'" 
-                    class="w-full pl-4 pr-4 p-4 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                >
-            </div>
-            <button 
-                @click="handleSearch" 
-                :disabled="loading || !query.trim()"
-                class="bg-primary hover:bg-blue-700 text-white px-8 p-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-                <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                <span v-else>搜索</span>
-            </button>
+
+    <!-- Search Area -->
+    <Card class="border-none shadow-lg bg-card/50 backdrop-blur-sm sticky top-4 z-10 transition-all duration-300" :class="{ 'shadow-sm': hasResults }">
+      <CardContent class="p-4 md:p-6 space-y-4">
+        <div class="flex flex-col md:flex-row gap-3 md:gap-4">
+          <div class="relative flex-1 group">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <Input 
+              v-model="query" 
+              @keyup.enter="handleSearch"
+              type="text" 
+              placeholder="输入关键词，例如：'2024年工业互联网发展趋势'" 
+              class="pl-10 h-12 text-base shadow-sm border-muted-foreground/20 focus-visible:ring-primary/20"
+              aria-label="搜索关键词"
+            />
+          </div>
+          <Button 
+            @click="handleSearch" 
+            :disabled="isSearchDisabled"
+            size="lg"
+            class="h-12 px-8 font-medium shadow-md transition-all active:scale-95"
+          >
+            <Loader2 v-if="loading" class="w-5 h-5 mr-2 animate-spin" />
+            <span v-else>立即搜索</span>
+          </Button>
         </div>
-        
-        <!-- Search Options (Simple) -->
-        <div class="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <div class="flex gap-6">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="useGovSites" class="rounded text-primary focus:ring-blue-500">
-                    <span>优先政府官网</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="useAuthSites" class="rounded text-primary focus:ring-blue-500">
-                    <span>优先权威媒体</span>
-                </label>
+
+        <!-- Quick Filters -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
+          <div class="flex items-center gap-6">
+            <div class="flex items-center space-x-2">
+              <Checkbox id="gov-sites" v-model:checked="useGovSites" />
+              <Label for="gov-sites" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                优先政府官网
+              </Label>
             </div>
-            <button 
-                @click="showAdvanced = !showAdvanced" 
-                class="flex items-center gap-1 text-primary hover:text-blue-700 font-medium transition-colors"
-            >
-                <span>高级搜索</span>
-                <svg 
-                    class="w-4 h-4 transition-transform duration-200" 
-                    :class="showAdvanced ? 'rotate-180' : ''"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                >
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-            </button>
+            <div class="flex items-center space-x-2">
+              <Checkbox id="auth-sites" v-model:checked="useAuthSites" />
+              <Label for="auth-sites" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                优先权威媒体
+              </Label>
+            </div>
+          </div>
+          
+          <Collapsible v-model:open="showAdvanced" class="w-full sm:w-auto">
+            <CollapsibleTrigger as-child>
+              <Button variant="ghost" size="sm" class="w-full sm:w-auto text-muted-foreground hover:text-primary gap-2">
+                <SlidersHorizontal class="w-4 h-4" />
+                <span>高级筛选</span>
+                <ChevronDown class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': showAdvanced }" />
+              </Button>
+            </CollapsibleTrigger>
+          </Collapsible>
         </div>
 
         <!-- Advanced Options Panel -->
-        <div v-if="showAdvanced" class="mt-6 pt-6 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">关键词分组标签</label>
-                <input 
-                    v-model="advancedForm.groupTag"
-                    type="text" 
-                    placeholder="例如：能源行业、政策法规" 
-                    class="w-full p-4 py-2 rounded-lg border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-all"
-                >
-            </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">时间范围</label>
-                <select 
-                    v-model="advancedForm.timeRange"
-                    class="w-full p-4 py-2 rounded-lg border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-all bg-white"
-                >
-                    <option v-for="opt in timeRangeOptions" :key="opt" :value="opt">{{ opt }}</option>
-                </select>
-            </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">关键词限定条件</label>
-                <input 
-                    v-model="advancedForm.constraints"
-                    type="text" 
-                    placeholder="例如：必须包含'碳达峰'，不包含'煤炭'" 
-                    class="w-full p-4 py-2 rounded-lg border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-all"
-                >
-            </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">返回结果要求</label>
-                <input 
-                    v-model="advancedForm.requirements"
-                    type="text" 
-                    placeholder="例如：按时间倒序，优先权威媒体" 
-                    class="w-full p-4 py-2 rounded-lg border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-all"
-                >
-            </div>
-            
-            <div class="col-span-1 md:col-span-2 space-y-2">
-                <label class="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">搜索来源</label>
-                <div class="flex flex-wrap gap-6 pt-1">
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" v-model="advancedForm.enabledTiers" value="crawler" class="rounded text-red-600 focus:ring-red-500 border-slate-300">
-                        <span class="text-sm text-slate-700">政府官网爬虫 (Crawler)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" v-model="advancedForm.enabledTiers" value="tavily" class="rounded text-purple-600 focus:ring-purple-500 border-slate-300">
-                        <span class="text-sm text-slate-700">权威媒体 (Tavily)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" v-model="advancedForm.enabledTiers" value="aliyun" class="rounded text-orange-600 focus:ring-orange-500 border-slate-300">
-                        <span class="text-sm text-slate-700">全网检索 (Aliyun)</span>
-                    </label>
+        <Collapsible v-model:open="showAdvanced">
+          <CollapsibleContent class="space-y-4 pt-4 animate-accordion-down overflow-hidden">
+            <Separator class="my-4" />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <Label class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">关键词分组</Label>
+                <Input v-model="advancedForm.groupTag" placeholder="例如：能源行业、政策法规" class="h-9" />
+              </div>
+              <div class="space-y-2">
+                <Label class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">时间范围</Label>
+                <Select v-model="advancedForm.timeRange">
+                  <SelectTrigger class="h-9 w-full">
+                    <SelectValue placeholder="选择时间范围" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="opt in timeRangeOptions" :key="opt" :value="opt">
+                      {{ opt }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-2">
+                <Label class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">关键词限定</Label>
+                <Input v-model="advancedForm.constraints" placeholder="例如：必须包含'碳达峰'，不包含'煤炭'" class="h-9" />
+              </div>
+              <div class="space-y-2">
+                <Label class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">结果要求</Label>
+                <Input v-model="advancedForm.requirements" placeholder="例如：按时间倒序，优先权威媒体" class="h-9" />
+              </div>
+              <div class="col-span-1 md:col-span-2 space-y-3">
+                <Label class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">数据来源</Label>
+                <div class="flex flex-wrap gap-4">
+                  <div class="flex items-center space-x-2 bg-muted/50 px-3 py-1.5 rounded-md">
+                    <Checkbox 
+                      id="source-crawler" 
+                      :checked="advancedForm.enabledTiers.includes('crawler')"
+                      @update:checked="(checked) => {
+                        if (checked) advancedForm.enabledTiers.push('crawler')
+                        else advancedForm.enabledTiers = advancedForm.enabledTiers.filter(t => t !== 'crawler')
+                      }"
+                    />
+                    <Label for="source-crawler" class="text-sm font-normal cursor-pointer">政府官网爬虫</Label>
+                  </div>
+                  <div class="flex items-center space-x-2 bg-muted/50 px-3 py-1.5 rounded-md">
+                    <Checkbox 
+                      id="source-tavily" 
+                      :checked="advancedForm.enabledTiers.includes('tavily')"
+                      @update:checked="(checked) => {
+                        if (checked) advancedForm.enabledTiers.push('tavily')
+                        else advancedForm.enabledTiers = advancedForm.enabledTiers.filter(t => t !== 'tavily')
+                      }"
+                    />
+                    <Label for="source-tavily" class="text-sm font-normal cursor-pointer">权威媒体 (Tavily)</Label>
+                  </div>
+                  <div class="flex items-center space-x-2 bg-muted/50 px-3 py-1.5 rounded-md">
+                    <Checkbox 
+                      id="source-aliyun" 
+                      :checked="advancedForm.enabledTiers.includes('aliyun')"
+                      @update:checked="(checked) => {
+                        if (checked) advancedForm.enabledTiers.push('aliyun')
+                        else advancedForm.enabledTiers = advancedForm.enabledTiers.filter(t => t !== 'aliyun')
+                      }"
+                    />
+                    <Label for="source-aliyun" class="text-sm font-normal cursor-pointer">全网检索 (Aliyun)</Label>
+                  </div>
                 </div>
+              </div>
             </div>
-        </div>
-    </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </CardContent>
+    </Card>
 
-    <!-- Status / Error -->
-    <div v-if="error" class="bg-red-50 text-red-600 p-4 rounded-lg mb-6 flex items-center gap-2">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        {{ error }}
+    <!-- Error State -->
+    <Alert v-if="error" variant="destructive" class="animate-in fade-in slide-in-from-top-2">
+      <AlertCircle class="h-4 w-4" />
+      <AlertTitle>搜索失败</AlertTitle>
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
+
+    <!-- Loading Skeletons -->
+    <div v-if="loading" class="space-y-4 animate-in fade-in duration-500">
+      <div class="flex justify-between items-center mb-4">
+        <Skeleton class="h-4 w-32" />
+        <Skeleton class="h-4 w-20" />
+      </div>
+      <div v-for="i in 3" :key="i" class="space-y-3 p-6 border rounded-xl bg-card">
+        <div class="flex justify-between">
+          <Skeleton class="h-6 w-2/3" />
+          <Skeleton class="h-5 w-16" />
+        </div>
+        <div class="flex gap-4">
+          <Skeleton class="h-4 w-24" />
+          <Skeleton class="h-4 w-32" />
+        </div>
+        <Skeleton class="h-20 w-full" />
+      </div>
     </div>
 
     <!-- Results List -->
-    <template v-if="results.length > 0">
-        <div class="space-y-6">
-            <div class="flex items-center justify-between text-muted-foreground text-sm mb-2">
-                <span>找到 {{ results.length }} 条相关结果</span>
-                <button @click="results = []" class="hover:text-red-500">清除结果</button>
-            </div>
+    <div v-if="hasResults && !loading" class="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-lg font-semibold tracking-tight flex items-center gap-2">
+          搜索结果
+          <Badge variant="secondary" class="rounded-full px-2.5">{{ results.length }}</Badge>
+        </h2>
+        <Button variant="ghost" size="sm" @click="clearResults" class="text-muted-foreground hover:text-destructive transition-colors">
+          <X class="w-4 h-4 mr-1" />
+          清除结果
+        </Button>
+      </div>
 
-            <div v-for="(item, index) in results" :key="index" class="bg-white rounded-lg p-6 shadow-sm border border-border hover:shadow-md transition-shadow group">
-                <div class="flex items-start justify-between gap-4 mb-2">
-                    <h3 class="text-lg font-semibold text-slate-800 group-hover:text-primary transition-colors leading-tight">
-                        <a :href="item.url" target="_blank" class="hover:underline">{{ item.title }}</a>
-                    </h3>
-                    <span 
-                        class="text-xs px-2 py-1 rounded border whitespace-nowrap"
-                        :class="{
-                            'bg-red-50 text-red-600 border-red-100': item.tier === 'core' || item.tier === 'crawler',
-                            'bg-purple-50 text-purple-600 border-purple-100': item.tier === 'authoritative' || item.tier === 'tavily',
-                            'bg-orange-50 text-orange-600 border-orange-100': item.tier === 'global' || item.tier === 'aliyun'
-                        }"
-                    >
-                        {{ getTierLabel(item.tier) }}
-                    </span>
-                </div>
-                
-                <div class="flex items-center gap-4 text-xs text-muted-foreground m-4">
-                    <span class="flex items-center gap-1">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                        {{ item.source }}
-                    </span>
-                    <span class="flex items-center gap-1">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        {{ item.news_time }}
-                    </span>
-                </div>
-                
-                <p class="text-slate-600 text-sm leading-relaxed line-clamp-3">{{ item.content }}</p>
-            </div>
+      <ScrollArea class="h-[calc(100vh-24rem)] pr-4">
+        <div class="space-y-4 pb-8">
+          <Card v-for="(item, index) in results" :key="index" class="group hover:shadow-md transition-all duration-300 border-muted/60 hover:border-primary/20">
+            <CardHeader class="pb-3 space-y-2">
+              <div class="flex items-start justify-between gap-4">
+                <CardTitle class="text-lg leading-snug font-semibold text-card-foreground group-hover:text-primary transition-colors">
+                  <a :href="item.url" target="_blank" rel="noopener noreferrer" class="hover:underline flex items-start gap-2">
+                    {{ item.title }}
+                    <ExternalLink class="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity mt-1" />
+                  </a>
+                </CardTitle>
+                <Badge :variant="getTierVariant(item.tier)" class="shrink-0 font-normal">
+                  {{ getTierLabel(item.tier) }}
+                </Badge>
+              </div>
+              <CardDescription class="flex items-center gap-4 text-xs mt-1">
+                <span class="flex items-center gap-1.5 text-muted-foreground/80">
+                  <Globe class="w-3.5 h-3.5" />
+                  {{ item.source }}
+                </span>
+                <span class="flex items-center gap-1.5 text-muted-foreground/80">
+                  <Calendar class="w-3.5 h-3.5" />
+                  {{ item.news_time }}
+                </span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3 group-hover:text-foreground/80 transition-colors">
+                {{ item.content }}
+              </p>
+            </CardContent>
+          </Card>
         </div>
-    </template>
-    
-    <template v-else-if="!loading && !error && hasSearched">
-        <div class="text-center py-20 text-muted-foreground">
-            <div class="mb-4 text-6xl">🔍</div>
-            <p>未找到相关结果，请尝试更换关键词</p>
-        </div>
-    </template>
+      </ScrollArea>
+    </div>
+
+    <!-- Empty State -->
+    <div v-if="hasSearched && !hasResults && !loading && !error" class="text-center py-20 text-muted-foreground animate-in fade-in zoom-in duration-300">
+      <div class="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Search class="w-8 h-8 opacity-50" />
+      </div>
+      <h3 class="text-lg font-medium text-foreground mb-1">未找到相关结果</h3>
+      <p class="text-sm">请尝试更换关键词或调整筛选条件</p>
+    </div>
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue';
-import axios from 'axios';
-
-const api = axios.create({
-    baseURL: '/api/v1' 
-});
-
-const query = ref('');
-const loading = ref(false);
-const error = ref('');
-const results = ref([]);
-const hasSearched = ref(false);
-
-const useGovSites = ref(true);
-const useAuthSites = ref(true);
-
-const showAdvanced = ref(false);
-const advancedForm = ref({
-    groupTag: '',
-    constraints: '',
-    timeRange: '不限',
-    requirements: '',
-    enabledTiers: ['crawler', 'tavily', 'aliyun']
-});
-const timeRangeOptions = ['不限', '最近一天', '最近一周', '最近一月', '最近一年'];
-
-const getTierLabel = (tier) => {
-    const map = {
-        'core': '政府官网爬虫',
-        'crawler': '政府官网爬虫',
-        'authoritative': '权威媒体(Tavily)',
-        'tavily': '权威媒体(Tavily)',
-        'global': '全网检索(Aliyun)',
-        'aliyun': '全网检索(Aliyun)'
-    };
-    return map[tier] || tier;
-};
-
-const handleSearch = async () => {
-    if (!query.value.trim()) return;
-    
-    loading.value = true;
-    error.value = '';
-    results.value = [];
-    hasSearched.value = true;
-    
-    try {
-        // Check if any advanced fields are used
-        const hasAdvancedInput = advancedForm.value.groupTag || 
-                                 advancedForm.value.constraints || 
-                                 advancedForm.value.requirements || 
-                                 (advancedForm.value.timeRange && advancedForm.value.timeRange !== '不限');
-
-        if (showAdvanced.value || hasAdvancedInput) {
-            // Advanced Custom Search: Merge standard options into requirements
-            let extraRequirements = [];
-            if (useGovSites.value) extraRequirements.push("优先来源于政府官网的信息");
-            if (useAuthSites.value) extraRequirements.push("优先来源于权威媒体的报道");
-            
-            const baseRequirements = advancedForm.value.requirements || '';
-            const finalRequirements = [baseRequirements, ...extraRequirements].filter(Boolean).join('，');
-
-            const payload = {
-                keywords: [query.value],
-                group_tag: advancedForm.value.groupTag || '通用',
-                keyword_constraints: advancedForm.value.constraints || '',
-                result_requirements: finalRequirements,
-                time_range: advancedForm.value.timeRange === '不限' ? null : advancedForm.value.timeRange,
-                max_char_limit: 1000,
-                enabled_tiers: advancedForm.value.enabledTiers
-            };
-            
-            const res = await api.post('/news_search/custom_search', payload);
-            
-            if (res.data.success) {
-                results.value = res.data.data.results;
-            } else {
-                error.value = res.data.message || '搜索失败';
-            }
-        } else {
-            // Standard Search
-            const govSites = useGovSites.value ? ["gov.cn", "miit.gov.cn"] : []; // Example sites
-            
-            const payload = {
-                keywords: [query.value],
-                gov_sites: govSites,
-                authoritative_sites: useAuthSites.value ? undefined : [], // Use default if checked, else empty
-                max_results: 20
-            };
-            
-            const res = await api.post('/news_search/search', payload);
-            
-            if (res.data.success) {
-                results.value = res.data.data.results;
-            } else {
-                error.value = res.data.message || '搜索失败';
-            }
-        }
-    } catch (e) {
-        error.value = e.response?.data?.detail || '网络请求失败';
-        console.error(e);
-    } finally {
-        loading.value = false;
-    }
-};
-</script>
+<style scoped>
+/* Custom animations can go here if not covered by Tailwind Animate */
+</style>

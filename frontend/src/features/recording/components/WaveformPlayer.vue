@@ -1,78 +1,50 @@
 <template>
-  <div class="w-full bg-white border-t border-slate-200 px-6 p-4 flex items-center gap-4 select-none">
+  <div class="w-full bg-background border-t border-border px-4 py-3 flex items-center gap-4 select-none shadow-sm">
     <!-- Play/Pause Button -->
-    <button 
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      class="h-10 w-10 rounded-full hover:bg-muted text-primary hover:text-primary/90 transition-colors shrink-0"
       @click="togglePlay"
-      class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center hover:bg-brand-gradient-end transition-all shadow-md shrink-0"
     >
-      <svg v-if="!isPlaying" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-        <path d="M8 5v14l11-7z"/>
-      </svg>
-      <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-      </svg>
-    </button>
+      <Play v-if="!isPlaying" class="h-6 w-6 fill-current" />
+      <Pause v-else class="h-6 w-6 fill-current" />
+    </Button>
 
     <!-- Time Display -->
-    <div class="text-xs font-mono text-muted-foreground w-24 text-center shrink-0">
+    <div class="text-xs font-mono text-muted-foreground w-24 text-center shrink-0 tabular-nums">
       {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
     </div>
 
-    <!-- Progress Bar -->
-    <div class="flex-1 relative group h-8 flex items-center">
-      <!-- Background Track -->
-      <div class="absolute inset-x-0 h-1 bg-slate-200 rounded-full overflow-hidden">
-        <!-- Buffered -->
-        <div class="h-full bg-slate-300 transition-all duration-200" :style="{ width: bufferedPercentage + '%' }"></div>
-      </div>
-      <!-- Progress -->
-      <div class="absolute left-0 h-1 bg-brand-primary rounded-full" :style="{ width: progressPercentage + '%' }"></div>
-      
-      <!-- Scrubber Input -->
-      <input 
-        type="range" 
-        min="0" 
-        :max="duration" 
-        step="0.1"
-        :value="currentTime"
-        @input="onSeek"
-        class="absolute inset-x-0 w-full h-full opacity-0 cursor-pointer z-10"
+    <!-- Progress Slider -->
+    <div class="flex-1 relative flex items-center min-w-0">
+      <Slider
+        v-model="sliderValue"
+        :max="duration"
+        :step="0.1"
+        class="w-full cursor-pointer"
+        @valueCommit="onSeekCommit"
       />
-      
-      <!-- Thumb (Visual only) -->
-      <div 
-        class="absolute h-3 w-3 bg-white border-2 border-brand-primary rounded-full shadow-sm pointer-events-none transform -translate-x-1/2 transition-transform duration-75"
-        :style="{ left: progressPercentage + '%' }"
-      ></div>
     </div>
 
     <!-- Speed Control -->
-    <div class="relative shrink-0">
-      <button 
-        @click="showSpeedMenu = !showSpeedMenu"
-        class="px-2 py-1 rounded text-xs font-medium text-slate-600 hover:bg-muted transition-colors w-12 text-center"
-      >
-        {{ playbackRate }}x
-      </button>
-      
-      <!-- Speed Menu -->
-      <div 
-        v-if="showSpeedMenu"
-        class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-border py-1 min-w-[80px] z-50 animate-[fadeIn_0.1s_ease-out]"
-      >
-        <button 
+    <DropdownMenu>
+      <DropdownMenuTrigger as-child>
+        <Button variant="ghost" size="sm" class="h-8 px-2 text-xs font-medium text-muted-foreground hover:text-foreground w-16 shrink-0">
+          {{ playbackRate }}x
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" class="min-w-[80px]">
+        <DropdownMenuItem 
           v-for="rate in [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]" 
           :key="rate"
           @click="changeSpeed(rate)"
-          class="block w-full p-4 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors"
-          :class="{ 'text-brand-primary font-semibold bg-brand-primary/5': rate === playbackRate, 'text-slate-700': rate !== playbackRate }"
+          :class="{ 'bg-accent text-accent-foreground': rate === playbackRate }"
         >
           {{ rate }}x
-        </button>
-      </div>
-      <!-- Backdrop to close menu -->
-      <div v-if="showSpeedMenu" class="fixed inset-0 z-40" @click="showSpeedMenu = false"></div>
-    </div>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
 
     <!-- Hidden Audio Element -->
     <audio 
@@ -88,10 +60,19 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { Play, Pause } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const props = defineProps({
   src: String,
-  seekTime: Number // Prop to control seeking from parent
+  seekTime: Number
 });
 
 const emit = defineEmits(['timeupdate']);
@@ -100,21 +81,29 @@ const audio = ref(null);
 const isPlaying = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
-const buffered = ref(0);
 const playbackRate = ref(1.0);
-const showSpeedMenu = ref(false);
+const isDragging = ref(false);
 
-const progressPercentage = computed(() => {
-  if (!duration.value) return 0;
-  return (currentTime.value / duration.value) * 100;
+const sliderValue = computed({
+  get: () => [currentTime.value],
+  set: (val) => {
+    isDragging.value = true;
+    if (val && val.length > 0) {
+        currentTime.value = val[0];
+    }
+  }
 });
 
-const bufferedPercentage = computed(() => {
-  if (!duration.value) return 0;
-  return (buffered.value / duration.value) * 100;
-});
+const onSeekCommit = (val) => {
+    isDragging.value = false;
+    if (val && val.length > 0) {
+        const time = val[0];
+        if (audio.value) {
+            audio.value.currentTime = time;
+        }
+    }
+};
 
-// Watch for external seek requests
 watch(() => props.seekTime, (newVal) => {
   if (newVal !== undefined && audio.value) {
     audio.value.currentTime = newVal;
@@ -125,13 +114,11 @@ watch(() => props.seekTime, (newVal) => {
   }
 });
 
-// Watch for src changes to reset state
 watch(() => props.src, () => {
     if (audio.value) {
         audio.value.load();
         currentTime.value = 0;
         duration.value = 0;
-        buffered.value = 0;
         isPlaying.value = false;
     }
 });
@@ -151,36 +138,20 @@ const togglePlay = async () => {
     }
 };
 
-const onSeek = (e) => {
-    const time = parseFloat(e.target.value);
-    if (audio.value) {
-        audio.value.currentTime = time;
-        currentTime.value = time;
-    }
-};
-
 const changeSpeed = (rate) => {
     playbackRate.value = rate;
     if (audio.value) {
         audio.value.playbackRate = rate;
     }
-    showSpeedMenu.value = false;
 };
 
 const onTimeUpdate = () => {
-    if (!audio.value) return;
+    if (!audio.value || isDragging.value) return;
     currentTime.value = audio.value.currentTime;
-    // Handle infinite duration (streaming) or NaN
     if (isFinite(audio.value.duration)) {
         duration.value = audio.value.duration;
     }
     emit('timeupdate', currentTime.value);
-};
-
-const onProgress = () => {
-    if (audio.value && audio.value.buffered.length > 0) {
-        buffered.value = audio.value.buffered.end(audio.value.buffered.length - 1);
-    }
 };
 
 const onLoadedMetadata = () => {
@@ -202,18 +173,15 @@ const formatTime = (seconds) => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
+const onProgress = () => {
+    // Optional: Add buffering visualization if needed
+};
+
+// Keyboard shortcuts
 const skip = (seconds) => {
     if (!audio.value) return;
     audio.value.currentTime = Math.max(0, Math.min(duration.value || 0, audio.value.currentTime + seconds));
 };
-
-onMounted(() => {
-    window.addEventListener('keydown', handleKeydown);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeydown);
-});
 
 const handleKeydown = (e) => {
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
@@ -227,4 +195,12 @@ const handleKeydown = (e) => {
         skip(5);
     }
 };
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown);
+});
 </script>
