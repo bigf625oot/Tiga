@@ -1,60 +1,67 @@
 <template>
-  <div class="h-full flex flex-col bg-white">
+  <div class="h-full flex flex-col bg-background text-foreground transition-colors duration-300">
     <!-- Header Banner -->
-    <div class="px-10 pt-12 pb-6">
-      <div class="flex justify-between items-end">
-        <div>
-          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">音视频库</h2>
-          <p class="text-[#86868B] text-lg font-medium">管理和分析您的媒体资源。</p>
+    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <h2 class="text-lg font-semibold tracking-tight">音视频库</h2>
+          <div class="h-4 w-px bg-border"></div>
+          <p class="text-muted-foreground text-xs truncate max-w-xl">
+            管理和分析您的媒体资源。
+          </p>
         </div>
-        <div class="flex gap-4">
-          <button 
+        <div class="flex gap-2">
+           <Button 
             @click="triggerUpload" 
-            class="bg-[#0071e3] text-white p-6 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
+            size="sm"
+            class="h-9"
           >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <Upload class="w-4 h-4 mr-2" />
             上传
-          </button>
+          </Button>
           <input type="file" ref="fileInput" class="hidden" accept="audio/*,video/*" @change="handleFileUpload">
         </div>
       </div>
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-y-auto px-10 pb-10 custom-scrollbar">
+    <div class="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
       
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
-        <div v-for="i in 10" :key="i" class="bg-white rounded-[24px] border border-slate-200 overflow-hidden h-[280px]">
-            <div class="aspect-video bg-muted/50 animate-pulse"></div>
-            <div class="p-6 space-y-3">
-                 <a-skeleton active :title="false" :paragraph="{ rows: 1, width: '80%' }" />
-                 <a-skeleton active :title="false" :paragraph="{ rows: 1, width: '40%' }" />
+      <!-- Loading State -->
+      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        <div v-for="i in 10" :key="i" class="bg-card rounded-xl border border-border overflow-hidden h-[280px]">
+            <Skeleton class="h-[157px] w-full" />
+            <div class="p-4 space-y-3">
+                 <Skeleton class="h-4 w-3/4" />
+                 <Skeleton class="h-3 w-1/2" />
             </div>
         </div>
       </div>
 
-      <div v-else-if="files.length === 0" class="flex flex-col items-center justify-center py-40 text-[#86868B]">
-        <div class="w-20 h-20 bg-muted/50 rounded-[24px] flex items-center justify-center mb-6 border border-border">
-            <svg class="w-10 h-10 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+      <!-- Empty State -->
+      <div v-else-if="files.length === 0" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <div class="w-20 h-20 bg-muted/50 rounded-2xl flex items-center justify-center mb-6 border border-border">
+            <Film class="w-10 h-10 opacity-40" />
         </div>
-        <span class="text-lg font-semibold text-[#1D1D1F]">暂无内容</span>
+        <span class="text-lg font-semibold text-foreground">暂无内容</span>
         <p class="text-sm mt-2 opacity-80">您的音视频库是空的</p>
       </div>
 
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
-        <!-- Card -->
-        <div v-for="file in files" :key="file.id" class="bg-white rounded-[24px] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 flex flex-col group overflow-hidden relative border border-slate-200">
-            <!-- Icon/Thumbnail Area -->
-            <div class="aspect-video bg-[#F5F5F7] flex items-center justify-center relative overflow-hidden group-hover:bg-[#E8E8ED] transition-colors duration-500">
-                 <!-- Play Button Overlay -->
-                 <div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px] cursor-pointer z-10" @click="playMedia(file)">
-                    <div class="w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300 text-[#1D1D1F]">
-                        <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <!-- File Grid -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        <div v-for="file in files" :key="file.id" class="bg-card rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group overflow-hidden relative border border-border">
+            <!-- Thumbnail -->
+            <div class="aspect-video bg-muted/30 flex items-center justify-center relative overflow-hidden group-hover:bg-muted/50 transition-colors">
+                 <!-- Play Overlay -->
+                 <div class="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[1px] cursor-pointer z-10" @click="playMedia(file)">
+                    <div class="w-10 h-10 bg-background/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300 text-foreground">
+                        <Play class="w-4 h-4 ml-0.5 fill-current" />
                     </div>
                  </div>
 
-                 <div v-if="file.is_folder" class="w-20 h-20 text-[#FFD60A]">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                 <!-- Icon -->
+                 <div v-if="file.is_folder" class="w-16 h-16 text-yellow-400">
+                    <Folder class="w-full h-full fill-current" />
                  </div>
                  <div v-else class="w-20 h-20 transition-transform duration-500 group-hover:scale-105">
                     <img v-if="file.filename.toLowerCase().endsWith('.mp3')" src="/MP3.svg" class="w-full h-full" alt="MP3" />
@@ -62,104 +69,121 @@
                  </div>
                  
                  <!-- Status Badge -->
-                 <div class="absolute top-3 right-3 z-20">
-                    <span v-if="file.asr_status === 'completed'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/80 backdrop-blur-md text-[#34C759] shadow-sm border border-black/5">
+                 <div class="absolute top-2 right-2 z-20">
+                    <Badge v-if="file.asr_status === 'completed'" variant="secondary" class="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-transparent text-[10px] px-1.5 h-5">
                         已转写
-                    </span>
-                    <span v-else-if="file.asr_status === 'processing'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/80 backdrop-blur-md text-[#0071e3] shadow-sm border border-black/5">
-                        <svg class="animate-spin -ml-0.5 mr-1 h-2.5 w-2.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </Badge>
+                     <Badge v-else-if="file.asr_status === 'processing'" variant="secondary" class="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-transparent text-[10px] px-1.5 h-5 flex gap-1">
+                        <Loader2 class="w-3 h-3 animate-spin" />
                         转写中
-                    </span>
+                    </Badge>
                  </div>
             </div>
 
-            <!-- Content Area -->
-            <div class="p-6 flex-1 flex flex-col">
+            <!-- Content -->
+            <div class="p-4 flex-1 flex flex-col">
                 <div class="mb-2">
-                    <h4 class="font-semibold text-[#1D1D1F] text-[15px] line-clamp-1 leading-snug mb-1" :title="file.filename">{{ file.filename }}</h4>
-                    <div class="flex items-center gap-2 text-sm text-[#86868B] font-medium">
-                        <span class="font-din tracking-wide">{{ formatDuration(file.duration) }}</span>
+                    <h4 class="font-medium text-sm line-clamp-1 mb-1" :title="file.filename">{{ file.filename }}</h4>
+                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span class="font-mono">{{ formatDuration(file.duration) }}</span>
                         <span>•</span>
-                        <span class="font-din tracking-wide">{{ formatDate(file.created_at) }}</span>
+                        <span>{{ formatDate(file.created_at) }}</span>
                     </div>
                 </div>
 
-                <!-- Actions (Visible on Hover) -->
-                <div class="mt-auto pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
+                <!-- Actions -->
+                <div class="mt-auto pt-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div class="flex gap-1">
-                        <button @click="openRenameModal(file)" class="p-1.5 text-[#86868B] hover:text-[#0071e3] hover:bg-primary/10 rounded-lg transition-colors" title="重命名">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                        </button>
-                        <a-popconfirm
-                            title="确定要删除吗?"
-                            ok-text="确认"
-                            cancel-text="取消"
-                            @confirm="deleteFile(file.id)"
-                        >
-                            <button class="p-1.5 text-[#86868B] hover:text-[#FF3B30] hover:bg-red-50 rounded-lg transition-colors" title="删除">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </a-popconfirm>
+                        <Button variant="ghost" size="icon" class="h-7 w-7" @click="openRenameModal(file)" title="重命名">
+                            <Edit2 class="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" class="h-7 w-7 hover:text-destructive" @click="confirmDelete(file)" title="删除">
+                            <Trash2 class="w-3.5 h-3.5" />
+                        </Button>
                     </div>
 
-                    <button 
-                        @click="parseToGraph(file)" 
-                        class="text-sm font-semibold text-[#0071e3] hover:text-[#0077ED] hover:bg-primary/10 px-2.5 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                    <Button 
                         v-if="file.asr_status === 'completed'"
+                        variant="ghost" 
+                        size="sm" 
+                        class="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 px-2"
+                        @click="parseToGraph(file)"
                     >
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <Share2 class="w-3.5 h-3.5 mr-1" />
                         解析图谱
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
       </div>
     </div>
 
-    <!-- Rename Modal -->
-    <a-modal v-model:open="renameModalVisible" title="重命名" @ok="handleRename">
-        <div class="py-4">
-            <a-input 
-                v-model:value="renameValue" 
-                placeholder="请输入新名称" 
-                @pressEnter="handleRename"
-                auto-focus
-            />
-        </div>
-    </a-modal>
+    <!-- Rename Dialog -->
+    <Dialog v-model:open="renameModalVisible">
+        <DialogContent class="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>重命名</DialogTitle>
+                <DialogDescription>请输入新的文件名称。</DialogDescription>
+            </DialogHeader>
+            <div class="py-4">
+                <Input 
+                    v-model="renameValue" 
+                    placeholder="请输入新名称" 
+                    @keydown.enter="handleRename"
+                    autofocus
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" @click="renameModalVisible = false">取消</Button>
+                <Button @click="handleRename">确认</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
-    <!-- Player Modal -->
-    <a-modal
-        v-model:open="playerVisible"
-        :title="currentPlayingFile?.filename"
-        :footer="null"
-        width="800px"
-        destroyOnClose
-        @cancel="closePlayer"
-        :bodyStyle="{ padding: '0' }"
-    >
-        <div class="bg-black flex items-center justify-center rounded-b-lg overflow-hidden" style="min-height: 400px;">
-            <video 
-                v-if="currentPlayingFile && isVideo(currentPlayingFile.filename)"
-                :src="playUrl" 
-                controls 
-                autoplay
-                class="w-full h-full max-h-[600px]"
-            ></video>
-            <div v-else-if="currentPlayingFile" class="w-full p-10 flex flex-col items-center justify-center">
-                <div class="w-32 h-32 rounded-full bg-slate-800 flex items-center justify-center mb-8 animate-pulse-slow">
-                    <svg class="w-16 h-16 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-                </div>
-                <audio 
+    <!-- Player Dialog -->
+    <Dialog v-model:open="playerVisible">
+        <DialogContent class="sm:max-w-[800px] p-0 overflow-hidden bg-black border-zinc-800">
+             <DialogHeader class="px-4 py-3 bg-zinc-900/50 border-b border-zinc-800 absolute top-0 left-0 right-0 z-10">
+                <DialogTitle class="text-zinc-100 text-sm font-normal">{{ currentPlayingFile?.filename }}</DialogTitle>
+            </DialogHeader>
+            <div class="flex items-center justify-center min-h-[400px] bg-black pt-10">
+                <video 
+                    v-if="currentPlayingFile && isVideo(currentPlayingFile.filename)"
                     :src="playUrl" 
                     controls 
                     autoplay
-                    class="w-full max-w-md"
-                ></audio>
+                    class="w-full h-full max-h-[600px]"
+                ></video>
+                <div v-else-if="currentPlayingFile" class="w-full p-10 flex flex-col items-center justify-center">
+                     <div class="w-32 h-32 rounded-full bg-zinc-800 flex items-center justify-center mb-8 animate-pulse">
+                        <Music class="w-16 h-16 text-zinc-500" />
+                     </div>
+                     <audio 
+                        :src="playUrl" 
+                        controls 
+                        autoplay
+                        class="w-full max-w-md"
+                    ></audio>
+                </div>
             </div>
-            <div v-else class="text-white">加载中...</div>
-        </div>
-    </a-modal>
+        </DialogContent>
+    </Dialog>
+
+    <!-- Delete Confirmation -->
+    <AlertDialog :open="deleteConfirmOpen" @update:open="val => deleteConfirmOpen = val">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确定要删除此文件吗？</AlertDialogTitle>
+          <AlertDialogDescription>
+            此操作将永久删除该文件，无法恢复。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="deleteConfirmOpen = false">取消</AlertDialogCancel>
+          <AlertDialogAction @click="executeDelete" class="bg-red-600 hover:bg-red-700 focus:ring-red-600">删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
   </div>
 </template>
@@ -169,8 +193,43 @@ import { ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { 
+    Upload, 
+    Film, 
+    Play, 
+    Folder, 
+    Music, 
+    Video, 
+    Loader2, 
+    Edit2, 
+    Trash2, 
+    Share2 
+} from 'lucide-vue-next';
 
-// Reuse the axios instance logic or create new
+// Shadcn Components
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 const api = axios.create({
     baseURL: '/api/v1'
 });
@@ -187,14 +246,14 @@ const playerVisible = ref(false);
 const playUrl = ref('');
 const currentPlayingFile = ref(null);
 
+// Delete State
+const deleteConfirmOpen = ref(false);
+const itemToDelete = ref(null);
+
 const fetchFiles = async () => {
     loading.value = true;
     try {
         const res = await api.get('/recordings/');
-        // Filter out folders if we only want media files, or keep them. 
-        // For Media Library, usually we just show files. But let's keep it consistent.
-        // The user asked for "Audio/Video Library", maybe folders are less relevant here 
-        // unless we implement folder navigation. For now, let's show all.
         files.value = res.data;
     } catch (e) {
         message.error("获取列表失败");
@@ -247,13 +306,22 @@ const getMediaDuration = (file) => {
     });
 };
 
-const deleteFile = async (id) => {
+const confirmDelete = (file) => {
+    itemToDelete.value = file;
+    deleteConfirmOpen.value = true;
+};
+
+const executeDelete = async () => {
+    if (!itemToDelete.value) return;
     try {
-        await api.delete(`/recordings/${id}`);
+        await api.delete(`/recordings/${itemToDelete.value.id}`);
         message.success("删除成功");
         fetchFiles();
     } catch (e) {
         message.error("删除失败");
+    } finally {
+        deleteConfirmOpen.value = false;
+        itemToDelete.value = null;
     }
 };
 
@@ -370,19 +438,5 @@ onMounted(() => {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #CBD5E0;
-}
-
-@keyframes pulse-slow {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.05);
-  }
-}
-.animate-pulse-slow {
-  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>

@@ -640,7 +640,7 @@ const knowledgeSidebarItems: SidebarItem[] = [
     { type: 'group', label: '知识图谱' },
     { id: 'knowledge_graph', label: '知识图谱', icon: Network },
     { id: 'relation_fix', label: '图谱治理', icon: Share2 },
-    { type: 'group', label: '知识库' },
+    { type: 'group', label: '资源中心' },
     { id: 'knowledge', label: '知识库', icon: Database },
     { id: 'database', label: '数据库', icon: Database },
     { id: 'media_library', label: '音视频库', icon: Film },

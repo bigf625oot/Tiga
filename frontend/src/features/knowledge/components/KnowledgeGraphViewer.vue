@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full flex flex-row overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
+    <div class="h-full flex flex-row overflow-hidden bg-background transition-colors duration-300">
         <!-- Left: Sidebar -->
         <KnowledgeGraphSidebar
             v-if="!loading && hasData"
@@ -14,18 +14,18 @@
         />
 
         <!-- Right: Graph -->
-        <div class="flex-1 relative h-full overflow-hidden bg-slate-50 dark:bg-slate-900/50">
+        <div class="flex-1 relative h-full overflow-hidden bg-muted/10">
             <div v-if="loading" class="h-full flex flex-col items-center justify-center p-8 gap-4">
                 <!-- Skeleton for Graph -->
-                <div class="w-full h-full bg-slate-50 dark:bg-slate-900 graph-skeleton relative overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800">
+                <div class="w-full h-full bg-background graph-skeleton relative overflow-hidden rounded-xl border border-border">
                     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                        <div class="w-16 h-16 rounded-full bg-slate-200 dark:bg-slate-700 mb-4"></div>
-                        <div class="w-32 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                        <div class="w-16 h-16 rounded-full bg-muted mb-4"></div>
+                        <div class="w-32 h-4 bg-muted rounded"></div>
                     </div>
                     <!-- Random Nodes -->
-                    <div class="absolute top-1/4 left-1/4 w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-                    <div class="absolute bottom-1/4 right-1/4 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-                    <div class="absolute top-1/3 right-1/3 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                    <div class="absolute top-1/4 left-1/4 w-12 h-12 rounded-full bg-muted"></div>
+                    <div class="absolute bottom-1/4 right-1/4 w-10 h-10 rounded-full bg-muted"></div>
+                    <div class="absolute top-1/3 right-1/3 w-8 h-8 rounded-full bg-muted"></div>
                 </div>
             </div>
             <div v-else class="h-full relative">
@@ -43,20 +43,19 @@
                     @switchScope="handleSwitchScope" 
                     @search="handleGraphSearch"
                     :showScopeToggle="!!docId"
-                    class="dark:bg-slate-900"
+                    class="bg-background"
                 >
                     <template #toolbar-extras>
-                        <button 
-                            class="w-[28px] h-[28px] inline-flex items-center justify-center rounded-md text-[#2a2f3c] dark:text-slate-300 bg-[#f3f4f6] dark:bg-slate-800 hover:bg-[#e5e6eb] dark:hover:bg-slate-700 transition-all cursor-pointer border border-transparent dark:border-slate-700"
-                            :class="{'!bg-blue-100 !text-blue-600 dark:!bg-blue-900/50 dark:!text-blue-400 dark:!border-blue-800': showChat}"
-                            @click="$emit('toggle-chat')" 
-                            aria-label="知识问答" 
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            class="h-9 w-9"
+                            :class="{'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20': showChat}"
+                            @click="$emit('toggle-chat')"
                             title="知识问答"
                         >
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                            </svg>
-                        </button>
+                            <MessageSquare class="w-4 h-4" />
+                        </Button>
                     </template>
                 </GraphViewer>
             </div>
@@ -70,6 +69,8 @@ import axios from 'axios';
 import { message } from 'ant-design-vue';
 import { GraphViewer } from '@/shared/components/organisms/GraphViewer';
 import KnowledgeGraphSidebar from './KnowledgeGraphSidebar.vue';
+import { Button } from '@/components/ui/button';
+import { MessageSquare } from 'lucide-vue-next';
 
 // Props
 const props = defineProps<{

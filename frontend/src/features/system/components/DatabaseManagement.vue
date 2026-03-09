@@ -1,352 +1,422 @@
 <template>
-  <div class="h-full flex flex-col bg-white">
-    <!-- Header -->
-    <div class="px-10 pt-12 pb-6">
-      <div class="flex justify-between items-end">
-        <div>
-          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">数据库</h2>
-          <p class="text-[#86868B] text-lg font-medium">管理数据库连接配置，支持 MySQL, PostgreSQL 等多种数据库。</p>
+  <div class="h-full flex flex-col bg-background text-foreground transition-colors duration-300">
+    <!-- Header Banner -->
+    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <h2 class="text-lg font-semibold tracking-tight">数据库</h2>
+          <div class="h-4 w-px bg-border"></div>
+          <p class="text-muted-foreground text-xs truncate max-w-xl">
+            管理数据库连接配置，支持 MySQL, PostgreSQL 等。
+          </p>
         </div>
-        <button 
+        <Button 
           @click="openCreateModal" 
-          class="bg-[#0071e3] text-white p-6 py-2.5 rounded-full hover:bg-[#0077ED] transition-all shadow-sm hover:shadow-md font-medium flex items-center gap-2 active:scale-95 text-sm"
+          size="sm"
+          class="h-9"
         >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <Plus class="w-4 h-4 mr-2" />
           新建连接
-        </button>
+        </Button>
       </div>
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-hidden px-10 pb-10 bg-white">
-      
-      <!-- Connection List -->
-      <div class="h-full flex flex-col w-full">
-        <div class="bg-white rounded-lg  overflow-hidden flex-1 flex flex-col p-4">
-           <!-- Header -->
-           <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded p-4 text-[14px] font-medium text-[#2a2f3c]">
-              <div class="flex-1 flex items-center gap-2 relative">
-                  <span>连接名称/Host</span>
-                  <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-              </div>
-              <div class="w-[100px] p-4 relative">
-                  <span>类型</span>
-                  <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-              </div>
-              <div class="w-[80px] p-4 relative">
-                  <span>端口</span>
-                  <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-              </div>
-              <div class="w-[120px] p-4 relative">
-                  <span>用户</span>
-                  <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-              </div>
-              <div class="w-[220px] p-4 text-right">
-                  <span>操作</span>
+    <div class="flex-1 overflow-hidden p-6 bg-background">
+      <div class="h-full flex flex-col w-full border border-border rounded-lg bg-card shadow-sm overflow-hidden">
+         <!-- List Header -->
+         <div class="grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+            <div class="col-span-4 pl-2">连接名称/Host</div>
+            <div class="col-span-2">类型</div>
+            <div class="col-span-2">端口</div>
+            <div class="col-span-2">用户</div>
+            <div class="col-span-2 text-right pr-2">操作</div>
+         </div>
+         
+         <!-- List Content -->
+         <ScrollArea class="flex-1">
+           <div v-if="loading" class="flex flex-col p-4 space-y-4">
+              <div v-for="i in 3" :key="i" class="flex items-center gap-4">
+                  <Skeleton class="h-10 w-10 rounded-md" />
+                  <div class="space-y-2 flex-1">
+                    <Skeleton class="h-4 w-full" />
+                    <Skeleton class="h-3 w-2/3" />
+                  </div>
               </div>
            </div>
            
-           <!-- List Content -->
-           <div class="overflow-y-auto flex-1 mt-2">
-             <div v-if="loading" class="flex flex-col p-4">
-                <div v-for="i in 3" :key="i" class="flex items-center border-b border-slate-50 py-4 gap-4">
-                    <a-skeleton-avatar active size="small" shape="square" />
-                    <a-skeleton active :title="false" :paragraph="{ rows: 1, width: '100%' }" class="flex-1" />
-                </div>
-             </div>
-             <!-- Mock Data or Real Data if available. Since backend seems to have single config, we show it if exists -->
-             <div v-else-if="!currentConfig.host && !currentConfig.path" class="flex flex-col items-center justify-center py-20 text-[#86868B]">
-                <div class="w-16 h-16 bg-muted/50 rounded-lg flex items-center justify-center mb-4 border border-border">
-                    <svg class="w-8 h-8 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
-                </div>
-                <span class="text-sm font-medium opacity-80">暂无连接配置</span>
-             </div>
-             <div v-else class="flex flex-col">
-                <div class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 p-4 text-sm text-[#2a2f3c] group">
-                   <div class="flex-1 flex items-center gap-2 overflow-hidden">
-                        <div class="w-6 h-6 flex items-center justify-center bg-white rounded">
-                            <svg class="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
-                        </div>
-                        <span class="truncate text-[14px]">{{ currentConfig.name || currentConfig.host || currentConfig.path }}</span>
-                   </div>
-                   <div class="w-[100px] p-4">
-                      <span class="px-2 py-0.5 rounded bg-muted text-slate-600 text-xs border border-slate-200">{{ currentConfig.type }}</span>
-                   </div>
-                   <div class="w-[80px] p-4 text-muted-foreground">{{ currentConfig.port || '-' }}</div>
-                   <div class="w-[120px] p-4 text-muted-foreground">{{ currentConfig.user || '-' }}</div>
-                   <div class="w-[220px] p-4 flex justify-end items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <a-button type="text" size="small" @click="viewTables" class="!px-0 !h-auto !text-muted-foreground hover:!text-primary">查看表</a-button>
-                      <a-button type="text" size="small" @click="editConfig" class="!px-0 !h-auto !text-muted-foreground hover:!text-primary">编辑</a-button>
-                      <a-button type="text" size="small" danger class="!px-0 !h-auto">删除</a-button>
-                   </div>
-                </div>
-             </div>
+           <div v-else-if="!currentConfig.host && !currentConfig.path" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <div class="w-16 h-16 bg-muted/50 rounded-xl flex items-center justify-center mb-4">
+                  <Database class="w-8 h-8 opacity-50" />
+              </div>
+              <span class="text-sm font-medium">暂无连接配置</span>
            </div>
-        </div>
+           
+           <div v-else class="flex flex-col">
+              <div class="grid grid-cols-12 gap-4 items-center px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors text-sm group">
+                 <div class="col-span-4 flex items-center gap-3 overflow-hidden pl-2">
+                      <div class="w-8 h-8 flex items-center justify-center bg-muted rounded-md flex-shrink-0">
+                          <Database class="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <span class="truncate font-medium">{{ currentConfig.name || currentConfig.host || currentConfig.path }}</span>
+                 </div>
+                 <div class="col-span-2">
+                    <Badge variant="outline" class="font-normal bg-muted/50">{{ currentConfig.type }}</Badge>
+                 </div>
+                 <div class="col-span-2 text-muted-foreground font-mono text-xs">{{ currentConfig.port || '-' }}</div>
+                 <div class="col-span-2 text-muted-foreground text-xs">{{ currentConfig.user || '-' }}</div>
+                 <div class="col-span-2 flex justify-end items-center gap-2 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="viewTables" title="查看表">
+                        <TableIcon class="w-4 h-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="editConfig" title="编辑">
+                        <Edit2 class="w-4 h-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+                    <Button variant="ghost" size="icon" class="h-8 w-8" title="删除" disabled>
+                        <Trash2 class="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                 </div>
+              </div>
+           </div>
+         </ScrollArea>
       </div>
     </div>
 
     <!-- Tables Preview Modal -->
-    <a-modal 
-        v-model:open="showTablesModal" 
-        title="数据库表预览" 
-        width="1200px" 
-        :footer="null"
-        class="tables-preview-modal"
-    >
-        <div class="flex h-[600px] -mx-6 -mb-6 mt-2 border-t border-border">
-            <!-- Table List Sidebar -->
-            <div class="w-[240px] border-r border-border overflow-y-auto bg-muted/50 p-2">
-                <div v-if="loadingTables" class="flex justify-center py-10">
-                    <a-spin />
-                </div>
-                <div v-else-if="tables.length === 0" class="text-center py-10 text-muted-foreground text-sm">
-                    暂无数据表
-                </div>
-                <div v-else class="space-y-0.5">
-                    <div 
-                        v-for="t in tables" :key="t"
-                        @click="fetchTableData(t)"
-                        class="p-4 py-2 cursor-pointer rounded-lg text-sm truncate transition-colors"
-                        :class="selectedTable === t ? 'bg-white shadow-sm text-primary font-medium' : 'text-slate-600 hover:bg-muted'"
-                    >
-                        {{ t }}
-                    </div>
-                </div>
-            </div>
+    <Dialog v-model:open="showTablesModal">
+        <DialogContent class="max-w-[90vw] w-[1200px] h-[85vh] p-0 flex flex-col gap-0 overflow-hidden">
+            <DialogHeader class="px-6 py-4 border-b border-border bg-card">
+                <DialogTitle class="text-base flex items-center gap-2">
+                    <Database class="w-4 h-4 text-primary" />
+                    数据库表预览
+                </DialogTitle>
+            </DialogHeader>
             
-            <!-- Data View -->
-            <div class="flex-1 flex flex-col overflow-hidden bg-white">
-                <div v-if="!selectedTable" class="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-                    <svg class="w-12 h-12 m-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    <span>请选择左侧数据表查看详情</span>
+            <div class="flex-1 flex overflow-hidden">
+                <!-- Sidebar -->
+                <div class="w-64 border-r border-border bg-muted/10 flex flex-col">
+                    <div class="p-3 border-b border-border bg-muted/20">
+                        <div class="relative">
+                            <Search class="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input placeholder="搜索表..." class="h-8 pl-8 text-xs bg-background" />
+                        </div>
+                    </div>
+                    <ScrollArea class="flex-1">
+                        <div v-if="loadingTables" class="flex justify-center py-10">
+                            <Loader2 class="w-5 h-5 animate-spin text-muted-foreground" />
+                        </div>
+                        <div v-else-if="tables.length === 0" class="text-center py-10 text-muted-foreground text-xs">
+                            暂无数据表
+                        </div>
+                        <div v-else class="p-2 space-y-0.5">
+                            <button 
+                                v-for="t in tables" :key="t"
+                                @click="fetchTableData(t)"
+                                class="w-full text-left px-3 py-2 rounded-md text-sm truncate transition-colors flex items-center gap-2"
+                                :class="selectedTable === t ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
+                            >
+                                <TableIcon class="w-3.5 h-3.5 flex-shrink-0" />
+                                <span class="truncate">{{ t }}</span>
+                            </button>
+                        </div>
+                    </ScrollArea>
                 </div>
-                <div v-else class="flex-1 flex flex-col overflow-hidden">
-                    <div class="px-4 p-4 border-b border-border flex justify-between items-center bg-white">
-                        <div class="flex items-center gap-4">
-                            <h3 class="font-medium text-base text-slate-800">{{ selectedTable }}</h3>
-                            
-                            <!-- Graph Conversion Button -->
-                            <div class="flex items-center gap-2">
-                                <a-tooltip :title="convertStatus.status === 'completed' ? '转换完成' : '转换为图谱'">
-                                    <button 
-                                        @click="convertTableToGraph"
-                                        class="p-1.5 rounded-md transition-all relative group flex items-center justify-center border"
-                                        :class="[
-                                            (convertStatus.status === 'running' || convertStatus.status === 'pending') ? 'bg-primary/10 border-blue-100 text-primary' : 
-                                            convertStatus.status === 'completed' ? 'bg-green-50 border-green-100 text-green-600' :
-                                            convertStatus.status === 'failed' ? 'bg-red-50 border-red-100 text-red-600' :
-                                            'bg-white border-slate-200 text-muted-foreground hover:text-primary hover:border-blue-200'
-                                        ]"
-                                        :disabled="convertStatus.status === 'running' || convertStatus.status === 'pending'"
-                                    >
-                                        <!-- Loading Icon -->
-                                        <svg v-if="convertStatus.status === 'running' || convertStatus.status === 'pending'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        
-                                        <!-- Success Icon -->
-                                        <svg v-else-if="convertStatus.status === 'completed'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        
-                                        <!-- Error Icon -->
-                                        <svg v-else-if="convertStatus.status === 'failed'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                        
-                                        <!-- Default Graph Icon -->
-                                        <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                                        </svg>
-                                    </button>
-                                </a-tooltip>
+
+                <!-- Content -->
+                <div class="flex-1 flex flex-col overflow-hidden bg-background">
+                    <div v-if="!selectedTable" class="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                        <TableIcon class="w-12 h-12 mb-4 opacity-20" />
+                        <span class="text-sm">请选择左侧数据表查看详情</span>
+                    </div>
+                    <div v-else class="flex-1 flex flex-col overflow-hidden">
+                        <div class="px-4 py-3 border-b border-border flex justify-between items-center bg-card/50">
+                            <div class="flex items-center gap-4">
+                                <h3 class="font-medium text-sm flex items-center gap-2">
+                                    <TableIcon class="w-4 h-4 text-muted-foreground" />
+                                    {{ selectedTable }}
+                                </h3>
                                 
-                                <!-- Status Text -->
-                                <div v-if="convertStatus.status !== 'idle'" class="flex flex-col">
-                                    <div class="text-xs font-medium" 
-                                        :class="[
-                                            (convertStatus.status === 'running' || convertStatus.status === 'pending') ? 'text-primary' : 
-                                            convertStatus.status === 'completed' ? 'text-green-600' : 
-                                            'text-red-600'
-                                        ]">
-                                        {{ convertStatus.status === 'pending' ? '准备中...' : 
-                                           convertStatus.status === 'running' ? '转换中' : 
-                                           convertStatus.status === 'completed' ? '转换完成' : '转换失败' }}
-                                        <span v-if="convertStatus.status === 'running'">{{ convertStatus.progress }}%</span>
-                                    </div>
-                                    <!-- Optional: Show message on hover or always if it's short -->
-                                </div>
-                                
-                                <!-- View Graph Button (only when completed) -->
-                                <a-button 
+                                <div class="h-4 w-[1px] bg-border"></div>
+
+                                <!-- Actions -->
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger as-child>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                class="h-7 text-xs gap-1.5"
+                                                :class="{
+                                                    'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900': convertStatus.status === 'completed',
+                                                    'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900': convertStatus.status === 'failed'
+                                                }"
+                                                @click="convertTableToGraph"
+                                                :disabled="['running', 'pending'].includes(convertStatus.status)"
+                                            >
+                                                <Loader2 v-if="['running', 'pending'].includes(convertStatus.status)" class="w-3.5 h-3.5 animate-spin" />
+                                                <Check v-else-if="convertStatus.status === 'completed'" class="w-3.5 h-3.5" />
+                                                <XCircle v-else-if="convertStatus.status === 'failed'" class="w-3.5 h-3.5" />
+                                                <Share2 v-else class="w-3.5 h-3.5" />
+                                                
+                                                {{ convertStatus.status === 'pending' ? '准备中' : 
+                                                   convertStatus.status === 'running' ? `转换中 ${convertStatus.progress}%` : 
+                                                   convertStatus.status === 'completed' ? '转换完成' : 
+                                                   convertStatus.status === 'failed' ? '转换失败' : '转为图谱' }}
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{{ convertStatus.message || '将表结构和数据转换为知识图谱' }}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+
+                                <Button 
                                     v-if="convertStatus.status === 'completed'" 
-                                    type="link" 
-                                    size="small" 
-                                    class="!px-0 !h-auto text-xs"
+                                    variant="link" 
+                                    size="sm" 
+                                    class="h-7 text-xs p-0"
                                     @click="$emit('navigate', 'knowledge_graph')"
                                 >
-                                    查看图谱 &rarr;
-                                </a-button>
+                                    查看图谱 <ArrowRight class="w-3 h-3 ml-1" />
+                                </Button>
                             </div>
-                        </div>
-                        <span class="text-xs text-muted-foreground" v-if="tableData.length > 0">显示前 {{ tableData.length }} 条记录</span>
-                    </div>
-                    <div class="flex-1 overflow-hidden p-0 relative">
-                        <a-table 
-                            :columns="tableColumns" 
-                            :dataSource="tableData" 
-                            :loading="loadingTableData"
-                            :scroll="{ x: 'max-content', y: 500 }" 
-                            size="small" 
-                            :pagination="false"
-                            class="h-full"
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-    </a-modal>
-
-    <!-- Create/Edit Modal -->
-    <a-modal 
-        v-model:open="showCreateModal" 
-        :title="isEdit ? '编辑数据库配置' : '新建数据库配置'" 
-        :footer="null" 
-        width="600px"
-        destroyOnClose
-    >
-        <div class="py-4">
-             <a-form 
-                ref="formRef"
-                :model="configForm" 
-                :rules="rules"
-                layout="vertical" 
-                class="space-y-4"
-            >
-                <a-form-item label="连接名称" name="name">
-                    <a-input v-model:value="configForm.name" placeholder="请输入连接名称（选填）" />
-                </a-form-item>
-
-                <a-form-item label="数据库类型" name="type">
-                    <a-select v-model:value="configForm.type" @change="handleTypeChange">
-                        <a-select-option value="sqlite">SQLite</a-select-option>
-                        <a-select-option value="postgresql">PostgreSQL</a-select-option>
-                        <a-select-option value="mysql">MySQL</a-select-option>
-                    </a-select>
-                </a-form-item>
-                
-                <template v-if="configForm.type === 'sqlite'">
-                    <a-form-item label="文件路径" name="path" help="请输入SQLite数据库文件的绝对路径">
-                        <a-input v-model:value="configForm.path" placeholder="e.g. C:/data/app.db" />
-                    </a-form-item>
-                </template>
-                
-                <template v-else>
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="col-span-2">
-                            <a-form-item label="主机地址" name="host">
-                                <a-input v-model:value="configForm.host" placeholder="localhost" />
-                            </a-form-item>
-                        </div>
-                        <div>
-                            <a-form-item label="端口" name="port">
-                                <a-input-number v-model:value="configForm.port" class="w-full" :controls="false" />
-                            </a-form-item>
-                        </div>
-                    </div>
-                    
-                    <a-form-item label="用户名" name="user">
-                        <a-input v-model:value="configForm.user" placeholder="root" />
-                    </a-form-item>
-                    
-                    <a-form-item label="密码" name="password">
-                        <a-input-password v-model:value="configForm.password" placeholder="请输入密码" />
-                    </a-form-item>
-
-                    <!-- Advanced Options Toggle -->
-                    <div class="pt-2">
-                        <div 
-                            @click="showAdvanced = !showAdvanced" 
-                            class="flex items-center gap-1 text-xs text-primary cursor-pointer hover:text-blue-700 select-none font-medium"
-                        >
-                            <span>更多连接配置</span>
-                            <svg class="w-3 h-3 transition-transform duration-200" :class="showAdvanced ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <span class="text-xs text-muted-foreground" v-if="tableData.length > 0">
+                                前 {{ tableData.length }} 条记录
+                            </span>
                         </div>
                         
-                        <div v-show="showAdvanced" class="mt-4 space-y-4 p-4 bg-muted/50 rounded-lg border border-border">
-                            <a-form-item label="数据库名称" name="database">
-                                <a-input v-model:value="configForm.database" placeholder="选填，默认连接postgres/mysql" />
-                            </a-form-item>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <a-form-item label="连接超时 (秒)" name="timeout">
-                                    <a-input-number v-model:value="configForm.timeout" class="w-full" :min="1" />
-                                </a-form-item>
-                                <a-form-item label="连接池大小" name="pool_size">
-                                    <a-input-number v-model:value="configForm.pool_size" class="w-full" :min="1" />
-                                </a-form-item>
+                        <!-- Table Data -->
+                        <div class="flex-1 overflow-auto">
+                            <div v-if="loadingTableData" class="flex justify-center py-20">
+                                <Loader2 class="w-8 h-8 animate-spin text-primary/50" />
+                            </div>
+                            <Table v-else>
+                                <TableHeader>
+                                    <TableRow class="hover:bg-transparent">
+                                        <TableHead v-for="col in tableColumns" :key="col.key" class="h-9 text-xs font-semibold whitespace-nowrap bg-muted/50 sticky top-0 z-10">
+                                            {{ col.title }}
+                                        </TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow v-for="(row, idx) in tableData" :key="idx" class="hover:bg-muted/30">
+                                        <TableCell v-for="col in tableColumns" :key="col.key" class="py-2 text-xs whitespace-nowrap font-mono">
+                                            {{ row[col.key] }}
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </DialogContent>
+    </Dialog>
+
+    <!-- Create/Edit Modal -->
+    <Dialog v-model:open="showCreateModal">
+        <DialogContent class="sm:max-w-[500px]">
+            <DialogHeader>
+                <DialogTitle>{{ isEdit ? '编辑连接' : '新建连接' }}</DialogTitle>
+                <DialogDescription>
+                    配置数据库连接信息。
+                </DialogDescription>
+            </DialogHeader>
+            
+            <div class="py-4 space-y-4">
+                <div class="space-y-2">
+                    <Label>连接名称</Label>
+                    <Input v-model="configForm.name" placeholder="请输入连接名称（选填）" />
+                </div>
+
+                <div class="space-y-2">
+                    <Label>数据库类型</Label>
+                    <Select v-model="configForm.type" @update:modelValue="handleTypeChange">
+                        <SelectTrigger>
+                            <SelectValue placeholder="选择类型" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="sqlite">SQLite</SelectItem>
+                            <SelectItem value="postgresql">PostgreSQL</SelectItem>
+                            <SelectItem value="mysql">MySQL</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <template v-if="configForm.type === 'sqlite'">
+                    <div class="space-y-2">
+                        <Label>文件路径</Label>
+                        <Input v-model="configForm.path" placeholder="e.g. /data/app.db" />
+                        <p class="text-[10px] text-muted-foreground">请输入SQLite数据库文件的绝对路径</p>
+                    </div>
+                </template>
+
+                <template v-else>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-2 space-y-2">
+                            <Label>主机地址</Label>
+                            <Input v-model="configForm.host" placeholder="localhost" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label>端口</Label>
+                            <Input type="number" v-model="configForm.port" placeholder="Port" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>用户名</Label>
+                        <Input v-model="configForm.user" placeholder="root" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>密码</Label>
+                        <Input type="password" v-model="configForm.password" placeholder="••••••" />
+                    </div>
+
+                    <!-- Advanced Options -->
+                    <div class="pt-2">
+                        <button 
+                            @click="showAdvanced = !showAdvanced" 
+                            class="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                        >
+                            <span>更多配置</span>
+                            <ChevronDown class="w-3 h-3 transition-transform duration-200" :class="showAdvanced ? 'rotate-180' : ''" />
+                        </button>
+                        
+                        <div v-if="showAdvanced" class="mt-3 space-y-3 p-3 bg-muted/30 rounded-md border border-border animate-in slide-in-from-top-2">
+                            <div class="space-y-2">
+                                <Label class="text-xs">数据库名称</Label>
+                                <Input class="h-8 text-xs" v-model="configForm.database" placeholder="默认数据库" />
                             </div>
                             
-                            <a-form-item v-if="configForm.type === 'mysql'" label="字符集" name="charset">
-                                <a-select v-model:value="configForm.charset">
-                                    <a-select-option value="utf8mb4">utf8mb4</a-select-option>
-                                    <a-select-option value="utf8">utf8</a-select-option>
-                                    <a-select-option value="latin1">latin1</a-select-option>
-                                </a-select>
-                            </a-form-item>
-                            
-                            <a-form-item v-if="configForm.type === 'postgresql'" label="SSL 模式" name="ssl_mode">
-                                <a-select v-model:value="configForm.ssl_mode">
-                                    <a-select-option value="disable">Disable</a-select-option>
-                                    <a-select-option value="require">Require</a-select-option>
-                                    <a-select-option value="verify-ca">Verify CA</a-select-option>
-                                    <a-select-option value="verify-full">Verify Full</a-select-option>
-                                </a-select>
-                            </a-form-item>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-2">
+                                    <Label class="text-xs">超时 (秒)</Label>
+                                    <Input class="h-8 text-xs" type="number" v-model="configForm.timeout" />
+                                </div>
+                                <div class="space-y-2">
+                                    <Label class="text-xs">连接池大小</Label>
+                                    <Input class="h-8 text-xs" type="number" v-model="configForm.pool_size" />
+                                </div>
+                            </div>
+
+                            <div v-if="configForm.type === 'mysql'" class="space-y-2">
+                                <Label class="text-xs">字符集</Label>
+                                <Select v-model="configForm.charset">
+                                    <SelectTrigger class="h-8 text-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="utf8mb4">utf8mb4</SelectItem>
+                                        <SelectItem value="utf8">utf8</SelectItem>
+                                        <SelectItem value="latin1">latin1</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div v-if="configForm.type === 'postgresql'" class="space-y-2">
+                                <Label class="text-xs">SSL 模式</Label>
+                                <Select v-model="configForm.ssl_mode">
+                                    <SelectTrigger class="h-8 text-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="disable">Disable</SelectItem>
+                                        <SelectItem value="require">Require</SelectItem>
+                                        <SelectItem value="verify-ca">Verify CA</SelectItem>
+                                        <SelectItem value="verify-full">Verify Full</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                 </template>
-                
-                <!-- Buttons -->
-                <div class="flex flex-col gap-4 pt-4 border-t border-border mt-4">
-                    <a-button @click="testConnection" :loading="testing" class="w-full" :disabled="connecting">
-                        <template #icon>
-                            <svg class="w-4 h-4 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        </template>
-                        测试连接
-                    </a-button>
-                    
-                    <a-button type="primary" @click="saveAndConnect" :loading="connecting" class="w-full h-10 font-medium bg-primary" :disabled="testing">
-                        保存配置并连接
-                    </a-button>
+
+                <!-- Status Message -->
+                <div v-if="testResult" class="p-3 rounded-md text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'">
+                    <component :is="testResult.success ? Check : XCircle" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span class="break-all">{{ testResult.message }}</span>
                 </div>
-            </a-form>
-
-             <!-- Status Messages -->
-            <div v-if="testResult" class="mt-4 p-4 rounded-lg text-xs flex items-start gap-2" :class="testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
-                <span class="mt-0.5 text-lg leading-none">{{ testResult.success ? '✓' : '✗' }}</span>
-                <span class="break-all">{{ testResult.message }}</span>
             </div>
-        </div>
-    </a-modal>
 
+            <DialogFooter class="gap-2 sm:gap-0">
+                <Button variant="outline" @click="testConnection" :disabled="testing || connecting">
+                    <Loader2 v-if="testing" class="w-3.5 h-3.5 mr-2 animate-spin" />
+                    测试连接
+                </Button>
+                <Button @click="saveAndConnect" :disabled="testing || connecting">
+                    <Loader2 v-if="connecting" class="w-3.5 h-3.5 mr-2 animate-spin" />
+                    保存并连接
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, reactive, onUnmounted } from 'vue';
-import { message } from 'ant-design-vue';
+import { message } from 'ant-design-vue'; // Keep for global toast messages if preferred, or replace with shadcn toast
+// Icons
+import { 
+    Plus, 
+    Database, 
+    Table as TableIcon, 
+    Edit2, 
+    Trash2, 
+    Loader2, 
+    Search, 
+    ChevronDown, 
+    Check, 
+    XCircle,
+    Share2,
+    ArrowRight
+} from 'lucide-vue-next';
+
+// Shadcn Components
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const showCreateModal = ref(false);
 const isEdit = ref(false);
 const loading = ref(false);
 const emit = defineEmits(['navigate']);
-const currentConfig = ref({}); // Stores the fetched config
+const currentConfig = ref({});
 
 // Form State
-const formRef = ref();
 const configForm = ref({
     name: '',
     type: 'sqlite',
@@ -365,16 +435,7 @@ const configForm = ref({
 const showAdvanced = ref(false);
 const testing = ref(false);
 const connecting = ref(false);
-const exporting = ref(false);
 const testResult = ref(null);
-
-const rules = {
-    type: [{ required: true, message: '请选择数据库类型' }],
-    path: [{ required: true, message: '请输入文件路径', trigger: 'blur' }],
-    host: [{ required: true, message: '请输入主机地址', trigger: 'blur' }],
-    port: [{ required: true, message: '请输入端口号' }],
-    user: [{ required: true, message: '请输入用户名', trigger: 'blur' }]
-};
 
 const handleTypeChange = (val) => {
     if (val === 'postgresql') configForm.value.port = 5432;
@@ -391,7 +452,6 @@ const fetchConfig = async () => {
             const data = await res.json();
             if (Object.keys(data).length > 0) {
                 currentConfig.value = data;
-                // If editing, we would load this into configForm
             }
         }
     } catch (e) {
@@ -403,10 +463,9 @@ const fetchConfig = async () => {
 
 const openCreateModal = () => {
     isEdit.value = false;
-    // Reset form
     configForm.value = {
         name: '',
-        type: 'mysql', // Default to MySQL as per screenshot
+        type: 'mysql',
         path: '',
         host: 'localhost',
         port: 3306,
@@ -439,7 +498,6 @@ const tableColumns = ref([]);
 const loadingTableData = ref(false);
 
 const viewTables = async () => {
-    // Check if connected first? For now assume user can click button only if connection exists
     showTablesModal.value = true;
     loadingTables.value = true;
     selectedTable.value = null;
@@ -464,7 +522,7 @@ const viewTables = async () => {
 
 const fetchTableData = async (tableName) => {
     selectedTable.value = tableName;
-    // Reset conversion status when switching tables
+    // Reset conversion status
     convertStatus.status = 'idle';
     convertStatus.progress = 0;
     convertStatus.message = '';
@@ -479,15 +537,10 @@ const fetchTableData = async (tableName) => {
         const res = await fetch(`/api/v1/data_query/table/${tableName}/data`);
         if (res.ok) {
             const data = await res.json();
-            // Transform for Ant Design Table
             if (data.columns && data.columns.length > 0) {
                 tableColumns.value = data.columns.map(col => ({ 
                     title: col, 
-                    dataIndex: col, 
-                    key: col, 
-                    width: 150, 
-                    ellipsis: true,
-                    resizable: true,
+                    key: col
                 }));
                 
                 tableData.value = data.data.map((row, index) => {
@@ -511,13 +564,23 @@ const fetchTableData = async (tableName) => {
     }
 };
 
-// --- Actions from SmartDataQuery ---
+// --- Connection Actions ---
+
+const validateForm = () => {
+    if (!configForm.value.type) return '请选择数据库类型';
+    if (configForm.value.type === 'sqlite' && !configForm.value.path) return '请输入文件路径';
+    if (configForm.value.type !== 'sqlite') {
+        if (!configForm.value.host) return '请输入主机地址';
+        if (!configForm.value.user) return '请输入用户名';
+    }
+    return null;
+};
 
 const testConnection = async () => {
     testResult.value = null;
-    try {
-        await formRef.value.validate();
-    } catch (error) {
+    const error = validateForm();
+    if (error) {
+        testResult.value = { success: false, message: error };
         return;
     }
     
@@ -531,24 +594,21 @@ const testConnection = async () => {
         
         if (res.ok) {
             testResult.value = { success: true, message: '连接测试成功！' };
-            message.success('连接测试成功');
         } else {
             const err = await res.json();
             testResult.value = { success: false, message: '连接失败: ' + (err.detail || '未知错误') };
-            message.error('连接测试失败');
         }
     } catch (e) {
         testResult.value = { success: false, message: '网络错误: ' + e.message };
-        message.error('连接测试失败');
     } finally {
         testing.value = false;
     }
 };
 
 const saveAndConnect = async () => {
-    try {
-        await formRef.value.validate();
-    } catch (error) {
+    const error = validateForm();
+    if (error) {
+        message.warning(error);
         return;
     }
     
@@ -580,7 +640,7 @@ const saveAndConnect = async () => {
         } else {
             message.success('配置已保存并连接成功');
             showCreateModal.value = false;
-            fetchConfig(); // Refresh list
+            fetchConfig();
         }
         
     } catch (e) {
@@ -663,5 +723,4 @@ const startPolling = () => {
 onUnmounted(() => {
     if (pollInterval) clearInterval(pollInterval);
 });
-
 </script>

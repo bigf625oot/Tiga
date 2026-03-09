@@ -1,17 +1,33 @@
 <template>
   <DynamicGridBackground 
-    class="h-full overflow-hidden relative"
+    class="h-full overflow-hidden relative bg-background"
     :grid-size="30"
-    grid-color="#ffffff"
+    :grid-color="isDark ? '#333' : '#e5e7eb'"
     :blob-count="3"
-    :blob-colors="['rgba(99, 102, 241, 0.12)', 'rgba(59, 130, 246, 0.12)', 'rgba(168, 85, 247, 0.12)']"
+    :blob-colors="blobColors"
     :animation-speed="20"
+    :show-grid="!useTaskUI"
   >
     <div v-if="useTaskUI" class="h-full flex flex-col">
-      <div class="flex-none px-6 p-4 border-b border-figma-border flex justify-between items-center bg-white/80 backdrop-blur-sm z-30">
+      <!-- Header -->
+      <div class="flex-none px-4 py-3 border-b bg-background/80 backdrop-blur-md z-30 flex justify-between items-center supports-[backdrop-filter]:bg-background/60">
           <div class="flex items-center gap-4 min-w-0">
-              <div class="relative w-[36px] h-[36px] flex items-center justify-center shrink-0">
-                  <a-progress type="circle" :percent="workflowStore.progress" :size="36" :strokeWidth="4" :showInfo="false" strokeColor="#6366f1" trailColor="#e2e8f0" class="!m-0 !p-0" />
+              <div class="relative w-9 h-9 flex items-center justify-center shrink-0">
+                  <!-- Custom Progress Ring -->
+                  <div class="absolute inset-0 rounded-full border-2 border-muted"></div>
+                  <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="16"
+                      fill="none"
+                      class="stroke-primary transition-all duration-500 ease-in-out"
+                      stroke-width="2"
+                      stroke-dasharray="100"
+                      :stroke-dashoffset="100 - (workflowStore.progress || 0)"
+                    />
+                  </svg>
+                  
                   <div class="absolute inset-0 m-auto w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm overflow-hidden">
                       <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-full h-full object-cover" alt="Agent" />
                       <BaseIcon v-else icon="mdi:file-document-outline" class="text-white" :size="14" />
@@ -19,66 +35,80 @@
               </div>
 
               <div class="min-w-0">
-                  <h2 class="font-semibold text-figma-text text-sm m-0 leading-tight truncate">
+                  <h2 class="font-semibold text-sm leading-tight truncate text-foreground">
                       {{ currentSession?.title || '新任务' }}
                   </h2>
-                  <div class="flex items-center gap-1 text-sm text-figma-notation truncate" v-if="currentAgent">
+                  <div class="flex items-center gap-1 text-xs text-muted-foreground truncate" v-if="currentAgent">
                       <span>当前智能体:</span>
                       <span class="font-medium text-primary truncate">{{ currentAgent.name }}</span>
                   </div>
               </div>
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
-              <button
-                  class="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors flex items-center justify-center"
-                  title="查看系统日志"
-                  @click="openTaskLogs"
-              >
-                  <BaseIcon icon="lucide:code" :size="16" />
-              </button>
+          <div class="flex items-center gap-1 shrink-0">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" @click="openTaskLogs">
+                      <BaseIcon icon="lucide:code" :size="16" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>查看系统日志</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-              <button
-                  class="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors flex items-center justify-center"
-                  title="折叠/展开聊天区"
-                  @click="toggleLeftPane"
-              >
-                  <BaseIcon v-if="!isLeftCollapsed" icon="lucide:panel-left-close" :size="16" />
-                  <BaseIcon v-else icon="lucide:panel-left-open" :size="16" />
-              </button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" @click="toggleLeftPane">
+                      <BaseIcon v-if="!isLeftCollapsed" icon="lucide:panel-left-close" :size="16" />
+                      <BaseIcon v-else icon="lucide:panel-left-open" :size="16" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>折叠/展开聊天区</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-              <button
-                  class="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors flex items-center justify-center"
-                  title="折叠/展开任务区"
-                  @click="toggleRightPane"
-              >
-                  <BaseIcon v-if="!isRightCollapsed" icon="lucide:panel-right-close" :size="16" />
-                  <BaseIcon v-else icon="lucide:panel-right-open" :size="16" />
-              </button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" @click="toggleRightPane">
+                      <BaseIcon v-if="!isRightCollapsed" icon="lucide:panel-right-close" :size="16" />
+                      <BaseIcon v-else icon="lucide:panel-right-open" :size="16" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>折叠/展开任务区</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
           </div>
       </div>
 
       <div ref="splitContainerRef" class="flex-1 min-h-0 flex flex-col xl:flex-row bg-transparent overflow-hidden">
-        <div v-show="!isLeftCollapsed" class="flex flex-col min-w-0 flex-1 bg-white/60 backdrop-blur-sm relative transition-all duration-150" :style="leftPaneStyle">
+        <div v-show="!isLeftCollapsed" class="flex flex-col min-w-0 flex-1 bg-background/50 backdrop-blur-sm relative transition-all duration-150" :style="leftPaneStyle">
         <!-- Messages List -->
-        <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center px-4 pt-[20px] pb-[20px] bg-transparent overflow-y-auto relative custom-scrollbar">
-             <div class="w-full max-w-[800px] flex flex-col items-center gap-8">
+        <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center px-4 py-8 overflow-y-auto relative custom-scrollbar">
+             <div class="w-full max-w-2xl flex flex-col items-center gap-8">
                 <div class="flex flex-col items-center gap-4">
-                    <div class="w-[94px] h-[94px] flex items-center justify-center mb-2">
-                        <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain" />
+                    <div class="w-24 h-24 flex items-center justify-center mb-2 bg-muted/20 rounded-full p-4">
+                        <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain opacity-90" />
                     </div>
-                    <h1 class="text-[32px] font-semibold text-[#2A2F3C] text-center m-0">让我们创造点厉害的东西！</h1>
+                    <h1 class="text-3xl font-bold tracking-tight text-foreground text-center">让我们创造点厉害的东西！</h1>
                 </div>
                 
                 <!-- Centered Input Area -->
-                <div class="w-full relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+                <div class="w-full relative flex flex-col gap-2 border bg-background/50 backdrop-blur focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all shadow-lg rounded-xl p-3">
                     <!-- Attachments Preview -->
-                    <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                        <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
-                            <PaperClipOutlined />
+                    <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-1 pt-1">
+                        <Badge 
+                          v-for="(att, idx) in selectedAttachments" 
+                          :key="idx" 
+                          variant="secondary"
+                          class="flex items-center gap-1 px-2 py-1"
+                        >
+                            <Paperclip class="w-3 h-3" />
                             <span class="max-w-[100px] truncate">{{ att.name }}</span>
-                            <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
-                        </div>
+                            <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive ml-1" @click="removeAttachment(idx)" />
+                        </Badge>
                     </div>
 
                     <textarea 
@@ -87,109 +117,122 @@
                         @keydown="onInputKeydown"
                         rows="1"
                         :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm bg-transparent min-h-[40px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground"
                         :disabled="isLoading"
                         @input="adjustHeight"
                     ></textarea>
 
-                    <div class="flex justify-between items-center px-2 pb-1">
-                         <div class="flex items-center gap-2 h-8">
-                             <button @click="openAttachmentModal" class="p-1.5 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
-                                <PaperClipOutlined />
-                             </button>
-                             <div class="h-4 w-px bg-slate-200 mx-1"></div>
+                    <div class="flex justify-between items-center pt-2">
+                         <div class="flex items-center gap-2">
+                             <TooltipProvider>
+                               <Tooltip>
+                                 <TooltipTrigger as-child>
+                                   <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full" @click="openAttachmentModal">
+                                      <Paperclip class="w-4 h-4" />
+                                   </Button>
+                                 </TooltipTrigger>
+                                 <TooltipContent>添加附件</TooltipContent>
+                               </Tooltip>
+                             </TooltipProvider>
                              
-                             <a-dropdown :trigger="['click']">
-                                <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-muted transition-colors h-full select-none">
-                                    <MessageOutlined v-if="mode === 'chat'" class="text-indigo-600" />
-                                    <ProjectOutlined v-else-if="mode === 'workflow'" class="text-indigo-600" />
-                                    <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
-                                    <span class="text-xs font-medium text-slate-700">
-                                        {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : '自动任务') }}
+                             <Separator orientation="vertical" class="h-4" />
+                             
+                             <DropdownMenu>
+                                <DropdownMenuTrigger as-child>
+                                  <Button variant="ghost" size="sm" class="h-8 gap-2 px-2 font-normal text-muted-foreground hover:text-foreground">
+                                    <MessageSquare v-if="mode === 'chat'" class="w-4 h-4 text-primary" />
+                                    <Kanban v-else-if="mode === 'workflow'" class="w-4 h-4 text-primary" />
+                                    <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-4 h-4" />
+                                    <span>
+                                        {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : 'Openclaw') }}
                                     </span>
-                                    <DownOutlined class="text-[10px] text-muted-foreground" />
-                                </div>
-                                <template #overlay>
-                                    <a-menu @click="({ key }) => handleModeChange(key)">
-                                        <a-menu-item key="chat">
-                                            <div class="flex items-center gap-2 min-w-[120px]">
-                                                <MessageOutlined /> <span>对话模式</span>
-                                            </div>
-                                        </a-menu-item>
-                                        <a-menu-item key="workflow">
-                                            <div class="flex items-center gap-2">
-                                                <ProjectOutlined /> <span>智能规划</span>
-                                            </div>
-                                        </a-menu-item>
-                                        <a-menu-item key="auto_task">
-                                            <div class="flex items-center gap-2">
-                                                <img src="/openclaw.svg" class="w-3.5 h-3.5" /> <span>自动任务</span>
-                                            </div>
-                                        </a-menu-item>
-                                    </a-menu>
-                                </template>
-                             </a-dropdown>
+                                    <ChevronDown class="w-3 h-3 opacity-50" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem @click="handleModeChange('chat')">
+                                    <MessageSquare class="w-4 h-4 mr-2" /> 对话模式
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem @click="handleModeChange('workflow')">
+                                    <Kanban class="w-4 h-4 mr-2" /> 智能规划
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem @click="handleModeChange('auto_task')">
+                                    <img src="/openclaw.svg" class="w-4 h-4 mr-2" /> Openclaw
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                             </DropdownMenu>
 
-                             <div v-if="mode !== 'auto_task'" class="h-4 w-px bg-slate-200 mx-1"></div>
-                             <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
-                                <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
-                             </div>
+                             <template v-if="mode !== 'auto_task'">
+                               <Separator orientation="vertical" class="h-4" />
+                               <div class="flex items-center gap-2 cursor-pointer select-none px-2" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                  <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75" />
+                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-primary' : 'text-muted-foreground'">联网搜索</span>
+                               </div>
+                             </template>
                          </div>
                          
-                         <div class="flex items-center gap-4 h-8">
-                             <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
-                                <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-4 h-4 object-cover rounded-full" />
-                                <img v-else src="/tiga.svg" class="w-4 h-4" />
-                                <a-select 
-                                    v-model:value="selectedAgentId" 
-                                    @change="handleAgentChange"
-                                    class="agent-select-figma w-[100px]"
-                                    :bordered="false"
-                                    size="small"
+                         <div class="flex items-center gap-3">
+                             <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-transparent" @click="toggleAgentSelect">
+                                <Avatar class="w-5 h-5">
+                                  <AvatarImage v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" />
+                                  <AvatarFallback>
+                                    <img src="/tiga.svg" class="w-full h-full p-1" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <Select 
+                                    v-model="selectedAgentId" 
+                                    @update:modelValue="handleAgentChange"
                                     :open="agentSelectOpen"
-                                    @dropdownVisibleChange="val => agentSelectOpen = val"
-                                    :dropdownMatchSelectWidth="false"
-                                    :getPopupContainer="getPopupContainerForSelect"
+                                    @update:open="val => agentSelectOpen = val"
                                 >
-                                    <a-select-option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</a-select-option>
-                                </a-select>
+                                  <SelectTrigger class="w-[110px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none">
+                                    <SelectValue placeholder="选择智能体" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</SelectItem>
+                                  </SelectContent>
+                                </Select>
                              </div>
-                             <button 
+                             
+                             <Button 
                                 @click="sendMessage" 
-                                class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
+                                size="icon"
+                                class="h-8 w-8 rounded-full shadow-md transition-all active:scale-95"
+                                :variant="(input.trim() || isTaskRunning) ? 'default' : 'secondary'"
                                 :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                              >
-                                <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
-                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
-                                <ArrowUpOutlined v-else class="text-sm font-semibold" />
-                             </button>
+                                <Loader2 v-if="isStopping" class="w-4 h-4 animate-spin" />
+                                <Square v-else-if="isTaskRunning" class="w-3 h-3 fill-current" />
+                                <ArrowUp v-else class="w-4 h-4" />
+                             </Button>
                          </div>
                     </div>
                 </div>
 
                 <!-- Scripts Section -->
-                <div v-if="userScripts.length > 0" class="flex flex-col gap-4 px-1 w-full animate-fade-in-up">
-                    <span class="text-sm font-medium text-[#495363] p-4">用户快捷提示语</span>
-                    <div class="flex gap-4 overflow-x-auto py-4 custom-scrollbar px-2">
-                        <div 
+                <div v-if="userScripts.length > 0" class="flex flex-col gap-4 w-full animate-fade-in-up">
+                    <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">快捷指令</span>
+                    <ScrollArea class="w-full whitespace-nowrap pb-4">
+                      <div class="flex w-max space-x-4 p-1">
+                        <Card
                             v-for="s in userScripts" 
                             :key="s.id" 
-                            class="w-[220px] h-[140px] flex-shrink-0 flex flex-col justify-between p-6 bg-gradient-to-br from-white via-white to-indigo-50/60 rounded-lg border border-border hover:border-indigo-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden" 
+                            class="w-[240px] h-[140px] flex flex-col justify-between p-5 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm"
                             @click="sendQuickMessage(s.content)"
                         >
-                            <div class="absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-purple-100/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div class="absolute -right-8 -top-8 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors"></div>
                             <div class="flex flex-col gap-2 relative z-10">
-                                <p class="text-xs text-muted-foreground group-hover:text-slate-600 line-clamp-3 leading-relaxed transition-colors duration-300">
+                                <p class="text-xs text-muted-foreground group-hover:text-foreground line-clamp-3 leading-relaxed whitespace-normal transition-colors">
                                     {{ s.content }}
                                 </p>
                             </div>
-                            <div class="relative z-10 flex items-center justify-between mt-1 p-4 border-t border-slate-50 group-hover:border-border transition-colors duration-300">
-                                <span class="text-sm font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors duration-300 truncate">{{ s.title }}</span>
+                            <div class="relative z-10 flex items-center justify-between pt-4 border-t border-border/50 group-hover:border-primary/20 transition-colors">
+                                <span class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{{ s.title }}</span>
                             </div>
-                        </div>
-                    </div>
+                        </Card>
+                      </div>
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
                 </div>
              </div>
         </div>
@@ -205,16 +248,21 @@
         />
 
         <!-- Input Area (Fixed Bottom for Chat) -->
-        <div v-if="messages.length > 0" class="flex-none w-full p-4 px-4 bg-white z-30 border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+        <div v-if="messages.length > 0" class="flex-none w-full p-4 bg-background/80 backdrop-blur-sm z-30 border-t border-border shadow-sm">
             <div class="max-w-4xl mx-auto relative">
-                <div class="relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
+                <div class="relative flex flex-col gap-2 border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all rounded-xl p-3 shadow-sm">
                     <!-- Attachments Preview -->
-                    <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                        <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
-                            <PaperClipOutlined />
+                    <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-1 pt-1">
+                        <Badge 
+                          v-for="(att, idx) in selectedAttachments" 
+                          :key="idx" 
+                          variant="secondary"
+                          class="flex items-center gap-1 px-2 py-1"
+                        >
+                            <Paperclip class="w-3 h-3" />
                             <span class="max-w-[100px] truncate">{{ att.name }}</span>
-                            <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
-                        </div>
+                            <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive ml-1" @click="removeAttachment(idx)" />
+                        </Badge>
                     </div>
 
                     <textarea 
@@ -223,29 +271,30 @@
                         @keydown="onInputKeydown"
                         rows="1"
                         :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm bg-transparent min-h-[40px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground"
                         :disabled="isLoading"
                         @input="adjustHeight"
                     ></textarea>
 
-                    <div class="flex justify-between items-center px-2 pb-1">
+                    <div class="flex justify-between items-center pt-2">
                          <div class="flex items-center gap-2 h-8">
-                             <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
-                                <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
+                             <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full px-2" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75" />
+                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-primary' : 'text-muted-foreground'">联网搜索</span>
                              </div>
                          </div>
                          <div class="flex items-center gap-4 h-8">
-                             <button 
+                             <Button 
                                 @click="sendMessage" 
-                                class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
+                                size="icon"
+                                class="h-8 w-8 rounded-full shadow-md transition-all active:scale-95"
+                                :variant="(input.trim() || isTaskRunning) ? 'default' : 'secondary'"
                                 :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                              >
-                                <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
-                                <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
-                                <ArrowUpOutlined v-else class="text-sm font-semibold" />
-                             </button>
+                                <Loader2 v-if="isStopping" class="w-4 h-4 animate-spin" />
+                                <Square v-else-if="isTaskRunning" class="w-3 h-3 fill-current" />
+                                <ArrowUp v-else class="w-4 h-4" />
+                             </Button>
                          </div>
                     </div>
                 </div>
@@ -255,16 +304,14 @@
 
       <div
         v-if="isDesktop && !isLeftCollapsed && !isRightCollapsed"
-        class="hidden xl:flex w-1 shrink-0 items-center justify-center cursor-col-resize bg-transparent z-50 relative group"
+        class="hidden xl:flex w-1 shrink-0 items-center justify-center cursor-col-resize bg-transparent z-50 relative group hover:bg-primary/10 transition-colors"
         @mousedown="startResize"
       >
         <!-- Visual Line -->
-        <div class="w-[1px] h-full bg-slate-200 group-hover:bg-indigo-500 group-hover:w-[2px] transition-all"></div>
-        <!-- Hit Area -->
-        <div class="absolute w-4 h-full bg-transparent -left-1.5 cursor-col-resize"></div>
+        <div class="w-[1px] h-full bg-border group-hover:bg-primary group-hover:w-[2px] transition-all"></div>
       </div>
 
-      <div v-show="!isRightCollapsed" class="w-full h-[420px] xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-muted/50 z-20 transition-all duration-150 flex flex-col overflow-hidden" :style="rightPaneStyle">
+      <div v-show="!isRightCollapsed" class="w-full h-[420px] xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-muted/30 z-20 transition-all duration-150 flex flex-col overflow-hidden" :style="rightPaneStyle">
         <AutoTaskPanel 
             v-if="isAutoTaskMode" 
             @run-task="handleRunTask" 
@@ -282,22 +329,35 @@
     </div>
     </div>
 
-    <div v-else class="h-full flex flex-col bg-transparent overflow-hidden relative">
-      <div class="flex-1 flex flex-col h-full bg-transparent relative min-w-0">
-          <div v-if="messages.length > 0 && !embedded" class="px-6 p-4 border-b border-figma-border flex justify-between items-center bg-white/80 backdrop-blur-sm z-10">
+    <!-- Standalone Chat UI (No Task/Workflow) -->
+    <div v-else class="h-full flex flex-col bg-background overflow-hidden relative">
+      <div class="flex-1 flex flex-col h-full relative min-w-0">
+          <div v-if="messages.length > 0 && !embedded" class="px-4 py-3 border-b border-border flex justify-between items-center bg-background/80 backdrop-blur-sm z-10">
               <div class="flex items-center gap-4 group flex-1">
-                  <div class="relative w-[36px] h-[36px] flex items-center justify-center">
-                      <a-progress type="circle" :percent="workflowStore.progress" :size="36" :strokeWidth="4" :showInfo="false" strokeColor="#6366f1" trailColor="#e2e8f0" class="!m-0 !p-0" />
+                  <div class="relative w-9 h-9 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full border-2 border-muted"></div>
+                    <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                        <circle
+                        cx="18"
+                        cy="18"
+                        r="16"
+                        fill="none"
+                        class="stroke-primary transition-all duration-500 ease-in-out"
+                        stroke-width="2"
+                        stroke-dasharray="100"
+                        :stroke-dashoffset="100 - (workflowStore.progress || 0)"
+                        />
+                    </svg>
                       <div class="absolute inset-0 m-auto w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm overflow-hidden">
                           <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-full h-full object-cover" alt="Agent" />
                           <BaseIcon v-else icon="mdi:file-document-outline" class="text-white" :size="14" />
                       </div>
                   </div>
                   <div class="min-w-0">
-                      <h2 class="font-semibold text-figma-text text-sm m-0 leading-tight truncate">
+                      <h2 class="font-semibold text-sm leading-tight truncate text-foreground">
                           {{ currentSession?.title || '新任务' }}
                       </h2>
-                      <div class="flex items-center gap-1 text-sm text-figma-notation truncate" v-if="currentAgent">
+                      <div class="flex items-center gap-1 text-xs text-muted-foreground truncate" v-if="currentAgent">
                           <span>当前智能体:</span>
                           <span class="font-medium text-primary truncate">{{ currentAgent.name }}</span>
                       </div>
@@ -305,23 +365,28 @@
               </div>
           </div>
 
-          <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center px-4 pt-[20px] pb-[20px] bg-transparent overflow-y-auto relative custom-scrollbar">
-               <div class="w-full max-w-[800px] flex flex-col items-center gap-8">
+          <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center px-4 py-8 overflow-y-auto relative custom-scrollbar">
+               <div class="w-full max-w-2xl flex flex-col items-center gap-8">
                   <div class="flex flex-col items-center gap-4">
-                      <div class="w-[94px] h-[94px] flex items-center justify-center mb-2">
-                          <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain" />
+                      <div class="w-24 h-24 flex items-center justify-center mb-2 bg-muted/20 rounded-full p-4">
+                          <img src="/bot.svg" alt="Robot" class="w-full h-full object-contain opacity-90" />
                       </div>
-                      <h1 v-if="!embedded" class="text-[32px] font-semibold text-[#2A2F3C] text-center m-0">让我们创造点厉害的东西！</h1>
-                      <h1 v-else class="text-xl font-semibold text-[#2A2F3C] text-center m-0">有什么可以帮您？</h1>
+                      <h1 v-if="!embedded" class="text-3xl font-bold tracking-tight text-foreground text-center">让我们创造点厉害的东西！</h1>
+                      <h1 v-else class="text-xl font-semibold text-foreground text-center">有什么可以帮您？</h1>
                   </div>
                   
-                  <div class="w-full relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                          <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
-                              <PaperClipOutlined />
-                              <span class="max-w-[100px] truncate">{{ att.name }}</span>
-                              <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
-                          </div>
+                  <div class="w-full relative flex flex-col gap-2 border bg-background/50 backdrop-blur focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all rounded-xl p-3 shadow-lg">
+                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-1 pt-1">
+                        <Badge 
+                          v-for="(att, idx) in selectedAttachments" 
+                          :key="idx" 
+                          variant="secondary"
+                          class="flex items-center gap-1 px-2 py-1"
+                        >
+                            <Paperclip class="w-3 h-3" />
+                            <span class="max-w-[100px] truncate">{{ att.name }}</span>
+                            <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive ml-1" @click="removeAttachment(idx)" />
+                        </Badge>
                       </div>
 
                       <textarea 
@@ -330,109 +395,121 @@
                           @keydown="onInputKeydown"
                           rows="1"
                           :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm bg-transparent min-h-[40px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground"
                         :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
-                      <div class="flex justify-between items-center px-2 pb-1">
+                      <div class="flex justify-between items-center pt-2">
                            <div class="flex items-center gap-2 h-8">
-                               <button @click="openAttachmentModal" class="p-1.5 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
-                                  <PaperClipOutlined />
-                               </button>
-                               <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                               
-                               <a-dropdown :trigger="['click']" v-if="!embedded">
-                                  <div class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-md hover:bg-muted transition-colors h-full select-none">
-                                      <MessageOutlined v-if="mode === 'chat'" class="text-indigo-600" />
-                                      <ProjectOutlined v-else-if="mode === 'workflow'" class="text-indigo-600" />
-                                    <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
-                                    <span class="text-xs font-medium text-slate-700">
-                                        {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : '自动任务') }}
-                                    </span>
-                                    <DownOutlined class="text-[10px] text-muted-foreground" />
-                                  </div>
-                                  <template #overlay>
-                                      <a-menu @click="({ key }) => handleModeChange(key)">
-                                          <a-menu-item key="chat">
-                                            <div class="flex items-center gap-2 min-w-[120px]">
-                                                <MessageOutlined /> <span>对话模式</span>
-                                            </div>
-                                        </a-menu-item>
-                                        <a-menu-item key="workflow">
-                                            <div class="flex items-center gap-2">
-                                                <ProjectOutlined /> <span>智能规划</span>
-                                            </div>
-                                        </a-menu-item>
-                                        <a-menu-item key="auto_task">
-                                            <div class="flex items-center gap-2">
-                                                <img src="/openclaw.svg" class="w-3.5 h-3.5" /> <span>自动任务</span>
-                                            </div>
-                                        </a-menu-item>
-                                      </a-menu>
-                                  </template>
-                               </a-dropdown>
+                               <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full" @click="openAttachmentModal">
+                                        <Paperclip class="w-4 h-4" />
+                                    </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>添加附件</TooltipContent>
+                                </Tooltip>
+                               </TooltipProvider>
 
-                               <div v-if="mode !== 'auto_task' && !embedded" class="h-4 w-px bg-slate-200 mx-1"></div>
-                               <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
-                                  <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
-                               </div>
+                               <Separator orientation="vertical" class="h-4" />
+                               
+                               <DropdownMenu v-if="!embedded">
+                                <DropdownMenuTrigger as-child>
+                                  <Button variant="ghost" size="sm" class="h-8 gap-2 px-2 font-normal text-muted-foreground hover:text-foreground">
+                                    <MessageSquare v-if="mode === 'chat'" class="w-4 h-4 text-primary" />
+                                    <Kanban v-else-if="mode === 'workflow'" class="w-4 h-4 text-primary" />
+                                    <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-4 h-4" />
+                                    <span>
+                                        {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : 'Openclaw') }}
+                                    </span>
+                                    <ChevronDown class="w-3 h-3 opacity-50" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem @click="handleModeChange('chat')">
+                                    <MessageSquare class="w-4 h-4 mr-2" /> 对话模式
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem @click="handleModeChange('workflow')">
+                                    <Kanban class="w-4 h-4 mr-2" /> 智能规划
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem @click="handleModeChange('auto_task')">
+                                    <img src="/openclaw.svg" class="w-4 h-4 mr-2" /> Openclaw
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                               </DropdownMenu>
+
+                               <template v-if="mode !== 'auto_task' && !embedded">
+                                   <Separator orientation="vertical" class="h-4" />
+                                   <div class="flex items-center gap-2 cursor-pointer select-none px-2" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                      <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75" />
+                                      <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-primary' : 'text-muted-foreground'">联网搜索</span>
+                                   </div>
+                               </template>
                            </div>
                            
-                           <div class="flex items-center gap-4 h-8">
-                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
-                                  <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-4 h-4 object-cover rounded-full" />
-                                  <img v-else src="/tiga.svg" class="w-4 h-4" />
-                                  <a-select 
-                                      v-model:value="selectedAgentId" 
-                                      @change="handleAgentChange"
-                                      class="agent-select-figma w-[100px]"
-                                      :bordered="false"
-                                      size="small"
+                           <div class="flex items-center gap-3 h-8">
+                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-transparent" @click="toggleAgentSelect">
+                                  <Avatar class="w-5 h-5">
+                                    <AvatarImage v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" />
+                                    <AvatarFallback>
+                                        <img src="/tiga.svg" class="w-full h-full p-1" />
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <Select 
+                                      v-model="selectedAgentId" 
+                                      @update:modelValue="handleAgentChange"
                                       :open="agentSelectOpen"
-                                      @dropdownVisibleChange="val => agentSelectOpen = val"
-                                      :dropdownMatchSelectWidth="false"
-                                      :getPopupContainer="getPopupContainerForSelect"
+                                      @update:open="val => agentSelectOpen = val"
                                   >
-                                      <a-select-option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</a-select-option>
-                                  </a-select>
+                                    <SelectTrigger class="w-[110px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none">
+                                        <SelectValue placeholder="选择智能体" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                </div>
 
-                               <button 
+                               <Button 
                                   @click="sendMessage" 
-                                  class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
+                                  size="icon"
+                                  class="h-8 w-8 rounded-full shadow-md transition-all active:scale-95"
+                                  :variant="(input.trim() || isTaskRunning) ? 'default' : 'secondary'"
                                   :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
-                                  <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
-                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
-                                  <ArrowUpOutlined v-else class="text-sm font-semibold" />
-                               </button>
+                                  <Loader2 v-if="isStopping" class="w-4 h-4 animate-spin" />
+                                  <Square v-else-if="isTaskRunning" class="w-3 h-3 fill-current" />
+                                  <ArrowUp v-else class="w-4 h-4" />
+                               </Button>
                            </div>
                       </div>
                   </div>
 
-                  <div v-if="userScripts.length > 0" class="flex flex-col gap-4 px-1 w-full animate-fade-in-up">
-                      <span class="text-sm font-medium text-[#495363] p-4">用户快捷提示语</span>
-                      <div class="flex gap-4 overflow-x-auto py-4 custom-scrollbar px-2">
-                        <div 
-                            v-for="s in userScripts" 
-                            :key="s.id" 
-                            class="w-[220px] h-[140px] flex-shrink-0 flex flex-col justify-between p-6 bg-gradient-to-br from-white via-white to-indigo-50/60 rounded-lg border border-border hover:border-indigo-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-                            @click="sendQuickMessage(s.content)"
-                        >
-                            <div class="absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-purple-100/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div class="flex flex-col gap-2 relative z-10">
-                                <p class="text-xs text-muted-foreground group-hover:text-slate-600 line-clamp-3 leading-relaxed transition-colors duration-300">
-                                    {{ s.content }}
-                                </p>
-                            </div>
-                            <div class="relative z-10 flex items-center justify-between mt-1 p-4 border-t border-slate-50 group-hover:border-border transition-colors duration-300">
-                                <span class="text-sm font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors duration-300 truncate">{{ s.title }}</span>
-                            </div>
+                  <div v-if="userScripts.length > 0" class="flex flex-col gap-4 w-full animate-fade-in-up">
+                      <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">快捷指令</span>
+                      <ScrollArea class="w-full whitespace-nowrap pb-4">
+                        <div class="flex w-max space-x-4 p-1">
+                          <Card
+                              v-for="s in userScripts" 
+                              :key="s.id" 
+                              class="w-[240px] h-[140px] flex flex-col justify-between p-5 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm"
+                              @click="sendQuickMessage(s.content)"
+                          >
+                              <div class="absolute -right-8 -top-8 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors"></div>
+                              <div class="flex flex-col gap-2 relative z-10">
+                                  <p class="text-xs text-muted-foreground group-hover:text-foreground line-clamp-3 leading-relaxed whitespace-normal transition-colors">
+                                      {{ s.content }}
+                                  </p>
+                              </div>
+                              <div class="relative z-10 flex items-center justify-between pt-4 border-t border-border/50 group-hover:border-primary/20 transition-colors">
+                                  <span class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{{ s.title }}</span>
+                              </div>
+                          </Card>
                         </div>
-                      </div>
+                        <ScrollBar orientation="horizontal" />
+                      </ScrollArea>
                   </div>
                </div>
           </div>
@@ -448,15 +525,20 @@
               @open-doc-space="handleOpenDocSpace"
           />
 
-          <div v-if="messages.length > 0" class="flex-none w-full p-4 px-4 bg-white z-30 border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+          <div v-if="messages.length > 0" class="flex-none w-full p-4 bg-background/80 backdrop-blur-sm z-30 border-t border-border shadow-sm">
               <div class="max-w-4xl mx-auto relative">
-                  <div class="relative flex flex-col gap-2 border border-slate-200 rounded-lg p-2 bg-transparent focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
-                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-2 pt-2">
-                          <div v-for="(att, idx) in selectedAttachments" :key="idx" class="flex items-center gap-1 bg-primary/10 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">
-                              <PaperClipOutlined />
-                              <span class="max-w-[100px] truncate">{{ att.name }}</span>
-                              <DeleteOutlined class="cursor-pointer hover:text-red-500 ml-1" @click="removeAttachment(idx)" />
-                          </div>
+                  <div class="relative flex flex-col gap-2 border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all rounded-xl p-3 shadow-sm">
+                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-1 pt-1">
+                        <Badge 
+                          v-for="(att, idx) in selectedAttachments" 
+                          :key="idx" 
+                          variant="secondary"
+                          class="flex items-center gap-1 px-2 py-1"
+                        >
+                            <Paperclip class="w-3 h-3" />
+                            <span class="max-w-[100px] truncate">{{ att.name }}</span>
+                            <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive ml-1" @click="removeAttachment(idx)" />
+                        </Badge>
                       </div>
 
                       <textarea 
@@ -465,57 +547,73 @@
                           @keydown="onInputKeydown"
                           rows="1"
                           :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm text-slate-700 placeholder:text-muted-foreground bg-transparent min-h-[36px] max-h-[200px] custom-scrollbar"
+                        class="w-full p-2 resize-none outline-none text-sm bg-transparent min-h-[40px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground"
                         :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
-                      <div class="flex justify-between items-center px-2 pb-1">
+                      <div class="flex justify-between items-center pt-2">
                            <div class="flex items-center gap-2 h-8">
-                               <button @click="openAttachmentModal" class="p-1.5 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center" title="添加附件">
-                                  <PaperClipOutlined />
-                               </button>
-                               <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                               <div class="flex items-center gap-2 cursor-pointer select-none h-full" @click="toggleWorkflowMode" v-if="!embedded">
-                                  <a-switch size="small" :checked="isWorkflowMode" class="pointer-events-none" />
-                                  <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-indigo-600' : 'text-muted-foreground'">任务模式</span>
+                               <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full" @click="openAttachmentModal">
+                                        <Paperclip class="w-4 h-4" />
+                                    </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>添加附件</TooltipContent>
+                                </Tooltip>
+                               </TooltipProvider>
+
+                               <Separator orientation="vertical" class="h-4" />
+                               <div class="flex items-center gap-2 cursor-pointer select-none px-2" @click="toggleWorkflowMode" v-if="!embedded">
+                                  <Switch :checked="isWorkflowMode" class="pointer-events-none scale-75" />
+                                  <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-primary' : 'text-muted-foreground'">任务模式</span>
                                </div>
-                               <div v-if="mode !== 'auto_task' && !embedded" class="h-4 w-px bg-slate-200 mx-1"></div>
-                               <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
-                                  <a-switch size="small" :checked="isNetworkSearchEnabled" class="pointer-events-none" />
-                                  <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-indigo-600' : 'text-muted-foreground'">联网搜索</span>
-                               </div>
+                               
+                               <template v-if="mode !== 'auto_task' && !embedded">
+                                   <Separator orientation="vertical" class="h-4" />
+                                   <div class="flex items-center gap-2 cursor-pointer select-none px-2" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                      <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75" />
+                                      <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-primary' : 'text-muted-foreground'">联网搜索</span>
+                                   </div>
+                               </template>
                            </div>
 
-                           <div class="flex items-center gap-4 h-8">
-                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 cursor-pointer border border-transparent hover:border-slate-200 transition-all h-full" @click="toggleAgentSelect">
-                                  <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-4 h-4 object-cover rounded-full" />
-                                  <img v-else src="/tiga.svg" class="w-4 h-4" />
-                                  <a-select 
-                                      v-model:value="selectedAgentId" 
-                                      @change="handleAgentChange"
-                                      class="agent-select-figma w-[100px]"
-                                      :bordered="false"
-                                      size="small"
+                           <div class="flex items-center gap-3 h-8">
+                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-transparent" @click="toggleAgentSelect">
+                                  <Avatar class="w-5 h-5">
+                                    <AvatarImage v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" />
+                                    <AvatarFallback>
+                                        <img src="/tiga.svg" class="w-full h-full p-1" />
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <Select 
+                                      v-model="selectedAgentId" 
+                                      @update:modelValue="handleAgentChange"
                                       :open="agentSelectOpen"
-                                      @dropdownVisibleChange="val => agentSelectOpen = val"
-                                      :dropdownMatchSelectWidth="false"
-                                      :getPopupContainer="getPopupContainerForSelect"
+                                      @update:open="val => agentSelectOpen = val"
                                   >
-                                      <a-select-option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</a-select-option>
-                                  </a-select>
+                                    <SelectTrigger class="w-[110px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none">
+                                        <SelectValue placeholder="选择智能体" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                </div>
 
-                               <button 
+                               <Button 
                                   @click="sendMessage" 
-                                  class="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-                                  :class="(input.trim() || isTaskRunning) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-muted text-slate-300'"
+                                  size="icon"
+                                  class="h-8 w-8 rounded-full shadow-md transition-all active:scale-95"
+                                  :variant="(input.trim() || isTaskRunning) ? 'default' : 'secondary'"
                                   :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
-                                  <LoadingOutlined v-if="isStopping" class="text-sm font-semibold" />
-                                  <StopOutlined v-else-if="isTaskRunning" class="text-sm font-semibold" />
-                                  <ArrowUpOutlined v-else class="text-sm font-semibold" />
-                               </button>
+                                  <Loader2 v-if="isStopping" class="w-4 h-4 animate-spin" />
+                                  <Square v-else-if="isTaskRunning" class="w-3 h-3 fill-current" />
+                                  <ArrowUp v-else class="w-4 h-4" />
+                               </Button>
                            </div>
                       </div>
                   </div>
@@ -525,47 +623,102 @@
     </div>
 
     <!-- Attachment Modal -->
-    <a-modal v-model:open="attachmentModalVisible" title="选择附件" width="600px" @ok="handleAttachmentOk" destroyOnClose>
-        <a-tabs v-model:activeKey="activeAttachmentTab" @change="handleAttachmentTabChange">
-            <a-tab-pane key="local" tab="本地文件">
-                <a-upload-dragger name="file" :multiple="true" :showUploadList="false" :beforeUpload="handleLocalUpload">
-                    <p class="ant-upload-drag-icon"><InboxOutlined /></p>
-                    <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
-                    <p class="ant-upload-hint">支持 PDF, DOCX, PPTX, XLSX, TXT 格式，最大 50MB</p>
-                </a-upload-dragger>
-                <div v-if="localFileList.length > 0" class="mt-4 max-h-40 overflow-y-auto space-y-2 custom-scrollbar">
-                    <div v-for="file in localFileList" :key="file.uid" class="flex items-center justify-between p-2 bg-muted/50 rounded border border-border">
+    <Dialog v-model:open="attachmentModalVisible">
+      <DialogContent class="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>选择附件</DialogTitle>
+        </DialogHeader>
+        
+        <Tabs v-model="activeAttachmentTab" class="w-full">
+            <TabsList class="grid w-full grid-cols-2">
+                <TabsTrigger value="local">本地文件</TabsTrigger>
+                <TabsTrigger value="knowledge">知识库文档</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="local" class="py-4">
+                <div 
+                    class="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-muted/50 transition-colors cursor-pointer"
+                    @click="$refs.fileInput.click()"
+                    @drop.prevent="handleDrop"
+                    @dragover.prevent
+                >
+                    <input type="file" ref="fileInput" class="hidden" multiple @change="handleFileChange" />
+                    <div class="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Upload class="w-10 h-10 mb-2 text-muted-foreground/50" />
+                        <p class="text-sm font-medium">点击或拖拽文件到此区域上传</p>
+                        <p class="text-xs">支持 PDF, DOCX, PPTX, XLSX, TXT 格式，最大 50MB</p>
+                    </div>
+                </div>
+
+                <div v-if="localFileList.length > 0" class="mt-4 max-h-40 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                    <div v-for="file in localFileList" :key="file.uid" class="flex items-center justify-between p-2 bg-muted/30 rounded border border-border">
                         <div class="flex items-center gap-2 truncate">
-                            <PaperClipOutlined class="text-muted-foreground" />
-                            <span class="text-sm text-slate-700 truncate max-w-[300px]">{{ file.name }}</span>
+                            <Paperclip class="w-4 h-4 text-muted-foreground" />
+                            <span class="text-sm text-foreground truncate max-w-[300px]">{{ file.name }}</span>
                             <span class="text-xs text-muted-foreground">({{ (file.size / 1024).toFixed(1) }} KB)</span>
                         </div>
-                        <DeleteOutlined class="text-muted-foreground hover:text-red-500 cursor-pointer" @click="removeLocalFile(file)" />
+                        <Button variant="ghost" size="icon" class="h-6 w-6 text-muted-foreground hover:text-destructive" @click="removeLocalFile(file)">
+                            <Trash2 class="w-4 h-4" />
+                        </Button>
                     </div>
                 </div>
-            </a-tab-pane>
-            <a-tab-pane key="knowledge" tab="知识库文档">
+            </TabsContent>
+            
+            <TabsContent value="knowledge" class="py-4">
                 <div class="flex flex-col gap-4 h-[400px]">
                     <div class="flex gap-2">
-                        <a-input v-model:value="knowledgeSearchKeyword" placeholder="搜索文档名称..." allowClear>
-                            <template #prefix><SearchOutlined /></template>
-                        </a-input>
-                        <a-button type="primary" :loading="knowledgeLoading" @click="fetchKnowledgeDocs">刷新</a-button>
+                        <div class="relative flex-1">
+                            <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input v-model="knowledgeSearchKeyword" placeholder="搜索文档名称..." class="pl-9" />
+                        </div>
+                        <Button variant="outline" :disabled="knowledgeLoading" @click="fetchKnowledgeDocs">
+                            <Loader2 v-if="knowledgeLoading" class="w-4 h-4 animate-spin mr-2" />
+                            刷新
+                        </Button>
                     </div>
-                    <a-table
-                        :dataSource="filteredKnowledgeDocs"
-                        :columns="knowledgeColumns"
-                        :rowKey="record => record.id"
-                        :rowSelection="{ selectedRowKeys: selectedKnowledgeRowKeys, onChange: onKnowledgeSelectChange }"
-                        :pagination="{ pageSize: 50, size: 'small' }"
-                        :scroll="{ y: 300 }"
-                        size="small"
-                        :loading="knowledgeLoading"
-                    />
+                    
+                    <div class="border rounded-md flex-1 overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead class="w-[40px]"></TableHead>
+                                    <TableHead>文档名称</TableHead>
+                                    <TableHead>大小</TableHead>
+                                    <TableHead class="text-right">修改时间</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow v-for="doc in filteredKnowledgeDocs" :key="doc.id">
+                                    <TableCell>
+                                        <input 
+                                            type="checkbox" 
+                                            :checked="selectedKnowledgeRowKeys.includes(doc.id)"
+                                            @change="(e) => toggleKnowledgeSelection(doc.id, e.target.checked)"
+                                            class="rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                    </TableCell>
+                                    <TableCell class="font-medium">{{ doc.filename }}</TableCell>
+                                    <TableCell>{{ (doc.file_size / 1024).toFixed(2) }} KB</TableCell>
+                                    <TableCell class="text-right">{{ new Date(doc.updated_at).toLocaleDateString() }}</TableCell>
+                                </TableRow>
+                                <TableRow v-if="filteredKnowledgeDocs.length === 0">
+                                    <TableCell colspan="4" class="h-24 text-center text-muted-foreground">
+                                        暂无文档
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
-            </a-tab-pane>
-        </a-tabs>
-    </a-modal>
+            </TabsContent>
+        </Tabs>
+
+        <DialogFooter>
+            <Button variant="outline" @click="attachmentModalVisible = false">取消</Button>
+            <Button @click="handleAttachmentOk">确认 ({{ localFileList.length + selectedKnowledgeRowKeys.length }})</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </DynamicGridBackground>
 </template>
 
@@ -574,14 +727,13 @@
  * @场景    多智能体问答入口，支持对话、智能规划与自动任务协同处理
  * @功能    提供会话管理、SSE流式消息、附件上传、模式切换与任务面板联动
  * @依赖    Vue3、Ant Design Vue、workflow.store、/api/v1/chat 与 /openclaw 接口
- * @备注    当前模板存在重复结构与部分未使用变量，建议后续拆分输入区与模式面板
+ * @备注    UI Refactored to shadcn/ui
  */
 import { ref, nextTick, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { marked } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { api } from '@/core/api/client';
-import { message } from 'ant-design-vue';
 import MessageList from './MessageList.vue';
 import ReferencesTable from './ReferencesTable.vue';
 import ReferencesCards from './ReferencesCards.vue';
@@ -590,18 +742,39 @@ import WorkspaceTabs from '@/features/workflow/components/WorkspaceTabs.vue';
 import BaseIcon from '@/shared/components/atoms/BaseIcon';
 import DynamicGridBackground from '@/shared/components/molecules/DynamicGridBackground.vue';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
+import { useTheme } from '@/composables/useTheme';
+import { useToast } from '@/components/ui/toast/use-toast';
+
+// Shadcn Components
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
+
+// Icons
 import { 
-    PaperClipOutlined,
-    DeleteOutlined,
-    InboxOutlined,
-    SearchOutlined,
-    ArrowUpOutlined,
-    StopOutlined,
-    LoadingOutlined,
-    ProjectOutlined,
-    MessageOutlined,
-    DownOutlined
-} from '@ant-design/icons-vue';
+    Paperclip, 
+    Trash2, 
+    Upload, 
+    Search, 
+    ArrowUp, 
+    Square, 
+    Loader2, 
+    Kanban, 
+    MessageSquare, 
+    ChevronDown, 
+    Check 
+} from 'lucide-vue-next';
 
 const props = defineProps({
     sessionId: { type: String, default: null },
@@ -610,6 +783,13 @@ const props = defineProps({
 const emit = defineEmits(['refresh-sessions']);
 
 const workflowStore = useWorkflowStore();
+const { isLightMode } = useTheme();
+const { toast } = useToast();
+const isDark = computed(() => !isLightMode.value);
+const blobColors = computed(() => isDark.value 
+    ? ['rgba(99, 102, 241, 0.15)', 'rgba(59, 130, 246, 0.15)', 'rgba(168, 85, 247, 0.15)'] 
+    : ['rgba(99, 102, 241, 0.12)', 'rgba(59, 130, 246, 0.12)', 'rgba(168, 85, 247, 0.12)']);
+
 const mode = ref('chat'); // 'chat', 'workflow', 'auto_task'
 const isWorkflowMode = computed(() => mode.value === 'workflow');
 const isAutoTaskMode = computed(() => mode.value === 'auto_task');
@@ -651,6 +831,7 @@ const isRightCollapsed = ref(false);
 const isDesktop = ref(false);
 const splitRatio = ref(0.6);
 const workspaceTabsRef = ref(null);
+const fileInput = ref(null);
 
 const readSplitRatio = () => {
     try {
@@ -731,12 +912,12 @@ const handleRunTask = async (prompt) => {
                         body: JSON.stringify({ agent_id: targetAgent.id })
                     });
                     if (currentSession.value) currentSession.value.agent_id = targetAgent.id;
-                    message.info(`已切换至"${targetAgent.name}"以执行任务`);
+                    toast({ description: `已切换至"${targetAgent.name}"以执行任务` });
                 } catch (e) {
                     console.error("Failed to force update session agent", e);
                 }
             } else {
-                 message.info(`已切换至"${targetAgent.name}"以执行任务`);
+                 toast({ description: `已切换至"${targetAgent.name}"以执行任务` });
             }
         }
     }
@@ -799,25 +980,13 @@ const stopResize = () => {
     writeSplitRatio(splitRatio.value);
 };
 
-// Knowledge Columns
-const knowledgeColumns = [
-    { title: '文档名称', dataIndex: 'filename', key: 'filename', sorter: (a, b) => a.filename.localeCompare(b.filename) },
-    { title: '大小', dataIndex: 'file_size', key: 'file_size', customRender: ({ text }) => (text / 1024).toFixed(2) + ' KB', sorter: (a, b) => a.file_size - b.file_size },
-    { title: '修改时间', dataIndex: 'updated_at', key: 'updated_at', sorter: (a, b) => new Date(a.updated_at) - new Date(b.updated_at) }
-];
-
 const getPopupContainerForSelect = () => {
     return document.body;
 };
 
 const openTaskLogs = () => {
     if (isAutoTaskMode.value) {
-        // In auto task mode, logs might be different, but for now we try to open the same log panel
-        // We need to ensure WorkspaceTabs is mounted or LogDrawer is accessible globally
-        // Currently WorkspaceTabs is hidden in v-else of right pane.
-        // Option 1: Mount LogDrawer outside WorkspaceTabs
-        // Option 2: Just show a message
-        message.info('自动任务模式下的日志请直接在对话流中查看工具调用详情');
+        toast({ description: 'Openclaw模式下的日志请直接在对话流中查看工具调用详情' });
     } else {
         workspaceTabsRef.value?.openTaskLogs?.();
     }
@@ -860,7 +1029,6 @@ onBeforeUnmount(() => {
 
 watch(() => props.sessionId, (newId) => {
     currentSessionId.value = newId;
-    // Reset mode to 'chat' when switching sessions to avoid pollution
     mode.value = 'chat';
     isRightCollapsed.value = true;
     workflowStore.resetWorkflow();
@@ -885,20 +1053,6 @@ watch(() => workflowStore.currentStep, (newStep, oldStep) => {
         scrollToBottom();
     }
 });
-
-const structuredRefs = (msg) => {
-    const sr = msg.meta_data?.structured_references || [];
-    if (sr.length) return sr;
-    const refs = msg.meta_data?.references || [];
-    return refs.map((r, i) => ({
-        id: i + 1,
-        title: r.title || '',
-        createTime: '',
-        coverImage: r.url || '',
-        summary: r.preview || '',
-        tags: []
-    }));
-};
 
 const userScripts = ref([]);
 const userScriptsLoading = ref(false);
@@ -970,16 +1124,25 @@ const openAttachmentModal = () => {
         fetchKnowledgeDocs();
     }
 };
-const handleAttachmentTabChange = (key) => {
-    activeAttachmentTab.value = key;
-    if (key === 'knowledge' && knowledgeDocs.value.length === 0) fetchKnowledgeDocs();
+
+const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => handleLocalUpload(file));
+    // reset input
+    if (fileInput.value) fileInput.value.value = '';
 };
+
+const handleDrop = (e) => {
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(file => handleLocalUpload(file));
+};
+
 const handleLocalUpload = (file) => {
     const isLt50M = file.size / 1024 / 1024 < 50;
-    if (!isLt50M) { message.error('文件大小不能超过 50MB!'); return false; }
+    if (!isLt50M) { toast({ description: '文件大小不能超过 50MB!', variant: 'destructive' }); return false; }
     const acceptedTypes = ['.pdf', '.docx', '.pptx', '.xlsx', '.txt'];
     const fileExt = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
-    if (!acceptedTypes.includes(fileExt)) { message.error('不支持的文件类型!'); return false; }
+    if (!acceptedTypes.includes(fileExt)) { toast({ description: '不支持的文件类型!', variant: 'destructive' }); return false; }
     localFileList.value = [...localFileList.value, file];
     return false;
 };
@@ -999,14 +1162,22 @@ const fetchKnowledgeDocs = async () => {
                 docs = docs.filter(d => currentAgent.value.knowledge_config.document_ids.includes(d.id));
             }
             knowledgeDocs.value = docs;
-        } else { message.error('获取知识库文档失败'); }
-    } catch (e) { console.error(e); message.error('获取知识库文档出错'); } finally { knowledgeLoading.value = false; }
+        } else { toast({ description: '获取知识库文档失败', variant: 'destructive' }); }
+    } catch (e) { console.error(e); toast({ description: '获取知识库文档出错', variant: 'destructive' }); } finally { knowledgeLoading.value = false; }
 };
 const filteredKnowledgeDocs = computed(() => {
     if (!knowledgeSearchKeyword.value) return knowledgeDocs.value;
     return knowledgeDocs.value.filter(d => d.filename.toLowerCase().includes(knowledgeSearchKeyword.value.toLowerCase()));
 });
-const onKnowledgeSelectChange = (selectedKeys) => { selectedKnowledgeRowKeys.value = selectedKeys; };
+
+const toggleKnowledgeSelection = (id, checked) => {
+    if (checked) {
+        if (!selectedKnowledgeRowKeys.value.includes(id)) selectedKnowledgeRowKeys.value.push(id);
+    } else {
+        selectedKnowledgeRowKeys.value = selectedKnowledgeRowKeys.value.filter(k => k !== id);
+    }
+};
+
 const handleAttachmentOk = () => {
     const localAtts = localFileList.value.map(f => ({ type: 'local', name: f.name, size: f.size, file: f }));
     const knowledgeAtts = knowledgeDocs.value
@@ -1014,7 +1185,7 @@ const handleAttachmentOk = () => {
         .map(d => ({ type: 'knowledge', name: d.filename, size: d.file_size, id: d.id, file: null }));
     selectedAttachments.value = [...localAtts, ...knowledgeAtts];
     attachmentModalVisible.value = false;
-    message.success(`已选择 ${selectedAttachments.value.length} 个附件`);
+    toast({ description: `已选择 ${selectedAttachments.value.length} 个附件` });
 };
 const removeAttachment = (index) => { selectedAttachments.value.splice(index, 1); };
 
@@ -1069,15 +1240,20 @@ const fetchSessionDetails = async (id) => {
     } catch (e) { console.error("Failed to fetch session details", e); }
 };
 
-const handleAgentChange = async () => {
+const handleAgentChange = async (val) => {
+    // val might be event or value depending on component
+    // With shadcn Select, it's value
+    const newValue = val;
+    selectedAgentId.value = newValue;
+
     if (messages.value.length === 0 && currentSessionId.value) {
         try {
             const res = await fetch(`/api/v1/chat/sessions/${currentSessionId.value}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ agent_id: selectedAgentId.value || null })
+                body: JSON.stringify({ agent_id: newValue || null })
             });
-            if (res.ok && currentSession.value) currentSession.value.agent_id = selectedAgentId.value;
+            if (res.ok && currentSession.value) currentSession.value.agent_id = newValue;
         } catch (e) { console.error("Failed to update session agent", e); }
     }
 };
@@ -1128,10 +1304,10 @@ const sendMessage = async (options = {}) => {
             if (res.ok) {
                 const doc = await res.json();
                 attachmentIds.push(doc.id);
-            } else { message.error(`附件上传失败: ${att.name}`); }
+            } else { toast({ description: `附件上传失败: ${att.name}`, variant: 'destructive' }); }
         } catch (e) {
             if (e.name === 'AbortError') return;
-            message.error(`附件上传出错: ${att.name}`);
+            toast({ description: `附件上传出错: ${att.name}`, variant: 'destructive' });
         }
     }
 }
@@ -1353,7 +1529,6 @@ const scrollToBottom = () => {
     });
 };
 
-// Normalize reasoning payloads from SSE 'think' events to readable text
 const normalizeThink = (data) => {
     if (data == null) return '';
     if (typeof data === 'string') return data;
@@ -1390,61 +1565,6 @@ const normalizeThink = (data) => {
     return safeString(data);
 };
 
-const renderMarkdown = (text, isAssistant = false) => {
-    try {
-        let inputText = (text || '').trim();
-        let thinkHtml = '';
-        if (isAssistant) {
-            // Support multiple think blocks
-            const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|$)/g;
-            let match;
-            let lastIndex = 0;
-            let newText = '';
-            let hasThink = false;
-
-            while ((match = thinkRegex.exec(inputText)) !== null) {
-                hasThink = true;
-                // Add text before this think block
-                newText += inputText.substring(lastIndex, match.index);
-                
-                const content = match[1];
-                const isPartial = !match[0].endsWith('</think>');
-                
-                const parsedThink = marked.parse(content || '正在检索思考中...');
-                thinkHtml += `
-                <details class="m-4 bg-amber-50/50 rounded-lg border border-amber-100 overflow-hidden group" ${isPartial ? 'open' : ''}>
-                    <summary class="p-4 py-1.5 text-xs font-medium text-amber-600/70 cursor-pointer hover:bg-amber-50 flex items-center gap-2 select-none transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-                        思考过程
-                    </summary>
-                    <div class="p-4 py-2 text-xs text-slate-600 border-t border-amber-100/50 bg-white/50 leading-relaxed">
-                        ${parsedThink}
-                    </div>
-                </details>`;
-                
-                lastIndex = thinkRegex.lastIndex;
-            }
-
-            if (hasThink) {
-                newText += inputText.substring(lastIndex);
-                inputText = newText;
-            }
-        }
-        inputText = inputText.replace(/doc#\d+:[a-f0-9-]+(\.\w+)?(:part\d+)?/gi, '');
-        const refHeaderPattern = /\n+\s*(?:#+\s*)?(?:\*\*)?(References|Sources|参考来源|知识来源|引用|引用文献|Reference Document List)(:|\：)?(\*\*)?\s*(\n+|$)/gi;
-        inputText = inputText.split(refHeaderPattern)[0];
-        let html = marked.parse(inputText);
-        html = html.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, open, formula) => {
-            try { return katex.renderToString(formula, { displayMode: true }); } catch { return match; }
-        });
-        html = html.replace(/\\\(([\s\S]*?)\\\)/g, (match, formula) => {
-            try { return katex.renderToString(formula, { displayMode: false }); } catch { return match; }
-        });
-        html = html.replace(/<p>\s*<\/p>/g, '');
-        return thinkHtml + html;
-    } catch (e) { return text; }
-};
-
 const isAmisJSON = (text) => {
     if (!text || !text.trim().startsWith('```json')) return false;
     return text.includes('"type": "page"') || text.includes('"type": "chart"');
@@ -1462,27 +1582,19 @@ const renderAmis = (index, content) => {
 };
 
 const toggleAgentSelect = (e) => {
-    if (e.target.closest('.ant-select-selector')) return;
-    agentSelectOpen.value = !agentSelectOpen.value;
+    // handled by Select v-model:open
 };
 
 const handleLocateNode = (item) => {
-    // Open right pane if collapsed
     if (isRightCollapsed.value) {
         isRightCollapsed.value = false;
     }
-    // Call workspaceTabs to locate node
-    // item: { chunkId, docId, nodeId, ... }
-    // If nodeId is present, use it. Else fall back to title or some other ID.
-    // The requirement says "highlight node (nodeId binds to chunk metadata nodeId)".
     const nid = item.nodeId || item.title; 
     workspaceTabsRef.value?.locateNode?.(nid, item.docId);
 };
 
 const handleDocSummary = (item) => {
     console.log("View doc summary:", item);
-    // Logic handled in SourcePanel usually, but if we need global overlay:
-    // ...
 };
 
 const handleOpenDocSpace = (docId) => {
@@ -1492,45 +1604,31 @@ const handleOpenDocSpace = (docId) => {
     workspaceTabsRef.value?.openDocSpace?.(docId);
 };
 
+const toggleWorkflowMode = () => {
+    handleModeChange(isWorkflowMode.value ? 'chat' : 'workflow');
+};
 </script>
 
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; }
-.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #e5e6eb; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #bcc1cd; }
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: hsl(var(--muted)); }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
-.markdown-body { font-size: 13px; line-height: 1.7; color: #334155; }
+.markdown-body { font-size: 13px; line-height: 1.7; color: hsl(var(--foreground)); }
+
 .markdown-body p { margin-bottom: 0.75em; }
 .markdown-body p:last-child { margin-bottom: 0; }
-.markdown-body strong { font-weight: 600; color: #1e293b; }
+.markdown-body strong { font-weight: 600; color: hsl(var(--foreground)); }
 .markdown-body em { font-style: italic; }
-.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { font-weight: 600; color: #0f172a; margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3; }
-.markdown-body h1 { font-size: 1.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
-.markdown-body h2 { font-size: 1.3em; }
-.markdown-body h3 { font-size: 1.1em; }
-.markdown-body ul, .markdown-body ol { padding-left: 1.5em; margin-bottom: 0.75em; }
-.markdown-body ul { list-style-type: disc; }
-.markdown-body ol { list-style-type: decimal; }
-.markdown-body pre { background: #f1f5f9; padding: 12px 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; border: 1px solid #e2e8f0; }
-.markdown-body code { font-family: monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { font-weight: 600; color: hsl(var(--foreground)); margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3; }
+.markdown-body h1 { font-size: 1.5em; border-bottom: 1px solid hsl(var(--border)); padding-bottom: 0.3em; }
 
-:deep(.entity-citation) { color: #2563eb; background-color: #eff6ff; padding: 0px 4px; border-radius: 4px; border-bottom: 1px dashed #3b82f6; cursor: pointer; font-weight: 500; transition: all 0.2s; }
-:deep(.entity-citation:hover) { background-color: #dbeafe; border-bottom-style: solid; }
-:deep(.chunk-citation) { color: #6366f1; font-weight: bold; cursor: help; margin-left: 2px; padding: 0 2px; }
-:deep(.chunk-citation:hover) { text-decoration: underline; }
+.markdown-body pre { background: hsl(var(--muted)); padding: 12px 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; border: 1px solid hsl(var(--border)); }
+.markdown-body code { font-family: monospace; background: hsl(var(--muted)); padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
 
-:deep(.agent-select-figma .ant-select-selector) { padding: 0 !important; height: 24px !important; line-height: 24px !important; background: transparent !important; }
-:deep(.agent-select-figma .ant-select-selection-item) { font-size: 13px !important; color: #475569 !important; font-weight: 500 !important; padding-inline-end: 4px !important; }
-:deep(.agent-select-figma .ant-select-arrow) { display: none !important; }
+:deep(.entity-citation) { color: hsl(var(--primary)); background-color: hsl(var(--primary) / 0.1); padding: 0px 4px; border-radius: 4px; border-bottom: 1px dashed hsl(var(--primary)); cursor: pointer; font-weight: 500; transition: all 0.2s; }
 
-.bubble-user { max-width: 85%; padding: 12px 16px; border-radius: 14px 14px 4px 14px; background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); color: #ffffff; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); font-size: 12px; line-height: 1.6; }
-.bubble-assistant { max-width: 85%; padding: 16px 20px; border-radius: 14px 14px 14px 4px; background: #ffffff; border: 1px solid #f1f5f9; color: #334155; box-shadow: 0 2px 8px rgba(0,0,0,0.04); font-size: 12px; line-height: 1.6; }
-
-.bg-animated::before {
-    content: ""; position: absolute; inset: -20%;
-    background: radial-gradient(circle at 20% 20%, rgba(99,102,241,0.08), transparent 60%), radial-gradient(circle at 80% 30%, rgba(59,130,246,0.08), transparent 55%), radial-gradient(circle at 30% 80%, rgba(16,185,129,0.05), transparent 55%);
-    filter: blur(40px); pointer-events: none; z-index: 0;
-}
+:deep(.chunk-citation) { color: hsl(var(--primary)); font-weight: bold; cursor: help; margin-left: 2px; padding: 0 2px; }
 </style>

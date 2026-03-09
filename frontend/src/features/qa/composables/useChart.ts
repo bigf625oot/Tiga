@@ -4,7 +4,7 @@
 export function useChartOptions() {
     
     const processOption = (rawOption: any) => {
-        if (!rawOption) return {};
+        if (!rawOption) return null;
         const option = JSON.parse(JSON.stringify(rawOption));
         
         // Modern Color Palette

@@ -1,67 +1,57 @@
 <template>
-  <div class="h-full flex flex-col bg-muted/50 overflow-hidden">
-    <div class="bg-white px-4 p-4 border-b border-border">
+  <div class="h-full flex flex-col bg-background overflow-hidden">
+    <div class="bg-background border-b px-4 py-2">
       <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-6 min-w-0">
-          <button
-            class="relative p-4 text-sm font-semibold transition-colors"
-            :class="activeTab === 'task' ? 'text-slate-900' : 'text-muted-foreground hover:text-slate-700'"
-            @click="activeTab = 'task'"
-          >
-            任务空间
-            <span
-              class="ml-2 text-[11px] px-2 py-0.5 rounded-full font-medium align-middle"
-              :class="store.isRunning ? 'bg-blue-100 text-blue-700' : 'bg-muted text-muted-foreground'"
-            >
-              {{ store.isRunning ? '执行中' : '空闲' }}
-            </span>
-            <span
-              v-if="activeTab === 'task'"
-              class="absolute left-0 right-0 -bottom-[1px] h-0.5 bg-slate-900 rounded"
-            ></span>
-          </button>
+        <Tabs v-model="activeTab" class="w-full">
+          <div class="flex items-center justify-between w-full">
+            <TabsList class="grid w-auto grid-cols-3 h-10">
+              <TabsTrigger value="task" class="px-4 gap-2 data-[state=active]:bg-background">
+                <LayoutDashboard class="w-4 h-4" />
+                <span>任务空间</span>
+                <Badge 
+                  :variant="store.isRunning ? 'default' : 'secondary'"
+                  class="ml-1 px-1.5 py-0 h-5 text-[10px] font-normal"
+                >
+                  {{ store.isRunning ? '执行中' : '空闲' }}
+                </Badge>
+              </TabsTrigger>
+              
+              <TabsTrigger value="doc" class="px-4 gap-2 data-[state=active]:bg-background">
+                <FileText class="w-4 h-4" />
+                <span>文档空间</span>
+                <Badge 
+                  v-if="store.documents.length" 
+                  variant="secondary"
+                  class="ml-1 px-1.5 py-0 h-5 text-[10px] font-normal bg-emerald-100 text-emerald-700 hover:bg-emerald-100/80 dark:bg-emerald-900/30 dark:text-emerald-400"
+                >
+                  {{ store.documents.length }}
+                </Badge>
+              </TabsTrigger>
+              
+              <TabsTrigger value="graph" class="px-4 gap-2 data-[state=active]:bg-background">
+                <Share2 class="w-4 h-4" />
+                <span>知识图谱</span>
+              </TabsTrigger>
+            </TabsList>
 
-          <button
-            class="relative p-4 text-sm font-semibold transition-colors"
-            :class="activeTab === 'doc' ? 'text-slate-900' : 'text-muted-foreground hover:text-slate-700'"
-            @click="activeTab = 'doc'"
-          >
-            文档空间
-            <span v-if="store.documents.length" class="ml-2 text-[11px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 align-middle">
-              {{ store.documents.length }}
-            </span>
-            <span
-              v-if="activeTab === 'doc'"
-              class="absolute left-0 right-0 -bottom-[1px] h-0.5 bg-slate-900 rounded"
-            ></span>
-          </button>
-
-          <button
-            class="relative p-4 text-sm font-semibold transition-colors"
-            :class="activeTab === 'graph' ? 'text-slate-900' : 'text-muted-foreground hover:text-slate-700'"
-            @click="activeTab = 'graph'"
-          >
-            知识图谱
-            <span
-              v-if="activeTab === 'graph'"
-              class="absolute left-0 right-0 -bottom-[1px] h-0.5 bg-slate-900 rounded"
-            ></span>
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2 shrink-0">
-          <button
-            v-if="activeTab === 'doc' && store.documents.length"
-            class="text-xs px-2 py-1 rounded bg-muted text-slate-600 hover:bg-slate-200 transition-colors"
-            @click="clearDocs"
-          >
-            清空
-          </button>
-        </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <Button
+                v-if="activeTab === 'doc' && store.documents.length"
+                variant="ghost"
+                size="sm"
+                class="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                @click="clearDocs"
+              >
+                <Trash2 class="w-3.5 h-3.5 mr-1.5" />
+                清空
+              </Button>
+            </div>
+          </div>
+        </Tabs>
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-hidden bg-white">
+    <div class="flex-1 min-h-0 overflow-hidden bg-background relative">
       <div v-show="activeTab === 'task'" class="h-full">
         <TaskPanel
           ref="taskPanelRef"
@@ -98,7 +88,10 @@ import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import TaskPanel from '@/features/workflow/components/TaskPanel.vue';
 import DocumentPanel from '@/features/workflow/components/DocumentPanel.vue';
 import GraphViewer from '@/shared/components/organisms/GraphViewer/GraphViewer.vue';
-import { CodeOutlined } from '@ant-design/icons-vue';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { LayoutDashboard, FileText, Share2, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps({
   sessionId: { type: String, default: '' },

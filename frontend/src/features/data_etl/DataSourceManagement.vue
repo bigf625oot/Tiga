@@ -1,8 +1,14 @@
 <template>
   <div class="h-full w-full flex flex-col bg-background text-foreground transition-colors duration-300">
     <!-- Header -->
-    <div class="px-8 p-6 flex items-center justify-between border-b bg-card">
-      <h1 class="text-xl font-semibold tracking-wide">数据源管理</h1>
+    <div class="px-4 py-3 flex items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold tracking-tight">数据源管理</h2>
+        <div class="h-4 w-px bg-border"></div>
+        <p class="text-muted-foreground text-xs truncate">
+          管理外部数据源连接配置
+        </p>
+      </div>
       <div class="flex items-center gap-4">
         <!-- Theme Toggle could go here -->
       </div>

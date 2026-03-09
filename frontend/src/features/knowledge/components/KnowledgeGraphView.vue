@@ -1,5 +1,5 @@
 <template>
-    <div class="flex h-full overflow-hidden bg-white">
+    <div class="flex h-full overflow-hidden bg-background">
         <!-- Left: Graph -->
         <div class="flex-1 relative">
             <KnowledgeGraphViewer

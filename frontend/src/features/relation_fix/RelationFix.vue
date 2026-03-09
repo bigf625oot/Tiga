@@ -4,7 +4,7 @@
     <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-3">
-          <h2 class="text-lg font-semibold tracking-tight">关系修复</h2>
+          <h2 class="text-lg font-semibold tracking-tight">图谱治理</h2>
           <div class="h-4 w-px bg-border"></div>
           <p class="text-muted-foreground text-xs truncate max-w-xl">
             检测并修复知识图谱中的关系缺失，管理实体属性与关联。

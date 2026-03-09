@@ -1,10 +1,10 @@
 <template>
-  <div class="h-full flex flex-col bg-white border-l border-border shadow-xl shadow-slate-200/50 relative z-10 font-sans">
+  <div class="h-full flex flex-col bg-background border-l border-border shadow-xl relative z-10 font-sans">
     <!-- Header -->
-    <div class="p-6 py-4 border-b border-border flex justify-between items-center bg-white/95 backdrop-blur-sm sticky top-0 z-20">
+    <div class="p-6 py-4 border-b border-border flex justify-between items-center bg-background/95 backdrop-blur-sm sticky top-0 z-20">
       <div class="flex items-center gap-4">
         <div>
-          <h3 class="font-semibold text-slate-900 text-base m-0 tracking-tight">自动任务工作台</h3>
+          <h3 class="font-semibold text-foreground text-base m-0 tracking-tight">自动任务工作台</h3>
           <p class="text-xs text-muted-foreground m-0">自动化任务管理</p>
         </div>
         <div class="bg-muted p-0.5 rounded-lg flex items-center ml-4">
@@ -13,17 +13,17 @@
             :key="tab"
             @click="activeTab = tab"
             class="p-4 py-1 text-xs font-medium rounded-md transition-all duration-200"
-            :class="activeTab === tab ? 'bg-white text-indigo-600 shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
+            :class="activeTab === tab ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'"
           >
             {{ tab === 'host' ? 'GateWay' : (tab === 'task' ? '任务' : '节点') }}
           </button>
         </div>
       </div>
       <button 
-        class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground hover:text-slate-600 transition-colors"
+        class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         @click="$emit('close')"
       >
-        <CloseOutlined class="text-xs" />
+        <X class="w-4 h-4" />
       </button>
     </div>
 
@@ -70,7 +70,17 @@
  */
 import { api } from '@/core/api/client';
 import { ref, onMounted, onUnmounted } from 'vue';
-import { CloseOutlined, LineChartOutlined, DollarOutlined, FileTextOutlined, CameraOutlined, ReadOutlined, BarChartOutlined, BellOutlined, AimOutlined } from '@ant-design/icons-vue';
+import { 
+  X, 
+  LineChart, 
+  DollarSign, 
+  FileText, 
+  Camera, 
+  BookOpen, 
+  BarChart, 
+  Bell, 
+  Crosshair 
+} from 'lucide-vue-next';
 import TaskManagement from './TaskManagement.vue';
 import NodeList from './NodeList.vue';
 import NodeDetail from './NodeDetail.vue';
@@ -95,7 +105,7 @@ const stats = ref<any[]>([
 // Templates Data
 const templates = [
   {
-    icon: LineChartOutlined,
+    icon: LineChart,
     title: "竞品监控",
     description: "每天9点抓取[网站]，对比[产品]价格变化",
     template: "每天9点抓取 [输入竞品网站URL]，对比 [输入产品名称] 价格变化并发送报告",
@@ -103,7 +113,7 @@ const templates = [
     iconBg: "from-blue-500 to-indigo-600",
   },
   {
-    icon: DollarOutlined,
+    icon: DollarSign,
     title: "价格追踪",
     description: "监控[商品链接]，降价[幅度]%时通知我",
     template: "监控 [输入商品链接]，当降价超过 [输入百分比]% 时通知我",
@@ -111,7 +121,7 @@ const templates = [
     iconBg: "from-emerald-500 to-teal-600",
   },
   {
-    icon: FileTextOutlined,
+    icon: FileText,
     title: "周报生成",
     description: "每周五汇总[数据源]，生成[格式]周报",
     template: "每周五下午5点汇总 [输入数据源]，生成 [输入格式：PDF/Word/HTML] 周报并发送",
@@ -119,7 +129,7 @@ const templates = [
     iconBg: "from-purple-500 to-pink-600",
   },
   {
-    icon: CameraOutlined,
+    icon: Camera,
     title: "截图存档",
     description: "定期网页截图，留存证据",
     template: "每天 [输入时间] 对 [输入网页URL] 进行全屏截图并保存到云端",
@@ -127,7 +137,7 @@ const templates = [
     iconBg: "from-amber-500 to-orange-600",
   },
   {
-    icon: ReadOutlined,
+    icon: BookOpen,
     title: "新闻监控",
     description: "监控[关键词]相关新闻，实时推送",
     template: "监控 [输入关键词] 相关新闻，每小时检查一次，有新内容时推送到 [邮箱/微信/钉钉]",
@@ -135,7 +145,7 @@ const templates = [
     iconBg: "from-cyan-500 to-blue-600",
   },
   {
-    icon: BarChartOutlined,
+    icon: BarChart,
     title: "数据统计",
     description: "每日统计[网站]流量/销量数据",
     template: "每天 [输入时间] 统计 [输入网站/平台] 的 [流量/销量/用户数] 数据并生成图表",
@@ -143,7 +153,7 @@ const templates = [
     iconBg: "from-violet-500 to-purple-600",
   },
   {
-    icon: BellOutlined,
+    icon: Bell,
     title: "库存监控",
     description: "监控商品库存，有货时通知",
     template: "每 [输入分钟数] 分钟检查 [输入商品链接] 库存状态，有货时立即通知我",
@@ -151,7 +161,7 @@ const templates = [
     iconBg: "from-red-500 to-rose-600",
   },
   {
-    icon: AimOutlined,
+    icon: Crosshair,
     title: "舆情监控",
     description: "监控社交媒体[品牌/关键词]提及",
     template: "监控 [微博/知乎/小红书] 平台关于 [输入品牌/关键词] 的提及，每天汇总发送",

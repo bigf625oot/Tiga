@@ -72,12 +72,17 @@ const props = defineProps({
   containerClass: { type: String, default: '' },
   
   /** Opacity of the blobs (0-1) */
-  blobOpacity: { type: Number, default: 0.7 }
+  blobOpacity: { type: Number, default: 0.7 },
+
+  /** Whether to show the grid lines */
+  showGrid: { type: Boolean, default: true }
 });
 
 // Grid Pattern Style
 const gridStyle = computed(() => ({
-  backgroundImage: `linear-gradient(to right, ${props.gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${props.gridColor} 1px, transparent 1px)`,
+  backgroundImage: props.showGrid 
+    ? `linear-gradient(to right, ${props.gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${props.gridColor} 1px, transparent 1px)`
+    : 'none',
   backgroundSize: `${props.gridSize}px ${props.gridSize}px`
 }));
 

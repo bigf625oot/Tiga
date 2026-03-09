@@ -1,16 +1,25 @@
 <template>
   <div class="h-full w-full flex flex-col bg-background text-foreground transition-colors duration-300">
-    <!-- Header -->
-    <div class="px-8 p-6 flex items-center justify-between border-b bg-card">
-      <div>
-        <h1 class="text-2xl font-semibold tracking-tight">ETL 流水线管理</h1>
-        <p class="text-sm text-muted-foreground mt-1">管理和监控所有数据处理流程</p>
-      </div>
-      <div class="flex items-center gap-4">
-        <Button @click="isCreateDialogOpen = true" class="shadow-sm">
-          <Plus class="w-4 h-4 mr-2" />
-          新建流水线
-        </Button>
+    <!-- Header Banner -->
+    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <h2 class="text-lg font-semibold tracking-tight">ETL 流水线管理</h2>
+          <div class="h-4 w-px bg-border"></div>
+          <p class="text-muted-foreground text-xs truncate max-w-xl">
+            管理和监控所有数据处理流程
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+           <Button 
+            @click="isCreateDialogOpen = true" 
+            size="sm"
+            class="h-9"
+          >
+            <Plus class="w-4 h-4 mr-2" />
+            新建流水线
+          </Button>
+        </div>
       </div>
     </div>
 

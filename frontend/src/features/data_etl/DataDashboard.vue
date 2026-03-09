@@ -3,6 +3,7 @@
     class="flex flex-col h-full w-full overflow-hidden font-sans transition-colors duration-300"
     :class="isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0B0C10] text-white'"
   >
+    <!-- Header -->
     <DashboardHeader />
 
     <div class="flex flex-1 overflow-hidden">

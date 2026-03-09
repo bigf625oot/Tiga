@@ -1,334 +1,394 @@
 
 <template>
-  <div class="h-full flex flex-col bg-white">
-    <!-- Header -->
-    <div class="px-10 pt-12 pb-6">
-      <div class="flex flex-col gap-6">
-        <div>
-          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">知识库</h2>
-          <p class="text-[#86868B] text-lg font-medium">企业级知识沉淀与管理。</p>
-        </div>
-
-        <div class="flex items-center gap-8 pb-0">
-                <div 
-                    class="cursor-pointer pb-2 text-base font-medium transition-colors relative"
-                    :class="activeTab === 'shared' ? 'text-[#0056e8]' : 'text-[#858b9b]'"
-                    @click="activeTab = 'shared'"
-                >
-                    共享
-                    <div v-if="activeTab === 'shared'" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0056e8]"></div>
-                </div>
-                <div 
-                    class="cursor-pointer pb-2 text-base font-medium transition-colors relative"
-                    :class="activeTab === 'personal' ? 'text-[#0056e8]' : 'text-[#858b9b]'"
-                    @click="activeTab = 'personal'"
-                >
-                    个人
-                    <div v-if="activeTab === 'personal'" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0056e8]"></div>
-                </div>
-        </div>
+  <div class="h-full flex flex-col bg-white dark:bg-zinc-950 transition-colors duration-300">
+    <!-- Compact Header -->
+    <div class="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-white/95 dark:bg-zinc-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-950/60">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">知识库</h2>
+        <div class="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800"></div>
+        <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-[200px]">
+          <TabsList class="grid w-full grid-cols-2 h-8">
+            <TabsTrigger value="shared" class="text-xs">共享</TabsTrigger>
+            <TabsTrigger value="personal" class="text-xs">个人</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
+      
+      <!-- Right Side Actions -->
+      <div class="flex items-center gap-2">
+         <div class="relative w-64">
+            <Search class="absolute left-2 top-2.5 h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+            <Input 
+              placeholder="搜索文件..." 
+              class="pl-8 h-9 text-sm bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600" 
+            />
+         </div>
+         <Button variant="outline" size="sm" class="h-9" @click="viewGlobalGraph" title="查看全局知识图谱">
+            <Share2 class="w-4 h-4 mr-2" />
+            全局图谱
+         </Button>
+      </div>
+    </div>
+
+    <!-- Toolbar & Breadcrumbs -->
+    <div class="px-6 py-3 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/20 border-b border-zinc-200 dark:border-zinc-800">
+       <!-- Left: Breadcrumbs -->
+       <div class="flex items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <div v-for="(crumb, index) in breadcrumbs" :key="index" class="flex items-center">
+             <span 
+                class="cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors px-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                :class="index === breadcrumbs.length - 1 ? 'font-semibold text-zinc-900 dark:text-zinc-50' : ''"
+                @click="navigateToBreadcrumb(index)"
+             >
+                {{ crumb.name }}
+             </span>
+             <span v-if="index < breadcrumbs.length - 1" class="text-zinc-400 dark:text-zinc-600 mx-1">/</span>
+          </div>
+       </div>
+
+       <!-- Right: File Actions -->
+       <div class="flex items-center gap-2">
+            <div v-if="selectedFiles.length > 0" class="flex items-center gap-2 mr-4 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-md">
+                <span class="text-xs text-zinc-500 dark:text-zinc-400">已选 {{ selectedFiles.length }} 项</span>
+                <div class="h-3 w-[1px] bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
+                <button @click="openMoveModal" class="text-xs text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">移动</button>
+                <button @click="confirmBatchDelete" class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium ml-2">删除</button>
+            </div>
+
+            <input 
+                type="file" 
+                ref="fileInput" 
+                class="hidden" 
+                @change="handleFileUpload" 
+                accept=".pdf,.txt,.md,.doc,.docx"
+            >
+            <Button size="sm" @click="$refs.fileInput.click()" :disabled="uploading" class="h-8">
+                <UploadCloud class="w-4 h-4 mr-2" />
+                <span v-if="uploading">上传中...</span>
+                <span v-else>上传文件</span>
+            </Button>
+            <Button variant="outline" size="sm" @click="openNewFolder" class="h-8">
+                <FolderPlus class="w-4 h-4 mr-2" />
+                新建文件夹
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button variant="ghost" size="icon" class="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="confirmCleanVector" :disabled="cleaningVector">
+                    <Trash2 class="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>清空向量库</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+       </div>
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-hidden px-10 pb-10 bg-white">
-      <div class="h-full flex flex-col">
-
-        <!-- Toolbar -->
-        <div class="flex justify-between items-center mb-4">
-            <!-- Left: Search and File Count/Title -->
-            <div class="flex items-center gap-4 flex-1">
-                 <span class="text-base font-medium text-[#2a2f3c] cursor-pointer hover:text-primary transition-colors" @click="viewGlobalGraph" title="查看全局知识图谱">全部文件</span>
-                 <div class="flex items-center gap-2 p-4 py-1.5 rounded-lg bg-white w-[330px]">
-                     <svg class="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                     <input type="text" placeholder="请输入名称或关键词进行搜索" class="flex-1 text-sm outline-none text-[#2a2f3c] placeholder-[#bcc1cd]">
-                 </div>
+    <div class="flex-1 overflow-hidden p-6 bg-white dark:bg-zinc-950">
+      <div 
+          class="h-full flex flex-col border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden shadow-sm bg-white dark:bg-zinc-900"
+      >
+        <!-- Table Header -->
+        <div class="flex items-center bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 h-10 px-4 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <div class="w-[40px] flex justify-center">
+                <Checkbox :checked="allSelected" :indeterminate="indeterminate" @update:checked="toggleSelectAll" />
             </div>
-
-            <!-- Right: Actions -->
-            <div class="flex items-center gap-4">
-                 <input 
-                    type="file" 
-                    ref="fileInput" 
-                    class="hidden" 
-                    @change="handleFileUpload" 
-                    accept=".pdf,.txt,.md,.doc,.docx"
-                >
-                <button 
-                    @click="$refs.fileInput.click()"
-                    class="flex items-center gap-1 px-4 py-1.5 bg-[#171717] text-white rounded-lg text-sm hover:bg-slate-800 transition-colors"
-                    :disabled="uploading"
-                >
-                    <span v-if="uploading">上传中...</span>
-                    <span v-else>上传文件</span>
-                </button>
-                <button 
-                    @click="openNewFolder"
-                    class="flex items-center gap-1 px-4 py-1.5 border border-[#c9cdd4] text-[#2a2f3c] rounded-lg text-sm hover:bg-muted/50 transition-colors"
-                >
-                    新建文件夹
-                </button>
-                <button 
-                    @click="confirmCleanVector"
-                    class="flex items-center gap-1 px-4 py-1.5 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition-colors"
-                    :disabled="cleaningVector"
-                    title="清空向量库（不影响图谱与文件）"
-                >
-                    <span v-if="cleaningVector">清理中...</span>
-                    <span v-else>清空向量库</span>
-                </button>
-            </div>
+            <div class="flex-1 pl-2">文件名称</div>
+            <div class="w-[100px]">大小</div>
+            <div class="w-[180px]">上传/创建时间</div>
+            <div class="w-[140px]">状态</div>
+            <div class="w-[100px] text-right pr-4">操作</div>
         </div>
 
-        <!-- Breadcrumbs & Batch Actions -->
-        <div class="flex justify-between items-center mb-4">
-             <!-- Breadcrumbs -->
-             <div class="flex items-center gap-2 text-sm text-[#2a2f3c]">
-                 <div v-for="(crumb, index) in breadcrumbs" :key="index" class="flex items-center gap-2">
-                     <span 
-                        class="cursor-pointer hover:text-primary transition-colors font-medium"
-                        :class="index === breadcrumbs.length - 1 ? 'text-[#171717] font-semibold' : 'text-[#858b9b]'"
-                        @click="navigateToBreadcrumb(index)"
-                     >
-                         {{ crumb.name }}
-                     </span>
-                     <span v-if="index < breadcrumbs.length - 1" class="text-[#c9cdd4]">/</span>
-                 </div>
-             </div>
-
-             <!-- Batch Actions -->
-             <div v-if="selectedFiles.length > 0" class="flex items-center gap-2 bg-[#f9f9fa] p-4 py-1 rounded-lg">
-                 <span class="text-xs text-muted-foreground">已选 {{ selectedFiles.length }} 项</span>
-                 <button @click="openMoveModal" class="text-xs text-primary hover:text-blue-700 font-medium px-2">移动</button>
-                 <button @click="batchDelete" class="text-xs text-red-600 hover:text-red-700 font-medium px-2">删除</button>
-             </div>
-        </div>
-
-
-        <!-- File List Table -->
-        <div 
-            class="flex-1 overflow-auto mt-2 scroll-container"
-            @scroll="onScroll"
-            ref="scrollContainer"
-        >
-            <Loading v-if="loading && files.length === 0" type="skeleton-list" />
-            <div v-else class="min-w-full">
-                <!-- Table Header -->
-                <div class="flex items-center bg-[#f9f9fa] h-[38px] rounded p-4 text-[14px] font-medium text-[#2a2f3c]">
-                    <div class="w-[40px] flex items-center justify-center">
-                        <input type="checkbox" :checked="allSelected" :indeterminate="indeterminate" @change="toggleSelectAll" class="rounded border-slate-300 text-primary focus:ring-blue-500">
-                    </div>
-                    <div class="flex-1 flex items-center gap-2 relative">
-                        <span>文件名称</span>
-                        <div class="flex flex-col gap-0.5">
-                             <svg class="w-2 h-1 text-muted-foreground" fill="none" viewBox="0 0 10 5" stroke="currentColor"><path d="M5 0L10 5H0L5 0Z" fill="currentColor"/></svg>
-                             <svg class="w-2 h-1 text-muted-foreground" fill="none" viewBox="0 0 10 5" stroke="currentColor"><path d="M5 5L0 0H10L5 5Z" fill="currentColor"/></svg>
-                        </div>
-                        <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-                    </div>
-                    <div class="w-[100px] p-4 relative">
-                        <span>大小</span>
-                        <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-                    </div>
-                    <div class="w-[180px] p-4 relative">
-                        <span>上传/创建时间</span>
-                        <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-                    </div>
-                    <div class="w-[180px] p-4 relative flex items-center gap-2">
-                        <span>解析方式</span>
-                        <svg class="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        <div class="absolute right-0 top-3 bottom-3 w-[1px] bg-[#e5e6eb]"></div>
-                    </div>
-                    <div class="w-[100px] p-4">
-                        <span>操作</span>
-                    </div>
+        <!-- File List -->
+        <div class="flex-1 overflow-y-auto scroll-container" ref="scrollContainer" @scroll="onScroll">
+            <div class="flex flex-col min-w-full">
+                <div v-if="loading && files.length === 0" class="p-8 space-y-4">
+                    <Skeleton class="h-12 w-full" v-for="i in 5" :key="i" />
                 </div>
+                
+                <div v-else-if="files.length === 0 && !uploading" class="flex flex-col items-center justify-center py-20 text-zinc-400 dark:text-zinc-600">
+                    <FolderOpen class="w-12 h-12 mb-3 opacity-20" />
+                    <p class="text-sm">暂无文件</p>
+                </div>
+                
+                <div 
+                    v-for="file in files" 
+                    :key="file.id" 
+                    class="group flex items-center border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors py-3 px-4 text-sm text-zinc-700 dark:text-zinc-200"
+                >
+                    <!-- Checkbox -->
+                    <div class="w-[40px] flex justify-center" @click.stop>
+                        <Checkbox :checked="selectedFiles.includes(file.id)" @update:checked="() => toggleSelect(file.id)" />
+                    </div>
 
-                <!-- Table Body -->
-                <div class="flex flex-col">
-                    <div v-if="files.length === 0 && !uploading" class="py-12 flex flex-col items-center justify-center text-muted-foreground text-[14px]">
-                        暂无文件
+                    <!-- Name -->
+                    <div 
+                        class="flex-1 flex items-center gap-3 overflow-hidden cursor-pointer pl-2"
+                        @click="file.is_folder ? openFolder(file) : null"
+                    >
+                         <!-- File Icon -->
+                         <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                             <Folder v-if="file.is_folder" class="w-5 h-5 text-blue-500 dark:text-blue-400" fill="currentColor" />
+                             <img v-else :src="getFileIcon(file.filename)" class="w-5 h-5 object-contain opacity-80" alt="icon" />
+                         </div>
+                         <div class="flex flex-col overflow-hidden">
+                            <span class="truncate font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ file.filename }}</span>
+                            <span v-if="!file.is_folder" class="text-[10px] text-zinc-400 dark:text-zinc-500 truncate">{{ file.id }}</span>
+                         </div>
                     </div>
                     
-                    <div 
-                        v-for="file in files" 
-                        :key="file.id" 
-                        class="flex items-center border-b border-slate-50 hover:bg-[#eeeeee] transition-colors py-2 p-4 text-[14px] text-[#2a2f3c]"
-                    >
-                        <!-- Checkbox -->
-                        <div class="w-[40px] flex items-center justify-center" @click.stop>
-                            <input type="checkbox" :checked="selectedFiles.includes(file.id)" @change="toggleSelect(file.id)" class="rounded border-slate-300 text-primary focus:ring-blue-500">
-                        </div>
-
-                        <!-- Name -->
-                        <div 
-                            class="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer"
-                            @click="file.is_folder ? openFolder(file) : null"
-                        >
-                             <!-- File Icon -->
-                             <div class="w-6 h-6 flex items-center justify-center flex-shrink-0">
-                                 <svg v-if="file.is_folder" class="w-full h-full text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                     <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
-                                 </svg>
-                                 <img v-else :src="getFileIcon(file.filename)" class="w-full h-full object-contain" alt="icon" />
-                             </div>
-                             <span class="truncate hover:text-primary transition-colors" :class="{'font-medium': file.is_folder}">{{ file.filename }}</span>
-                        </div>
-                        
-                        <!-- Size -->
-                        <div class="w-[100px] p-4 text-muted-foreground">
-                            {{ file.is_folder ? '-' : formatSize(file.file_size) }}
-                        </div>
-                        
-                        <!-- Time -->
-                        <div class="w-[180px] p-4 text-muted-foreground">
-                            {{ file.is_folder ? '-' : formatDate(file.created_at) }}
-                        </div>
-                        
-                        <!-- Status -->
-                        <div class="w-[180px] p-4">
-                            <template v-if="!file.is_folder">
-                                <!-- Progress Bar for active states -->
-                                <div v-if="['上传中', '解析中'].includes(file.status_text)" class="w-full pr-4">
-                                    <div class="flex justify-between items-center mb-1.5">
-                                        <span class="text-xs text-primary font-medium">
-                                            {{ file.status_text }}
-                                        </span>
-                                        <span class="text-[10px] text-muted-foreground">
-                                            <template v-if="file.progress !== null && file.progress !== undefined">
-                                                {{ file.progress }}%
-                                            </template>
-                                            <template v-else>进行中</template>
-                                        </span>
-                                    </div>
-                                    <div class="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                                         <div 
-                                            class="h-full bg-blue-500 rounded-full relative overflow-hidden"
-                                            :style="{ width: (file.progress !== null && file.progress !== undefined) ? (file.progress + '%') : '100%' }"
-                                         >
-                                             <div class="absolute inset-0 bg-white/30 w-full h-full animate-shimmer"></div>
-                                         </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Standard Badge for other states -->
-                                <div v-else class="flex items-center gap-2 px-2 py-1 bg-muted rounded border border-slate-200 w-fit">
-                                    <span class="w-2 h-2 rounded-full" 
-                                        :class="{
-                                            'bg-green-500': file.status_text === '已完成',
-                                            'bg-red-500': file.status_text === '失败'
-                                        }"
-                                    ></span>
-                                    <span class="text-xs">
-                                        {{ file.status_text || '未知' }}
+                    <!-- Size -->
+                    <div class="w-[100px] text-zinc-500 dark:text-zinc-400 text-xs font-mono">
+                        {{ file.is_folder ? '-' : formatSize(file.file_size) }}
+                    </div>
+                    
+                    <!-- Time -->
+                    <div class="w-[180px] text-zinc-500 dark:text-zinc-400 text-xs">
+                        {{ file.is_folder ? '-' : formatDate(file.created_at) }}
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="w-[140px]">
+                        <template v-if="!file.is_folder">
+                            <!-- Progress Bar for active states -->
+                            <div v-if="['上传中', '解析中'].includes(file.status_text)" class="w-full pr-4">
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                                        {{ file.status_text }}
+                                    </span>
+                                    <span class="text-[10px] text-zinc-400">
+                                        {{ file.progress || 0 }}%
                                     </span>
                                 </div>
-                            </template>
-                            <span v-else class="text-muted-foreground">-</span>
-                        </div>
-                        
-                        <!-- Actions -->
-                        <div class="w-[100px] p-4 flex items-center gap-4">
-                            <button 
-                                v-if="!file.is_folder && file.status_text === '已完成'"
-                                @click="viewGraph(file)" 
-                                class="text-muted-foreground hover:text-primary" 
-                                title="查看知识图谱"
+                                <Progress :model-value="file.progress || 0" class="h-1.5" />
+                            </div>
+                            
+                            <!-- Standard Badge for other states -->
+                            <Badge 
+                                v-else 
+                                variant="outline" 
+                                class="font-normal text-xs"
+                                :class="{
+                                    'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900': file.status_text === '已完成',
+                                    'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900': file.status_text === '失败',
+                                    'bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700': !['已完成', '失败'].includes(file.status_text)
+                                }"
                             >
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                            </button>
-                            <button @click="deleteFile(file.id)" class="text-muted-foreground hover:text-red-600" title="删除文件">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
+                                {{ file.status_text || '未知' }}
+                            </Badge>
+                        </template>
+                        <span v-else class="text-zinc-400">-</span>
                     </div>
                     
-                    <!-- Load More Spinner -->
-                    <div v-if="loadingMore" class="py-4 flex justify-center text-muted-foreground text-sm">
-                        加载中...
+                    <!-- Actions -->
+                    <div class="w-[100px] flex items-center justify-end gap-2 pr-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button 
+                            v-if="!file.is_folder && file.status_text === '已完成'"
+                            variant="ghost" 
+                            size="icon" 
+                            class="h-8 w-8 text-zinc-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400" 
+                            @click="viewGraph(file)" 
+                            title="查看知识图谱"
+                        >
+                            <Share2 class="w-4 h-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            class="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:text-zinc-400 dark:hover:text-red-400 dark:hover:bg-red-900/20" 
+                            @click="confirmDelete(file.id)" 
+                            title="删除文件"
+                        >
+                            <Trash2 class="w-4 h-4" />
+                        </Button>
                     </div>
+                </div>
+                
+                <!-- Load More Spinner -->
+                <div v-if="loadingMore" class="py-4 flex justify-center text-zinc-400 text-xs">
+                    <Loader2 class="w-4 h-4 animate-spin mr-2" />
+                    加载中...
                 </div>
             </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Graph Modal -->
-        <a-modal
-            v-model:open="graphVisible"
-            width="95%"
-            :style="{ top: '20px' }"
-            :footer="null"
-            destroyOnClose
-            class="graph-modal"
-        >
-            <template #title>
-                <div class="flex items-center gap-2">
-                  <span :title="currentGraphTitle" class="cursor-help text-[#171717]">
-                      {{ currentGraphTitle.length > 20 ? currentGraphTitle.slice(0, 20) + '...' : currentGraphTitle }}
-                  </span>
-                </div>
-            </template>
-            <div class="h-[80vh]">
+    <!-- Graph Modal -->
+    <Dialog v-model:open="graphVisible">
+        <DialogContent class="max-w-[95vw] w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col gap-0 dark:bg-zinc-900 dark:border-zinc-800">
+            <DialogHeader class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+                <DialogTitle class="flex items-center gap-2 text-base">
+                    <Share2 class="w-4 h-4 text-blue-500" />
+                    <span class="truncate max-w-[600px]" :title="currentGraphTitle">{{ currentGraphTitle }}</span>
+                </DialogTitle>
+            </DialogHeader>
+            <div class="flex-1 overflow-hidden relative">
                 <KnowledgeGraphView :doc-id="currentDocId" :initial-scope="currentDocId ? 'doc' : 'global'" />
             </div>
-        </a-modal>
+        </DialogContent>
+    </Dialog>
 
-        <!-- New Folder Modal -->
-        <a-modal
-            v-model:open="newFolderVisible"
-            title="新建文件夹"
-            :confirmLoading="creatingFolder"
-            @ok="createFolder"
-            @cancel="resetNewFolder"
-            destroyOnClose
-        >
-            <div class="flex flex-col gap-2">
-                <label class="text-sm text-slate-600">文件夹名称</label>
-                <input 
-                    v-model="newFolderName"
-                    type="text" 
-                    placeholder="请输入文件夹名称" 
-                    class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-muted-foreground"
-                />
+    <!-- New Folder Modal -->
+    <Dialog v-model:open="newFolderVisible">
+        <DialogContent class="sm:max-w-[425px] dark:bg-zinc-900 dark:border-zinc-800">
+            <DialogHeader>
+                <DialogTitle>新建文件夹</DialogTitle>
+                <DialogDescription>
+                    请输入新文件夹的名称。
+                </DialogDescription>
+            </DialogHeader>
+            <div class="grid gap-4 py-4">
+                <div class="grid gap-2">
+                    <Label htmlFor="name" class="text-right">名称</Label>
+                    <Input id="name" v-model="newFolderName" class="col-span-3" placeholder="我的文件夹" @keyup.enter="createFolder" />
+                </div>
             </div>
-        </a-modal>
-        <!-- Move Modal -->
-        <a-modal
-            v-model:open="moveModalVisible"
-            title="移动到..."
-            :confirmLoading="moving"
-            @ok="confirmMove"
-            destroyOnClose
-        >
-            <div class="flex flex-col gap-4">
-                <p class="text-sm text-muted-foreground">将选中的 {{ selectedFiles.length }} 个项目移动到：</p>
-                <div class="max-h-[300px] overflow-y-auto border border-slate-200 rounded-lg">
+            <DialogFooter>
+                <Button variant="outline" @click="newFolderVisible = false">取消</Button>
+                <Button @click="createFolder" :disabled="creatingFolder">
+                    <Loader2 v-if="creatingFolder" class="w-4 h-4 mr-2 animate-spin" />
+                    创建
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <!-- Move Modal -->
+    <Dialog v-model:open="moveModalVisible">
+        <DialogContent class="sm:max-w-[425px] dark:bg-zinc-900 dark:border-zinc-800">
+            <DialogHeader>
+                <DialogTitle>移动到...</DialogTitle>
+                <DialogDescription>
+                    选择目标文件夹。
+                </DialogDescription>
+            </DialogHeader>
+            <div class="py-4">
+                <ScrollArea class="h-[300px] w-full border border-zinc-200 dark:border-zinc-800 rounded-md p-2">
                      <div 
                         v-for="folder in availableFolders" 
                         :key="folder.value"
-                        class="px-4 py-2 hover:bg-muted/50 cursor-pointer flex items-center gap-2"
-                        :class="{'bg-primary/10 text-primary': targetFolderId === folder.value}"
+                        class="px-3 py-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-3 transition-colors text-sm"
+                        :class="{'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': targetFolderId === folder.value}"
                         @click="targetFolderId = folder.value"
                      >
-                         <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                             <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
-                         </svg>
-                         <span class="text-sm">{{ folder.label }}</span>
+                         <Folder class="w-4 h-4 text-blue-400" fill="currentColor" />
+                         <span>{{ folder.label }}</span>
                      </div>
-                </div>
+                </ScrollArea>
             </div>
-        </a-modal>
-      </div>
-    </div>
+            <DialogFooter>
+                <Button variant="outline" @click="moveModalVisible = false">取消</Button>
+                <Button @click="confirmMove" :disabled="moving">
+                    <Loader2 v-if="moving" class="w-4 h-4 mr-2 animate-spin" />
+                    确认移动
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <!-- Alert Dialogs -->
+    <AlertDialog :open="deleteConfirmOpen" @update:open="val => deleteConfirmOpen = val">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确定要删除此文件吗？</AlertDialogTitle>
+          <AlertDialogDescription>
+            此操作将永久删除该文件，无法恢复。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="deleteConfirmOpen = false">取消</AlertDialogCancel>
+          <AlertDialogAction @click="executeDelete" class="bg-red-600 hover:bg-red-700 focus:ring-red-600">删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="batchDeleteConfirmOpen" @update:open="val => batchDeleteConfirmOpen = val">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确定要删除选中的 {{ selectedFiles.length }} 个项目吗？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后可联系管理员恢复。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="batchDeleteConfirmOpen = false">取消</AlertDialogCancel>
+          <AlertDialogAction @click="executeBatchDelete" class="bg-red-600 hover:bg-red-700 focus:ring-red-600">删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="cleanVectorConfirmOpen" @update:open="val => cleanVectorConfirmOpen = val">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确定要清空向量库吗？</AlertDialogTitle>
+          <AlertDialogDescription>
+            此操作将删除向量库持久化数据并按当前模型重建，不影响图谱与已上传文件。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="cleanVectorConfirmOpen = false">取消</AlertDialogCancel>
+          <AlertDialogAction @click="executeCleanVector" class="bg-red-600 hover:bg-red-700 focus:ring-red-600">清空并重建</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, createVNode, watch, computed } from 'vue';
 import axios from 'axios';
-import { message, Modal } from 'ant-design-vue';
-import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
-import { marked } from 'marked';
-import { Loading } from '@/shared/components/atoms/Loading';
+import { message } from 'ant-design-vue'; // Keep for global toast messages
+import { 
+    Search, 
+    Share2, 
+    UploadCloud, 
+    FolderPlus, 
+    Trash2, 
+    Folder, 
+    FolderOpen, 
+    Loader2 
+} from 'lucide-vue-next';
+
+// Shadcn Components
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
 import KnowledgeGraphView from './KnowledgeGraphView.vue';
 
 const files = ref([]);
@@ -396,6 +456,12 @@ const availableFolders = ref([]); // For simple selection
 const graphVisible = ref(false);
 const currentGraphTitle = ref('');
 const currentDocId = ref(null);
+
+// Confirmation Dialog State
+const deleteConfirmOpen = ref(false);
+const batchDeleteConfirmOpen = ref(false);
+const cleanVectorConfirmOpen = ref(false);
+const itemToDelete = ref(null);
 
 const viewGraph = (file) => {
     currentGraphTitle.value = file.filename;
@@ -498,35 +564,26 @@ const toggleSelect = (id) => {
     }
 };
 
-const batchDelete = () => {
+const confirmBatchDelete = () => {
     if (selectedFiles.value.length === 0) return;
-    
-    Modal.confirm({
-        title: `确定要删除选中的 ${selectedFiles.value.length} 个项目吗？`,
-        icon: createVNode(ExclamationCircleOutlined),
-        content: '删除后可联系管理员恢复。',
-        okText: '确认',
-        cancelText: '取消',
-        onOk: async () => {
-            try {
-                await api.post('/knowledge/batch_delete', { item_ids: selectedFiles.value });
-                message.success("批量删除成功");
-                fetchFiles(true);
-            } catch (e) {
-                message.error("删除失败：" + (e.response?.data?.detail || e.message));
-            }
-        }
-    });
+    batchDeleteConfirmOpen.value = true;
+};
+
+const executeBatchDelete = async () => {
+    try {
+        await api.post('/knowledge/batch_delete', { item_ids: selectedFiles.value });
+        message.success("批量删除成功");
+        fetchFiles(true);
+    } catch (e) {
+        message.error("删除失败：" + (e.response?.data?.detail || e.message));
+    } finally {
+        batchDeleteConfirmOpen.value = false;
+    }
 };
 
 const openMoveModal = async () => {
     if (selectedFiles.value.length === 0) return;
     
-    // Fetch all folders for simple selection (could be optimized)
-    // For now we just list root folders or a flat list if possible.
-    // Since backend doesn't support flat list of all folders easily without recursion,
-    // we might just let user type ID or show root folders.
-    // Better: Fetch root folders first.
     try {
         const res = await api.get('/knowledge/list', { params: { parent_id: null, page: 1, page_size: 100 } });
         availableFolders.value = res.data.filter(f => f.is_folder).map(f => ({ label: f.filename, value: f.id }));
@@ -559,8 +616,7 @@ const confirmMove = async () => {
 
 const startPolling = () => {
     if (pollTimer) return;
-    pollTimer = setInterval(() => fetchFiles(true), 3000); // Polling resets for simplicity or update existing
-    // Simple polling implementation: refresh all
+    pollTimer = setInterval(() => fetchFiles(true), 3000); 
 };
 
 const stopPolling = () => {
@@ -586,26 +642,23 @@ const openNewFolder = () => {
 };
 
 const confirmCleanVector = () => {
-    Modal.confirm({
-        title: '确定要清空向量库吗？',
-        icon: createVNode(ExclamationCircleOutlined),
-        content: '此操作将删除向量库持久化数据并按当前模型重建，不影响图谱与已上传文件。',
-        okText: '确认',
-        cancelText: '取消',
-        onOk: async () => {
-            cleaningVector.value = true;
-            try {
-                await api.post('/knowledge/vector/clean');
-                message.success('向量库已清空并重建');
-                fetchFiles(true);
-            } catch (e) {
-                message.error('清理失败：' + (e.response?.data?.detail || e.message));
-            } finally {
-                cleaningVector.value = false;
-            }
-        }
-    });
+    cleanVectorConfirmOpen.value = true;
 };
+
+const executeCleanVector = async () => {
+    cleaningVector.value = true;
+    try {
+        await api.post('/knowledge/vector/clean');
+        message.success('向量库已清空并重建');
+        fetchFiles(true);
+    } catch (e) {
+        message.error('清理失败：' + (e.response?.data?.detail || e.message));
+    } finally {
+        cleaningVector.value = false;
+        cleanVectorConfirmOpen.value = false;
+    }
+};
+
 const createFolder = async () => {
     const name = newFolderName.value.trim();
     if (!name) {
@@ -649,23 +702,23 @@ const handleFileUpload = async (e) => {
     }
 };
 
-const deleteFile = (id) => {
-    Modal.confirm({
-        title: '确定要删除此文件吗？',
-        icon: createVNode(ExclamationCircleOutlined),
-        content: '删除后将无法恢复，请谨慎操作。',
-        okText: '确认',
-        cancelText: '取消',
-        onOk: async () => {
-            try {
-                await api.delete(`/knowledge/${id}`);
-                message.success("删除成功");
-                fetchFiles(true);
-            } catch (e) {
-                message.error("删除失败");
-            }
-        }
-    });
+const confirmDelete = (id) => {
+    itemToDelete.value = id;
+    deleteConfirmOpen.value = true;
+};
+
+const executeDelete = async () => {
+    if (!itemToDelete.value) return;
+    try {
+        await api.delete(`/knowledge/${itemToDelete.value}`);
+        message.success("删除成功");
+        fetchFiles(true);
+    } catch (e) {
+        message.error("删除失败");
+    } finally {
+        deleteConfirmOpen.value = false;
+        itemToDelete.value = null;
+    }
 };
 
 const formatSize = (bytes) => {
