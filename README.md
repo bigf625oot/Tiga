@@ -59,6 +59,9 @@ cd backend
 python -m venv venv
 .\venv\Scripts\activate
 
+# 虚拟环境 (macOS/Linux)
+source venv/bin/activate
+
 # 安装依赖
 pip install -r requirements.txt
 # 或: make install

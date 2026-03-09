@@ -59,5 +59,22 @@ export const relationFixApi = {
   getNodeRelations: async (nodeId: string) => {
       const response = await api.get<{nodes: any[], edges: any[]}>(`/relation-fix/node/${nodeId}`);
       return response.data;
+  },
+
+  updateNode: async (nodeId: string, attributes: Record<string, any>) => {
+    const response = await api.post<{ success: boolean }>('/relation-fix/node/update', {
+      node_id: nodeId,
+      attributes
+    });
+    return response.data;
+  },
+
+  updateRelation: async (source: string, target: string, attributes: Record<string, any>) => {
+    const response = await api.post<{ success: boolean }>('/relation-fix/relation/update', {
+      source,
+      target,
+      attributes
+    });
+    return response.data;
   }
 };

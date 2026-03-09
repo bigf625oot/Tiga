@@ -100,6 +100,35 @@ def search_nodes(q: str = Query(..., description="Query string for node name"), 
     """
     return relation_fix_service.search_nodes(q, limit)
 
+class UpdateNodeRequest(BaseModel):
+    node_id: str
+    attributes: Dict[str, Any]
+
+class UpdateRelationRequest(BaseModel):
+    source: str
+    target: str
+    attributes: Dict[str, Any]
+
+@router.post("/node/update", response_model=Dict[str, bool])
+def update_node(request: UpdateNodeRequest):
+    """
+    Update attributes of a node.
+    """
+    success = relation_fix_service.update_node(request.node_id, request.attributes)
+    if not success:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return {"success": success}
+
+@router.post("/relation/update", response_model=Dict[str, bool])
+def update_relation(request: UpdateRelationRequest):
+    """
+    Update attributes of a relation.
+    """
+    success = relation_fix_service.update_relation(request.source, request.target, request.attributes)
+    if not success:
+        raise HTTPException(status_code=404, detail="Relation not found")
+    return {"success": success}
+
 @router.get("/node/{node_id}", response_model=Dict[str, Any])
 def get_node_relations(node_id: str):
     """

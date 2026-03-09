@@ -224,38 +224,14 @@
          <!-- Agent/Apps List -->
          <template v-else-if="sidebarTab === 'agent' || sidebarTab === 'knowledge'">
              <div class="space-y-1">
-                 <template v-for="item in (sidebarTab === 'agent' ? [
-                     { id: 'agent', label: '智能体中心', icon: Box },
-                     { id: 'service_market', label: '工具市场', icon: LayoutGrid },
-                     { type: 'separator' },
-                     { id: 'search', label: '智能爬取', icon: Search },
-                     { id: 'metrics', label: '指标提取', icon: BarChart },
-                     { id: 'batch_metrics', label: '批量提取', icon: Box },
-                     { id: 'indicators', label: '指标管理', icon: Calculator },
-                     { id: 'list', label: '录音纪要', icon: Mic },
-                     { id: 'data_query', label: '智能问数', icon: Database },
-                     { id: 'model', label: '模型管理', icon: Cpu },
-                     { id: 'workflow', label: '工作流', icon: Workflow }
-                 ] : [
-                     { type: 'group', label: '知识图谱' },
-                     { id: 'knowledge_graph', label: '知识图谱', icon: Network },
-                     { id: 'relation_fix', label: '关系修复', icon: Share2 },
-                     { type: 'group', label: '知识库' },
-                     { id: 'knowledge', label: '知识库', icon: Database },
-                     { id: 'database', label: '数据库', icon: Database },
-                     { id: 'media_library', label: '音视频库', icon: Film },
-                     { type: 'group', label: '流水线' },
-                     { id: 'data_dashboard', label: '数据大屏', icon: BarChart },
-                     { id: 'data_source', label: '数据源', icon: Database },
-                     { id: 'etl_list', label: 'ETL流水线', icon: Workflow },
-                     { id: 'etl_settings', label: '系统设置', icon: Settings }
-                 ])" :key="item.id || item.type || item.label">
+                 <template v-for="item in currentSidebarItems" :key="item.id || item.type || item.label">
                     
                     <div v-if="item.type === 'separator'" class="h-px bg-border/40 my-2 mx-1" />
 
                     <div v-else-if="item.type === 'group'" class="px-3 py-2 mt-2 first:mt-0">
-                       <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider" v-if="!isSidebarCollapsed">
+                       <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2" v-if="!isSidebarCollapsed">
                           {{ item.label }}
+                          <span v-if="item.badge" class="px-1.5 py-0.5 rounded-md text-[10px] bg-blue-500/10 text-blue-500 font-bold border border-blue-500/20 leading-none">{{ item.badge }}</span>
                        </h4>
                        <div v-else class="h-px bg-border/40 my-2 mx-1" />
                     </div>
@@ -637,6 +613,47 @@ const handleNavigateToExtraction = (indicator: any) => {
     prefilledIndicator.value = indicator;
     currentView.value = 'metrics';
 };
+
+interface SidebarItem {
+    id?: string;
+    label?: string;
+    icon?: any;
+    type?: 'group' | 'separator';
+    badge?: string;
+}
+
+const agentSidebarItems: SidebarItem[] = [
+    { id: 'agent', label: '智能体中心', icon: Box },
+    { id: 'service_market', label: '工具市场', icon: LayoutGrid },
+    { type: 'separator' },
+    { id: 'search', label: '智能爬取', icon: Search },
+    { id: 'metrics', label: '指标提取', icon: BarChart },
+    { id: 'batch_metrics', label: '批量提取', icon: Box },
+    { id: 'indicators', label: '指标管理', icon: Calculator },
+    { id: 'list', label: '录音纪要', icon: Mic },
+    { id: 'data_query', label: '智能问数', icon: Database },
+    { id: 'model', label: '模型管理', icon: Cpu },
+    { id: 'workflow', label: '工作流', icon: Workflow }
+];
+
+const knowledgeSidebarItems: SidebarItem[] = [
+    { type: 'group', label: '知识图谱' },
+    { id: 'knowledge_graph', label: '知识图谱', icon: Network },
+    { id: 'relation_fix', label: '图谱治理', icon: Share2 },
+    { type: 'group', label: '知识库' },
+    { id: 'knowledge', label: '知识库', icon: Database },
+    { id: 'database', label: '数据库', icon: Database },
+    { id: 'media_library', label: '音视频库', icon: Film },
+    { type: 'group', label: '流水线', badge: 'Beta' },
+    { id: 'data_dashboard', label: '数据大屏', icon: BarChart },
+    { id: 'data_source', label: '数据源', icon: Database },
+    { id: 'etl_list', label: 'ETL流水线', icon: Workflow },
+    { id: 'etl_settings', label: '系统设置', icon: Settings }
+];
+
+const currentSidebarItems = computed<SidebarItem[]>(() => {
+    return sidebarTab.value === 'agent' ? agentSidebarItems : knowledgeSidebarItems;
+});
 
 onMounted(() => {
     fetchSessions();

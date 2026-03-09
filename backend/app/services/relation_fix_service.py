@@ -306,11 +306,13 @@ class RelationFixService:
             
         # Get ego graph (radius 1)
         # Using a subgraph logic manually to ensure we format it correctly
-        nodes = {node_id: {"id": node_id, "label": node_id}}
+        node_data = G.nodes[node_id]
+        nodes = {node_id: {"id": node_id, "label": node_id, **node_data}}
         edges = []
         
         for neighbor in G.neighbors(node_id):
-            nodes[neighbor] = {"id": neighbor, "label": neighbor}
+            neighbor_data = G.nodes[neighbor]
+            nodes[neighbor] = {"id": neighbor, "label": neighbor, **neighbor_data}
             edge_data = G.get_edge_data(node_id, neighbor)
             edges.append({
                 "source": node_id,
@@ -319,5 +321,41 @@ class RelationFixService:
             })
             
         return {"nodes": list(nodes.values()), "edges": edges}
+
+    def update_node(self, node_id: str, attributes: Dict[str, Any]) -> bool:
+        self.backup_graph()
+        G = self._get_graph()
+        
+        if node_id not in G:
+            return False
+            
+        # Update attributes
+        for k, v in attributes.items():
+            G.nodes[node_id][k] = v
+            
+        self._save_graph(G)
+        self._log_action("UPDATE_NODE", f"Updated node {node_id}")
+        return True
+
+    def update_relation(self, source: str, target: str, attributes: Dict[str, Any]) -> bool:
+        self.backup_graph()
+        G = self._get_graph()
+        
+        if not G.has_edge(source, target):
+            # Check reverse direction if undirected
+            if G.has_edge(target, source):
+                # Swap source/target for update
+                source, target = target, source
+            else:
+                return False
+                
+        # Update attributes
+        # NetworkX edge attributes are accessed via G[u][v] or G.edges[u, v]
+        for k, v in attributes.items():
+            G.edges[source, target][k] = v
+            
+        self._save_graph(G)
+        self._log_action("UPDATE_RELATION", f"Updated relation {source} -> {target}")
+        return True
 
 relation_fix_service = RelationFixService()

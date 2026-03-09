@@ -1,22 +1,29 @@
 <template>
-  <div class="h-full flex flex-col bg-white">
-    <!-- Header Banner (Unified Style) -->
-    <div class="px-10 pt-12 pb-6 flex-shrink-0">
-      <div class="flex justify-between items-end">
-        <div>
-          <h2 class="text-4xl font-semibold text-[#1D1D1F] tracking-tight mb-2">关系修复</h2>
-          <p class="text-[#86868B] text-lg font-medium">检测并修复知识图谱中的关系缺失。</p>
+  <div class="h-full flex flex-col bg-background text-foreground">
+    <!-- Header Banner -->
+    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <h2 class="text-lg font-semibold tracking-tight">关系修复</h2>
+          <div class="h-4 w-px bg-border"></div>
+          <p class="text-muted-foreground text-xs truncate max-w-xl">
+            检测并修复知识图谱中的关系缺失，管理实体属性与关联。
+          </p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <!-- Future header actions can go here -->
         </div>
       </div>
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex overflow-hidden border-t border-slate-200">
+    <div class="flex-1 flex overflow-hidden">
       <!-- Left Sidebar (Editor) -->
-      <div class="w-96 flex-shrink-0 border-r border-slate-200 bg-white z-10 overflow-y-auto custom-scrollbar">
+      <div class="w-80 flex-shrink-0 border-r bg-muted/10">
         <RelationEditor 
           :fixes="fixes"
           :currentRelations="currentRelations"
+          :selectedNode="selectedNode"
           @search="handleSearch"
           @detect="handleDetect"
           @applyFixes="handleApplyFixes"
@@ -24,25 +31,22 @@
           @delete="handleDelete"
           @backup="handleBackup"
           @restore="handleRestore"
+          @updateNode="handleUpdateNode"
         />
       </div>
 
       <!-- Right Content (Graph) -->
-      <div class="flex-1 relative bg-muted/50">
+      <div class="flex-1 relative bg-muted/20">
         <!-- Skeleton Loading State -->
-        <div v-if="loading" class="absolute inset-0 z-30 bg-white p-8 flex flex-col items-center justify-center">
-             <div class="w-full h-full max-w-4xl mx-auto flex flex-col gap-8 items-center justify-center opacity-50">
-                 <!-- Mock Graph Nodes -->
-                 <div class="relative w-full h-96">
-                     <div class="absolute top-1/2 left-1/2 w-20 h-20 bg-slate-200 rounded-full animate-pulse -translate-x-1/2 -translate-y-1/2"></div>
-                     <div class="absolute top-1/4 left-1/4 w-12 h-12 bg-slate-200 rounded-full animate-pulse"></div>
-                     <div class="absolute bottom-1/4 right-1/4 w-14 h-14 bg-slate-200 rounded-full animate-pulse"></div>
-                     <div class="absolute top-1/3 right-1/3 w-10 h-10 bg-slate-200 rounded-full animate-pulse"></div>
-                     <div class="absolute bottom-1/3 left-1/3 w-16 h-16 bg-slate-200 rounded-full animate-pulse"></div>
+        <div v-if="loading" class="absolute inset-0 z-30 bg-background/50 backdrop-blur-sm flex items-center justify-center transition-all duration-300">
+             <div class="flex flex-col items-center gap-6">
+                 <div class="relative">
+                    <Skeleton class="h-32 w-32 rounded-full border-4 border-background shadow-xl animate-pulse" />
+                    <div class="absolute inset-0 border-t-4 border-primary rounded-full animate-spin"></div>
                  </div>
-                 <div class="space-y-4 w-64 text-center">
-                     <div class="h-4 bg-slate-200 rounded w-3/4 mx-auto animate-pulse"></div>
-                     <div class="h-3 bg-slate-200 rounded w-1/2 mx-auto animate-pulse"></div>
+                 <div class="space-y-2 text-center">
+                     <Skeleton class="h-4 w-[200px]" />
+                     <Skeleton class="h-3 w-[150px]" />
                  </div>
              </div>
         </div>
@@ -57,26 +61,48 @@
           @node-click="handleNodeClick"
         >
           <template #toolbar-extras>
-            <button 
-              class="w-7 h-7 inline-flex items-center justify-center rounded-md text-[#2a2f3c] bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
+            <Button
+              variant="outline"
+              size="icon"
+              class="h-8 w-8 shadow-sm"
+              :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground border-primary': showLogs }"
               @click="showLogs = !showLogs"
-              :class="{ 'bg-blue-100 text-primary': showLogs }"
               title="操作日志"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            </button>
+              <FileTextIcon class="h-4 w-4" />
+            </Button>
           </template>
         </GraphViewer>
         
-        <!-- Logs Drawer / Overlay -->
-        <div v-if="showLogs" class="absolute bottom-16 right-4 w-96 max-h-64 bg-black/80 text-white text-xs p-2 rounded overflow-y-auto font-mono pointer-events-auto shadow-lg z-20">
-          <div class="flex justify-between items-center mb-1 pb-1 border-b border-white/20">
-              <span class="font-semibold">操作日志</span>
-              <button @click="loadLogs" class="text-blue-300 hover:text-blue-100">刷新</button>
-          </div>
-          <div v-if="logs.length === 0" class="text-gray-400 italic p-2 text-center">暂无日志</div>
-          <div v-for="(log, i) in logs" :key="i" class="whitespace-pre-wrap">{{ log }}</div>
-        </div>
+        <!-- Logs Panel -->
+        <Card 
+          v-if="showLogs" 
+          class="absolute bottom-4 right-4 w-96 max-h-[300px] flex flex-col shadow-xl border-border/60 z-20 animate-in slide-in-from-bottom-4 fade-in-0 duration-200"
+        >
+          <CardHeader class="py-2.5 px-4 flex flex-row items-center justify-between space-y-0 border-b bg-muted/40">
+            <CardTitle class="text-xs font-medium uppercase tracking-wider text-muted-foreground">操作日志</CardTitle>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              class="h-6 w-6 p-0 hover:bg-background"
+              @click="loadLogs"
+              title="刷新日志"
+            >
+              <RefreshCwIcon class="h-3.5 w-3.5" />
+            </Button>
+          </CardHeader>
+          <CardContent class="p-0 flex-1 min-h-0 bg-zinc-950 text-zinc-50 font-mono text-[10px] leading-relaxed">
+             <ScrollArea class="h-64 w-full">
+               <div class="p-3 space-y-1">
+                 <div v-if="logs.length === 0" class="text-zinc-500 italic text-center py-4">暂无日志记录</div>
+                 <div v-for="(log, i) in logs" :key="i" class="break-all border-b border-white/5 last:border-0 pb-1 mb-1 last:pb-0 last:mb-0 opacity-90 hover:opacity-100 transition-opacity">
+                    <span class="text-zinc-500 select-none mr-2">[{{ i + 1 }}]</span>
+                    {{ log }}
+                 </div>
+               </div>
+             </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
     </div>
   </div>
@@ -84,9 +110,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { FileText as FileTextIcon, RefreshCw as RefreshCwIcon } from 'lucide-vue-next';
 import GraphViewer from '@/shared/components/organisms/GraphViewer/GraphViewer.vue';
 import RelationEditor from './components/RelationEditor.vue';
 import { relationFixApi, type RelationFix } from './api';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/components/ui/toast/use-toast';
+
+const { toast } = useToast();
 
 const nodes = ref<Record<string, any>>({});
 const edges = ref<Record<string, any>>({});
@@ -98,6 +132,13 @@ const graphViewerRef = ref();
 const currentNodeId = ref<string>('');
 
 const currentRelations = computed(() => Object.values(edges.value));
+
+const selectedNode = computed(() => {
+  if (currentNodeId.value && nodes.value[currentNodeId.value]) {
+    return nodes.value[currentNodeId.value];
+  }
+  return null;
+});
 
 const loadLogs = async () => {
   try {
@@ -115,11 +156,19 @@ const handleSearch = async (query: string) => {
       // Load first match
       await loadNode(results[0], false); // Don't set global loading inside
     } else {
-        alert("未找到相关节点");
+        toast({
+          title: "未找到相关节点",
+          description: `未发现与 "${query}" 匹配的节点`,
+          variant: "destructive"
+        });
     }
   } catch (e) {
       console.error(e);
-      alert("搜索失败");
+      toast({
+          title: "搜索失败",
+          description: "请检查网络连接或稍后重试",
+          variant: "destructive"
+      });
   } finally {
     loading.value = false;
   }
@@ -165,9 +214,28 @@ const loadNode = async (nodeId: string, setGlobalLoading = true) => {
   }
 };
 
+const handleUpdateNode = async (nodeId: string, attributes: Record<string, any>) => {
+  loading.value = true;
+  try {
+    await relationFixApi.updateNode(nodeId, attributes);
+    toast({ title: "更新成功", description: `节点 ${nodeId} 属性已保存` });
+    await loadNode(nodeId, false);
+    await loadLogs();
+  } catch (e) {
+    console.error(e);
+    toast({ title: "更新失败", description: "无法保存节点属性更改", variant: "destructive" });
+  } finally {
+    loading.value = false;
+  }
+};
+
 const handleDetect = async (mainNode: string, keyword: string) => {
   if (!mainNode || !keyword) {
-      alert("请输入主节点和关键词");
+      toast({
+          title: "输入不完整",
+          description: "请输入主节点和关键词以开始检测",
+          variant: "destructive"
+      });
       return;
   }
   loading.value = true;
@@ -178,11 +246,22 @@ const handleDetect = async (mainNode: string, keyword: string) => {
     const results = await relationFixApi.detectRelations(mainNode, keyword);
     fixes.value = results;
     if (results.length === 0) {
-        alert("未发现可修复的关系");
+        toast({
+            title: "检测完成",
+            description: "当前节点关系完整或未找到相关缺失。"
+        });
+    } else {
+        toast({
+            title: "检测完成",
+            description: `发现了 ${results.length} 个潜在的缺失关系`
+        });
     }
   } catch (e) {
       console.error(e);
-      alert("检测失败");
+      toast({
+          title: "检测失败",
+          variant: "destructive"
+      });
   } finally {
     loading.value = false;
   }
@@ -194,7 +273,10 @@ const handleApplyFixes = async (selectedFixes: RelationFix[]) => {
   loading.value = true;
   try {
     const res = await relationFixApi.applyFixes(selectedFixes);
-    alert(`已修复 ${res.count} 个关系`);
+    toast({
+        title: "修复成功",
+        description: `已修复 ${res.count} 个关系`
+    });
     fixes.value = []; // Clear fixes
     // Reload graph
     if (selectedFixes.length > 0) {
@@ -203,22 +285,31 @@ const handleApplyFixes = async (selectedFixes: RelationFix[]) => {
     await loadLogs();
   } catch (e) {
       console.error(e);
-      alert("修复失败");
+      toast({
+          title: "修复失败",
+          variant: "destructive"
+      });
   } finally {
     loading.value = false;
   }
 };
 
-const handleCreate = async (source: string, target: string, type: string) => {
+const handleCreate = async (source: string, target: string, type: string, attributes: Record<string, any>) => {
   loading.value = true;
   try {
-    await relationFixApi.createRelation(source, target, type);
-    alert('创建成功');
+    await relationFixApi.createRelation(source, target, type, attributes);
+    toast({
+        title: "创建成功",
+        description: `已建立 ${source} -> ${target} 的关系`
+    });
     await loadNode(source, false);
     await loadLogs();
   } catch (e) {
       console.error(e);
-      alert("创建失败");
+      toast({
+          title: "创建失败",
+          variant: "destructive"
+      });
   } finally {
     loading.value = false;
   }
@@ -228,14 +319,20 @@ const handleDelete = async (relations: Array<{ source: string, target: string }>
   loading.value = true;
   try {
     const res = await relationFixApi.deleteRelations(relations);
-    alert(`已解除 ${res.count} 个关系`);
+    toast({
+        title: "解除成功",
+        description: `已解除 ${res.count} 个关系`
+    });
     if (currentNodeId.value) {
         await loadNode(currentNodeId.value, false);
     }
     await loadLogs();
   } catch (e) {
       console.error(e);
-      alert("解除关系失败");
+      toast({
+          title: "解除关系失败",
+          variant: "destructive"
+      });
   } finally {
     loading.value = false;
   }
@@ -244,11 +341,17 @@ const handleDelete = async (relations: Array<{ source: string, target: string }>
 const handleBackup = async () => {
   try {
       const res = await relationFixApi.backupGraph();
-      alert(`备份已创建: ${res.path}`);
+      toast({
+          title: "备份已创建",
+          description: `路径: ${res.path}`
+      });
       await loadLogs();
   } catch (e) {
       console.error(e);
-      alert("备份失败");
+      toast({
+          title: "备份失败",
+          variant: "destructive"
+      });
   }
 };
 
@@ -258,7 +361,10 @@ const handleRestore = async () => {
     try {
         const res = await relationFixApi.restoreBackup();
         if (res.success) {
-            alert('回滚成功');
+            toast({
+                title: "回滚成功",
+                description: "图谱已恢复到最近的备份状态"
+            });
             await loadLogs();
             // Reload current graph if possible
             if (Object.keys(nodes.value).length > 0) {
@@ -266,11 +372,17 @@ const handleRestore = async () => {
                  await loadNode(firstNode, false);
             }
         } else {
-            alert('回滚失败');
+            toast({
+                title: "回滚失败",
+                variant: "destructive"
+            });
         }
     } catch (e) {
         console.error(e);
-        alert("回滚出错");
+        toast({
+            title: "回滚出错",
+            variant: "destructive"
+        });
     } finally {
         loading.value = false;
     }
@@ -285,19 +397,3 @@ onMounted(() => {
     loadLogs();
 });
 </script>
-
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #E2E8F0;
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #CBD5E0;
-}
-</style>
