@@ -1,6 +1,8 @@
 # Tiga
 
-**Tiga**（Taichi Agent）是一个企业级 AI 智能体（Agent）管理与编排平台，帮助开发者和企业快速构建基于 LLM 的智能应用。后端采用 **Agno** 框架，集成 **LightRAG** 知识图谱检索、**Vanna** Text-to-SQL 以及 **MCP (Model Context Protocol)**，提供从非结构化文档问答到结构化数据分析的全栈能力。
+**Tiga**（Taichi Agent）是一个企业级 AI 智能体（Agent）管理与编排平台，帮助开发者和企业快速构建基于 LLM 的智能应用。后端采用 **Agno** 框架，集成 **LightRAG** 知识图谱检索、**Vanna** Text-to-SQL、**Pathway** 实时数据流处理以及 **OpenClaw** 分布式任务节点，全面支持 **MCP (Model Context Protocol)**。
+
+前端采用 **Vue 3** + **Shadcn/UI** + **Element Plus** 的现代化架构，提供从非结构化文档问答、结构化数据分析到知识图谱修复的全栈能力。
 
 ---
 
@@ -8,11 +10,32 @@
 
 ```
 Tiga/
-├── backend/          # 后端服务 (FastAPI + Agno)
-├── frontend/         # 前端应用 (Vue 3 + Vite + Element Plus)
-├── docker-compose.yml # Redis 等基础设施
-├── LICENSE
-└── README.md
+├── backend/
+│   ├── app/
+│   │   ├── api/          # API 路由 (Agent, Chat, RAG, MCP, OpenClaw 等)
+│   │   ├── core/         # 核心配置与工具
+│   │   ├── services/     # 业务逻辑服务
+│   │   │   ├── agent/    # 智能体核心 (Planner, Skills, Tools)
+│   │   │   ├── openclaw/ # 分布式任务节点与网关
+│   │   │   ├── pathway/  # 实时数据流 ETL 引擎
+│   │   │   ├── rag/      # RAG 引擎 (LightRAG, GraphitiRAG)
+│   │   │   ├── relation_fix_service.py # 图谱关系修复
+│   │   │   └── sandbox/  # 代码沙箱 (E2B, Codebox)
+│   └── ...
+├── frontend/
+│   ├── src/
+│   │   ├── components/ui/ # Shadcn/UI 组件库
+│   │   ├── features/      # 功能模块
+│   │   │   ├── agent/     # 智能体管理
+│   │   │   ├── analytics/ # 数据指标分析
+│   │   │   ├── data_etl/  # ETL 数据流看板
+│   │   │   ├── etl_editor/# 可视化 ETL 编排
+│   │   │   ├── knowledge/ # 知识库管理
+│   │   │   ├── qa/        # 智能问答
+│   │   │   ├── relation_fix/ # 知识图谱关系修复
+│   │   │   └── sandbox/   # 沙箱终端与结果查看
+│   └── ...
+└── ...
 ```
 
 ---
@@ -21,10 +44,14 @@ Tiga/
 
 | 模块 | 说明 |
 |------|------|
-| **智能体编排** | 基于 Agno，支持 OpenAI、DeepSeek 等；可视化配置角色、系统提示词与工具；MCP 协议支持 |
-| **混合 RAG** | LightRAG 图谱检索；BM25 + 向量 + 图谱三路召回；LanceDB/Qdrant/Milvus、NetworkX/Neo4j |
-| **数据智能** | Vanna Text-to-SQL；数据源与指标管理；自动图表生成 |
-| **自动化扩展** | N8N 工作流、用户脚本、Agno Workflow 任务编排；S3/OSS 存储 |
+| **智能体编排** | 基于 Agno，支持 OpenAI、DeepSeek 等；可视化配置角色、系统提示词与工具；内置 Planner 与 Control Plane |
+| **混合 RAG** | 集成 LightRAG、GraphitiRAG；支持 BM25 + 向量 + 图谱三路召回；知识图谱可视化与交互 |
+| **图谱治理** | **Relation Fix**：可视化的知识图谱关系检测与修复工具，支持实体属性编辑、关系增删改、操作回滚 |
+| **数据智能** | Vanna Text-to-SQL；Smart Data Query；自动图表生成与指标管理 |
+| **实时流处理** | **Pathway** 引擎集成，支持实时数据连接、清洗、结构化与 AI 算子编排 |
+| **分布式执行** | **OpenClaw**：分布式任务节点管理，支持负载均衡、心跳监测与任务分发 |
+| **安全沙箱** | 集成 E2B 与 Codebox，支持安全执行 Python/Node.js 代码与文件操作 |
+| **MCP 支持** | 全面支持 Model Context Protocol，可作为 MCP Client 连接多种 MCP Server |
 
 ---
 
@@ -32,10 +59,11 @@ Tiga/
 
 | 层级 | 技术 |
 |------|------|
-| **后端** | Python 3.12+、FastAPI、Agno、LightRAG、Vanna、SQLAlchemy、Redis |
-| **前端** | Vue 3、Vite、Element Plus、TailwindCSS、Pinia、ECharts、Vue Flow |
+| **后端** | Python 3.12+、FastAPI、Agno、LightRAG、Vanna、Pathway、SQLAlchemy、Redis |
+| **前端** | Vue 3、Vite、**Shadcn/UI** (Radix Vue + TailwindCSS)、Element Plus、Vue Flow、ECharts、3d-force-graph |
 | **向量/图** | LanceDB（默认）、Qdrant、Milvus；NetworkX、Neo4j |
 | **存储** | 本地 FS、AWS S3、阿里云 OSS |
+| **沙箱** | E2B、Codebox |
 
 ---
 
@@ -43,11 +71,10 @@ Tiga/
 
 ### 1. 基础设施（可选）
 
-项目默认使用 SQLite + 本地存储；若需 Redis（任务队列、缓存等）：
+项目默认使用 SQLite + 本地存储；若需 Redis（任务队列、缓存等）、Neo4j 或 Qdrant：
 
 ```bash
 docker-compose up -d
-# Redis: localhost:6379
 ```
 
 ### 2. 后端
@@ -86,26 +113,21 @@ npm run dev
 
 访问：`http://localhost:5173`
 
-### 4. 可选 Docker 服务
-
-```bash
-# Neo4j（图数据库）
-docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
-
-# Qdrant（向量库）
-docker run -d --name qdrant -p 6333:6333 qdrant/qdrant
-```
-
 ---
 
 ## 后端架构概要
 
 - **API**（`app/api`）：路由与请求/响应，无业务与 DB 直接操作  
-- **Service**（`app/services`）：Agent、RAG、存储、LLM、数据、媒体、OpenClaw 等业务逻辑  
-- **CRUD**（`app/crud`）：数据库 CRUD 封装  
-- **Core**（`app/core`）：配置、日志、异常、安全  
+- **Service**（`app/services`）：
+    - **Agent**: 智能体核心逻辑
+    - **OpenClaw**: 分布式节点通信与任务调度
+    - **Pathway**: 数据流处理管道
+    - **RAG**: 知识检索与图谱构建
+    - **Sandbox**: 代码执行环境
+- **Core**（`app/core`）：配置、日志、异常、安全、Redis 队列
+- **CRUD**（`app/crud`）：数据库操作封装
 
-主要 API 模块：`/agent`、`/chat`、`/knowledge`、`/rag`、`/workflows`、`/data-sources`、`/mcp`、`/openclaw`、`/health` 等。
+主要 API 模块：`/agent`、`/chat`、`/knowledge`、`/rag`、`/workflows`、`/data-sources`、`/mcp`、`/openclaw`、`/pathway`、`/sandbox` 等。
 
 ---
 
@@ -127,16 +149,9 @@ make clean     # 清理缓存
 
 - 后端配置见 `backend/app/core/config.py`，支持 `.env`（可放在项目根或 `backend/`）。
 - 重要变量示例：`OPENAI_API_KEY`、`USE_SQLITE`、`REDIS_HOST`、`STORAGE_TYPE`、`OPENCLAW_*`、`DEEPSEEK_API_KEY` 等。
-- Windows 上安装 `lancedb`、`numpy` 等可能需要 **Visual C++ Build Tools**。
 
 ---
 
 ## 许可证
 
 MIT License（见 [LICENSE](LICENSE)）。
-
----
-
-## 更多说明
-
-- 后端详细说明、RAG/存储/OpenClaw 等见 [backend/README.md](backend/README.md)。

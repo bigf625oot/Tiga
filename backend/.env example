@@ -1,0 +1,53 @@
+# Database
+USE_SQLITE=True
+
+# Storage Configuration
+STORAGE_TYPE=aliyun_oss 
+# (Options: local, s3, aliyun_oss. Default is local)
+
+# Aliyun OSS Configuration (Required if STORAGE_TYPE=aliyun_oss)
+ALIYUN_OSS_ENDPOINT=
+ALIYUN_OSS_BUCKET=
+# ALIYUN_OSS_ACCESS_KEY_ID= (Defaults to ALIYUN_ACCESS_KEY_ID if not set)
+# ALIYUN_OSS_ACCESS_KEY_SECRET= (Defaults to ALIYUN_ACCESS_KEY_SECRET if not set)
+
+# Aliyun ASR Configuration
+ALIYUN_ACCESS_KEY_ID=
+ALIYUN_ACCESS_KEY_SECRET=
+ALIYUN_APP_KEY=
+
+# S3 Configuration (Optional, defaults to local mock if not set)
+# S3_ACCESS_KEY=minioadmin
+# S3_SECRET_KEY=minioadmin
+# S3_BUCKET_NAME=recordings
+# S3_ENDPOINT_URL=http://localhost:9000
+
+# 阿里云搜索服务配置
+alibaba_cloud_bearer_token=
+alibaba_cloud_endpoint=
+alibaba_cloud_protocol=
+
+# Tavily API 配置
+TAVILY_API_KEY=
+# OpenAI Configuration
+OPENAI_API_KEY=
+
+# E2B Sandbox Configuration
+# 访问的url地址：https://e2b.dev/
+E2B_API_KEY=
+
+# OpenClaw Configuration
+OPENCLAW_GATEWAY_TOKEN=
+OPENCLAW_WS_URL=
+
+# Proxy Configuration
+# Bypass proxy for OpenClaw to avoid timeouts
+NO_PROXY=
+OPENCLAW_DEVICE_ID=
+OPENCLAW_DEVICE_PRIVATE_KEY=
+OPENCLAW_VERIFY_SSL=False
+
+# Smart Ask Data (Text-to-SQL)
+KG_Q2S_ENABLE=True
+MASTER_KEY=
+SECRET_KEY=
