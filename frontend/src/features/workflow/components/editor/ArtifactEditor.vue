@@ -1,14 +1,14 @@
 <template>
-  <div class="h-full flex flex-col relative bg-white overflow-hidden">
+  <div class="h-full flex flex-col relative bg-background overflow-hidden">
     <!-- Toolbar -->
-    <div class="h-10 border-b border-slate-200 flex items-center px-4 justify-between bg-muted/50">
+    <div class="h-10 border-b border-border flex items-center px-4 justify-between bg-muted/50">
         <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Code Editor</span>
-            <span v-if="isReadOnly" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-muted-foreground">READ ONLY</span>
+            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Code Editor</span>
+            <span v-if="isReadOnly" class="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">READ ONLY</span>
         </div>
         <div class="flex items-center gap-2">
             <button 
-                class="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-200 text-slate-600 transition-colors"
+                class="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-muted text-muted-foreground transition-colors"
                 @click="toggleDiff"
                 title="Toggle Diff View"
             >
@@ -16,7 +16,7 @@
                 {{ showDiff ? 'Hide Diff' : 'Show Diff' }}
             </button>
             <button 
-                class="text-xs flex items-center gap-1 px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors border border-indigo-200"
+                class="text-xs flex items-center gap-1 px-2 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition-colors border border-indigo-500/20"
                 @click="runSelection"
                 title="Run Selected Code"
             >
@@ -28,7 +28,7 @@
 
     <div class="flex-1 flex overflow-hidden">
         <!-- Editor Area (Left) -->
-        <div class="h-full border-r border-slate-200 transition-all duration-300" 
+        <div class="h-full border-r border-border transition-all duration-300" 
              :class="isReadOnly ? 'w-0 overflow-hidden border-none' : 'w-1/2'">
             
             <vue-monaco-editor
@@ -51,10 +51,10 @@
         </div>
         
         <!-- Preview Area (Right/Full) -->
-        <div class="h-full overflow-y-auto bg-white custom-scrollbar transition-all duration-300 relative"
+        <div class="h-full overflow-y-auto bg-background custom-scrollbar transition-all duration-300 relative"
              :class="isReadOnly ? 'w-full' : 'w-1/2'">
              
-            <div v-if="rendering" class="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
+            <div v-if="rendering" class="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
                 <div class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
 
@@ -64,32 +64,32 @@
                     <div v-if="block.type === 'html'" v-html="block.content"></div>
                     
                     <!-- Vue Component Preview -->
-                    <div v-else-if="block.type === 'vue'" class="my-6 border border-slate-200 rounded-lg overflow-hidden bg-muted/50/50 shadow-sm transition-all hover:shadow-md">
-                        <div class="px-4 py-2 border-b border-slate-200 bg-muted/50 flex justify-between items-center">
+                    <div v-else-if="block.type === 'vue'" class="my-6 border border-border rounded-lg overflow-hidden bg-card shadow-sm transition-all hover:shadow-md">
+                        <div class="px-4 py-2 border-b border-border bg-muted/50 flex justify-between items-center">
                             <span class="text-xs font-medium text-muted-foreground">Vue Preview</span>
                             <div class="flex gap-2">
-                                <button class="text-xs text-muted-foreground hover:text-indigo-600 transition-colors" @click="block.showCode = !block.showCode">
+                                <button class="text-xs text-muted-foreground hover:text-primary transition-colors" @click="block.showCode = !block.showCode">
                                     {{ block.showCode ? '隐藏代码' : '查看代码' }}
                                 </button>
                             </div>
                         </div>
                         
-                        <div class="p-6 bg-white relative">
+                        <div class="p-6 bg-card relative">
                             <ErrorBoundary>
                                 <component :is="block.component" v-if="block.component" />
                                 <div v-else class="text-amber-500 text-sm">正在编译组件...</div>
                             </ErrorBoundary>
                         </div>
                         
-                        <div v-if="block.showCode" class="border-t border-slate-200 bg-muted/50 p-4 overflow-x-auto">
-                            <pre class="text-xs m-0 font-mono text-slate-600">{{ block.rawCode }}</pre>
+                        <div v-if="block.showCode" class="border-t border-border bg-muted/50 p-4 overflow-x-auto">
+                            <pre class="text-xs m-0 font-mono text-muted-foreground">{{ block.rawCode }}</pre>
                         </div>
                     </div>
                 </template>
                 
                 <div v-if="parsedBlocks.length === 0 && !localValue" class="flex flex-col items-center justify-center h-full min-h-[300px] text-muted-foreground select-none absolute inset-0">
                     <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-4 border border-border">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-slate-300">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-muted">
                             <path d="M16 18L22 12L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M8 6L2 12L8 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -108,6 +108,7 @@ import { VueMonacoEditor, VueMonacoDiffEditor } from '@guolao/vue-monaco-editor'
 import { marked } from 'marked';
 import { compile } from 'vue';
 import { PlayCircleOutlined, DiffOutlined, EyeInvisibleOutlined } from '@ant-design/icons-vue';
+import { useTheme } from '@/composables/useTheme';
 
 const props = defineProps({
     value: { type: String, default: '' },
@@ -118,6 +119,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:value', 'run']);
+const { isLightMode } = useTheme();
 
 const localValue = ref(props.value);
 const isReadOnly = ref(props.readOnly);
@@ -156,7 +158,7 @@ const ErrorBoundary = defineComponent({
       return false;
     });
     return () => error.value 
-        ? h('div', { class: 'text-red-500 text-sm bg-red-50 p-4 rounded border border-red-100' }, [
+        ? h('div', { class: 'text-red-500 text-sm bg-red-500/10 p-4 rounded border border-red-500/20' }, [
             h('strong', '组件渲染错误: '),
             h('span', error.value.message || String(error.value))
           ]) 
@@ -172,7 +174,7 @@ const editorOptions = computed(() => ({
     scrollBeyondLastLine: false,
     wordWrap: 'on',
     automaticLayout: true,
-    theme: 'vs-light'
+    theme: isLightMode.value ? 'vs-light' : 'vs-dark'
 }));
 
 const handleMount = (editor) => {
@@ -374,23 +376,23 @@ onBeforeUnmount(() => {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     font-size: 14px;
     line-height: 1.6;
-    color: #333;
+    color: hsl(var(--foreground));
 }
-.markdown-body :deep(h1) { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; margin-bottom: 16px; font-weight: 600; }
-.markdown-body :deep(h2) { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; margin-bottom: 16px; font-weight: 600; margin-top: 24px; }
-.markdown-body :deep(p) { margin-bottom: 16px; }
-.markdown-body :deep(code) { background-color: rgba(27,31,35,0.05); padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; }
-.markdown-body :deep(pre) { background-color: #f6f8fa; padding: 16px; overflow: auto; border-radius: 6px; margin-bottom: 16px; }
+.markdown-body :deep(h1) { font-size: 2em; border-bottom: 1px solid hsl(var(--border)); padding-bottom: 0.3em; margin-bottom: 16px; font-weight: 600; color: hsl(var(--foreground)); }
+.markdown-body :deep(h2) { font-size: 1.5em; border-bottom: 1px solid hsl(var(--border)); padding-bottom: 0.3em; margin-bottom: 16px; font-weight: 600; margin-top: 24px; color: hsl(var(--foreground)); }
+.markdown-body :deep(p) { margin-bottom: 16px; color: hsl(var(--foreground)); }
+.markdown-body :deep(code) { background-color: hsl(var(--muted)); padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; color: hsl(var(--foreground)); }
+.markdown-body :deep(pre) { background-color: hsl(var(--muted)); padding: 16px; overflow: auto; border-radius: 6px; margin-bottom: 16px; }
 .markdown-body :deep(pre code) { background-color: transparent; padding: 0; }
-.markdown-body :deep(blockquote) { color: #6a737d; border-left: 0.25em solid #dfe2e5; padding-left: 1em; margin-left: 0; margin-bottom: 16px; }
-.markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 2em; margin-bottom: 16px; }
-.markdown-body :deep(table) { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
-.markdown-body :deep(table th), .markdown-body :deep(table td) { border: 1px solid #dfe2e5; padding: 6px 13px; }
-.markdown-body :deep(table tr:nth-child(2n)) { background-color: #f6f8fa; }
-.markdown-body :deep(img) { max-width: 100%; box-sizing: content-box; background-color: #fff; }
+.markdown-body :deep(blockquote) { color: hsl(var(--muted-foreground)); border-left: 0.25em solid hsl(var(--border)); padding-left: 1em; margin-left: 0; margin-bottom: 16px; }
+.markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 2em; margin-bottom: 16px; color: hsl(var(--foreground)); }
+.markdown-body :deep(table) { border-collapse: collapse; width: 100%; margin-bottom: 16px; color: hsl(var(--foreground)); }
+.markdown-body :deep(table th), .markdown-body :deep(table td) { border: 1px solid hsl(var(--border)); padding: 6px 13px; }
+.markdown-body :deep(table tr:nth-child(2n)) { background-color: hsl(var(--muted)/0.5); }
+.markdown-body :deep(img) { max-width: 100%; box-sizing: content-box; background-color: hsl(var(--background)); }
 
 .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 10px; }
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground)); }
 </style>

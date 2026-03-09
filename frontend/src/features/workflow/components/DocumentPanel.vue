@@ -1,26 +1,26 @@
 <template>
   <div class="h-full flex flex-col bg-muted/50 relative">
-    <div v-if="showHeader" class="bg-white px-4 p-4 border-b border-border flex justify-between items-center shadow-sm z-10">
+    <div v-if="showHeader" class="bg-background px-4 p-4 border-b border-border flex justify-between items-center shadow-sm z-10">
         <div class="flex items-center gap-2 min-w-0">
-           <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-               <FileTextOutlined class="text-emerald-600" />
+           <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+               <FileTextOutlined class="text-emerald-600 dark:text-emerald-400" />
            </div>
            <div class="min-w-0">
-              <div class="text-sm font-semibold text-slate-800 leading-none">文档空间</div>
+              <div class="text-sm font-semibold text-foreground leading-none">文档空间</div>
               <div class="mt-1 text-xs text-muted-foreground truncate">共 {{ documents.length }} 篇</div>
            </div>
         </div>
         
         <button
            v-if="documents.length"
-           class="text-xs px-2 py-1 rounded bg-muted text-slate-600 hover:bg-slate-200 transition-colors"
+           class="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
            @click="clearDocs"
         >
            清空
         </button>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-hidden bg-white">
+    <div class="flex-1 min-h-0 overflow-hidden bg-background">
         <ArtifactEditor
             v-if="currentDoc"
             :value="currentDoc.content"
@@ -30,7 +30,12 @@
         />
         <div v-else class="h-full w-full">
             <div v-if="store.isRunning" class="h-full w-full p-8 flex flex-col justify-center">
-                 <a-skeleton active :paragraph="{ rows: 8 }" />
+                 <div class="animate-pulse space-y-4">
+                     <div class="h-4 bg-muted rounded w-3/4"></div>
+                     <div class="h-4 bg-muted rounded"></div>
+                     <div class="h-4 bg-muted rounded"></div>
+                     <div class="h-4 bg-muted rounded w-5/6"></div>
+                 </div>
             </div>
             <EmptyState v-else />
         </div>

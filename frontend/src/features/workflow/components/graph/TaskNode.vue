@@ -1,7 +1,7 @@
 <template>
-  <div class="task-node p-2 rounded-lg border shadow-sm min-w-[200px] bg-white" 
+  <div class="task-node p-2 rounded-lg border shadow-sm min-w-[200px] bg-card" 
        :class="statusClass">
-    <Handle type="target" position="top" class="w-2 h-2 !bg-slate-400" />
+    <Handle type="target" position="top" class="w-2 h-2 !bg-muted-foreground" />
     
     <div class="flex items-center gap-2 mb-1">
       <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" :class="iconBgClass">
@@ -17,7 +17,7 @@
         <div class="h-full bg-blue-500 animate-pulse" :style="{ width: (data.progress || 0) + '%' }"></div>
     </div>
 
-    <Handle type="source" position="bottom" class="w-2 h-2 !bg-slate-400" />
+    <Handle type="source" position="bottom" class="w-2 h-2 !bg-muted-foreground" />
   </div>
 </template>
 
@@ -35,10 +35,10 @@ const props = defineProps(['data']);
 
 const statusClass = computed(() => {
   switch (props.data.status) {
-    case 'completed': return 'border-green-500 ring-1 ring-green-100';
-    case 'running': return 'border-blue-500 ring-1 ring-blue-100';
-    case 'failed': return 'border-red-500 ring-1 ring-red-100';
-    default: return 'border-slate-200';
+    case 'completed': return 'border-green-500 ring-1 ring-green-500/20';
+    case 'running': return 'border-blue-500 ring-1 ring-blue-500/20';
+    case 'failed': return 'border-red-500 ring-1 ring-red-500/20';
+    default: return 'border-border';
   }
 });
 
@@ -47,7 +47,7 @@ const iconBgClass = computed(() => {
     case 'completed': return 'bg-green-500';
     case 'running': return 'bg-blue-500';
     case 'failed': return 'bg-red-500';
-    default: return 'bg-slate-200';
+    default: return 'bg-muted';
   }
 });
 

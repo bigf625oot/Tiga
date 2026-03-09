@@ -4,7 +4,7 @@
       <!-- Today's Tasks Statistics -->
       <section>
         <div class="mb-4">
-          <h4 class="text-sm font-semibold text-slate-900 tracking-tight m-0">今日任务</h4>
+          <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight m-0">今日任务</h4>
           <p class="text-[11px] text-muted-foreground mt-0.5 m-0">实时监控任务状态</p>
         </div>
         <div class="grid grid-cols-3 gap-4">
@@ -18,25 +18,25 @@
 
       <!-- Input Area -->
       <section id="task-input" :class="{'opacity-100 translate-y-0': inputValue, 'opacity-0 -translate-y-4 pointer-events-none absolute': !inputValue}" class="transition-all duration-300 ease-in-out">
-        <div class="border border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm rounded-lg overflow-hidden">
-          <div class="p-4 pb-2 border-b border-indigo-50/50 flex items-center gap-2">
+        <div class="border border-indigo-100 dark:border-indigo-900/30 bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-950/10 dark:to-slate-900 shadow-sm rounded-lg overflow-hidden">
+          <div class="p-4 pb-2 border-b border-indigo-50/50 dark:border-indigo-900/20 flex items-center gap-2">
             <div class="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-600 text-white">
               <ThunderboltFilled class="text-xs" />
             </div>
-            <span class="text-sm font-medium text-indigo-900">创建任务</span>
+            <span class="text-sm font-medium text-indigo-900 dark:text-indigo-100">创建任务</span>
           </div>
           <div class="p-4 space-y-3">
             <textarea
               ref="inputRef"
               v-model="inputValue"
               rows="3"
-              class="w-full resize-none border border-indigo-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white text-xs rounded-lg p-4 outline-none transition-all"
+              class="w-full resize-none border border-indigo-200 dark:border-indigo-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-slate-950 text-xs rounded-lg p-4 outline-none transition-all dark:text-slate-100"
               placeholder="输入任务描述..."
             ></textarea>
             <div class="flex justify-end gap-2">
               <button
                 @click="inputValue = ''"
-                class="h-8 text-xs px-4 text-muted-foreground hover:text-slate-700 hover:bg-muted rounded-lg transition-colors"
+                class="h-8 text-xs px-4 text-muted-foreground hover:text-slate-700 dark:hover:text-slate-200 hover:bg-muted rounded-lg transition-colors"
               >
                 取消
               </button>
@@ -57,21 +57,21 @@
       <section>
         <div class="flex items-end justify-between mb-4">
           <div>
-            <h4 class="text-sm font-semibold text-slate-900 tracking-tight m-0">自动化模板</h4>
+            <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight m-0">自动化模板</h4>
             <p class="text-[11px] text-muted-foreground mt-0.5 m-0">快速创建任务</p>
           </div>
           <div class="flex bg-muted p-0.5 rounded-lg">
             <button
               @click="showAllTemplates = false"
               class="p-4 py-1 rounded-md text-xs font-medium transition-all"
-              :class="!showAllTemplates ? 'bg-white text-indigo-600 shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
+              :class="!showAllTemplates ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300'"
             >
               常用
             </button>
             <button
               @click="showAllTemplates = true"
               class="p-4 py-1 rounded-md text-xs font-medium transition-all"
-              :class="showAllTemplates ? 'bg-white text-indigo-600 shadow-sm' : 'text-muted-foreground hover:text-slate-700'"
+              :class="showAllTemplates ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300'"
             >
               全部
             </button>
@@ -92,7 +92,7 @@
       <section>
         <div class="flex justify-between items-center mb-4">
           <div>
-            <h4 class="text-sm font-semibold text-slate-900 tracking-tight m-0">最近活动</h4>
+            <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight m-0">最近活动</h4>
             <p class="text-[11px] text-muted-foreground mt-0.5 m-0">任务执行记录</p>
           </div>
           <button 
@@ -104,7 +104,7 @@
           </button>
         </div>
         
-        <div class="bg-white rounded-lg border border-border shadow-sm p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-lg border border-border shadow-sm p-4">
           <div v-if="activitiesLoading" class="space-y-4">
              <a-skeleton active :paragraph="{ rows: 2 }" avatar />
              <a-skeleton active :paragraph="{ rows: 1 }" avatar />
@@ -112,7 +112,7 @@
           
           <div v-else-if="!activityGroups.length" class="flex flex-col items-center justify-center py-12 text-muted-foreground">
              <div class="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center m-4">
-                <InboxOutlined class="text-2xl text-slate-300" />
+                <InboxOutlined class="text-2xl text-slate-300 dark:text-slate-600" />
              </div>
              <span class="text-xs">暂无活动记录</span>
           </div>
@@ -128,12 +128,12 @@
                 class="flex items-center gap-4 cursor-pointer py-1 hover:bg-muted/50 rounded-lg transition-colors relative z-10 m-4"
               >
                 <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm transition-transform duration-200"
-                     :class="expandedTimeGroups.has(group.time) ? 'bg-indigo-500 rotate-0' : 'bg-slate-300 -rotate-90'">
+                     :class="expandedTimeGroups.has(group.time) ? 'bg-indigo-500 rotate-0' : 'bg-slate-300 dark:bg-slate-600 -rotate-90'">
                   <ClockCircleOutlined class="text-sm" />
                 </div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-semibold text-slate-900 m-0">{{ group.time }}</h3>
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 m-0">{{ group.time }}</h3>
                     <span class="text-[10px] text-muted-foreground font-normal">{{ group.activities.length }}个任务</span>
                   </div>
                 </div>
@@ -146,7 +146,7 @@
               <div class="space-y-3 pl-12 transition-all duration-300 origin-top overflow-hidden"
                    v-show="expandedTimeGroups.has(group.time)">
                 <div v-for="act in group.activities" :key="act.id" class="relative">
-                   <div class="bg-white border border-border rounded-lg p-4 hover:shadow-md hover:border-indigo-100 transition-all duration-200 cursor-pointer group/card flex gap-4" @click="handleActivityClick(act)">
+                   <div class="bg-white dark:bg-slate-800 border border-border rounded-lg p-4 hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-900 transition-all duration-200 cursor-pointer group/card flex gap-4" @click="handleActivityClick(act)">
                       <!-- Icon -->
                       <div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors" :class="getActivityIconClass(act.type)">
                          <component :is="getActivityIcon(act.type)" />
@@ -158,11 +158,11 @@
                             <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" :class="getActivityTagClass(act.type)">{{ getActivityLabel(act.type) }}</span>
                             <span class="text-[10px] text-muted-foreground">{{ act.last_run || '刚刚' }}</span>
                             <span class="text-[10px] px-1.5 py-0.5 rounded-md" 
-                                  :class="act.status === 'FAILED' ? 'bg-red-50 text-red-500' : (act.status === 'DISPATCHED' ? 'bg-primary/10 text-blue-500' : 'bg-muted/50 text-muted-foreground')">
+                                  :class="act.status === 'FAILED' ? 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400' : (act.status === 'DISPATCHED' ? 'bg-primary/10 text-blue-500 dark:text-blue-400' : 'bg-muted/50 text-muted-foreground')">
                                 {{ act.status }}
                             </span>
                          </div>
-                         <p class="text-xs text-slate-700 font-medium leading-relaxed m-0 line-clamp-2 group-hover/card:text-indigo-600 transition-colors">
+                         <p class="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed m-0 line-clamp-2 group-hover/card:text-indigo-600 dark:group-hover/card:text-indigo-400 transition-colors">
                             {{ act.description || act.name }}
                          </p>
                       </div>

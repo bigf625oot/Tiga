@@ -1,6 +1,7 @@
 <template>
   <DynamicGridBackground 
     class="h-full overflow-hidden relative bg-background"
+    background-color="transparent"
     :grid-size="30"
     :grid-color="isDark ? '#333' : '#e5e7eb'"
     :blob-count="3"
@@ -316,13 +317,14 @@
             @close="isRightCollapsed = true"
         />
         <WorkspaceTabs
-            v-else
-            ref="workspaceTabsRef"
-            :sessionId="currentSessionId || ''"
-            :agentName="currentAgent?.name || ''"
-            :isWorkflowMode="isWorkflowMode"
-            :attachmentsCount="selectedAttachments.length"
-        />
+                v-else
+                ref="workspaceTabsRef"
+                :sessionId="currentSessionId || ''"
+                :agentName="currentAgent?.name || ''"
+                :isWorkflowMode="isWorkflowMode"
+                :attachmentsCount="selectedAttachments.length"
+                :hasKnowledgeBase="hasKnowledgeBase"
+            />
       </div>
     </div>
     </div>
@@ -818,7 +820,33 @@ const knowledgeSearchKeyword = ref('');
 const knowledgeLoading = ref(false);
 const selectedAttachments = ref([]);
 
-const currentAgent = computed(() => agents.value.find(a => a.id === selectedAgentId.value));
+const currentAgent = computed(() => {
+    return agents.value.find(a => a.id === selectedAgentId.value);
+});
+const hasKnowledgeBase = computed(() => {
+    if (!currentAgent.value) return false;
+    const config = currentAgent.value.knowledge_config;
+    // Log for debugging
+    console.log('[SmartQA] Checking KB for agent:', currentAgent.value.name, config);
+    
+    if (!config) return false;
+    
+    let docs = [];
+    if (typeof config === 'string') {
+        try {
+            const parsed = JSON.parse(config);
+            docs = parsed.document_ids || parsed.knowledge_base_ids || [];
+        } catch (e) {
+            console.error('[SmartQA] Failed to parse config:', e);
+            return false;
+        }
+    } else {
+        docs = config.document_ids || config.knowledge_base_ids || [];
+    }
+    
+    console.log('[SmartQA] Docs found:', docs.length);
+    return docs.length > 0;
+});
 const viewMode = ref('table');
 const cardsLayout = ref('grid');
 
@@ -1189,14 +1217,19 @@ const removeAttachment = (index) => { selectedAttachments.value.splice(index, 1)
 // API Helpers
 const fetchAgents = async () => {
     try {
-        const res = await fetch('/api/v1/agents/');
+        const res = await fetch(`/api/v1/agents/?_t=${Date.now()}`);
         if (res.ok) {
             const data = await res.json();
             agents.value = data;
-            if (!selectedAgentId.value && data.length > 0) {
-                const did = getDefaultAgentId(data);
-                selectedAgentId.value = did;
-                fetchUserScripts(did);
+            
+            // Ensure selectedAgentId is valid
+            if (data.length > 0) {
+                const currentExists = data.find(a => a.id === selectedAgentId.value);
+                if (!selectedAgentId.value || !currentExists) {
+                    const did = getDefaultAgentId(data);
+                    selectedAgentId.value = did;
+                    fetchUserScripts(did);
+                }
             }
         }
     } catch (e) { console.error("Failed to fetch agents", e); }

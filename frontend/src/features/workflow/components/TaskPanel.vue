@@ -1,22 +1,9 @@
 <template>
-  <div class="h-full flex flex-col bg-white relative">
-    <!-- Unified Header -->
-    <div class="flex-none px-4 py-1.5 border-b border-indigo-100/50 flex items-center justify-end bg-white z-20">
-      <!-- Center: View Switcher (Tabs) -->
-      <a-segmented v-model:value="activeView" :options="views.map(v => ({ value: v.id, payload: v }))" size="small">
-        <template #label="{ payload }">
-          <div class="flex items-center gap-1.5 px-1 py-0.5">
-            <component :is="payload.icon" class="text-xs" />
-            <span class="text-xs font-medium">{{ t(payload.labelKey) }}</span>
-          </div>
-        </template>
-      </a-segmented>
-    </div>
-
+  <div class="h-full flex flex-col bg-background relative">
      <!-- Editor Area -->
-    <div class="flex-1 flex flex-col overflow-hidden bg-white relative">
+    <div class="flex-1 flex flex-col overflow-hidden bg-background relative">
        <!-- Agent Status Dashboard (Only in Tasks view) -->
-       <div v-if="(currentTask || store.isRunning) && activeView === 'tasks'" class="flex-none px-4 pt-4 pb-2 bg-white z-10 border-b border-slate-50">
+       <div v-if="(currentTask || store.isRunning) && activeView === 'tasks'" class="flex-none px-4 pt-4 pb-2 bg-background z-10 border-b border-border">
               <AgentStatusDashboard 
                   :agentName="agentName || '智能体'"
                   :sessionId="sessionId"
@@ -43,13 +30,13 @@
                  <!-- Task List / Details -->
                   <div class="space-y-4 pb-20">
                       <div v-for="(task, idx) in store.tasks" :key="idx" 
-                           class="p-4 rounded-lg border transition-all cursor-pointer bg-white shadow-sm group"
-                           :class="idx === currentStepIndex ? 'border-indigo-500 ring-1 ring-indigo-500 shadow-md' : 'border-slate-200 hover:border-indigo-300'"
+                           class="p-4 rounded-lg border transition-all cursor-pointer bg-card shadow-sm group"
+                           :class="idx === currentStepIndex ? 'border-primary ring-1 ring-primary shadow-md' : 'border-border hover:border-primary/50'"
                            @click="currentStepIndex = idx"
                       >
                           <div class="flex justify-between items-start mb-2">
-                              <h4 class="font-semibold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{{ task.name || `Task #${idx + 1}` }}</h4>
-                              <span class="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-slate-200 uppercase tracking-wide">
+                              <h4 class="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{{ task.name || `Task #${idx + 1}` }}</h4>
+                              <span class="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border uppercase tracking-wide">
                                   {{ detectLanguage(task) }}
                               </span>
                           </div>
@@ -94,7 +81,7 @@
               </div>
           </template>
           
-          <div v-else class="h-full w-full flex items-center justify-center bg-muted/50/20">
+          <div v-else class="h-full w-full flex items-center justify-center bg-muted/20">
                <div v-if="store.isRunning" class="w-full max-w-md p-8 flex flex-col items-center select-none">
                    <!-- AI Loading Animation -->
                    <div class="relative w-24 h-24 mb-6">
@@ -119,14 +106,14 @@
     </div>
     
     <!-- Log Navigation Footer (Player Style) -->
-    <div v-if="totalSteps > 0" class="px-4 py-2 bg-white border-t border-slate-200 z-20">
+    <div v-if="totalSteps > 0" class="px-4 py-2 bg-background border-t border-border z-20">
         <div class="flex items-center gap-4 max-w-2xl mx-auto">
             <!-- Controls Group -->
-            <div class="flex items-center gap-0.5 p-0.5 bg-muted rounded-lg border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-0.5 p-0.5 bg-muted rounded-lg border border-border shadow-sm">
                 <button 
                     @click="prevStep" 
                     :disabled="currentStepIndex <= 0"
-                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
+                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-background hover:text-primary hover:shadow-sm text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
                     title="上一步"
                 >
                     <LeftOutlined :style="{ fontSize: '10px' }" />
@@ -134,7 +121,7 @@
                 <button 
                     @click="nextStep" 
                     :disabled="currentStepIndex >= totalSteps - 1"
-                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-white hover:text-indigo-600 hover:shadow-sm text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
+                    class="w-7 h-6 flex items-center justify-center rounded hover:bg-background hover:text-primary hover:shadow-sm text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
                     title="下一步"
                 >
                     <RightOutlined :style="{ fontSize: '10px' }" />
@@ -142,7 +129,7 @@
             </div>
 
             <!-- Slider Group -->
-            <div class="flex-1 flex items-center gap-4 bg-muted/50 p-4 py-0.5 rounded-lg border border-slate-200 h-8">
+            <div class="flex-1 flex items-center gap-4 bg-muted/50 p-4 py-0.5 rounded-lg border border-border h-8">
                 <span class="text-[10px] font-medium text-muted-foreground font-mono min-w-[1.2rem] text-right">{{ currentStepIndex + 1 }}</span>
                 <a-slider 
                     v-model:value="currentStepIndex" 

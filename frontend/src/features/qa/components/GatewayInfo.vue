@@ -1,23 +1,23 @@
 <template>
   <div class="p-6 h-full overflow-y-auto">
     <div class="mb-6">
-      <h2 class="text-lg font-semibold text-slate-800 mb-2">OpenClaw 网关信息</h2>
+      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">OpenClaw 网关信息</h2>
       <p class="text-sm text-muted-foreground">网关的核心配置和状态信息。</p>
     </div>
 
     <div v-if="loading" class="flex justify-center py-10">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-50/50 border border-red-100 rounded-lg p-6 flex flex-col items-center justify-center text-center">
-      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-        <CloseCircleOutlined class="text-xl text-red-500" />
+    <div v-else-if="error" class="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+      <div class="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+        <CloseCircleOutlined class="text-xl text-red-500 dark:text-red-400" />
       </div>
-      <h3 class="text-sm font-semibold text-slate-800 mb-1">获取网关信息失败</h3>
+      <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">获取网关信息失败</h3>
       <p class="text-xs text-muted-foreground mb-4 max-w-xs">{{ error }}</p>
       <button 
         @click="fetchInfo" 
-        class="px-4 py-2 bg-white border border-slate-200 shadow-sm rounded-lg text-xs font-medium text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+        class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
       >
         重试连接
       </button>
@@ -25,12 +25,12 @@
 
     <div v-else class="space-y-4">
       <!-- Status Card -->
-      <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+      <div class="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
         <div class="flex items-center justify-between mb-2">
           <span class="text-sm font-medium text-muted-foreground">运行状态</span>
           <span 
             class="px-2 py-0.5 text-xs font-medium rounded-full"
-            :class="info.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
+            :class="info.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'"
           >
             {{ info.status === 'active' ? '运行中' : '离线' }}
           </span>
@@ -39,42 +39,42 @@
       </div>
 
       <!-- Info Items -->
-      <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <div class="divide-y divide-slate-100">
+      <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div class="divide-y divide-slate-100 dark:divide-slate-800">
           <div class="p-4">
             <div class="text-xs font-medium text-muted-foreground mb-1">网关 URL</div>
-            <div class="text-sm text-slate-800 font-mono break-all">{{ info.gateway_url || '未配置' }}</div>
+            <div class="text-sm text-slate-800 dark:text-slate-200 font-mono break-all">{{ info.gateway_url || '未配置' }}</div>
           </div>
           
           <div class="p-4">
             <div class="text-xs font-medium text-muted-foreground mb-1">WebSocket 地址</div>
-            <div class="text-sm text-slate-800 font-mono break-all">{{ info.websocket_url || '不可用' }}</div>
+            <div class="text-sm text-slate-800 dark:text-slate-200 font-mono break-all">{{ info.websocket_url || '不可用' }}</div>
           </div>
 
           <div class="p-4">
             <div class="text-xs font-medium text-muted-foreground mb-1">连接状态</div>
-            <div class="text-sm text-slate-800">
+            <div class="text-sm text-slate-800 dark:text-slate-200">
               {{ info.ws_connected === true ? 'WebSocket 已连接' : info.ws_connected === false ? 'WebSocket 未连接' : '未知' }}
             </div>
           </div>
 
           <div class="p-4">
             <div class="text-xs font-medium text-muted-foreground mb-1">最近断链原因</div>
-            <div class="text-sm text-slate-800 font-mono break-all">{{ info.last_disconnect_context || '暂无' }}</div>
+            <div class="text-sm text-slate-800 dark:text-slate-200 font-mono break-all">{{ info.last_disconnect_context || '暂无' }}</div>
           </div>
 
           <div class="p-4">
             <div class="text-xs font-medium text-muted-foreground mb-1">重连次数</div>
-            <div class="text-sm text-slate-800">{{ info.reconnect_count ?? 0 }}</div>
+            <div class="text-sm text-slate-800 dark:text-slate-200">{{ info.reconnect_count ?? 0 }}</div>
           </div>
 
           <div class="p-4">
             <div class="text-xs font-medium text-muted-foreground mb-1">网关令牌 (Token)</div>
             <div class="flex items-center gap-2">
-               <div class="text-sm text-slate-800 font-mono break-all flex-1">
+               <div class="text-sm text-slate-800 dark:text-slate-200 font-mono break-all flex-1">
                  {{ showToken ? (info.gateway_token || '已隐藏') : '•'.repeat(20) }}
                </div>
-               <button @click="showToken = !showToken" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
+               <button @click="showToken = !showToken" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs font-medium">
                  {{ showToken ? '隐藏' : '显示' }}
                </button>
             </div>
@@ -83,10 +83,10 @@
           <div class="p-4">
             <div class="text-xs font-medium text-muted-foreground mb-1">默认会话密钥 (Session Secret)</div>
             <div class="flex items-center gap-2">
-               <div class="text-sm text-slate-800 font-mono break-all flex-1">
+               <div class="text-sm text-slate-800 dark:text-slate-200 font-mono break-all flex-1">
                  {{ showSecret ? (info.session_secret || '已隐藏') : '•'.repeat(20) }}
                </div>
-               <button @click="showSecret = !showSecret" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
+               <button @click="showSecret = !showSecret" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs font-medium">
                  {{ showSecret ? '隐藏' : '显示' }}
                </button>
             </div>
@@ -97,7 +97,7 @@
       <div class="mt-4 flex justify-end">
         <button 
           @click="fetchInfo" 
-          class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors"
+          class="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors"
         >
           <ReloadOutlined /> 刷新
         </button>

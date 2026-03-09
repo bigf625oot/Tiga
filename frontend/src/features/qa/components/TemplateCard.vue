@@ -1,6 +1,6 @@
 <template>
   <button 
-    class="w-full text-left group h-full relative overflow-hidden border border-border bg-white hover:border-indigo-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 rounded-lg"
+    class="w-full text-left group h-full relative overflow-hidden border border-border bg-white dark:bg-slate-900 hover:border-indigo-100 dark:hover:border-indigo-800 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 rounded-lg"
     @click="$emit('fill', template)"
   >
     <!-- Background Gradient -->
@@ -12,13 +12,13 @@
            <component :is="icon" class="text-sm" />
          </div>
          <div class="min-w-0 pt-0.5">
-           <h3 class="text-xs font-semibold text-slate-900 mb-0.5 group-hover:text-indigo-700 transition-colors truncate">{{ title }}</h3>
+           <h3 class="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-0.5 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors truncate">{{ title }}</h3>
            <p class="text-[10px] text-muted-foreground leading-tight line-clamp-2 pr-1">{{ description }}</p>
          </div>
        </div>
        
        <div class="mt-auto flex items-center justify-end">
-         <span class="text-[10px] font-semibold text-indigo-500 group-hover:text-indigo-600 transition-colors flex items-center gap-0.5 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+         <span class="text-[10px] font-semibold text-indigo-500 dark:text-indigo-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors flex items-center gap-0.5 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
            使用
            <ArrowRightOutlined class="text-[8px]" />
          </span>

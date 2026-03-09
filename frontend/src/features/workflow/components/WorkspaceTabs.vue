@@ -69,7 +69,12 @@
       </div>
 
       <div v-if="activeTab === 'graph'" class="h-full relative">
+        <div v-if="!hasKnowledgeBase" class="h-full flex flex-col items-center justify-center text-muted-foreground">
+            <Database class="w-12 h-12 mb-4 opacity-50" />
+            <p>当前智能体未绑定知识库</p>
+        </div>
         <GraphViewer 
+            v-else
             ref="graphViewerRef"
             :nodes="graphNodes" 
             :edges="graphEdges" 
@@ -91,7 +96,7 @@ import GraphViewer from '@/shared/components/organisms/GraphViewer/GraphViewer.v
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, FileText, Share2, Trash2 } from 'lucide-vue-next';
+import { LayoutDashboard, FileText, Share2, Trash2, Database } from 'lucide-vue-next';
 
 const props = defineProps({
   sessionId: { type: String, default: '' },
@@ -141,8 +146,24 @@ watch(() => props.isWorkflowMode, (val) => {
   if (!val) activeTab.value = 'task';
 });
 
+watch(() => props.hasKnowledgeBase, (val) => {
+  if (!val) {
+    graphNodes.value = {};
+    graphEdges.value = {};
+  } else if (activeTab.value === 'graph') {
+    loadGraph(null);
+  }
+});
+
 // Graph Methods
 const loadGraph = async (docId = null) => {
+    // If no knowledge base and trying to load global graph (docId is null), skip
+    if (!docId && !props.hasKnowledgeBase) {
+        graphNodes.value = {};
+        graphEdges.value = {};
+        return;
+    }
+
     // Don't reload if we are already on the same doc (or both null)
     // Exception: if we want to force reload, we might need another param or method
     if (currentDocId.value === docId && Object.keys(graphNodes.value).length > 0) return;

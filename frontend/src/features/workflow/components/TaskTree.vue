@@ -7,7 +7,7 @@
     <div v-else class="space-y-2">
       <div v-for="task in tasks" :key="task.id" class="task-item">
         <!-- Task Header -->
-        <div class="flex items-center gap-4 p-4 bg-white border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+        <div class="flex items-center gap-4 p-4 bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
            <!-- Status Indicator -->
            <div class="absolute left-0 top-0 bottom-0 w-1" :class="statusColor(task.status)"></div>
            
@@ -19,7 +19,7 @@
            <!-- Content -->
            <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
-                 <span class="font-medium text-slate-700 truncate" :title="task.name">{{ task.name }}</span>
+                 <span class="font-medium text-foreground truncate" :title="task.name">{{ task.name }}</span>
                  <span class="text-xs px-2 py-0.5 rounded-full" :class="priorityClass(task.priority)">
                     {{ task.priority || 'Normal' }}
                  </span>
@@ -88,7 +88,7 @@ const statusColor = (status) => {
         case 'completed': return 'bg-green-500';
         case 'running': return 'bg-blue-500';
         case 'failed': return 'bg-red-500';
-        default: return 'bg-slate-300';
+        default: return 'bg-muted-foreground';
     }
 };
 
@@ -97,7 +97,7 @@ const statusBg = (status) => {
         case 'completed': return 'bg-green-500';
         case 'running': return 'bg-blue-500';
         case 'failed': return 'bg-red-500';
-        default: return 'bg-slate-200';
+        default: return 'bg-muted';
     }
 };
 
@@ -112,9 +112,9 @@ const statusIcon = (status) => {
 
 const priorityClass = (p) => {
     switch(p) {
-        case 'high': return 'bg-red-100 text-red-600';
-        case 'medium': return 'bg-amber-100 text-amber-600';
-        case 'low': return 'bg-blue-100 text-primary';
+        case 'high': return 'bg-red-500/10 text-red-600 dark:text-red-400';
+        case 'medium': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+        case 'low': return 'bg-blue-500/10 text-primary';
         default: return 'bg-muted text-muted-foreground';
     }
 };

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-muted/50/30">
+  <div class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-muted/50/30 dark:bg-slate-900/50">
     <div class="flex justify-between items-center mb-2">
       <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">节点列表 ({{ nodes.length }})</span>
       <button 
@@ -12,13 +12,13 @@
     </div>
 
     <div v-if="loading" class="space-y-3">
-       <div class="bg-white p-4 rounded-lg border border-border shadow-sm"><a-skeleton active :paragraph="{ rows: 1 }" /></div>
-       <div class="bg-white p-4 rounded-lg border border-border shadow-sm"><a-skeleton active :paragraph="{ rows: 1 }" /></div>
+       <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-border shadow-sm"><a-skeleton active :paragraph="{ rows: 1 }" /></div>
+       <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-border shadow-sm"><a-skeleton active :paragraph="{ rows: 1 }" /></div>
     </div>
 
     <div v-else-if="!nodes.length" class="flex flex-col items-center justify-center py-16 text-muted-foreground">
        <div class="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center m-4">
-          <component :is="DisconnectOutlined" class="text-2xl text-slate-300" />
+          <component :is="DisconnectOutlined" class="text-2xl text-slate-300 dark:text-slate-600" />
        </div>
        <span class="text-xs">暂无在线节点</span>
        <button class="mt-4 text-xs text-indigo-600 font-medium hover:underline" @click="$emit('refresh')">刷新重试</button>
@@ -28,12 +28,12 @@
       <div 
         v-for="node in nodes" 
         :key="node.id" 
-        class="group relative bg-white rounded-lg border transition-all duration-200 hover:shadow-md overflow-hidden cursor-pointer"
-        :class="node.status === 'online' ? 'border-slate-200 hover:border-indigo-300' : 'border-border opacity-80'"
+        class="group relative bg-white dark:bg-slate-800 rounded-lg border transition-all duration-200 hover:shadow-md overflow-hidden cursor-pointer"
+        :class="node.status === 'online' ? 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500' : 'border-border opacity-80'"
         @click="$emit('select', node)"
       >
          <!-- Header -->
-         <div class="p-4 border-b border-slate-50 flex justify-between items-start">
+         <div class="p-4 border-b border-slate-50 dark:border-slate-700/50 flex justify-between items-start">
             <div class="flex items-center gap-4">
                <!-- Status Indicator -->
                <div class="relative flex h-3 w-3">
@@ -41,7 +41,7 @@
                   <span class="relative inline-flex rounded-full h-3 w-3" 
                     :class="{
                         'bg-emerald-500': node.status === 'online',
-                        'bg-slate-300': node.status === 'offline' || node.status === 'unknown',
+                        'bg-slate-300 dark:bg-slate-600': node.status === 'offline' || node.status === 'unknown',
                         'bg-amber-500': node.status === 'busy'
                     }"
                   ></span>
@@ -49,7 +49,7 @@
                
                <div class="overflow-hidden">
                  <div class="flex items-center gap-2">
-                    <h5 class="font-semibold text-slate-800 text-sm m-0 truncate">{{ node.name }}</h5>
+                    <h5 class="font-semibold text-slate-800 dark:text-slate-100 text-sm m-0 truncate">{{ node.name }}</h5>
                     <span v-if="node.platform && node.platform !== 'unknown'" class="px-1.5 py-0.5 bg-muted text-muted-foreground text-[10px] rounded font-medium uppercase shrink-0">{{ node.platform }}</span>
                  </div>
                  <div class="text-[10px] text-muted-foreground font-mono mt-0.5 truncate" :title="node.id">ID: {{ node.id }}</div>
@@ -59,9 +59,9 @@
             <div class="flex flex-col items-end shrink-0">
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                     :class="{
-                        'bg-emerald-50 text-emerald-600': node.status === 'online',
+                        'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400': node.status === 'online',
                         'bg-muted text-muted-foreground': node.status === 'offline' || node.status === 'unknown',
-                        'bg-amber-50 text-amber-600': node.status === 'busy'
+                        'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400': node.status === 'busy'
                     }"
                 >
                     {{ node.status === 'online' ? '运行中' : (node.status === 'busy' ? '忙碌' : '离线') }}
@@ -70,22 +70,22 @@
          </div>
          
          <!-- Details -->
-         <div class="p-4 bg-muted/50/30 grid grid-cols-2 gap-4">
+         <div class="p-4 bg-muted/50/30 dark:bg-slate-900/50 grid grid-cols-2 gap-4">
             <div>
               <div class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">版本</div>
-              <div class="text-xs font-mono text-slate-600">{{ node.version || '--' }}</div>
+              <div class="text-xs font-mono text-slate-600 dark:text-slate-400">{{ node.version || '--' }}</div>
             </div>
             <div>
               <div class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">地址</div>
-              <div class="text-xs font-mono text-slate-600 truncate" :title="node.address">{{ node.address || '--' }}</div>
+              <div class="text-xs font-mono text-slate-600 dark:text-slate-400 truncate" :title="node.address">{{ node.address || '--' }}</div>
             </div>
          </div>
 
          <!-- Actions -->
-         <div class="px-4 p-4 bg-white border-t border-slate-50 flex gap-2" @click.stop>
+         <div class="px-4 p-4 bg-white dark:bg-slate-800 border-t border-slate-50 dark:border-slate-700/50 flex gap-2" @click.stop>
             <button 
               class="flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-              :class="node.status === 'online' ? 'border-slate-200 text-slate-600 hover:bg-muted/50 hover:text-indigo-600 hover:border-indigo-200' : 'border-border text-slate-300 cursor-not-allowed'"
+              :class="node.status === 'online' ? 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted/50 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-700' : 'border-border text-slate-300 dark:text-slate-600 cursor-not-allowed'"
               :disabled="node.status !== 'online'"
               @click="node.status === 'online' && $emit('run-command', node.id, 'check')"
             >
@@ -93,7 +93,7 @@
             </button>
              <button 
               class="flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-              :class="node.status === 'online' ? 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200' : 'bg-muted/50 text-slate-300 border-border cursor-not-allowed'"
+              :class="node.status === 'online' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 hover:border-indigo-200 dark:hover:border-indigo-700' : 'bg-muted/50 text-slate-300 dark:text-slate-600 border-border cursor-not-allowed'"
               :disabled="node.status !== 'online'"
               @click="node.status === 'online' && $emit('run-command', node.id, 'screenshot')"
             >
