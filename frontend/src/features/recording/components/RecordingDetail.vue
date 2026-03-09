@@ -1,55 +1,82 @@
 <template>
-  <div class="h-full flex flex-col bg-figma-bg animate-[fadeIn_0.3s_ease-out] overflow-hidden font-sans text-slate-900">
+  <div class="h-full flex flex-col bg-background animate-in fade-in duration-300 overflow-hidden font-sans text-foreground">
     <!-- 1. Header Container -->
-    <header class="h-16 bg-white border-b border-figma-border flex items-center justify-between px-6 shrink-0 z-20 shadow-sm">
+    <header class="h-16 bg-background border-b border-border flex items-center justify-between px-6 shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-4 min-w-0">
-            <button @click="$emit('back')" class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors" aria-label="返回">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            </button>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button variant="ghost" size="icon" @click="$emit('back')" class="text-muted-foreground hover:text-foreground">
+                            <ArrowLeft class="w-5 h-5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>返回</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            
             <div class="flex flex-col min-w-0">
-                <h1 class="text-lg font-semibold text-figma-heading leading-tight truncate max-w-md" :title="recording.filename">{{ recording.filename }}</h1>
-                <div class="flex items-center gap-2 text-xs text-figma-text-secondary mt-0.5">
+                <h1 class="text-lg font-semibold text-foreground leading-tight truncate max-w-md" :title="recording.filename">{{ recording.filename }}</h1>
+                <div class="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span>{{ formatDate(recording.created_at) }}</span>
                     <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                    <span class="font-din">{{ formatDuration(recording.duration) }}</span>
+                    <span class="font-mono">{{ formatDuration(recording.duration) }}</span>
                     <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                    <span :class="getStatusColor(recording.asr_status)" class="font-medium">{{ getStatusText(recording.asr_status) }}</span>
+                    <Badge 
+                        :variant="getStatusVariant(recording.asr_status)" 
+                        class="text-[10px] px-1.5 py-0 h-4 border-transparent"
+                        :class="{ 
+                            'bg-green-100 text-green-700 hover:bg-green-100/80': recording.asr_status === 'completed' 
+                        }"
+                    >
+                        {{ getStatusText(recording.asr_status) }}
+                    </Badge>
                 </div>
             </div>
         </div>
         
         <div class="flex items-center gap-2">
-             <button class="p-4 py-1.5 rounded-lg bg-brand-primary text-white text-sm font-medium shadow-sm hover:bg-brand-gradient-end transition-all flex items-center gap-2" @click="handleShare">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            <Button size="sm" class="gap-2" @click="handleShare">
+                <Share2 class="w-4 h-4" />
                 分享
-            </button>
+            </Button>
             
-            <div class="h-6 w-px bg-slate-200 mx-1"></div>
+            <div class="h-6 w-px bg-border mx-1"></div>
 
-            <a-tooltip title="导出文档">
-                <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                </button>
-            </a-tooltip>
-            
-            <a-tooltip title="下载音频">
-                <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                </button>
-            </a-tooltip>
-            
-            <a-tooltip title="删除录音">
-                <button class="w-9 h-9 rounded-lg hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-            </a-tooltip>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button variant="ghost" size="icon" class="text-muted-foreground hover:text-foreground">
+                            <FileText class="w-4 h-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>导出文档</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button variant="ghost" size="icon" class="text-muted-foreground hover:text-foreground">
+                            <Download class="w-4 h-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>下载音频</TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button variant="ghost" size="icon" class="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 class="w-4 h-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>删除录音</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         </div>
     </header>
 
     <!-- 2. Main Content Container -->
-    <main class="flex-1 flex flex-col min-h-0 relative bg-white">
-        <!-- Player Section (Moved to top) -->
-        <div class="border-b border-border bg-muted/50/50">
+    <main class="flex-1 flex flex-col min-h-0 relative bg-muted/10">
+        <!-- Player Section -->
+        <div class="border-b border-border bg-background">
             <WaveformPlayer 
                 :src="recording.play_url" 
                 :seekTime="seekTime"
@@ -57,183 +84,263 @@
             />
         </div>
 
-        <div class="flex-1 flex flex-col min-h-0 p-6">
-             <a-tabs v-model:activeKey="activeKey" class="custom-tabs flex-1 flex flex-col min-h-0" :animated="false" :tabBarStyle="{ borderBottom: 'none' }">
-                <template #rightExtra>
-                    <div class="flex items-center gap-4">
-                        <!-- Font Size Controls -->
-                        <div class="flex items-center bg-muted rounded-lg p-0.5">
-                            <button @click="adjustFontSize(-2)" class="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-slate-700 hover:bg-white rounded transition-colors" title="减小字号">A-</button>
-                            <span class="text-[10px] text-muted-foreground px-1 select-none">{{ fontSize }}</span>
-                            <button @click="adjustFontSize(2)" class="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-slate-700 hover:bg-white rounded transition-colors" title="增大字号">A+</button>
-                        </div>
+        <!-- Content Tabs -->
+        <Tabs v-model="activeKey" class="flex-1 flex flex-col min-h-0" :default-value="activeKey">
+            <!-- Tabs Header -->
+            <div class="flex items-center justify-between px-6 border-b border-border bg-background shrink-0">
+                <TabsList class="h-12 bg-transparent p-0 w-auto justify-start rounded-none border-b-0">
+                    <TabsTrigger 
+                        value="transcript" 
+                        class="h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 font-medium transition-none"
+                    >
+                        全文转写
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="summary"
+                        class="h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 font-medium transition-none"
+                    >
+                        智能摘要
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="recommendation"
+                        class="h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 font-medium transition-none"
+                    >
+                        内容推荐
+                    </TabsTrigger>
+                </TabsList>
 
-                        <div v-if="activeKey === 'transcript'" class="flex items-center gap-2 border-l border-slate-200 pl-4">
-                            <template v-if="isEditing">
-                                <button @click="isEditing = false" class="text-xs text-muted-foreground hover:text-slate-700 p-4 py-1 rounded transition-colors">
-                                    取消
-                                </button>
-                                <button @click="saveTranscript" class="text-xs bg-brand-primary text-white hover:bg-brand-gradient-end p-4 py-1 rounded shadow-sm transition-all font-medium">
-                                    保存
-                                </button>
-                            </template>
-                            <button v-else @click="toggleEditMode" class="text-xs text-brand-primary hover:text-brand-gradient-end flex items-center gap-1 px-2 py-1 rounded hover:bg-brand-primary/5 transition-colors">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                编辑模式
-                            </button>
-                        </div>
+                <!-- Right Controls -->
+                <div class="flex items-center gap-4">
+                    <!-- Font Size Controls -->
+                    <div class="flex items-center bg-muted rounded-md p-0.5">
+                        <Button variant="ghost" size="sm" class="h-6 w-8 text-xs p-0" @click="adjustFontSize(-2)" title="减小字号">A-</Button>
+                        <span class="text-[10px] text-muted-foreground px-1 select-none w-6 text-center">{{ fontSize }}</span>
+                        <Button variant="ghost" size="sm" class="h-6 w-8 text-xs p-0" @click="adjustFontSize(2)" title="增大字号">A+</Button>
                     </div>
-                </template>
 
-                <a-tab-pane key="transcript" tab="全文转写" class="h-full overflow-y-auto custom-scrollbar">
-                    <div v-if="isAsrLoading" class="space-y-4 animate-pulse max-w-none w-full py-8 px-4">
-                        <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-                        <div class="h-4 bg-slate-200 rounded w-full"></div>
-                        <div class="h-4 bg-slate-200 rounded w-5/6"></div>
-                        <div class="h-4 bg-slate-200 rounded w-4/5"></div>
+                    <div v-if="activeKey === 'transcript'" class="flex items-center gap-2 border-l border-border pl-4">
+                        <template v-if="isEditing">
+                            <Button variant="ghost" size="sm" class="h-8 text-xs" @click="isEditing = false">
+                                取消
+                            </Button>
+                            <Button size="sm" class="h-8 text-xs gap-1" @click="saveTranscript">
+                                <Save class="w-3.5 h-3.5" />
+                                保存
+                            </Button>
+                        </template>
+                        <Button v-else variant="ghost" size="sm" class="h-8 text-xs text-primary hover:text-primary/80 gap-1" @click="toggleEditMode">
+                            <Edit3 class="w-3.5 h-3.5" />
+                            编辑模式
+                        </Button>
                     </div>
-                    <div v-else class="h-full flex flex-col max-w-none w-full py-4 px-4">
-                            <textarea 
-                                v-if="isEditing"
-                                v-model="editContent"
-                                class="w-full h-full p-0 border-0 outline-none bg-transparent resize-none leading-relaxed font-sans"
-                                :style="{ fontSize: fontSize + 'px' }"
-                                placeholder="输入转写内容..."
-                            ></textarea>
-                            <div 
-                                v-else
-                                class="prose max-w-none text-slate-700 leading-loose whitespace-pre-wrap font-sans text-left"
-                                :style="{ fontSize: fontSize + 'px' }"
-                            >
-                                <template v-if="transcriptionData && transcriptionData.length > 0">
-                                    <span 
-                                        v-for="(sentence, index) in transcriptionData" 
-                                        :key="index"
-                                        class="cursor-pointer hover:bg-brand-primary/10 transition-colors rounded px-0.5 py-0.5"
-                                        :class="{ 'bg-brand-primary/20 text-brand-primary font-medium': isCurrentSentence(sentence) }"
-                                        @click="handleSentenceClick(sentence)"
-                                        :title="formatTime(sentence.BeginTime/1000)"
-                                    >{{ sentence.Text }}</span>
-                                </template>
-                                <template v-else>
-                                    {{ recording.transcription_text || '暂无转写内容' }}
-                                </template>
+                </div>
+            </div>
+
+            <!-- Tabs Content -->
+            <div class="flex-1 min-h-0 bg-background">
+                <TabsContent value="transcript" class="h-full m-0 data-[state=active]:flex flex-col ring-0 outline-none">
+                    <ScrollArea class="h-full w-full">
+                        <div class="p-6 max-w-4xl mx-auto">
+                            <div v-if="isAsrLoading" class="space-y-4 animate-pulse w-full">
+                                <div class="h-4 bg-muted rounded w-3/4"></div>
+                                <div class="h-4 bg-muted rounded w-full"></div>
+                                <div class="h-4 bg-muted rounded w-5/6"></div>
+                                <div class="h-4 bg-muted rounded w-4/5"></div>
                             </div>
-                        </div>
-                </a-tab-pane>
-
-                <a-tab-pane key="summary" tab="智能摘要" class="h-full overflow-y-auto custom-scrollbar">
-                    <div v-if="isSummaryLoading" class="space-y-4 animate-pulse max-w-none w-full py-8 px-4">
-                        <div class="h-32 bg-muted rounded-lg"></div>
-                    </div>
-                    <div v-else class="max-w-none w-full mt-4 px-4">
-                        
-                        <div class="markdown-body text-slate-700 leading-relaxed text-left" 
-                             :style="{ fontSize: fontSize + 'px' }"
-                             v-html="renderMarkdown(recording.summary_text)"></div>
-                    </div>
-                </a-tab-pane>
-                
-                <a-tab-pane key="recommendation" tab="内容推荐" class="h-full overflow-y-auto custom-scrollbar">
-                     <div v-if="isRecommendationLoading" class="max-w-none w-full mt-4 px-4">
-                        <div class="h-4 w-32 bg-muted rounded mb-4 animate-pulse"></div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                            <div v-for="i in 8" :key="i" class="flex items-center gap-2 p-1.5 border border-border rounded-md animate-pulse">
-                                <div class="w-6 h-6 rounded bg-muted shrink-0"></div>
-                                <div class="flex-1 min-w-0 space-y-1">
-                                    <div class="h-3 bg-muted rounded w-3/4"></div>
-                                    <div class="h-2 bg-muted rounded w-1/4"></div>
+                            <div v-else class="w-full">
+                                <textarea 
+                                    v-if="isEditing"
+                                    v-model="editContent"
+                                    class="w-full min-h-[500px] p-0 border-0 outline-none bg-transparent resize-none leading-relaxed font-sans focus:ring-0"
+                                    :style="{ fontSize: fontSize + 'px' }"
+                                    placeholder="输入转写内容..."
+                                ></textarea>
+                                <div 
+                                    v-else
+                                    class="prose prose-slate max-w-none text-slate-700 leading-loose whitespace-pre-wrap font-sans text-left"
+                                    :style="{ fontSize: fontSize + 'px' }"
+                                >
+                                    <template v-if="transcriptionData && transcriptionData.length > 0">
+                                        <span 
+                                            v-for="(sentence, index) in transcriptionData" 
+                                            :key="index"
+                                            class="cursor-pointer hover:bg-primary/10 transition-colors rounded px-0.5 py-0.5"
+                                            :class="{ 'bg-primary/20 text-primary font-medium': isCurrentSentence(sentence) }"
+                                            @click="handleSentenceClick(sentence)"
+                                            :title="formatTime(sentence.BeginTime/1000)"
+                                        >{{ sentence.Text }}</span>
+                                    </template>
+                                    <template v-else>
+                                        {{ recording.transcription_text || '暂无转写内容' }}
+                                    </template>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div v-else class="max-w-none w-full mt-4 px-4">
-                        
-                        <!-- Recommendation Content -->
-                        <div class="space-y-6">
-                            <!-- 2. Related Documents Cards -->
-                            <div v-if="relatedDocs.length > 0">
-                                <h4 class="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide scale-90 origin-left">相关知识库文档</h4>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                    <div 
-                                        v-for="(doc, idx) in relatedDocs" 
-                                        :key="idx"
-                                        class="group flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded-md hover:border-brand-primary/50 hover:shadow-sm transition-all cursor-pointer relative overflow-hidden"
-                                        @click="handleDocClick(doc)"
-                                    >
-                                        <!-- File Icon -->
-                                        <div class="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0 text-brand-primary">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                <polyline points="14 2 14 8 20 8"></polyline>
-                                            </svg>
-                                        </div>
-                                        
-                                        <div class="flex-1 min-w-0 flex items-center gap-2">
-                                            <h5 class="text-[11px] font-medium text-slate-900 truncate group-hover:text-brand-primary transition-colors flex-1" :title="doc.title">{{ doc.title }}</h5>
-                                            <div class="flex items-center gap-1 shrink-0">
-                                                <span class="px-1 py-[1px] rounded-[2px] bg-muted text-[9px] text-muted-foreground font-medium leading-none scale-90">{{ doc.type || 'DOC' }}</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Arrow Icon (Subtle) -->
-                                        <div class="opacity-0 group-hover:opacity-100 transition-opacity -ml-1">
-                                            <svg class="text-brand-primary" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="summary" class="h-full m-0 data-[state=active]:flex flex-col ring-0 outline-none">
+                    <ScrollArea class="h-full w-full">
+                         <div class="p-6 max-w-4xl mx-auto">
+                            <div v-if="isSummaryLoading" class="space-y-4 animate-pulse w-full">
+                                <div class="h-32 bg-muted rounded-lg"></div>
+                            </div>
+                            <div v-else class="w-full">
+                                <div class="markdown-body text-slate-700 leading-relaxed text-left" 
+                                    :style="{ fontSize: fontSize + 'px' }"
+                                    v-html="renderMarkdown(recording.summary_text)"></div>
+                            </div>
+                        </div>
+                    </ScrollArea>
+                </TabsContent>
+                
+                <TabsContent value="recommendation" class="h-full m-0 data-[state=active]:flex flex-col ring-0 outline-none">
+                    <ScrollArea class="h-full w-full">
+                        <div class="p-6 max-w-6xl mx-auto">
+                            <div v-if="isRecommendationLoading" class="w-full">
+                                <div class="h-4 w-32 bg-muted rounded mb-4 animate-pulse"></div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    <div v-for="i in 8" :key="i" class="flex items-center gap-2 p-3 border border-border rounded-lg animate-pulse bg-muted/10">
+                                        <div class="w-8 h-8 rounded bg-muted shrink-0"></div>
+                                        <div class="flex-1 min-w-0 space-y-2">
+                                            <div class="h-3 bg-muted rounded w-3/4"></div>
+                                            <div class="h-2 bg-muted rounded w-1/4"></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div v-else class="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                                <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-4">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-slate-300">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                                        <polyline points="10 9 9 9 8 9"></polyline>
-                                    </svg>
+                            <div v-else class="w-full">
+                                <div class="space-y-8">
+                                    <div v-if="relatedDocs.length > 0">
+                                        <h4 class="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wide">相关知识库文档</h4>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                            <div 
+                                                v-for="(doc, idx) in relatedDocs" 
+                                                :key="idx"
+                                                class="group flex items-center gap-3 p-3 bg-card border border-border rounded-lg hover:border-primary/50 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+                                                @click="handleDocClick(doc)"
+                                            >
+                                                <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                                                    <FileText class="w-4 h-4" />
+                                                </div>
+                                                
+                                                <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+                                                    <h5 class="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors" :title="doc.title">{{ doc.title }}</h5>
+                                                    <div class="flex items-center gap-2">
+                                                        <Badge variant="secondary" class="text-[10px] px-1 py-0 h-4 rounded-sm font-normal">{{ doc.type || 'DOC' }}</Badge>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-1/2 -translate-y-1/2">
+                                                    <ExternalLink class="w-4 h-4 text-primary" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-else class="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                                        <div class="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                                            <File class="w-10 h-10 text-muted-foreground/50" />
+                                        </div>
+                                        <p class="text-sm font-medium">暂无相关推荐内容</p>
+                                        <p class="text-xs text-muted-foreground mt-1">系统未找到与此录音相关的知识库文档</p>
+                                    </div>
                                 </div>
-                                <p class="text-sm">暂无相关推荐内容</p>
-                                <p class="text-xs text-slate-300 mt-1">系统未找到与此录音相关的知识库文档</p>
                             </div>
                         </div>
-                    </div>
-                </a-tab-pane>
-            </a-tabs>
-        </div>
+                    </ScrollArea>
+                </TabsContent>
+            </div>
+        </Tabs>
     </main>
 
-    <!-- Share Modal -->
-    <a-modal v-model:open="shareModalVisible" title="分享录音" @ok="handleShareConfirm" ok-text="复制链接" centered>
-        <div class="py-4 space-y-4">
-            <div>
-                <label class="text-sm font-medium text-slate-700 mb-1 block">链接权限</label>
-                <a-select v-model:value="sharePermission" class="w-full">
-                    <a-select-option value="view">仅查看</a-select-option>
-                    <a-select-option value="comment">允许评论</a-select-option>
-                    <a-select-option value="edit">允许编辑</a-select-option>
-                </a-select>
+    <!-- Share Dialog -->
+    <Dialog v-model:open="shareModalVisible">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>分享录音</DialogTitle>
+                <DialogDescription>
+                    创建一个链接以分享此录音给其他人。
+                </DialogDescription>
+            </DialogHeader>
+            <div class="py-4 space-y-4">
+                <div class="space-y-2">
+                    <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">链接权限</label>
+                    <Select v-model="sharePermission">
+                        <SelectTrigger>
+                            <SelectValue placeholder="选择权限" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="view">仅查看</SelectItem>
+                            <SelectItem value="comment">允许评论</SelectItem>
+                            <SelectItem value="edit">允许编辑</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="grid flex-1 gap-2">
+                        <div class="flex items-center justify-between bg-muted p-3 rounded-md border border-border">
+                            <span class="text-sm text-muted-foreground truncate">{{ shareLink }}</span>
+                        </div>
+                    </div>
+                    <Button size="sm" class="px-3" @click="handleShareConfirm">
+                        <span class="sr-only">复制</span>
+                        <Share2 class="h-4 w-4" />
+                    </Button>
+                </div>
+                <div class="flex items-center justify-between">
+                     <div class="flex items-center space-x-2">
+                        <Switch id="allow-comments" v-model:checked="allowComments" />
+                        <label
+                            for="allow-comments"
+                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            允许评论
+                        </label>
+                     </div>
+                </div>
             </div>
-            <div class="flex items-center justify-between bg-muted/50 p-4 rounded-lg border border-slate-200">
-                <span class="text-sm text-muted-foreground truncate mr-2">{{ shareLink }}</span>
-                <button class="text-brand-primary text-sm font-medium hover:underline">复制</button>
-            </div>
-            <div class="flex items-center gap-2">
-                 <a-switch v-model:checked="allowComments" size="small" />
-                 <span class="text-sm text-slate-600">允许评论</span>
-            </div>
-        </div>
-    </a-modal>
+            <DialogFooter class="sm:justify-start">
+                <Button type="button" variant="secondary" @click="shareModalVisible = false">
+                    关闭
+                </Button>
+                <Button type="button" @click="handleShareConfirm">
+                    复制链接
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import { message } from 'ant-design-vue';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { marked } from 'marked';
+import { 
+  ArrowLeft, Share2, Download, Trash2, FileText, 
+  Edit3, Save, X, File, FileType, ExternalLink 
+} from 'lucide-vue-next';
 import WaveformPlayer from './WaveformPlayer.vue';
+
+// Shadcn Components
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
+} from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/components/ui/toast/use-toast';
+
+const { toast } = useToast();
 
 const props = defineProps({
     recording: {
@@ -268,7 +375,6 @@ const relatedDocs = computed(() => {
         const text = props.recording.recommendation_text;
         if (!text) return [];
         
-        // Check if it's JSON
         if (text.trim().startsWith('[')) {
             const parsed = JSON.parse(text);
             return parsed.map(item => ({
@@ -284,6 +390,24 @@ const relatedDocs = computed(() => {
     }
 });
 
+// Mock transcription data for demo if not present (in real app this comes from recording)
+const transcriptionData = computed(() => {
+    try {
+        if (props.recording.transcription_json) {
+             return JSON.parse(props.recording.transcription_json);
+        }
+    } catch(e) {}
+    return []; 
+});
+
+const isCurrentSentence = (sentence) => {
+    return currentTime.value * 1000 >= sentence.BeginTime && currentTime.value * 1000 < sentence.EndTime;
+};
+
+const handleSentenceClick = (sentence) => {
+    seekTime.value = sentence.BeginTime / 1000;
+};
+
 const getFileType = (filename) => {
     if (!filename) return 'DOC';
     const ext = filename.split('.').pop().toLowerCase();
@@ -296,8 +420,7 @@ const getFileType = (filename) => {
 };
 
 const handleDocClick = (doc) => {
-    message.info(`打开文档: ${doc.title}`);
-    // 实际逻辑可以是跳转到文档详情页或下载
+    toast({ description: `打开文档: ${doc.title}` });
 };
 
 const toggleEditMode = () => {
@@ -312,17 +435,16 @@ const toggleEditMode = () => {
 
 const saveTranscript = async () => {
     try {
-        const oldText = props.recording.transcription_text;
         props.recording.transcription_text = editContent.value;
         isEditing.value = false;
         
         await api.patch(`/recordings/${props.recording.id}`, {
             transcription_text: editContent.value
         });
-        message.success("已保存修改");
+        toast({ title: "已保存", description: "转写内容已更新" });
     } catch (e) {
         console.error(e);
-        message.error("保存失败");
+        toast({ variant: "destructive", title: "保存失败", description: "请稍后重试" });
     }
 };
 
@@ -344,12 +466,19 @@ const handleShare = () => {
 
 const handleShareConfirm = () => {
     navigator.clipboard.writeText(shareLink.value);
-    message.success("链接已复制");
+    toast({ title: "链接已复制", description: "分享链接已复制到剪贴板" });
     shareModalVisible.value = false;
 };
 
 const formatDate = (date) => {
     return dayjs(date).format('YYYY-MM-DD HH:mm');
+};
+
+const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return "00:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
 const formatDuration = (ms) => {
@@ -359,12 +488,12 @@ const formatDuration = (ms) => {
     return (min > 0 ? min + ":" : "0:") + (sec < 10 ? "0" + sec : sec);
 };
 
-const getStatusColor = (status) => {
+const getStatusVariant = (status) => {
     switch(status) {
-        case 'completed': return 'text-green-500';
-        case 'processing': return 'text-blue-500';
-        case 'failed': return 'text-red-500';
-        default: return 'text-muted-foreground';
+        case 'completed': return 'outline'; 
+        case 'processing': return 'secondary';
+        case 'failed': return 'destructive';
+        default: return 'outline';
     }
 };
 
@@ -386,54 +515,17 @@ const adjustFontSize = (delta) => {
 </script>
 
 <style scoped>
-.custom-tabs {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-.custom-tabs :deep(.ant-tabs-nav) {
-    margin-bottom: 0;
-    flex-shrink: 0;
-}
-.custom-tabs :deep(.ant-tabs-nav)::before {
-    display: none;
-}
-.custom-tabs :deep(.ant-tabs-content) {
-    flex: 1;
-    height: 100%;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-.custom-tabs :deep(.ant-tabs-tabpane) {
-    height: 100%;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-.custom-tabs :deep(.ant-tabs-tab) {
-    padding: 12px 20px;
-    font-size: 14px;
-    margin: 0;
-}
-.custom-tabs :deep(.ant-tabs-tab-active) {
-    font-weight: 600;
-}
-
 /* Markdown Styles */
-.markdown-body {
-    color: #334155; /* slate-700 */
-    line-height: 1.8;
-}
 .markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) {
     font-weight: 600;
     margin-bottom: 0.5em;
     margin-top: 1em;
-    color: #1e293b;
+    color: inherit;
 }
 .markdown-body :deep(ul), .markdown-body :deep(ol) {
     padding-left: 1.5em;
     margin-bottom: 1em;
+    list-style-type: disc;
 }
 .markdown-body :deep(li) {
     margin-bottom: 0.25em;

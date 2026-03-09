@@ -1,194 +1,339 @@
 <template>
-  <div class="max-w-[1200px] mx-auto">
+  <div class="container mx-auto py-6 max-w-7xl animate-in fade-in duration-500">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <div class="flex items-center gap-2">
-        <h2 class="text-lg font-semibold text-slate-800">模型列表</h2>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight">模型管理</h2>
+        <p class="text-muted-foreground text-sm mt-1">配置和管理您的 LLM 模型接口，支持多种主流模型服务商。</p>
       </div>
-      <button 
-        @click="openCreateModal"
-        class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm shadow-blue-600/20"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span>添加模型</span>
-      </button>
+      <Button @click="openCreateModal" class="shadow-sm">
+        <Plus class="mr-2 h-4 w-4" />
+        添加模型
+      </Button>
     </div>
 
-    <!-- List -->
-    <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <a-table :columns="columns" :data-source="models" :loading="loading" :pagination="false">
-            <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'provider'">
-                    <a-tag color="blue">{{ record.provider }}</a-tag>
-                </template>
-                <template v-if="column.key === 'model_type'">
-                    <a-tag v-if="record.model_type === 'multimodal'" color="purple">多模态</a-tag>
-                    <a-tag v-else-if="record.model_type === 'image'" color="cyan">图像</a-tag>
-                    <a-tag v-else-if="record.model_type === 'video'" color="orange">视频</a-tag>
-                    <a-tag v-else-if="record.model_type === 'embedding'" color="green">嵌入</a-tag>
-                    <a-tag v-else>文本</a-tag>
-                </template>
-                <template v-if="column.key === 'is_active'">
-                     <a-switch v-model:checked="record.is_active" @change="handleStatusChange(record)" />
-                </template>
-                <template v-if="column.key === 'created_at'">
-                    {{ formatDate(record.created_at) }}
-                </template>
-                <template v-if="column.key === 'action'">
-                    <div class="flex gap-2">
-                        <a-button type="link" size="small" @click="openEditModal(record)">编辑</a-button>
-                        <a-popconfirm
-                            title="确定要删除吗?"
-                            ok-text="确认"
-                            cancel-text="取消"
-                            @confirm="deleteModel(record.id)"
-                        >
-                            <a-button type="link" danger size="small">删除</a-button>
-                        </a-popconfirm>
-                    </div>
-                </template>
-            </template>
-        </a-table>
-    </div>
+    <!-- Main Content -->
+    <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
+      <!-- Loading State -->
+      <div v-if="loading" class="p-8 flex justify-center items-center">
+        <Loader2 class="h-8 w-8 animate-spin text-primary" />
+      </div>
 
-    <!-- Drawer (Replaces Modal) -->
-    <div v-if="modalVisible" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex justify-end">
-        <div class="w-[600px] h-full bg-white shadow-2xl flex flex-col animate-slide-in-right">
-            <!-- Header -->
-            <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-white">
-                <h3 class="text-lg font-semibold text-slate-800">{{ isEdit ? '编辑模型' : '添加模型' }}</h3>
-                <button @click="modalVisible = false" class="p-2 text-muted-foreground hover:text-slate-600 rounded-lg hover:bg-muted/50">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-
-            <!-- Body -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/50/50">
-                <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-4">
-                    <div>
-                        <label class="block text-xs font-medium text-muted-foreground mb-1">模型名称 <span class="text-red-500">*</span></label>
-                        <input v-model="formState.name" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="例如: GPT-4o">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-xs font-medium text-muted-foreground mb-1">提供商 <span class="text-red-500">*</span></label>
-                        <select v-model="formState.provider" @change="handleProviderChange" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white">
-                            <option value="openai">OpenAI</option>
-                            <option value="aliyun">Aliyun (通义千问)</option>
-                            <option value="deepseek">DeepSeek</option>
-                            <option value="anthropic">Anthropic</option>
-                            <option value="google">Google</option>
-                            <option value="local">Local (Ollama/vLLM)</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-muted-foreground mb-1">模型类型 <span class="text-red-500">*</span></label>
-                        <select v-model="formState.model_type" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white">
-                            <option value="text">文本 (Text)</option>
-                            <option value="embedding">嵌入 (Embedding)</option>
-                            <option value="multimodal">多模态 (Multimodal)</option>
-                            <option value="image">图像生成 (Image Generation)</option>
-                            <option value="video">视频生成 (Video Generation)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-muted-foreground mb-1">模型ID <span class="text-red-500">*</span></label>
-                        <div class="flex gap-2">
-                             <select 
-                                v-if="!isCustomModel"
-                                v-model="formState.model_id" 
-                                class="flex-1 p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none bg-white"
-                             >
-                                <option value="" disabled>选择模型ID</option>
-                                <option v-for="opt in currentModelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                             </select>
-                             <input 
-                                v-else
-                                v-model="formState.model_id" 
-                                class="flex-1 p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors"
-                                placeholder="输入自定义模型ID"
-                            >
-                            <button @click="isCustomModel = !isCustomModel" class="text-primary text-xs font-medium hover:underline whitespace-nowrap px-2">
-                                {{ isCustomModel ? '选择列表' : '手动输入' }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-muted-foreground mb-1">API Key</label>
-                        <input type="password" v-model="formState.api_key" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="sk-...">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-muted-foreground mb-1">Base URL</label>
-                        <input v-model="formState.base_url" class="w-full p-4 py-2 border border-slate-300 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" placeholder="可选, 例如: https://api.openai.com/v1">
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                         <span class="text-xs font-medium text-muted-foreground">状态</span>
-                         <button 
-                            @click="formState.is_active = !formState.is_active"
-                            class="w-10 h-5 rounded-full transition-colors relative"
-                            :class="formState.is_active ? 'bg-primary' : 'bg-slate-200'"
-                         >
-                            <span class="absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform" :class="formState.is_active ? 'translate-x-5' : ''"></span>
-                         </button>
-                         <span class="text-xs text-muted-foreground">{{ formState.is_active ? '启用' : '禁用' }}</span>
-                    </div>
-
-                    <div class="pt-4 border-t border-border">
-                        <button @click="handleTestConnection" :disabled="testing" class="w-full py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:text-primary hover:border-blue-300 hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
-                             <svg v-if="testing" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                             <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                             <span>测试连接</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 border-t border-slate-200 bg-white flex justify-end gap-4">
-                <button @click="modalVisible = false" class="px-4 py-2 text-slate-600 hover:bg-muted rounded-lg text-sm font-medium transition-colors">取消</button>
-                <button @click="handleSubmit" class="px-6 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm" :disabled="submitting">
-                    <span v-if="submitting">保存中...</span>
-                    <span v-else>保存配置</span>
-                </button>
-            </div>
+      <!-- Empty State -->
+      <div v-else-if="models.length === 0" class="flex flex-col items-center justify-center p-12 text-center">
+        <div class="bg-muted/50 p-4 rounded-full mb-4">
+          <Bot class="h-8 w-8 text-muted-foreground" />
         </div>
+        <h3 class="text-lg font-semibold">暂无模型</h3>
+        <p class="text-muted-foreground text-sm max-w-sm mt-2 mb-6">
+          您还没有配置任何模型。添加一个模型以开始使用智能功能。
+        </p>
+        <Button variant="outline" @click="openCreateModal">
+          <Plus class="mr-2 h-4 w-4" />
+          立即添加
+        </Button>
+      </div>
+
+      <!-- Data Table -->
+      <Table v-else>
+        <TableHeader>
+          <TableRow>
+            <TableHead class="w-[200px]">名称</TableHead>
+            <TableHead>提供商</TableHead>
+            <TableHead>类型</TableHead>
+            <TableHead>模型 ID</TableHead>
+            <TableHead>状态</TableHead>
+            <TableHead class="hidden md:table-cell">创建时间</TableHead>
+            <TableHead class="text-right">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow v-for="model in models" :key="model.id" class="group">
+            <TableCell class="font-medium">
+              <div class="flex items-center gap-2">
+                <div class="p-1.5 rounded-md bg-primary/10 text-primary">
+                  <Bot class="h-4 w-4" />
+                </div>
+                <span>{{ model.name }}</span>
+              </div>
+            </TableCell>
+            <TableCell>
+              <Badge variant="outline" class="capitalize">
+                {{ model.provider }}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <Badge :variant="getModelTypeVariant(model.model_type)" class="capitalize">
+                {{ getModelTypeLabel(model.model_type) }}
+              </Badge>
+            </TableCell>
+            <TableCell class="font-mono text-xs text-muted-foreground">
+              {{ model.model_id }}
+            </TableCell>
+            <TableCell>
+              <div class="flex items-center gap-2">
+                <Switch 
+                  :checked="model.is_active" 
+                  @update:checked="(val) => handleStatusChange(model, val)"
+                  :disabled="model.statusLoading"
+                />
+                <span class="text-xs text-muted-foreground w-8">
+                  {{ model.is_active ? '启用' : '禁用' }}
+                </span>
+              </div>
+            </TableCell>
+            <TableCell class="hidden md:table-cell text-muted-foreground text-xs">
+              {{ formatDate(model.created_at) }}
+            </TableCell>
+            <TableCell class="text-right">
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <Button variant="ghost" size="icon" class="h-8 w-8">
+                    <MoreHorizontal class="h-4 w-4" />
+                    <span class="sr-only">打开菜单</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>操作</DropdownMenuLabel>
+                  <DropdownMenuItem @click="openEditModal(model)">
+                    <Edit2 class="mr-2 h-4 w-4" />
+                    编辑
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem @click="confirmDelete(model)" class="text-destructive focus:text-destructive">
+                    <Trash2 class="mr-2 h-4 w-4" />
+                    删除
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
     </div>
+
+    <!-- Create/Edit Sheet -->
+    <Sheet v-model:open="sheetOpen">
+      <SheetContent class="sm:max-w-[540px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{{ isEdit ? '编辑模型' : '添加模型' }}</SheetTitle>
+          <SheetDescription>
+            配置模型的连接参数。带 <span class="text-destructive">*</span> 为必填项。
+          </SheetDescription>
+        </SheetHeader>
+        
+        <div class="grid gap-6 py-6">
+          <!-- Basic Info -->
+          <div class="grid gap-2">
+            <Label for="name">模型名称 <span class="text-destructive">*</span></Label>
+            <Input id="name" v-model="formState.name" placeholder="例如: GPT-4o 助手" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-2">
+              <Label for="provider">提供商 <span class="text-destructive">*</span></Label>
+              <Select v-model="formState.provider" @update:modelValue="handleProviderChange">
+                <SelectTrigger>
+                  <SelectValue placeholder="选择提供商" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="aliyun">Aliyun (通义千问)</SelectItem>
+                  <SelectItem value="deepseek">DeepSeek</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                  <SelectItem value="google">Google</SelectItem>
+                  <SelectItem value="local">Local (Ollama/vLLM)</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="grid gap-2">
+              <Label for="type">模型类型 <span class="text-destructive">*</span></Label>
+              <Select v-model="formState.model_type">
+                <SelectTrigger>
+                  <SelectValue placeholder="选择类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">文本 (Text)</SelectItem>
+                  <SelectItem value="embedding">嵌入 (Embedding)</SelectItem>
+                  <SelectItem value="multimodal">多模态 (Multimodal)</SelectItem>
+                  <SelectItem value="image">图像生成 (Image)</SelectItem>
+                  <SelectItem value="video">视频生成 (Video)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div class="grid gap-2">
+            <div class="flex items-center justify-between">
+              <Label for="model_id">模型 ID <span class="text-destructive">*</span></Label>
+              <Button 
+                variant="link" 
+                size="sm" 
+                class="h-auto p-0 text-xs" 
+                @click="toggleCustomModel"
+              >
+                {{ isCustomModel ? '从列表选择' : '手动输入' }}
+              </Button>
+            </div>
+            
+            <div v-if="!isCustomModel && currentModelOptions.length > 0">
+              <Select v-model="formState.model_id">
+                <SelectTrigger>
+                  <SelectValue placeholder="选择模型 ID" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="opt in currentModelOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Input 
+              v-else 
+              id="model_id" 
+              v-model="formState.model_id" 
+              placeholder="输入模型 ID，例如: gpt-4-turbo" 
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="api_key">API Key</Label>
+            <div class="relative">
+              <Input 
+                id="api_key" 
+                :type="showApiKey ? 'text' : 'password'" 
+                v-model="formState.api_key" 
+                placeholder="sk-..." 
+                class="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                class="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                @click="showApiKey = !showApiKey"
+              >
+                <Eye v-if="!showApiKey" class="h-4 w-4 text-muted-foreground" />
+                <EyeOff v-else class="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="base_url">Base URL</Label>
+            <Input id="base_url" v-model="formState.base_url" placeholder="可选，例如: https://api.openai.com/v1" />
+            <p class="text-[10px] text-muted-foreground">如果不填写，将使用提供商的默认地址。</p>
+          </div>
+
+          <div class="flex items-center justify-between rounded-lg border p-4">
+            <div class="space-y-0.5">
+              <Label class="text-base">启用状态</Label>
+              <p class="text-xs text-muted-foreground">控制该模型是否在应用中可用</p>
+            </div>
+            <Switch v-model:checked="formState.is_active" />
+          </div>
+
+          <!-- Connection Test -->
+          <div v-if="testResult" class="rounded-lg border p-3 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2" :class="testResult.success ? 'bg-green-50 text-green-700 border-green-200' : 'bg-destructive/10 text-destructive border-destructive/20'">
+            <CheckCircle2 v-if="testResult.success" class="h-5 w-5 flex-shrink-0" />
+            <XCircle v-else class="h-5 w-5 flex-shrink-0" />
+            <span class="break-all">{{ testResult.message }}</span>
+          </div>
+
+        </div>
+
+        <SheetFooter class="flex-col sm:flex-row gap-2">
+          <Button variant="outline" type="button" @click="handleTestConnection" :disabled="testing" class="w-full sm:w-auto">
+            <Loader2 v-if="testing" class="mr-2 h-4 w-4 animate-spin" />
+            <Network v-else class="mr-2 h-4 w-4" />
+            测试连接
+          </Button>
+          <Button type="submit" @click="handleSubmit" :disabled="submitting" class="w-full sm:w-auto">
+            <Loader2 v-if="submitting" class="mr-2 h-4 w-4 animate-spin" />
+            {{ isEdit ? '保存更改' : '创建模型' }}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+
+    <!-- Delete Confirmation Dialog -->
+    <AlertDialog v-model:open="deleteDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除模型?</AlertDialogTitle>
+          <AlertDialogDescription>
+            此操作不可撤销。这将永久删除模型 "{{ modelToDelete?.name }}" 及其配置信息。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="modelToDelete = null">取消</AlertDialogCancel>
+          <AlertDialogAction @click="handleDelete" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <Loader2 v-if="deleteLoading" class="mr-2 h-4 w-4 animate-spin" />
+            删除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    
+    <Toaster />
   </div>
 </template>
 
-<style scoped>
-@keyframes slide-in-right {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-.animate-slide-in-right {
-    animation: slide-in-right 0.3s ease-out forwards;
-}
-</style>
-
 <script setup>
-import { ref, onMounted, reactive, watch } from 'vue';
-import { message } from 'ant-design-vue';
+import { ref, onMounted, reactive, watch, computed } from 'vue';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { 
+  Loader2, Plus, Bot, MoreHorizontal, Edit2, Trash2, 
+  Eye, EyeOff, Network, CheckCircle2, XCircle 
+} from 'lucide-vue-next';
+
+// Shadcn Components
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter,
+} from '@/components/ui/sheet';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/components/ui/toast/use-toast';
+import { Toaster } from '@/components/ui/toast';
+
+const { toast } = useToast();
 
 const api = axios.create({
     baseURL: '/api/v1'
 });
 
+// State
 const models = ref([]);
 const loading = ref(false);
-const modalVisible = ref(false);
+const sheetOpen = ref(false);
 const submitting = ref(false);
 const testing = ref(false);
 const isEdit = ref(false);
 const isCustomModel = ref(false);
+const showApiKey = ref(false);
+const testResult = ref(null);
+
+const deleteDialogOpen = ref(false);
+const deleteLoading = ref(false);
+const modelToDelete = ref(null);
 
 const formState = reactive({
     id: null,
@@ -234,34 +379,42 @@ const providerConfig = {
 
 const currentModelOptions = ref([]);
 
+// Methods
+const fetchModels = async () => {
+    loading.value = true;
+    try {
+        const res = await api.get('/llm/models');
+        models.value = res.data.map(m => ({ ...m, statusLoading: false }));
+    } catch (e) {
+        toast({
+            title: "获取失败",
+            description: "无法加载模型列表，请稍后重试。",
+            variant: "destructive"
+        });
+    } finally {
+        loading.value = false;
+    }
+};
+
 const handleProviderChange = (val) => {
     const config = providerConfig[val];
     if (config) {
-        // Auto fill base_url if empty or if it was matching a previous default
-        // For simplicity, let's just update it if the user switches provider.
-        // Or maybe we should only update if it's currently empty?
-        // User request says "automatically brought out" (auto filled).
-        // Let's set it.
         formState.base_url = config.baseUrl;
-        
-        // Update model options
         currentModelOptions.value = config.models.map(m => ({ value: m, label: m }));
         
-        // Check if current model_id is in the new list, if not, maybe switch to custom or clear
-        const isInList = config.models.includes(formState.model_id);
-        if (!isInList && formState.model_id) {
-             // Keep it but maybe switch to custom view if we want to show it?
-             // Or just let user handle it.
-             // But for UX, if we switch provider, usually we want to reset model_id or pick first.
-             // Let's reset to first option or empty.
-             formState.model_id = config.models[0] || '';
-             isCustomModel.value = false;
-        } else if (!formState.model_id && config.models.length > 0) {
-             formState.model_id = config.models[0];
-             isCustomModel.value = false;
+        // Logic to reset or keep model_id
+        if (config.models.length > 0) {
+            // If current model_id is not in the new list, reset to first available
+            if (!config.models.includes(formState.model_id)) {
+                formState.model_id = config.models[0];
+            }
+            isCustomModel.value = false;
+        } else {
+            // If no predefined models, switch to custom input
+            isCustomModel.value = true;
+            if (!formState.model_id) formState.model_id = '';
         }
         
-        // For 'local' or 'other', default to custom input
         if (val === 'local' || val === 'other') {
             isCustomModel.value = true;
         }
@@ -271,51 +424,19 @@ const handleProviderChange = (val) => {
     }
 };
 
-// Initial load options when editing
-watch(() => modalVisible.value, (val) => {
-    if (val) {
-        const config = providerConfig[formState.provider];
-        if (config) {
-            currentModelOptions.value = config.models.map(m => ({ value: m, label: m }));
-            
-            // Determine if current model is custom
-            const isInList = config.models.includes(formState.model_id);
-            isCustomModel.value = !isInList && !!formState.model_id;
-            
-            // Special handling for local/other
-            if (formState.provider === 'local' || formState.provider === 'other') {
-                isCustomModel.value = true;
-            }
-        } else {
-             isCustomModel.value = true;
+const toggleCustomModel = () => {
+    isCustomModel.value = !isCustomModel.value;
+    if (!isCustomModel.value && currentModelOptions.value.length > 0) {
+        // Switching back to list, ensure valid selection
+        if (!currentModelOptions.value.find(o => o.value === formState.model_id)) {
+            formState.model_id = currentModelOptions.value[0].value;
         }
-    }
-});
-
-const columns = [
-    { title: '名称', dataIndex: 'name', key: 'name' },
-    { title: '提供商', dataIndex: 'provider', key: 'provider' },
-    { title: '类型', dataIndex: 'model_type', key: 'model_type' },
-    { title: '模型ID', dataIndex: 'model_id', key: 'model_id' },
-    { title: '状态', key: 'is_active', width: 100 },
-    { title: '创建时间', key: 'created_at', width: 200 },
-    { title: '操作', key: 'action', width: 150 },
-];
-
-const fetchModels = async () => {
-    loading.value = true;
-    try {
-        const res = await api.get('/llm/models');
-        models.value = res.data;
-    } catch (e) {
-        message.error('获取模型列表失败');
-    } finally {
-        loading.value = false;
     }
 };
 
 const openCreateModal = () => {
     isEdit.value = false;
+    testResult.value = null;
     Object.assign(formState, {
         id: null,
         name: '',
@@ -326,11 +447,27 @@ const openCreateModal = () => {
         base_url: '',
         is_active: true
     });
-    modalVisible.value = true;
+    // Trigger provider change to set defaults
+    handleProviderChange('openai');
+    sheetOpen.value = true;
 };
 
 const openEditModal = (record) => {
     isEdit.value = true;
+    testResult.value = null;
+    
+    // Set provider first to populate options
+    const config = providerConfig[record.provider];
+    if (config) {
+        currentModelOptions.value = config.models.map(m => ({ value: m, label: m }));
+        const isInList = config.models.includes(record.model_id);
+        isCustomModel.value = !isInList;
+        if (record.provider === 'local' || record.provider === 'other') isCustomModel.value = true;
+    } else {
+        currentModelOptions.value = [];
+        isCustomModel.value = true;
+    }
+
     Object.assign(formState, {
         id: record.id,
         name: record.name,
@@ -341,12 +478,16 @@ const openEditModal = (record) => {
         base_url: record.base_url,
         is_active: record.is_active
     });
-    modalVisible.value = true;
+    sheetOpen.value = true;
 };
 
 const handleSubmit = async () => {
     if (!formState.name || !formState.model_id) {
-        message.error('请填写必要信息');
+        toast({
+            title: "表单错误",
+            description: "请填写所有必填项 (名称, 提供商, 模型 ID)",
+            variant: "destructive"
+        });
         return;
     }
 
@@ -354,15 +495,25 @@ const handleSubmit = async () => {
     try {
         if (isEdit.value) {
             await api.put(`/llm/models/${formState.id}`, formState);
-            message.success('更新成功');
+            toast({
+                title: "更新成功",
+                description: `模型 "${formState.name}" 已更新。`
+            });
         } else {
             await api.post('/llm/models', formState);
-            message.success('创建成功');
+            toast({
+                title: "创建成功",
+                description: `模型 "${formState.name}" 已创建。`
+            });
         }
-        modalVisible.value = false;
+        sheetOpen.value = false;
         fetchModels();
     } catch (e) {
-        message.error('操作失败');
+        toast({
+            title: "操作失败",
+            description: e.response?.data?.detail || e.message || "请求失败",
+            variant: "destructive"
+        });
     } finally {
         submitting.value = false;
     }
@@ -370,11 +521,16 @@ const handleSubmit = async () => {
 
 const handleTestConnection = async () => {
     if (!formState.provider || !formState.model_id) {
-        message.warning('请先填写提供商和模型ID');
+        toast({
+            title: "参数缺失",
+            description: "请先填写提供商和模型 ID",
+            variant: "destructive"
+        });
         return;
     }
     
     testing.value = true;
+    testResult.value = null;
     try {
         const res = await api.post('/llm/models/test', {
             provider: formState.provider,
@@ -384,39 +540,109 @@ const handleTestConnection = async () => {
         });
         
         if (res.data.success) {
-            message.success(res.data.message);
+            testResult.value = { success: true, message: res.data.message || '连接测试成功！' };
+            toast({
+                title: "测试成功",
+                description: "模型连接正常。",
+                variant: "default", // shadcn toast typically uses 'default' or 'destructive'
+                class: "bg-green-500 text-white border-none"
+            });
         } else {
-            message.error(res.data.message);
+            testResult.value = { success: false, message: res.data.message || '连接测试失败' };
+            toast({
+                title: "测试失败",
+                description: res.data.message,
+                variant: "destructive"
+            });
         }
     } catch (e) {
-        message.error('测试请求失败: ' + (e.response?.data?.detail || e.message));
+        const errMsg = e.response?.data?.detail || e.message;
+        testResult.value = { success: false, message: '请求失败: ' + errMsg };
+        toast({
+            title: "连接错误",
+            description: errMsg,
+            variant: "destructive"
+        });
     } finally {
         testing.value = false;
     }
 };
 
-const deleteModel = async (id) => {
+const confirmDelete = (model) => {
+    modelToDelete.value = model;
+    deleteDialogOpen.value = true;
+};
+
+const handleDelete = async () => {
+    if (!modelToDelete.value) return;
+    deleteLoading.value = true;
     try {
-        await api.delete(`/llm/models/${id}`);
-        message.success('删除成功');
+        await api.delete(`/llm/models/${modelToDelete.value.id}`);
+        toast({
+            title: "删除成功",
+            description: "模型已删除。"
+        });
         fetchModels();
     } catch (e) {
-        message.error('删除失败');
+        toast({
+            title: "删除失败",
+            description: "无法删除该模型，请稍后重试。",
+            variant: "destructive"
+        });
+    } finally {
+        deleteLoading.value = false;
+        deleteDialogOpen.value = false;
+        modelToDelete.value = null;
     }
 };
 
-const handleStatusChange = async (record) => {
+const handleStatusChange = async (model, checked) => {
+    model.statusLoading = true;
     try {
-        await api.put(`/llm/models/${record.id}`, { is_active: record.is_active });
-        message.success('状态更新成功');
+        // Optimistic update
+        const originalStatus = model.is_active;
+        model.is_active = checked;
+        
+        await api.put(`/llm/models/${model.id}`, { is_active: checked });
+        toast({
+            description: `模型已${checked ? '启用' : '禁用'}`
+        });
     } catch (e) {
-        record.is_active = !record.is_active; // revert
-        message.error('状态更新失败');
+        model.is_active = !checked; // revert
+        toast({
+            title: "更新失败",
+            description: "无法修改状态",
+            variant: "destructive"
+        });
+    } finally {
+        model.statusLoading = false;
     }
 };
 
 const formatDate = (date) => {
-    return dayjs(date).format('YYYY-MM-DD HH:mm:ss');
+    return dayjs(date).format('YYYY-MM-DD HH:mm');
+};
+
+const getModelTypeLabel = (type) => {
+    const map = {
+        'text': '文本',
+        'embedding': '嵌入',
+        'multimodal': '多模态',
+        'image': '图像',
+        'video': '视频'
+    };
+    return map[type] || type;
+};
+
+const getModelTypeVariant = (type) => {
+    switch (type) {
+        case 'text': return 'secondary';
+        case 'embedding': return 'outline';
+        case 'multimodal': return 'default'; // purple-ish in custom themes often
+        case 'image': return 'outline';
+        case 'video': return 'outline';
+        default: return 'secondary';
+    }
 };
 
 onMounted(() => {

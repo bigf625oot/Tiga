@@ -1,265 +1,328 @@
 <template>
-  <div class="h-full flex flex-col bg-white font-sans">
+  <div class="h-full flex flex-col bg-background font-sans">
     <!-- Header & Actions -->
     <div class="flex flex-col gap-6 px-8 pt-8 pb-4">
-        <div class="flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight">指标管理</h1>
-                <span class="px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium border border-slate-200">{{ total }} 个指标</span>
-            </div>
-            <div class="flex gap-4">
-                 <div class="relative group">
-                    <input 
-                        v-model="searchQuery"
-                        @keyup.enter="fetchIndicators"
-                        type="text" 
-                        placeholder="搜索指标名称或分组..." 
-                        class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm w-72 transition-all focus:w-80 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm placeholder:text-muted-foreground"
-                    >
-                    <svg class="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                 </div>
-                 <button @click="openImportDialog" class="px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-lg font-medium hover:bg-muted/50 transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                    批量导入
-                 </button>
-                 <button @click="openBatchPromptDialog" class="px-4 py-2.5 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg font-medium hover:bg-amber-100 transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    生成 Prompt
-                 </button>
-                 <button @click="openDialog('create')" class="px-4 py-2.5 bg-primary text-white rounded-lg font-medium shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    添加指标
-                 </button>
-            </div>
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <h1 class="text-2xl font-semibold tracking-tight">指标管理</h1>
+          <Badge variant="secondary" class="px-2.5 py-0.5 text-xs font-medium">
+            {{ total }} 个指标
+          </Badge>
         </div>
-        
-        <!-- Quick Filters -->
-        <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            <button 
-                @click="filterGroup = ''"
-                :class="!filterGroup ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10' : 'bg-white border border-slate-200 text-slate-600 hover:bg-muted/50'"
-                class="p-6 py-2 rounded-full text-sm font-medium transition-all"
-            >全部</button>
-            <button 
-                v-for="group in uniqueGroups" 
-                :key="group"
-                @click="filterGroup = group"
-                :class="filterGroup === group ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10' : 'bg-white border border-slate-200 text-slate-600 hover:bg-muted/50'"
-                class="p-6 py-2 rounded-full text-sm font-medium transition-all"
-            >{{ group }}</button>
+        <div class="flex gap-4">
+          <div class="relative w-72 transition-all focus-within:w-80">
+            <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              v-model="searchQuery"
+              @keyup.enter="fetchIndicators"
+              type="text"
+              placeholder="搜索指标名称或分组..."
+              class="pl-9 bg-background"
+            />
+          </div>
+          <Button variant="outline" @click="openImportDialog" class="gap-2">
+            <Upload class="w-4 h-4" />
+            批量导入
+          </Button>
+          <Button variant="outline" class="gap-2 text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200" @click="openBatchPromptDialog">
+            <Sparkles class="w-4 h-4" />
+            生成 Prompt
+          </Button>
+          <Button @click="openDialog('create')" class="gap-2 shadow-lg shadow-primary/20">
+            <Plus class="w-4 h-4" />
+            添加指标
+          </Button>
         </div>
+      </div>
+      
+      <!-- Quick Filters -->
+      <ScrollArea class="w-full whitespace-nowrap pb-2">
+        <div class="flex w-max space-x-2 p-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            @click="filterGroup = ''"
+            :class="!filterGroup ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-background hover:bg-muted text-muted-foreground'"
+            class="rounded-full px-4 font-normal"
+          >
+            全部
+          </Button>
+          <Button
+            v-for="group in uniqueGroups"
+            :key="group"
+            variant="ghost"
+            size="sm"
+            @click="filterGroup = group"
+            :class="filterGroup === group ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-background hover:bg-muted text-muted-foreground'"
+            class="rounded-full px-4 font-normal"
+          >
+            {{ group }}
+          </Button>
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
 
     <!-- Content Area -->
     <div class="flex-1 overflow-y-auto px-8 pb-32">
-        <!-- Loading State -->
-        <div v-if="loading" class="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <svg class="animate-spin h-8 w-8 m-4 text-primary" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <span class="text-sm font-medium">加载数据中...</span>
-        </div>
+      <!-- Loading State -->
+      <div v-if="loading" class="flex flex-col items-center justify-center h-64 text-muted-foreground gap-4">
+        <Loader2 class="h-8 w-8 animate-spin text-primary" />
+        <span class="text-sm font-medium">加载数据中...</span>
+      </div>
 
-        <!-- Empty State -->
-        <div v-else-if="filteredIndicators.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-slate-300 animate-[fadeIn_0.5s_ease-out]">
-            <div class="relative w-48 h-48 mb-6 opacity-80">
-                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
-                    <rect x="40" y="60" width="120" height="80" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="2"/>
-                    <path d="M40 90H160" stroke="#CBD5E1" stroke-width="2"/>
-                    <rect x="55" y="75" width="40" height="6" rx="3" fill="#E2E8F0"/>
-                    <rect x="55" y="105" width="90" height="6" rx="3" fill="#E2E8F0"/>
-                    <rect x="55" y="120" width="60" height="6" rx="3" fill="#E2E8F0"/>
-                    <circle cx="150" cy="50" r="15" fill="#3B82F6" fill-opacity="0.1"/>
-                    <path d="M150 42V58M142 50H158" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+      <!-- Empty State -->
+      <div v-else-if="filteredIndicators.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-muted-foreground animate-in fade-in zoom-in duration-300">
+        <div class="relative w-48 h-48 mb-6 opacity-80 bg-muted/30 rounded-full flex items-center justify-center">
+            <FileText class="w-24 h-24 text-muted-foreground/50" />
+        </div>
+        <h3 class="text-lg font-semibold text-foreground mb-2">暂无相关指标</h3>
+        <p class="text-muted-foreground text-sm mb-6">点击上方按钮添加您的第一个业务指标</p>
+        <Button @click="openDialog('create')" size="lg" class="shadow-lg shadow-primary/20">
+          立即添加
+        </Button>
+      </div>
+
+      <!-- Card Grid -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card v-for="item in filteredIndicators" :key="item.id" class="group hover:shadow-lg hover:border-primary/50 transition-all duration-300 flex flex-col justify-between h-[240px] relative">
+          <CardHeader class="p-6 pb-2 space-y-0">
+            <div class="flex justify-between items-start mb-2">
+              <Badge variant="secondary" class="truncate max-w-[120px] font-normal">
+                {{ item.group }}
+              </Badge>
+              
+              <!-- Actions Dropdown -->
+              <div class="opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground">
+                      <MoreHorizontal class="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-40">
+                    <DropdownMenuItem @click="openDialog('edit', item)">
+                      <Edit class="mr-2 h-4 w-4" />
+                      编辑
+                    </DropdownMenuItem>
+                    <DropdownMenuItem @click="handleExtract(item)">
+                      <Play class="mr-2 h-4 w-4" />
+                      提取
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem @click="handleDelete(item)" class="text-destructive focus:text-destructive">
+                      <Trash2 class="mr-2 h-4 w-4" />
+                      删除
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-            <h3 class="text-lg font-semibold text-slate-700 mb-2">暂无相关指标</h3>
-            <p class="text-muted-foreground text-sm mb-6">点击上方按钮添加您的第一个业务指标</p>
-            <button @click="openDialog('create')" class="p-6 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
-                立即添加
-            </button>
-        </div>
+            
+            <CardTitle class="text-lg font-semibold truncate" :title="item.name">{{ item.name }}</CardTitle>
+            <div class="text-xs text-muted-foreground mt-1 truncate flex items-center gap-1.5 h-5">
+              <template v-if="item.alias">
+                <span class="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
+                {{ item.alias }}
+              </template>
+            </div>
+          </CardHeader>
+          
+          <CardContent class="px-6 py-2 flex-1">
+            <p class="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+              {{ item.description || '暂无描述信息...' }}
+            </p>
+          </CardContent>
 
-        <!-- Card Grid -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-[fadeIn_0.3s_ease-out]">
-            <div v-for="item in filteredIndicators" :key="item.id" 
-                class="group bg-white rounded-lg p-6 border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all duration-300 flex flex-col justify-between h-[240px] relative"
+          <CardFooter class="p-4 pt-0 mt-auto border-t bg-muted/10 flex items-center justify-between">
+            <span class="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mt-4">
+              <Calendar class="w-3.5 h-3.5" />
+              {{ formatDate(item.created_at) }}
+            </span>
+            <Button 
+                variant="ghost" 
+                size="sm"
+                @click="handleExtract(item)"
+                class="text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 -mr-2 mt-4 gap-1 group/btn"
             >
-                <!-- Card Header -->
-                <div class="flex-1 flex flex-col">
-                    <div class="flex justify-between items-start m-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted/50 text-slate-600 border border-border truncate max-w-[120px]">
-                            {{ item.group }}
-                        </span>
-                        
-                        <!-- Actions Dropdown -->
-                        <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-                             <a-dropdown placement="bottomRight" :trigger="['click']">
-                                <button class="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-                                </button>
-                                <template #overlay>
-                                    <a-menu class="!rounded-lg !p-1 !min-w-[120px] !shadow-xl !border !border-border">
-                                        <a-menu-item key="edit" @click="openDialog('edit', item)" class="!rounded-lg">
-                                            <div class="flex items-center gap-2 text-slate-700">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                编辑
-                                            </div>
-                                        </a-menu-item>
-                                        <a-menu-item key="extract" @click="handleExtract(item)" class="!rounded-lg">
-                                            <div class="flex items-center gap-2 text-primary">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                                提取
-                                            </div>
-                                        </a-menu-item>
-                                        <a-menu-divider class="!my-1" />
-                                        <a-menu-item key="delete" @click="handleDelete(item)" class="!rounded-lg !text-red-500">
-                                            <div class="flex items-center gap-2">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                                删除
-                                            </div>
-                                        </a-menu-item>
-                                    </a-menu>
-                                </template>
-                            </a-dropdown>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-semibold text-slate-900 mb-1 truncate tracking-tight" :title="item.name">{{ item.name }}</h3>
-                    <div class="text-xs text-muted-foreground m-4 truncate flex items-center gap-1.5 h-5">
-                        <template v-if="item.alias">
-                            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                            {{ item.alias }}
-                        </template>
-                    </div>
-                    
-                    <p class="text-sm text-muted-foreground line-clamp-3 leading-relaxed pr-2">
-                        {{ item.description || '暂无描述信息...' }}
-                    </p>
-                </div>
-
-                <!-- Card Footer -->
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-50">
-                    <span class="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        {{ formatDate(item.created_at) }}
-                    </span>
-                    <button 
-                        @click="handleExtract(item)"
-                        class="text-xs font-semibold text-primary bg-primary/10 p-4 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-all flex items-center gap-1.5 group/btn"
-                    >
-                        去提取
-                        <svg class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
+                去提取
+                <ArrowRight class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" />
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
 
     <!-- Create/Edit Dialog -->
-    <a-modal
-        v-model:open="dialogVisible"
-        :title="dialogType === 'create' ? '添加指标' : '编辑指标'"
-        :footer="null"
-        width="800px"
-        destroyOnClose
-        centered
-    >
+    <Dialog v-model:open="dialogVisible">
+      <DialogContent class="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{{ dialogType === 'create' ? '添加指标' : '编辑指标' }}</DialogTitle>
+          <DialogDescription>
+            {{ dialogType === 'create' ? '填写下方信息以创建新的业务指标。' : '修改指标信息，点击保存以更新。' }}
+          </DialogDescription>
+        </DialogHeader>
         <div class="py-4">
-            <IndicatorForm 
-                :initialData="selectedIndicator" 
-                :isEdit="dialogType === 'edit'"
-                @submit="handleFormSubmit"
-                @cancel="dialogVisible = false"
-            />
+          <IndicatorForm 
+            :initialData="selectedIndicator" 
+            :isEdit="dialogType === 'edit'"
+            @submit="handleFormSubmit"
+            @cancel="dialogVisible = false"
+          />
         </div>
-    </a-modal>
+      </DialogContent>
+    </Dialog>
 
     <!-- Import Dialog -->
-    <a-modal 
-        v-model:open="importDialogVisible" 
-        title="批量导入指标" 
-        :footer="null"
-        width="600px"
-        destroyOnClose
-        centered
-    >
+    <Dialog v-model:open="importDialogVisible">
+      <DialogContent class="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>批量导入指标</DialogTitle>
+          <DialogDescription>
+            请上传 CSV 或 Excel 文件。必填表头：指标分组 (Group), 指标名称 (Name), 指标描述 (Description)。
+          </DialogDescription>
+        </DialogHeader>
+        
         <div class="py-4 space-y-4">
-            <div class="bg-primary/10 border border-blue-100 rounded-lg p-4 text-sm text-blue-700 flex gap-2">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <div class="leading-relaxed">
-                    请上传 CSV 或 Excel 文件。必填表头：指标分组 (Group), 指标名称 (Name), 指标描述 (Description)。
-                </div>
+          <div class="bg-primary/5 border border-primary/20 rounded-lg p-4 text-sm text-primary flex gap-2">
+            <Info class="w-5 h-5 flex-shrink-0" />
+            <div class="leading-relaxed">
+              支持 .csv, .xlsx, .xls 格式。请确保文件编码为 UTF-8。
             </div>
-            
-            <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-primary/10/30 transition-all group" @click="triggerFileInput">
-                <input type="file" ref="fileInput" class="hidden" accept=".csv,.xlsx,.xls" @change="handleImportFile">
-                <div class="w-12 h-12 rounded-full bg-muted group-hover:bg-blue-100 flex items-center justify-center m-4 transition-colors">
-                    <svg class="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                </div>
-                <p class="text-sm font-medium text-slate-700">点击上传或拖拽文件到此处</p>
-                <p class="text-xs text-muted-foreground mt-1">支持 .csv, .xlsx, .xls 格式</p>
+          </div>
+          
+          <div 
+            class="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group" 
+            @click="triggerFileInput"
+          >
+            <input type="file" ref="fileInput" class="hidden" accept=".csv,.xlsx,.xls" @change="handleImportFile">
+            <div class="w-12 h-12 rounded-full bg-muted group-hover:bg-primary/20 flex items-center justify-center m-4 transition-colors">
+              <UploadCloud class="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
             </div>
+            <p class="text-sm font-medium text-foreground">点击上传或拖拽文件到此处</p>
+            <p class="text-xs text-muted-foreground mt-1">支持最大 10MB 文件</p>
+          </div>
 
-            <div v-if="importing || importResult" class="mt-4">
-                <div v-if="importing" class="w-full bg-muted rounded-full h-2 mb-2 overflow-hidden">
-                    <div class="bg-primary h-2 rounded-full transition-all duration-300" :style="{ width: importProgress + '%' }"></div>
-                </div>
-                <div v-if="importResult" class="bg-muted/50 p-4 rounded-lg border border-slate-200">
-                    <div class="flex gap-4 mb-2 text-sm">
-                        <span class="text-green-600 font-semibold">成功: {{ importResult.success }}</span>
-                        <span class="text-red-600 font-semibold">失败: {{ importResult.failed }}</span>
-                    </div>
-                    <div v-if="importResult.errors.length > 0" class="max-h-32 overflow-y-auto text-xs text-red-500 space-y-1 custom-scrollbar pr-2">
-                        <div v-for="(err, idx) in importResult.errors" :key="idx">{{ err }}</div>
-                    </div>
-                </div>
+          <div v-if="importing || importResult" class="mt-4 space-y-2">
+            <div v-if="importing" class="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div class="bg-primary h-2 rounded-full transition-all duration-300" :style="{ width: importProgress + '%' }"></div>
             </div>
+            <div v-if="importResult" class="bg-muted/50 p-4 rounded-lg border text-sm">
+              <div class="flex gap-4 mb-2">
+                <span class="text-green-600 font-semibold flex items-center gap-1"><CheckCircle2 class="w-4 h-4"/> 成功: {{ importResult.success }}</span>
+                <span class="text-destructive font-semibold flex items-center gap-1"><XCircle class="w-4 h-4"/> 失败: {{ importResult.failed }}</span>
+              </div>
+              <ScrollArea v-if="importResult.errors.length > 0" class="h-32 w-full rounded border border-destructive/20 bg-destructive/5 p-2">
+                <div v-for="(err, idx) in importResult.errors" :key="idx" class="text-xs text-destructive mb-1">{{ err }}</div>
+              </ScrollArea>
+            </div>
+          </div>
         </div>
-    </a-modal>
+      </DialogContent>
+    </Dialog>
 
     <!-- Batch Prompt Dialog -->
-    <a-modal 
-        v-model:open="batchPromptDialogVisible" 
-        title="批量生成 Prompt" 
-        :footer="null"
-        width="700px"
-        destroyOnClose
-        centered
-    >
-        <div class="py-4 space-y-4">
-            <div class="bg-amber-50 border border-amber-100 rounded-lg p-4 text-sm text-amber-700 leading-relaxed">
-                该功能将根据当前列表中的所有指标（受搜索条件影响），自动生成一份完整的指标提取 Prompt 模板。
-            </div>
+    <Dialog v-model:open="batchPromptDialogVisible">
+      <DialogContent class="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle>批量生成 Prompt</DialogTitle>
+          <DialogDescription>
+            该功能将根据当前列表中的所有指标（受搜索条件影响），自动生成一份完整的指标提取 Prompt 模板。
+          </DialogDescription>
+        </DialogHeader>
 
-            <div class="bg-muted/50 p-4 rounded-lg border border-slate-200 h-[400px] overflow-y-auto font-mono text-sm whitespace-pre-wrap select-text custom-scrollbar">
-                <div v-if="generatingPrompt" class="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <svg class="animate-spin h-8 w-8 mb-2 text-amber-500" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <div class="bg-muted/30 p-4 rounded-lg border h-[400px] overflow-hidden font-mono text-sm">
+           <ScrollArea class="h-full w-full">
+                <div v-if="generatingPrompt" class="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 mt-32">
+                    <Loader2 class="h-8 w-8 animate-spin text-amber-500" />
                     <span>正在生成 Prompt...</span>
                 </div>
-                <div v-else class="text-slate-700">{{ generatedPrompt || '点击下方按钮开始生成...' }}</div>
-            </div>
-
-            <div class="flex justify-end gap-4 pt-2">
-                <button @click="generateBatchPrompt" :disabled="generatingPrompt" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
-                    {{ generatingPrompt ? '生成中...' : '开始生成' }}
-                </button>
-                <button v-if="generatedPrompt" @click="copyPrompt" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-muted/50 transition-colors">
-                    复制内容
-                </button>
-            </div>
+                <div v-else class="whitespace-pre-wrap select-text text-foreground">{{ generatedPrompt || '点击下方按钮开始生成...' }}</div>
+           </ScrollArea>
         </div>
-    </a-modal>
+
+        <DialogFooter>
+          <Button variant="outline" @click="batchPromptDialogVisible = false">关闭</Button>
+          <Button @click="generateBatchPrompt" :disabled="generatingPrompt">
+            {{ generatingPrompt ? '生成中...' : '开始生成' }}
+          </Button>
+          <Button v-if="generatedPrompt" variant="secondary" @click="copyPrompt" class="gap-2">
+            <Copy class="w-4 h-4" />
+            复制内容
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Delete Confirmation -->
+    <AlertDialog v-model:open="deleteDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogDescription>
+            确定要删除指标 "{{ indicatorToDelete?.name }}" 吗？此操作无法撤销。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="deleteDialogOpen = false">取消</AlertDialogCancel>
+          <AlertDialogAction @click="confirmDelete" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed, defineAsyncComponent } from 'vue';
 import axios from 'axios';
-import { message, Modal } from 'ant-design-vue';
 import dayjs from 'dayjs';
+import { 
+    Search, Plus, Upload, Sparkles, MoreHorizontal, Edit, Play, 
+    Trash2, FileText, Loader2, Calendar, ArrowRight, Info, 
+    UploadCloud, CheckCircle2, XCircle, Copy
+} from 'lucide-vue-next';
+
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { useToast } from '@/components/ui/toast/use-toast';
 
 const IndicatorForm = defineAsyncComponent(() => import('./IndicatorForm.vue'));
 
 const emit = defineEmits(['navigate-to-extraction']);
+const { toast } = useToast();
 
 const api = axios.create({ baseURL: '/api/v1' });
 
@@ -281,6 +344,10 @@ const fileInput = ref(null);
 const batchPromptDialogVisible = ref(false);
 const generatingPrompt = ref(false);
 const generatedPrompt = ref('');
+
+// Delete State
+const deleteDialogOpen = ref(false);
+const indicatorToDelete = ref(null);
 
 // Computed
 const uniqueGroups = computed(() => {
@@ -304,13 +371,6 @@ const filteredIndicators = computed(() => {
 const dialogVisible = ref(false);
 const dialogType = ref('create');
 const submitting = ref(false);
-const form = reactive({
-  id: null,
-  group: '',
-  name: '',
-  alias: '',
-  description: ''
-});
 
 const selectedIndicator = ref(null);
 
@@ -322,7 +382,11 @@ const fetchIndicators = async () => {
     indicators.value = res.data;
     total.value = res.data.length;
   } catch (e) {
-    message.error('获取指标列表失败');
+    toast({
+        title: "获取指标列表失败",
+        description: e.message,
+        variant: "destructive"
+    });
   } finally {
     loading.value = false;
   }
@@ -345,41 +409,49 @@ const handleFormSubmit = async (payload) => {
   try {
     if (dialogType.value === 'create') {
       await api.post('/indicators/', payload);
-      message.success('添加成功');
+      toast({ title: "添加成功" });
       // Reset filters to ensure new item is visible
       searchQuery.value = '';
       filterGroup.value = '';
     } else {
       await api.patch(`/indicators/${selectedIndicator.value.id}`, payload);
-      message.success('更新成功');
+      toast({ title: "更新成功" });
     }
     dialogVisible.value = false;
     fetchIndicators();
   } catch (e) {
     console.error(e);
-    message.error(e.response?.data?.detail || '操作失败');
+    toast({
+        title: "操作失败",
+        description: e.response?.data?.detail || e.message,
+        variant: "destructive"
+    });
   } finally {
     submitting.value = false;
   }
 };
 
 const handleDelete = (row) => {
-  Modal.confirm({
-    title: '确认删除',
-    content: `确定要删除指标 "${row.name}" 吗？此操作无法撤销。`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    onOk: async () => {
-      try {
-        await api.delete(`/indicators/${row.id}`);
-        message.success('删除成功');
+    indicatorToDelete.value = row;
+    deleteDialogOpen.value = true;
+};
+
+const confirmDelete = async () => {
+    if (!indicatorToDelete.value) return;
+    try {
+        await api.delete(`/indicators/${indicatorToDelete.value.id}`);
+        toast({ title: "删除成功" });
         fetchIndicators();
-      } catch (e) {
-        message.error('删除失败');
-      }
+    } catch (e) {
+        toast({
+            title: "删除失败",
+            description: e.message,
+            variant: "destructive"
+        });
+    } finally {
+        deleteDialogOpen.value = false;
+        indicatorToDelete.value = null;
     }
-  });
 };
 
 const handleExtract = (row) => {
@@ -423,17 +495,25 @@ const handleImportFile = async (e) => {
         importResult.value = res.data;
         
         if (res.data.failed === 0) {
-            message.success(`成功导入 ${res.data.success} 条数据`);
+            toast({ title: `成功导入 ${res.data.success} 条数据` });
             setTimeout(() => {
                 importDialogVisible.value = false;
                 fetchIndicators();
             }, 1500);
         } else {
-            message.warning(`导入完成，但有 ${res.data.failed} 条失败`);
+            toast({ 
+                title: "导入完成", 
+                description: `成功: ${res.data.success}, 失败: ${res.data.failed}`,
+                variant: "warning" 
+            });
             fetchIndicators();
         }
     } catch (e) {
-        message.error(e.response?.data?.detail || '导入失败');
+        toast({
+            title: "导入失败",
+            description: e.response?.data?.detail || e.message,
+            variant: "destructive"
+        });
         importProgress.value = 0;
     } finally {
         importing.value = false;
@@ -473,7 +553,11 @@ const generateBatchPrompt = async () => {
 
         generatedPrompt.value = finalOutput;
     } catch (e) {
-        message.error('生成失败');
+        toast({
+            title: "生成失败",
+            description: e.message,
+            variant: "destructive"
+        });
         console.error(e);
     } finally {
         generatingPrompt.value = false;
@@ -484,9 +568,9 @@ const copyPrompt = async () => {
     if (!generatedPrompt.value) return;
     try {
         await navigator.clipboard.writeText(generatedPrompt.value);
-        message.success('已复制到剪贴板');
+        toast({ title: "已复制到剪贴板" });
     } catch (err) {
-        message.error('复制失败');
+        toast({ title: "复制失败", variant: "destructive" });
     }
 };
 
@@ -494,13 +578,3 @@ onMounted(() => {
   fetchIndicators();
 });
 </script>
-
-<style scoped>
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-</style>

@@ -5,47 +5,55 @@
          class="fixed z-50"
          :style="{ left: position.x + 'px', top: position.y + 'px' }"
          @mousedown="startDrag">
-      <div class="bg-white/95 backdrop-blur-md w-[360px] box-border px-8 py-10 rounded-lg shadow-2xl border border-white/80 relative text-center select-none animate-[fadeIn_0.3s_ease-out] cursor-move">
-        <button class="absolute top-5 right-5 cursor-pointer text-gray-400 hover:text-gray-800 hover:bg-gray-100/50 rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 hover:rotate-90" @mousedown.stop @click="$emit('close')">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        </button>
+      <div class="bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 w-[360px] px-8 py-10 rounded-xl shadow-2xl border border-border relative text-center select-none animate-in fade-in zoom-in duration-300 cursor-move ring-1 ring-border/50">
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger as-child>
+                    <Button variant="ghost" size="icon" class="absolute top-4 right-4 h-8 w-8 rounded-full hover:bg-muted" @mousedown.stop @click="$emit('close')">
+                        <X class="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>关闭</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
         
-        <div class="w-[88px] h-[88px] mx-auto mb-6 bg-gradient-to-b from-brand-primary/10 to-brand-primary/5 rounded-[28px] flex justify-center items-center shadow-[0_8px_16px_-4px_rgba(0,82,217,0.15)] ring-1 ring-inset ring-white/50 relative">
-            <svg width="50" height="50" viewBox="0 0 24 24" fill="#0052D9" class="drop-shadow-md">
-                <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#85B1FF"/>
-                <path d="M14 2V8H20" fill="#5E96FF"/>
-                <path d="M8 12H16M8 16H16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <div class="absolute -bottom-1 -right-1 bg-gradient-to-br from-brand-gradient-start to-brand-gradient-end text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg border-2 border-white">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                </svg>
+        <div class="w-20 h-20 mx-auto mb-6 bg-primary/10 rounded-3xl flex justify-center items-center shadow-inner ring-1 ring-inset ring-background/50 relative">
+            <Mic class="w-10 h-10 text-primary drop-shadow-sm" />
+            <div class="absolute -bottom-2 -right-2 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center shadow-lg border-2 border-background">
+                <Plus class="w-5 h-5" />
             </div>
         </div>
         
-        <h2 class="text-xl text-gray-900 m-4 font-semibold tracking-tight">录音纪要</h2>
-        <div class="text-sm text-gray-500 mb-8 leading-relaxed">
+        <h2 class="text-xl text-foreground m-4 font-semibold tracking-tight">录音纪要</h2>
+        <div class="text-sm text-muted-foreground mb-8 leading-relaxed">
             实时转文字<br>
             录音结束后查看会议总结
         </div>
 
         <!-- Settings Controls -->
         <div class="flex gap-4 mb-6 justify-center" @mousedown.stop>
-            <a-select v-model:value="format" style="width: 120px" class="text-left">
-                <a-select-option value="mp3">MP3 格式</a-select-option>
-                <a-select-option value="wav">WAV 格式</a-select-option>
-            </a-select>
-            <a-select v-model:value="vizType" style="width: 130px" class="text-left">
-                <a-select-option value="histogram">频率直方图</a-select-option>
-                <a-select-option value="wave">实时波形图</a-select-option>
-            </a-select>
+            <Select v-model="format">
+                <SelectTrigger class="w-[120px]">
+                    <SelectValue placeholder="格式" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="mp3">MP3 格式</SelectItem>
+                    <SelectItem value="wav">WAV 格式</SelectItem>
+                </SelectContent>
+            </Select>
+
+            <Select v-model="vizType">
+                <SelectTrigger class="w-[130px]">
+                    <SelectValue placeholder="视图" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="histogram">频率直方图</SelectItem>
+                    <SelectItem value="wave">实时波形图</SelectItem>
+                </SelectContent>
+            </Select>
         </div>
 
-        <button class="w-full p-4.5 rounded-lg border-none text-base font-semibold cursor-pointer transition-all duration-200 mb-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:-translate-y-px hover:shadow-xl hover:brightness-105 active:translate-y-0 active:shadow-md" @mousedown.stop @click="startRecording">开始录音</button>
+        <Button size="lg" class="w-full font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all" @mousedown.stop @click="startRecording">开始录音</Button>
       </div>
     </div>
 
@@ -54,47 +62,70 @@
          class="fixed z-50"
          :style="{ left: position.x + 'px', top: position.y + 'px' }"
          @mousedown="startDrag">
-      <div class="bg-white/95 backdrop-blur-md w-[360px] box-border px-8 py-10 rounded-lg shadow-2xl border border-white/80 relative text-center select-none animate-[fadeIn_0.3s_ease-out] cursor-move">
+      <div class="bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 w-[360px] px-8 py-10 rounded-xl shadow-2xl border border-border relative text-center select-none animate-in fade-in zoom-in duration-300 cursor-move ring-1 ring-border/50">
          <!-- Header -->
         <div class="flex justify-between items-start mb-8">
             <div class="flex items-center gap-2">
-                 <div class="w-2.5 h-2.5 bg-brand-primary rounded-full animate-pulse"></div>
-                 <span class="text-brand-primary font-semibold text-lg">{{ isPaused ? '已暂停' : '录音转写中...' }}</span>
+                 <div class="w-2.5 h-2.5 bg-primary rounded-full animate-pulse"></div>
+                 <span class="text-primary font-semibold text-lg">{{ isPaused ? '已暂停' : '录音转写中...' }}</span>
             </div>
             <div class="flex items-center gap-1" @mousedown.stop>
-                <button class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" @click="stopRecording">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger as-child>
+                            <Button variant="ghost" size="icon" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground" @click="stopRecording">
+                                <X class="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>结束录音</TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
             </div>
         </div>
 
         <!-- Visualization -->
-        <div class="h-[100px] flex items-center justify-center relative w-full mb-4">
+        <div class="h-[100px] flex items-center justify-center relative w-full mb-4 bg-muted/20 rounded-lg overflow-hidden border border-border/50">
              <div id="wave-canvas" class="w-full h-full opacity-80"></div> 
         </div>
 
         <!-- Timer -->
-        <div class="text-3xl font-semibold text-gray-800 mb-8 font-din tabular-nums">{{ timerText }}</div>
+        <div class="text-4xl font-bold text-foreground mb-8 font-mono tabular-nums tracking-wider">{{ timerText }}</div>
 
         <!-- Controls -->
         <div class="flex justify-center gap-6" @mousedown.stop>
-             <button class="w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-200 bg-amber-50 text-amber-500 hover:bg-amber-100 border border-amber-200" @click="togglePause">
-                <svg v-if="!isPaused" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="5" width="4" height="14" rx="1"></rect>
-                    <rect x="14" y="5" width="4" height="14" rx="1"></rect>
-                </svg>
-                <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                     <path d="M8 5v14l11-7z"></path>
-                </svg>
-            </button>
-            <button class="w-14 h-14 rounded-lg flex items-center justify-center transition-all duration-200 bg-red-50 text-red-500 hover:bg-red-100 border border-red-200" @click="stopRecording">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-                </svg>
-            </button>
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            class="w-14 h-14 rounded-2xl border-2 transition-all duration-200"
+                            :class="isPaused ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-transparent shadow-lg shadow-primary/20' : 'bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50'"
+                            @click="togglePause"
+                        >
+                            <Play v-if="isPaused" class="w-6 h-6 ml-1 fill-current" />
+                            <Pause v-else class="w-6 h-6 fill-current" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{{ isPaused ? '继续' : '暂停' }}</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            class="w-14 h-14 rounded-2xl border-2 transition-all duration-200 bg-red-50 text-red-600 hover:bg-red-100 border-red-200 dark:bg-red-950/30 dark:border-red-900/50"
+                            @click="stopRecording"
+                        >
+                            <Square class="w-6 h-6 fill-current" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>停止并保存</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         </div>
       </div>
     </div>
@@ -102,11 +133,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, reactive } from 'vue';
-import { message } from 'ant-design-vue';
+import { ref, onMounted, onUnmounted, reactive } from 'vue';
+import { useToast } from '@/components/ui/toast/use-toast';
 import dayjs from 'dayjs';
+import { X, Mic, Plus, Play, Pause, Square } from 'lucide-vue-next';
+
+// Shadcn Components
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const emit = defineEmits(['close', 'finish']);
+
+const { toast } = useToast();
 
 const state = ref('start'); // start, recording
 const format = ref('mp3');
@@ -184,7 +234,7 @@ const initRecorder = async () => {
         await loadScript('/recorder-lib/frequency.histogram.view.js');
         await loadScript('/recorder-lib/waveview.js');
     } catch (e) {
-        message.error("Failed to load recorder libraries");
+        toast({ variant: "destructive", title: "无法加载录音库", description: "请检查网络连接" });
         console.error(e);
     }
 };
@@ -206,7 +256,7 @@ onUnmounted(() => {
 
 const startRecording = () => {
     if (!window.Recorder) {
-        message.error("Recorder library not loaded yet");
+        toast({ variant: "destructive", title: "录音组件未就绪", description: "请稍候再试" });
         return;
     }
 
@@ -249,7 +299,7 @@ const startRecording = () => {
         }, 100);
 
     }, (msg, isUserNotAllow) => {
-        message.error("Unable to open recorder: " + msg);
+        toast({ variant: "destructive", title: "无法打开录音", description: isUserNotAllow ? "请允许浏览器访问麦克风" : msg });
     });
 };
 
@@ -275,7 +325,7 @@ const stopRecording = () => {
             emit('close');
             
         }, (msg) => {
-            message.error("Stop failed: " + msg);
+            toast({ variant: "destructive", title: "停止失败", description: msg });
         });
     }
 };
@@ -312,12 +362,4 @@ const updateTimer = () => {
     const sec = seconds % 60;
     timerText.value = (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec);
 };
-
-onUnmounted(() => {
-    if (rec) {
-        rec.close();
-    }
-    clearInterval(timerInterval);
-});
-
 </script>
