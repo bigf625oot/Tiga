@@ -177,43 +177,80 @@
                   点击左上角“新建任务”开始新的对话
                </p>
             </div>
-            <div v-else class="space-y-1">
-               <div 
+            <div v-else-if="!isSidebarCollapsed" class="space-y-1">
+               <Card 
                  v-for="session in topSessions" 
                  :key="session.id"
                  @click="selectSession(session.id)"
-                 class="group relative flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all hover:bg-muted/60"
-                 :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-muted text-foreground shadow-sm dark:glass-sidebar-item-active dark:bg-transparent' : 'text-muted-foreground'"
+                 class="group relative flex items-center gap-3 p-3 mb-2 rounded-lg cursor-pointer transition-all duration-300 border-slate-200 dark:border-border shadow-sm hover:shadow-md hover:-translate-y-[2px]"
+                 :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-card text-foreground ring-1 ring-primary/20 dark:glass-sidebar-item-active dark:bg-transparent' : 'bg-card text-muted-foreground hover:bg-accent/50'"
                >
-                  <!-- Progress Circle -->
-                  <div class="relative h-8 w-8 flex-shrink-0 flex items-center justify-center">
-                     <div class="absolute inset-0 rounded-full border-2 border-muted" />
-                     <svg class="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 32 32">
-                        <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2" class="text-primary transition-all duration-500" :stroke-dasharray="88" :stroke-dashoffset="88 - (88 * getSessionProgress(session)) / 100" />
+                  <!-- Progress Circle & Avatar -->
+                  <div class="relative h-10 w-10 flex-shrink-0 flex items-center justify-center">
+                     <!-- Avatar (Center) -->
+                     <Avatar class="relative z-10 h-7 w-7 border border-border shadow-sm">
+                        <AvatarImage 
+                           v-if="getAgentIcon(session.agent_id)" 
+                           :src="getAgentIcon(session.agent_id)" 
+                           :alt="session.title" 
+                           class="object-cover bg-white"
+                        />
+                        <AvatarFallback class="bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                           <img src="/tiga.svg" class="h-3.5 w-3.5" />
+                        </AvatarFallback>
+                     </Avatar>
+                     
+                     <!-- Progress Ring (Outer) -->
+                     <svg class="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40">
+                        <!-- Background Circle -->
+                        <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2.5" class="text-muted/20" />
+                        <!-- Progress Circle -->
+                        <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2.5" 
+                          class="text-blue-500 transition-all duration-500 ease-out" 
+                          stroke-linecap="round"
+                          :stroke-dasharray="2 * Math.PI * 18" 
+                          :stroke-dashoffset="2 * Math.PI * 18 - (2 * Math.PI * 18 * getSessionProgress(session)) / 100" 
+                        />
                      </svg>
-                     <div class="relative z-10 h-5 w-5 rounded-full overflow-hidden flex items-center justify-center bg-background">
-                        <AgentIcon v-if="getAgentIcon(session.agent_id)" :src="getAgentIcon(session.agent_id)" :name="session.title" :size="20" />
-                        <div v-else class="h-full w-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                           <img src="/tiga.svg" class="h-3 w-3" />
-                        </div>
+                  </div>
+
+                  <!-- Content -->
+                  <div v-if="!isSidebarCollapsed" class="flex-1 min-w-0 flex flex-col gap-0.5">
+                     <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-semibold truncate text-foreground">{{ session.title || '新对话' }}</span>
+                        <Badge variant="secondary" class="h-4 px-1 text-[10px] font-normal rounded-sm flex-shrink-0">
+                           {{ getSessionProgress(session) === 100 ? '已完成' : '运行中' }}
+                        </Badge>
+                     </div>
+                     <div class="flex items-center gap-2 text-[10px] text-muted-foreground/80">
+                        <span>{{ formatDate(session.updated_at).split(' ')[0] }}</span>
+                        <span>•</span>
+                        <span>{{ getSessionProgress(session) }}%</span>
                      </div>
                   </div>
 
-                  <div v-if="!isSidebarCollapsed" class="flex-1 min-w-0 flex flex-col">
-                     <span class="text-sm font-medium truncate" :class="currentSessionId === session.id ? 'text-foreground' : 'text-foreground/80'">{{ session.title || '新对话' }}</span>
-                     <span class="text-[10px] text-muted-foreground/60 truncate">{{ formatDate(session.updated_at).split(' ')[0] }}</span>
-                  </div>
-
-                  <Button 
+                  <!-- Actions -->
+                  <div 
                     v-if="!isSidebarCollapsed"
-                    @click.stop="confirmDeleteSession(session.id)"
-                    variant="ghost" 
-                    size="icon" 
-                    class="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute right-1 top-1/2 -translate-y-1/2 hover:bg-destructive/10 hover:text-destructive"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-background/80 backdrop-blur-sm rounded-md p-0.5 shadow-sm border border-border/50"
                   >
-                     <Trash2 class="h-3.5 w-3.5" />
-                  </Button>
-               </div>
+                     <Button 
+                       @click.stop="confirmDeleteSession(session.id)"
+                       variant="ghost" 
+                       size="icon" 
+                       class="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-sm"
+                     >
+                        <Trash2 class="h-3.5 w-3.5" />
+                     </Button>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       class="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-sm"
+                     >
+                        <MoreHorizontal class="h-3.5 w-3.5" />
+                     </Button>
+                  </div>
+               </Card>
 
                <Button v-if="sessions.length > 5 && !isSidebarCollapsed" variant="ghost" size="sm" class="w-full text-xs text-muted-foreground h-8 mt-2" @click="allSessionsModalVisible = true">
                   查看更多
@@ -380,6 +417,8 @@ import { useTheme } from '@/composables/useTheme';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Toaster } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -393,7 +432,7 @@ import AgentIcon from '@/shared/components/atoms/AgentIcon/AgentIcon.vue';
 import {
   Menu, X, Plus, MessageSquare, Clock, Search, Mic, BarChart, Calculator,
   LayoutGrid, Database, Film, Box, Workflow, Network, Share2,
-  Trash2, Settings, Cpu
+  Trash2, Settings, Cpu, MoreHorizontal
 } from 'lucide-vue-next';
 
 // Initialize Theme

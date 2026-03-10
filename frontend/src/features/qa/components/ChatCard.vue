@@ -10,7 +10,7 @@
     <div 
       v-if="showAvatar" 
       class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden mt-1 transition-all duration-300 hover:scale-105"
-      :class="[isUser ? 'bg-indigo-600 ml-2' : 'bg-muted mr-2']"
+      :class="[isUser ? 'bg-indigo-600 ml-4' : 'bg-muted mr-4']"
     >
       <img v-if="isUser" src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="user" class="w-full h-full object-cover" />
       <img v-else-if="agent?.icon || agent?.icon_url" :src="agent?.icon || agent?.icon_url" alt="agent" class="w-full h-full object-cover" />
@@ -155,13 +155,13 @@
         <!-- Actions (Footer) -->
         <div v-if="!isUser" class="mt-2 pt-2 flex items-center gap-4 text-muted-foreground border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
              <button class="hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
-                <span class="text-xs">复制</span>
+                <Copy class="w-4 h-4" />
              </button>
              <button class="hover:text-green-600 transition-colors" title="赞">
-                <span class="text-xs">点赞</span>
+                <ThumbsUp class="w-4 h-4" />
              </button>
              <button class="hover:text-red-600 transition-colors" title="踩">
-                <span class="text-xs">点踩</span>
+                <ThumbsDown class="w-4 h-4" />
              </button>
         </div>
       </div>
@@ -172,6 +172,7 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
 import dayjs from 'dayjs';
+import { Copy, ThumbsUp, ThumbsDown } from 'lucide-vue-next';
 import ChartFrame from '../../analytics/components/ChartFrame.vue';
 import GenericResourceCard from './GenericResourceCard.vue';
 import { useMessageParser } from '../composables/useMessageParser';
@@ -195,9 +196,9 @@ const { processOption } = useChartOptions();
 // Computed
 const bubbleClasses = computed(() => {
   if (props.isUser) {
-    return 'bg-primary text-primary-foreground rounded-lg rounded-tr-sm';
+    return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm';
   } else {
-    return 'bg-card text-card-foreground rounded-lg rounded-tl-sm border border-border';
+    return 'bg-muted/50 text-foreground rounded-2xl rounded-tl-sm';
   }
 });
 

@@ -12,8 +12,8 @@
     <div v-if="useTaskUI" class="h-full flex flex-col">
       <!-- Header -->
       <div class="flex-none px-4 py-3 border-b bg-background/80 backdrop-blur-md z-30 flex justify-between items-center supports-[backdrop-filter]:bg-background/60">
-          <div class="flex items-center gap-4 min-w-0">
-              <div class="relative w-9 h-9 flex items-center justify-center shrink-0">
+          <div class="flex items-center gap-4 min-w-0" v-if="!isLeftCollapsed">
+                  <div class="relative w-9 h-9 flex items-center justify-center shrink-0">
                   <!-- Custom Progress Ring -->
                   <div class="absolute inset-0 rounded-full border-2 border-muted"></div>
                   <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
@@ -29,10 +29,17 @@
                     />
                   </svg>
                   
-                  <div class="absolute inset-0 m-auto w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm overflow-hidden">
-                      <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-full h-full object-cover" alt="Agent" />
-                      <BaseIcon v-else icon="mdi:file-document-outline" class="text-white" :size="14" />
-                  </div>
+                  <Avatar class="absolute inset-0 m-auto w-6 h-6 shadow-sm">
+                      <AvatarImage 
+                          v-if="currentAgent?.icon || currentAgent?.icon_url" 
+                          :src="currentAgent?.icon || currentAgent?.icon_url" 
+                          class="object-cover bg-white" 
+                          alt="Agent" 
+                      />
+                      <AvatarFallback class="bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
+                          <BaseIcon icon="mdi:file-document-outline" :size="14" />
+                      </AvatarFallback>
+                  </Avatar>
               </div>
 
               <div class="min-w-0">
@@ -247,16 +254,19 @@
         />
 
         <!-- Input Area (Fixed Bottom for Chat) -->
-        <div v-if="messages.length > 0" class="flex-none w-full p-4 bg-background/80 backdrop-blur-sm z-30 border-t border-border shadow-sm">
-            <div class="max-w-4xl mx-auto relative">
-                <div class="relative flex flex-col gap-2 border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all rounded-xl p-3 shadow-sm">
+        <div v-if="messages.length > 0" class="flex-none w-full p-4 pb-6 z-30 sticky bottom-0 bg-transparent">
+             <!-- Gradient Mask -->
+             <div class="absolute -top-12 left-0 w-full h-12 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
+             
+             <div class="max-w-4xl mx-auto relative bg-background rounded-2xl border border-border/50 shadow-lg focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300">
+                <div class="relative flex flex-col w-full">
                     <!-- Attachments Preview -->
-                    <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-1 pt-1">
+                    <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-3 pt-3">
                         <Badge 
                           v-for="(att, idx) in selectedAttachments" 
                           :key="idx" 
                           variant="secondary"
-                          class="flex items-center gap-1 px-2 py-1"
+                          class="flex items-center gap-1 px-2 py-1 bg-muted/50 border-border/50"
                         >
                             <Paperclip class="w-3 h-3" />
                             <span class="max-w-[100px] truncate">{{ att.name }}</span>
@@ -264,29 +274,75 @@
                         </Badge>
                     </div>
 
+                    <!-- Textarea -->
                     <textarea 
                         ref="textareaRef"
                         v-model="input" 
                         @keydown="onInputKeydown"
                         rows="1"
                         :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm bg-transparent min-h-[40px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground"
+                        class="w-full p-4 resize-none outline-none text-sm bg-transparent min-h-[56px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground/70"
                         :disabled="isLoading"
                         @input="adjustHeight"
                     ></textarea>
 
-                    <div class="flex justify-between items-center pt-2">
-                         <div class="flex items-center gap-2 h-8">
-                             <div v-if="mode !== 'auto_task'" class="flex items-center gap-2 cursor-pointer select-none h-full px-2" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
-                                <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75" />
-                                <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-primary' : 'text-muted-foreground'">联网搜索</span>
-                             </div>
+                    <!-- Bottom Toolbar -->
+                    <div class="flex justify-between items-center px-2 pb-2">
+                         <div class="flex items-center gap-1">
+                             <TooltipProvider>
+                               <Tooltip>
+                                 <TooltipTrigger as-child>
+                                   <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:bg-muted rounded-lg" @click="openAttachmentModal">
+                                      <Paperclip class="w-4 h-4" />
+                                   </Button>
+                                 </TooltipTrigger>
+                                 <TooltipContent>添加附件</TooltipContent>
+                               </Tooltip>
+                             </TooltipProvider>
+
+                             <template v-if="mode !== 'auto_task'">
+                               <div class="flex items-center gap-2 cursor-pointer select-none px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                  <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75 data-[state=checked]:bg-blue-500" />
+                                  <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                      <Globe v-if="isNetworkSearchEnabled" class="w-3.5 h-3.5 text-blue-500" />
+                                      <span :class="isNetworkSearchEnabled ? 'text-blue-500' : ''">联网搜索</span>
+                                  </div>
+                               </div>
+                             </template>
                          </div>
-                         <div class="flex items-center gap-4 h-8">
+                         
+                         <div class="flex items-center gap-2">
+                             <!-- Agent Selector -->
+                             <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" @click="toggleAgentSelect">
+                                  <Avatar class="w-5 h-5 border border-blue-500/20">
+                                      <AvatarImage 
+                                          v-if="currentAgent?.icon || currentAgent?.icon_url" 
+                                          :src="currentAgent?.icon || currentAgent?.icon_url" 
+                                          class="object-cover bg-white"
+                                      />
+                                      <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
+                                          <Zap class="w-3.5 h-3.5 text-blue-500" />
+                                      </AvatarFallback>
+                                  </Avatar>
+                                  <Select 
+                                      v-model="selectedAgentId" 
+                                      @update:modelValue="handleAgentChange"
+                                      :open="agentSelectOpen"
+                                      @update:open="val => agentSelectOpen = val"
+                                  >
+                                    <SelectTrigger class="w-auto min-w-[60px] max-w-[120px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none gap-1">
+                                        <SelectValue placeholder="选择智能体" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                             </div>
+
                              <Button 
                                 @click="sendMessage" 
                                 size="icon"
-                                class="h-8 w-8 rounded-full shadow-md transition-all active:scale-95"
+                                class="h-8 w-8 rounded-full shadow-sm transition-all active:scale-95"
                                 :variant="(input.trim() || isTaskRunning) ? 'default' : 'secondary'"
                                 :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                              >
@@ -335,24 +391,31 @@
           <div v-if="messages.length > 0 && !embedded" class="px-4 py-3 border-b border-border flex justify-between items-center bg-background/80 backdrop-blur-sm z-10">
               <div class="flex items-center gap-4 group flex-1">
                   <div class="relative w-9 h-9 flex items-center justify-center">
-                    <div class="absolute inset-0 rounded-full border-2 border-muted"></div>
-                    <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
-                        <circle
-                        cx="18"
-                        cy="18"
-                        r="16"
-                        fill="none"
-                        class="stroke-primary transition-all duration-500 ease-in-out"
-                        stroke-width="2"
-                        stroke-dasharray="100"
-                        :stroke-dashoffset="100 - (workflowStore.progress || 0)"
-                        />
-                    </svg>
-                      <div class="absolute inset-0 m-auto w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm overflow-hidden">
-                          <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-full h-full object-cover" alt="Agent" />
-                          <BaseIcon v-else icon="mdi:file-document-outline" class="text-white" :size="14" />
-                      </div>
-                  </div>
+                <div class="absolute inset-0 rounded-full border-2 border-muted"></div>
+                <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                    <circle
+                    cx="18"
+                    cy="18"
+                    r="16"
+                    fill="none"
+                    class="stroke-primary transition-all duration-500 ease-in-out"
+                    stroke-width="2"
+                    stroke-dasharray="100"
+                    :stroke-dashoffset="100 - (workflowStore.progress || 0)"
+                    />
+                </svg>
+                  <Avatar class="absolute inset-0 m-auto w-6 h-6 shadow-sm">
+                      <AvatarImage 
+                          v-if="currentAgent?.icon || currentAgent?.icon_url" 
+                          :src="currentAgent?.icon || currentAgent?.icon_url" 
+                          class="object-cover bg-white" 
+                          alt="Agent" 
+                      />
+                      <AvatarFallback class="bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
+                          <BaseIcon icon="mdi:file-document-outline" :size="14" />
+                      </AvatarFallback>
+                  </Avatar>
+              </div>
                   <div class="min-w-0">
                       <h2 class="font-semibold text-sm leading-tight truncate text-foreground">
                           {{ currentSession?.title || '新任务' }}
@@ -373,13 +436,13 @@
                       <h1 v-else class="text-xl font-semibold text-foreground text-center">有什么可以帮您？</h1>
                   </div>
                   
-                  <div class="w-full relative flex flex-col gap-2 border bg-background/50 backdrop-blur focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all rounded-xl p-3 shadow-lg">
-                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-1 pt-1">
+                  <div class="w-full relative flex flex-col bg-background rounded-2xl border border-border/50 shadow-lg focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300">
+                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-3 pt-3">
                         <Badge 
                           v-for="(att, idx) in selectedAttachments" 
                           :key="idx" 
                           variant="secondary"
-                          class="flex items-center gap-1 px-2 py-1"
+                          class="flex items-center gap-1 px-2 py-1 bg-muted/50 border-border/50"
                         >
                             <Paperclip class="w-3 h-3" />
                             <span class="max-w-[100px] truncate">{{ att.name }}</span>
@@ -393,17 +456,17 @@
                           @keydown="onInputKeydown"
                           rows="1"
                           :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm bg-transparent min-h-[40px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground"
+                        class="w-full p-4 resize-none outline-none text-sm bg-transparent min-h-[56px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground/70"
                         :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
-                      <div class="flex justify-between items-center pt-2">
-                           <div class="flex items-center gap-2 h-8">
+                      <div class="flex justify-between items-center px-2 pb-2">
+                           <div class="flex items-center gap-1">
                                <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger as-child>
-                                    <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full" @click="openAttachmentModal">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:bg-muted rounded-lg" @click="openAttachmentModal">
                                         <Paperclip class="w-4 h-4" />
                                     </Button>
                                     </TooltipTrigger>
@@ -411,19 +474,20 @@
                                 </Tooltip>
                                </TooltipProvider>
 
-                               <Separator orientation="vertical" class="h-4" />
-                               
                                <DropdownMenu v-if="!embedded">
                                 <DropdownMenuTrigger as-child>
-                                  <Button variant="ghost" size="sm" class="h-8 gap-2 px-2 font-normal text-muted-foreground hover:text-foreground">
-                                    <MessageSquare v-if="mode === 'chat'" class="w-4 h-4 text-primary" />
-                                    <Kanban v-else-if="mode === 'workflow'" class="w-4 h-4 text-primary" />
-                                    <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-4 h-4" />
-                                    <span>
-                                        {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : 'Openclaw') }}
-                                    </span>
-                                    <ChevronDown class="w-3 h-3 opacity-50" />
-                                  </Button>
+                                  <div class="flex items-center gap-2 cursor-pointer select-none px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors">
+                                      <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                          <MessageSquare v-if="mode === 'chat'" class="w-3.5 h-3.5" />
+                                          <Kanban v-else-if="mode === 'workflow'" class="w-3.5 h-3.5 text-blue-500" />
+                                          <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
+                                          
+                                          <span :class="(mode === 'workflow' || mode === 'auto_task') ? 'text-blue-500' : ''">
+                                              {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : 'Openclaw') }}
+                                          </span>
+                                          <ChevronDown class="w-3 h-3 opacity-50" />
+                                      </div>
+                                  </div>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start">
                                   <DropdownMenuItem @click="handleModeChange('chat')">
@@ -439,21 +503,27 @@
                                </DropdownMenu>
 
                                <template v-if="mode !== 'auto_task' && !embedded">
-                                   <Separator orientation="vertical" class="h-4" />
-                                   <div class="flex items-center gap-2 cursor-pointer select-none px-2" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
-                                      <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75" />
-                                      <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-primary' : 'text-muted-foreground'">联网搜索</span>
+                                   <div class="flex items-center gap-2 cursor-pointer select-none px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                      <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75 data-[state=checked]:bg-blue-500" />
+                                      <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                          <Globe v-if="isNetworkSearchEnabled" class="w-3.5 h-3.5 text-blue-500" />
+                                          <span :class="isNetworkSearchEnabled ? 'text-blue-500' : ''">联网搜索</span>
+                                      </div>
                                    </div>
                                </template>
                            </div>
                            
-                           <div class="flex items-center gap-3 h-8">
-                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-transparent" @click="toggleAgentSelect">
-                                  <Avatar class="w-5 h-5">
-                                    <AvatarImage v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" />
-                                    <AvatarFallback>
-                                        <img src="/tiga.svg" class="w-full h-full p-1" />
-                                    </AvatarFallback>
+                           <div class="flex items-center gap-2">
+                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" @click="toggleAgentSelect">
+                                  <Avatar class="w-5 h-5 border border-blue-500/20">
+                                      <AvatarImage 
+                                          v-if="currentAgent?.icon || currentAgent?.icon_url" 
+                                          :src="currentAgent?.icon || currentAgent?.icon_url" 
+                                          class="object-cover bg-white"
+                                      />
+                                      <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
+                                          <Zap class="w-3.5 h-3.5 text-blue-500" />
+                                      </AvatarFallback>
                                   </Avatar>
                                   <Select 
                                       v-model="selectedAgentId" 
@@ -461,7 +531,7 @@
                                       :open="agentSelectOpen"
                                       @update:open="val => agentSelectOpen = val"
                                   >
-                                    <SelectTrigger class="w-[110px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none">
+                                    <SelectTrigger class="w-auto min-w-[60px] max-w-[120px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none gap-1">
                                         <SelectValue placeholder="选择智能体" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -473,7 +543,7 @@
                                <Button 
                                   @click="sendMessage" 
                                   size="icon"
-                                  class="h-8 w-8 rounded-full shadow-md transition-all active:scale-95"
+                                  class="h-8 w-8 rounded-full shadow-sm transition-all active:scale-95"
                                   :variant="(input.trim() || isTaskRunning) ? 'default' : 'secondary'"
                                   :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
@@ -523,15 +593,18 @@
               @open-doc-space="handleOpenDocSpace"
           />
 
-          <div v-if="messages.length > 0" class="flex-none w-full p-4 bg-background/80 backdrop-blur-sm z-30 border-t border-border shadow-sm">
-              <div class="max-w-4xl mx-auto relative">
-                  <div class="relative flex flex-col gap-2 border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all rounded-xl p-3 shadow-sm">
-                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-1 pt-1">
+          <div v-if="messages.length > 0" class="flex-none w-full p-4 pb-6 z-30 sticky bottom-0 bg-transparent">
+              <!-- Gradient Mask -->
+              <div class="absolute -top-12 left-0 w-full h-12 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
+
+              <div class="max-w-4xl mx-auto relative bg-background rounded-2xl border border-border/50 shadow-lg focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300">
+                  <div class="relative flex flex-col w-full">
+                      <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-3 pt-3">
                         <Badge 
                           v-for="(att, idx) in selectedAttachments" 
                           :key="idx" 
                           variant="secondary"
-                          class="flex items-center gap-1 px-2 py-1"
+                          class="flex items-center gap-1 px-2 py-1 bg-muted/50 border-border/50"
                         >
                             <Paperclip class="w-3 h-3" />
                             <span class="max-w-[100px] truncate">{{ att.name }}</span>
@@ -545,17 +618,17 @@
                           @keydown="onInputKeydown"
                           rows="1"
                           :placeholder="'描述您的需求...'"
-                        class="w-full p-2 resize-none outline-none text-sm bg-transparent min-h-[40px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground"
+                        class="w-full p-4 resize-none outline-none text-sm bg-transparent min-h-[56px] max-h-[200px] custom-scrollbar placeholder:text-muted-foreground/70"
                         :disabled="isLoading"
                           @input="adjustHeight"
                       ></textarea>
 
-                      <div class="flex justify-between items-center pt-2">
-                           <div class="flex items-center gap-2 h-8">
+                      <div class="flex justify-between items-center px-2 pb-2">
+                           <div class="flex items-center gap-1">
                                <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger as-child>
-                                    <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full" @click="openAttachmentModal">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:bg-muted rounded-lg" @click="openAttachmentModal">
                                         <Paperclip class="w-4 h-4" />
                                     </Button>
                                     </TooltipTrigger>
@@ -563,36 +636,58 @@
                                 </Tooltip>
                                </TooltipProvider>
 
-                               <Separator orientation="vertical" class="h-4" />
-                               <div class="flex items-center gap-2 cursor-pointer select-none px-2" @click="toggleWorkflowMode" v-if="!embedded">
-                                  <Switch :checked="isWorkflowMode" class="pointer-events-none scale-75" />
-                                  <span class="text-xs font-medium" :class="isWorkflowMode ? 'text-primary' : 'text-muted-foreground'">任务模式</span>
-                               </div>
+                               <DropdownMenu v-if="!embedded">
+                                <DropdownMenuTrigger as-child>
+                                  <div class="flex items-center gap-2 cursor-pointer select-none px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors">
+                                      <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                          <MessageSquare v-if="mode === 'chat'" class="w-3.5 h-3.5" />
+                                          <Kanban v-else-if="mode === 'workflow'" class="w-3.5 h-3.5 text-blue-500" />
+                                          <img v-else-if="mode === 'auto_task'" src="/openclaw.svg" class="w-3.5 h-3.5" />
+                                          
+                                          <span :class="(mode === 'workflow' || mode === 'auto_task') ? 'text-blue-500' : ''">
+                                              {{ mode === 'chat' ? '对话模式' : (mode === 'workflow' ? '智能规划' : 'Openclaw') }}
+                                          </span>
+                                          <ChevronDown class="w-3 h-3 opacity-50" />
+                                      </div>
+                                  </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem @click="handleModeChange('chat')">
+                                    <MessageSquare class="w-4 h-4 mr-2" /> 对话模式
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem @click="handleModeChange('workflow')">
+                                    <Kanban class="w-4 h-4 mr-2" /> 智能规划
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem @click="handleModeChange('auto_task')">
+                                    <img src="/openclaw.svg" class="w-4 h-4 mr-2" /> Openclaw
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                               </DropdownMenu>
                                
                                <template v-if="mode !== 'auto_task' && !embedded">
-                                   <Separator orientation="vertical" class="h-4" />
-                                   <div class="flex items-center gap-2 cursor-pointer select-none px-2" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
-                                      <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75" />
-                                      <span class="text-xs font-medium" :class="isNetworkSearchEnabled ? 'text-primary' : 'text-muted-foreground'">联网搜索</span>
+                                   <div class="flex items-center gap-2 cursor-pointer select-none px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors" @click="isNetworkSearchEnabled = !isNetworkSearchEnabled">
+                                      <Switch :checked="isNetworkSearchEnabled" class="pointer-events-none scale-75 data-[state=checked]:bg-blue-500" />
+                                      <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                          <Globe v-if="isNetworkSearchEnabled" class="w-3.5 h-3.5 text-blue-500" />
+                                          <span :class="isNetworkSearchEnabled ? 'text-blue-500' : ''">联网搜索</span>
+                                      </div>
                                    </div>
                                </template>
                            </div>
 
-                           <div class="flex items-center gap-3 h-8">
-                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-transparent" @click="toggleAgentSelect">
-                                  <Avatar class="w-5 h-5">
-                                    <AvatarImage v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" />
-                                    <AvatarFallback>
-                                        <img src="/tiga.svg" class="w-full h-full p-1" />
-                                    </AvatarFallback>
-                                  </Avatar>
+                           <div class="flex items-center gap-2">
+                               <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" @click="toggleAgentSelect">
+                                  <div class="w-5 h-5 rounded bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center border border-blue-500/20">
+                                      <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-3.5 h-3.5 object-cover" />
+                                      <Zap v-else class="w-3.5 h-3.5 text-blue-500" />
+                                  </div>
                                   <Select 
                                       v-model="selectedAgentId" 
                                       @update:modelValue="handleAgentChange"
                                       :open="agentSelectOpen"
                                       @update:open="val => agentSelectOpen = val"
                                   >
-                                    <SelectTrigger class="w-[110px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none">
+                                    <SelectTrigger class="w-auto min-w-[60px] max-w-[120px] h-6 border-0 bg-transparent p-0 text-xs focus:ring-0 shadow-none gap-1">
                                         <SelectValue placeholder="选择智能体" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -604,7 +699,7 @@
                                <Button 
                                   @click="sendMessage" 
                                   size="icon"
-                                  class="h-8 w-8 rounded-full shadow-md transition-all active:scale-95"
+                                  class="h-8 w-8 rounded-full shadow-sm transition-all active:scale-95"
                                   :variant="(input.trim() || isTaskRunning) ? 'default' : 'secondary'"
                                   :disabled="(!input.trim() && !isTaskRunning) || isStopping"
                                >
@@ -772,7 +867,9 @@ import {
     Kanban, 
     MessageSquare, 
     ChevronDown, 
-    Check 
+    Check,
+    Globe,
+    Zap
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -937,6 +1034,7 @@ const handleRunTask = async (prompt) => {
                         body: JSON.stringify({ agent_id: targetAgent.id })
                     });
                     if (currentSession.value) currentSession.value.agent_id = targetAgent.id;
+                    emit('refresh-sessions');
                     toast({ description: `已切换至"${targetAgent.name}"以执行任务` });
                 } catch (e) {
                     console.error("Failed to force update session agent", e);
@@ -1283,7 +1381,10 @@ const handleAgentChange = async (val) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ agent_id: newValue || null })
             });
-            if (res.ok && currentSession.value) currentSession.value.agent_id = newValue;
+            if (res.ok && currentSession.value) {
+                currentSession.value.agent_id = newValue;
+                emit('refresh-sessions');
+            }
         } catch (e) { console.error("Failed to update session agent", e); }
     }
 };

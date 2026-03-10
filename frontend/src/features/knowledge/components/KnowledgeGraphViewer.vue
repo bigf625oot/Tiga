@@ -1,20 +1,22 @@
 <template>
     <div class="h-full flex flex-row overflow-hidden bg-background transition-colors duration-300">
         <!-- Left: Sidebar -->
-        <KnowledgeGraphSidebar
-            v-if="!loading && hasData"
-            v-model:searchQuery="searchQuery"
-            v-model:selectedTypes="selectedTypes"
-            v-model:timeRange="timeRange"
-            :allTypes="allTypes"
-            :colorMap="colorMap"
-            :typeCounts="typeCounts"
-            :stats="stats"
-            :timeBounds="timeBounds"
-        />
+        <div v-if="!loading && hasData" class="h-full flex-none relative bg-background border-r border-border">
+            <KnowledgeGraphSidebar
+                v-model:searchQuery="searchQuery"
+                v-model:selectedTypes="selectedTypes"
+                v-model:timeRange="timeRange"
+                :allTypes="allTypes"
+                :colorMap="colorMap"
+                :typeCounts="typeCounts"
+                :stats="stats"
+                :timeBounds="timeBounds"
+                class="border-none"
+            />
+        </div>
 
         <!-- Right: Graph -->
-        <div class="flex-1 relative h-full overflow-hidden bg-muted/10">
+        <div class="flex-1 relative h-full overflow-hidden bg-muted/10 min-w-0">
             <div v-if="loading" class="h-full flex flex-col items-center justify-center p-8 gap-4">
                 <!-- Skeleton for Graph -->
                 <div class="w-full h-full bg-background graph-skeleton relative overflow-hidden rounded-xl border border-border">
