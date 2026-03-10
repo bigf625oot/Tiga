@@ -20,6 +20,7 @@ const subTypeLabels: Record<string, string> = {
   [SourceType.S3]: 'S3',
   [SourceType.REST]: 'REST API',
   [SourceType.GENERIC_SQL]: '通用 SQL',
+  [SourceType.FILE_UPLOAD]: '文件上传',
   [TransformType.CLEAN_TEXT]: '文本清洗',
   [TransformType.FILTER]: '过滤',
   [TransformType.MAP]: '映射',

@@ -178,79 +178,54 @@
                </p>
             </div>
             <div v-else-if="!isSidebarCollapsed" class="space-y-1">
-               <Card 
-                 v-for="session in topSessions" 
-                 :key="session.id"
-                 @click="selectSession(session.id)"
-                 class="group relative flex items-center gap-3 p-3 mb-2 rounded-lg cursor-pointer transition-all duration-300 border-slate-200 dark:border-border shadow-sm hover:shadow-md hover:-translate-y-[2px]"
-                 :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-card text-foreground ring-1 ring-primary/20 dark:glass-sidebar-item-active dark:bg-transparent' : 'bg-card text-muted-foreground hover:bg-accent/50'"
-               >
-                  <!-- Progress Circle & Avatar -->
-                  <div class="relative h-10 w-10 flex-shrink-0 flex items-center justify-center">
-                     <!-- Avatar (Center) -->
-                     <Avatar class="relative z-10 h-7 w-7 border border-border shadow-sm">
-                        <AvatarImage 
-                           v-if="getAgentIcon(session.agent_id)" 
-                           :src="getAgentIcon(session.agent_id)" 
-                           :alt="session.title" 
-                           class="object-cover bg-white"
-                        />
-                        <AvatarFallback class="bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                           <img src="/tiga.svg" class="h-3.5 w-3.5" />
-                        </AvatarFallback>
-                     </Avatar>
-                     
-                     <!-- Progress Ring (Outer) -->
-                     <svg class="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40">
-                        <!-- Background Circle -->
-                        <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2.5" class="text-muted/20" />
-                        <!-- Progress Circle -->
-                        <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2.5" 
-                          class="text-blue-500 transition-all duration-500 ease-out" 
-                          stroke-linecap="round"
-                          :stroke-dasharray="2 * Math.PI * 18" 
-                          :stroke-dashoffset="2 * Math.PI * 18 - (2 * Math.PI * 18 * getSessionProgress(session)) / 100" 
-                        />
-                     </svg>
-                  </div>
+               <template v-for="(session, index) in topSessions" :key="session.id">
+                    <div 
+                      @click="selectSession(session.id)"
+                      class="group relative flex flex-col gap-1.5 p-2 rounded-lg cursor-pointer transition-all duration-300 border border-transparent hover:border-[#2f54eb] hover:bg-black/5 dark:hover:bg-white/5 hover:-translate-y-0.5"
+                      :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-black/5 dark:bg-white/10 shadow-sm' : ''"
+                    >
+                       <div class="flex items-center gap-2.5">
+                           <!-- Simple Avatar -->
+                           <div class="h-7 w-7 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
+                               <img 
+                                  v-if="getAgentIcon(session.agent_id)" 
+                                  :src="getAgentIcon(session.agent_id)" 
+                                  :alt="session.title" 
+                                  class="h-full w-full object-cover"
+                               />
+                               <img v-else src="/tiga.svg" class="h-full w-full object-cover opacity-80" />
+                           </div>
 
-                  <!-- Content -->
-                  <div v-if="!isSidebarCollapsed" class="flex-1 min-w-0 flex flex-col gap-0.5">
-                     <div class="flex items-center justify-between gap-2">
-                        <span class="text-sm font-semibold truncate text-foreground">{{ session.title || '新对话' }}</span>
-                        <Badge variant="secondary" class="h-4 px-1 text-[10px] font-normal rounded-sm flex-shrink-0">
-                           {{ getSessionProgress(session) === 100 ? '已完成' : '运行中' }}
-                        </Badge>
-                     </div>
-                     <div class="flex items-center gap-2 text-[10px] text-muted-foreground/80">
-                        <span>{{ formatDate(session.updated_at).split(' ')[0] }}</span>
-                        <span>•</span>
-                        <span>{{ getSessionProgress(session) }}%</span>
-                     </div>
-                  </div>
+                           <!-- Content -->
+                           <div class="flex-1 min-w-0">
+                              <div class="flex items-center justify-between gap-1">
+                                 <span class="text-sm font-medium truncate text-foreground/90 leading-tight">{{ session.title || '新对话' }}</span>
+                                 
+                                 <!-- Delete Button (Only visible on hover) -->
+                                  <button 
+                                    @click.stop="confirmDeleteSession(session.id)"
+                                    class="text-muted-foreground/50 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 p-0.5 rounded-md hover:bg-destructive/10"
+                                  >
+                                     <Trash2 class="h-3 w-3" />
+                                  </button>
+                              </div>
+                              <div class="flex items-center justify-between mt-0.5">
+                                  <span class="text-[10px] text-muted-foreground/60 leading-none">{{ formatDate(session.updated_at).split(' ')[0] }}</span>
+                                  <span v-if="session.mode === 'workflow' || session.mode === 'auto_task'" class="text-[10px] text-muted-foreground/60 leading-none">{{ getSessionProgress(session) }}%</span>
+                              </div>
+                           </div>
+                       </div>
 
-                  <!-- Actions -->
-                  <div 
-                    v-if="!isSidebarCollapsed"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-background/80 backdrop-blur-sm rounded-md p-0.5 shadow-sm border border-border/50"
-                  >
-                     <Button 
-                       @click.stop="confirmDeleteSession(session.id)"
-                       variant="ghost" 
-                       size="icon" 
-                       class="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-sm"
-                     >
-                        <Trash2 class="h-3.5 w-3.5" />
-                     </Button>
-                     <Button 
-                       variant="ghost" 
-                       size="icon" 
-                       class="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-sm"
-                     >
-                        <MoreHorizontal class="h-3.5 w-3.5" />
-                     </Button>
-                  </div>
-               </Card>
+                       <!-- Progress Bar -->
+                       <div v-if="session.mode === 'workflow' || session.mode === 'auto_task'" class="w-full h-0.5 bg-secondary/50 rounded-full overflow-hidden mt-0.5">
+                           <div 
+                             class="h-full bg-blue-500 transition-all duration-500 ease-out" 
+                             :style="{ width: `${getSessionProgress(session)}%` }"
+                           ></div>
+                       </div>
+                    </div>
+                    <Separator v-if="index < topSessions.length - 1" class="my-1 bg-border/60" />
+                </template>
 
                <Button v-if="sessions.length > 5 && !isSidebarCollapsed" variant="ghost" size="sm" class="w-full text-xs text-muted-foreground h-8 mt-2" @click="allSessionsModalVisible = true">
                   查看更多
@@ -423,6 +398,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SmartQA from '@/features/qa/components/SmartQA.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';

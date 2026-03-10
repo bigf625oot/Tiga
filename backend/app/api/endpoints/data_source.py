@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,6 +49,10 @@ async def test_connection(
     try:
         # Construct config dict from input
         cfg = config.model_dump()
+        
+        # Merge nested config if exists (important for database type overrides)
+        if config.config and isinstance(config.config, dict):
+            cfg.update(config.config)
         
         # Determine strategy
         strategy = get_strategy(config.type, cfg)
@@ -130,6 +134,109 @@ async def fetch_metadata(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Metadata fetch failed: {str(e)}")
 
+
+@router.get("/{id}/tables/{table_name}/columns", response_model=List[str])
+async def fetch_columns(
+    id: int,
+    table_name: str,
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    """
+    Fetch columns for a specific table in a data source.
+    """
+    ds = await crud_data_source.get(db, id)
+    if not ds:
+        raise HTTPException(status_code=404, detail="Data source not found")
+    
+    cfg = _get_strategy_config(ds)
+    
+    try:
+        strategy = get_strategy(ds.type, cfg)
+        # Use fetch_data with limit 1 to infer columns from result keys
+        # Ideally, we should have a dedicated method in strategy like `fetch_columns` or `inspect_table`
+        # But `fetch_data` returns a generator of DataChunk.
+        
+        # We need to run this asynchronously
+        columns = []
+        async for chunk in strategy.fetch_data(table_name=table_name, limit=1):
+            if chunk.data and len(chunk.data) > 0:
+                columns = list(chunk.data[0].keys())
+                break # We only need the first chunk
+        
+        return columns
+    except Exception as e:
+        # Log error but return empty list to avoid breaking UI
+        print(f"Error fetching columns: {e}")
+        return []
+
+@router.get("/{id}/tables/{table_name}/preview", response_model=List[dict])
+async def preview_table(
+    id: int,
+    table_name: str,
+    limit: int = 10,
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    """
+    Preview data from a specific table.
+    Returns a standard JSON list (not a stream) for easier UI consumption.
+    """
+    ds = await crud_data_source.get(db, id)
+    if not ds:
+        raise HTTPException(status_code=404, detail="Data source not found")
+    
+    cfg = _get_strategy_config(ds)
+    
+    try:
+        strategy = get_strategy(ds.type, cfg)
+        
+        # Collect data until limit is reached
+        rows = []
+        async for chunk in strategy.fetch_data(table_name=table_name, limit=limit):
+            if chunk.data:
+                rows.extend(chunk.data)
+                if len(rows) >= limit:
+                    break
+        
+        return rows[:limit]
+    except Exception as e:
+        # Log error
+        print(f"Error previewing data: {e}")
+        # Return empty list or raise 500? Raising 500 is better for UI feedback
+        raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
+
+@router.post("/{id}/query/preview", response_model=List[dict])
+async def preview_query(
+    id: int,
+    query: str = Body(..., embed=True),
+    limit: int = 10,
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    """
+    Execute a raw SQL query and return preview results.
+    """
+    ds = await crud_data_source.get(db, id)
+    if not ds:
+        raise HTTPException(status_code=404, detail="Data source not found")
+    
+    cfg = _get_strategy_config(ds)
+    
+    try:
+        strategy = get_strategy(ds.type, cfg)
+        
+        # Collect data until limit is reached
+        rows = []
+        # Pass query to fetch_data
+        async for chunk in strategy.fetch_data(query=query, limit=limit):
+            if chunk.data:
+                rows.extend(chunk.data)
+                if len(rows) >= limit:
+                    break
+        
+        return rows[:limit]
+    except Exception as e:
+        # Log error
+        print(f"Error executing query: {e}")
+        raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
 
 @router.get("/{id}/data")
 async def fetch_data(

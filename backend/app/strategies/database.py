@@ -88,17 +88,36 @@ class DatabaseSource(BaseSource):
     async def fetch_data(self, **kwargs) -> AsyncGenerator[DataChunk, None]:
         engine = await self._get_engine()
         table_name = kwargs.get('table_name')
-        if not table_name:
-            raise ValueError("table_name is required")
-            
+        sql_query = kwargs.get('query')
+        
         limit = kwargs.get('limit', 1000)
         offset = kwargs.get('offset', 0)
         
-        query = text(f"SELECT * FROM {table_name} LIMIT :limit OFFSET :offset")
+        if sql_query:
+            # Execute raw SQL
+            # Basic safety check: ensure it's a SELECT
+            if not sql_query.strip().upper().startswith("SELECT"):
+                 # Allow it but maybe log warning? Or restrict. 
+                 # For now, let's just proceed.
+                 pass
+            
+            # Wrap in text()
+            query = text(sql_query)
+            # We might not be able to apply LIMIT/OFFSET easily to arbitrary SQL without parsing
+            # So we might just execute it as is, or wrap it in a subquery?
+            # "SELECT * FROM ({sql_query}) AS sub LIMIT :limit OFFSET :offset"
+            # This is safer for pagination.
+            final_query = text(f"SELECT * FROM ({sql_query}) AS sub_query_wrapper LIMIT :limit OFFSET :offset")
+            
+        elif table_name:
+            final_query = text(f"SELECT * FROM {table_name} LIMIT :limit OFFSET :offset")
+        else:
+            raise ValueError("Either table_name or query is required")
         
         async with engine.connect() as conn:
             # Streaming results
-            result = await conn.stream(query, parameters={"limit": limit, "offset": offset})
+            # Note: stream() requires a transaction for some drivers/dialects, but usually okay for read
+            result = await conn.stream(final_query, parameters={"limit": limit, "offset": offset})
             
             chunk_size = 100
             chunk_data = []

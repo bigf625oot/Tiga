@@ -7,7 +7,7 @@
         <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">知识库</h2>
         <div class="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800"></div>
         <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-[200px]">
-          <TabsList class="grid w-full grid-cols-2 h-8">
+          <TabsList class="grid w-full grid-cols-2 h-9">
             <TabsTrigger value="shared" class="text-xs">共享</TabsTrigger>
             <TabsTrigger value="personal" class="text-xs">个人</TabsTrigger>
           </TabsList>

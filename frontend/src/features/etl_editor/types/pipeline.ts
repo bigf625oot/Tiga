@@ -14,7 +14,8 @@ export enum SourceType {
   SFTP = "sftp",
   CRAWLER = "crawler",
   DATABASE = "database",
-  API = "api"
+  API = "api",
+  FILE_UPLOAD = "file_upload"
 }
 
 export enum TransformType {
@@ -25,7 +26,8 @@ export enum TransformType {
   FILTER = "filter",
   LLM_INTENT = "llm_intent",
   VECTOR_EMBEDDING = "vector_embedding",
-  GRAPH_EXTRACT = "graph_extract"
+  GRAPH_EXTRACT = "graph_extract",
+  KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"
 }
 
 export enum SinkType {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Database, ArrowRightLeft, Save, FileJson, Globe, FileText, Webhook, Brain, Sparkles, Network } from 'lucide-vue-next';
+import { Database, ArrowRightLeft, Save, FileJson, Globe, FileText, Webhook, Brain, Sparkles, Network, UploadCloud, Search } from 'lucide-vue-next';
 import { Card } from '@/components/ui/card';
 import { NodeType, SourceType, TransformType, SinkType } from '../types/pipeline';
 
@@ -23,6 +23,7 @@ const components = [
       { type: NodeType.SOURCE, subType: SourceType.CRAWLER, label: 'Web 爬虫', icon: Globe },
       { type: NodeType.SOURCE, subType: SourceType.DATABASE, label: '结构化数据库', icon: Database },
       { type: NodeType.SOURCE, subType: SourceType.API, label: '外部 API', icon: Webhook },
+      { type: NodeType.SOURCE, subType: SourceType.FILE_UPLOAD, label: '单文件上传', icon: UploadCloud },
     ]
   },
   {
@@ -36,6 +37,7 @@ const components = [
       { type: NodeType.TRANSFORM, subType: TransformType.LLM_INTENT, label: 'LLM 意图识别', icon: Brain },
       { type: NodeType.TRANSFORM, subType: TransformType.VECTOR_EMBEDDING, label: '向量嵌入', icon: Sparkles },
       { type: NodeType.TRANSFORM, subType: TransformType.GRAPH_EXTRACT, label: '知识图谱提取', icon: Network },
+      { type: NodeType.TRANSFORM, subType: TransformType.KNOWLEDGE_RETRIEVAL, label: '知识库检索 (RAG)', icon: Search },
     ]
   },
   {

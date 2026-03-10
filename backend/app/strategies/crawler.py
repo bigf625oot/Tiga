@@ -74,21 +74,69 @@ class CrawlerSource(BaseSource):
 
     async def fetch_data(self, **kwargs) -> AsyncGenerator[DataChunk, None]:
         url = kwargs.get('url') or self.config.get('url')
+        selector = self.config.get('selector')
+        use_custom_selector = self.config.get('use_custom_selector', False)
+        js_render = self.config.get('js_render', False)
+        depth = self.config.get('depth', 1)
+
         if not url:
             raise ValueError("URL is required for crawling")
             
+        # Mocking AI Auto Extraction if selector is not provided
+        # In a real implementation, this would use a library like `trafilatura` or an LLM service
+        # to extract the main content.
+        
         async with aiohttp.ClientSession() as session:
             try:
+                # If js_render is True, we would use playwright or selenium here.
+                # For now, we simulate basic fetching.
                 async with session.get(url) as response:
-                    content = await response.text()
-                    # In a real crawler, we would parse HTML, extract links, etc.
-                    # Here we return the page content.
+                    html_content = await response.text()
+                    
+                    extracted_content = html_content
+                    extraction_method = "raw"
+
+                    if not use_custom_selector:
+                        # --- AI Auto Detect Simulation ---
+                        # Here we would use an intelligent extractor.
+                        # For demonstration, let's assume we strip scripts/styles and get body text.
+                        # In production: from trafilatura import extract; extracted_content = extract(html_content)
+                        try:
+                            # Simple heuristic: try to find <article> or main content div
+                            # This is a placeholder for "AI Auto Detect"
+                            import re
+                            body_match = re.search(r'<body[^>]*>(.*?)</body>', html_content, re.DOTALL | re.IGNORECASE)
+                            if body_match:
+                                # Remove scripts and styles
+                                clean_text = re.sub(r'<(script|style)[^>]*>.*?</\1>', '', body_match.group(1), flags=re.DOTALL | re.IGNORECASE)
+                                # Remove tags
+                                clean_text = re.sub(r'<[^>]+>', ' ', clean_text)
+                                # Normalize whitespace
+                                extracted_content = ' '.join(clean_text.split())
+                                extraction_method = "ai_auto"
+                            else:
+                                extracted_content = "Could not detect main content automatically."
+                        except Exception:
+                            extracted_content = "AI extraction failed, returning raw HTML."
+                    
+                    elif selector:
+                        # --- Custom Selector Extraction ---
+                        # We would use BeautifulSoup here.
+                        # from bs4 import BeautifulSoup
+                        # soup = BeautifulSoup(html_content, 'html.parser')
+                        # selection = soup.select(selector)
+                        # extracted_content = "\n".join([s.get_text() for s in selection])
+                        extraction_method = f"selector: {selector}"
+                        pass # Placeholder
+
                     yield DataChunk(
                         data=[{
                             'url': url,
                             'status': response.status,
-                            'content': content,
-                            'headers': dict(response.headers)
+                            'title': 'Page Title Detected', # Placeholder
+                            'content': extracted_content,
+                            'extraction_method': extraction_method,
+                            'crawled_at': 'now'
                         }],
                         count=1,
                         has_more=False

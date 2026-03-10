@@ -197,6 +197,7 @@ async def save_config(config: DbConnectionConfig):
 async def get_config():
     """
     Load the database configuration from a file.
+    If a config exists but no connection is active, try to auto-connect.
     """
     if not os.path.exists(CONFIG_FILE):
         return {}
@@ -204,7 +205,23 @@ async def get_config():
     try:
         async with aiofiles.open(CONFIG_FILE, mode="r") as f:
             content = await f.read()
-            return json.loads(content)
+            config_dict = json.loads(content)
+
+            # Check if we need to auto-connect
+            if config_dict and not data_query_service.current_db_config:
+                try:
+                    # Parse config dict to model
+                    config_model = DbConnectionConfig(**config_dict)
+                    logger.info("Auto-connecting to database using saved config...")
+                    
+                    # Await connection to ensure ready state when UI loads
+                    await data_query_service.connect_db(config_model)
+                    logger.info("Auto-connection successful.")
+                except Exception as e:
+                    logger.error(f"Auto-connection failed: {e}")
+                    # We don't raise here, just return the config so the user can see it and try manually.
+
+            return config_dict
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load config: {str(e)}")
 
