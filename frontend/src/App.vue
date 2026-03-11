@@ -177,59 +177,86 @@
                   点击左上角“新建任务”开始新的对话
                </p>
             </div>
-            <div v-else-if="!isSidebarCollapsed" class="space-y-1">
-               <template v-for="(session, index) in topSessions" :key="session.id">
-                    <div 
-                      @click="selectSession(session.id)"
-                      class="group relative flex flex-col gap-1.5 p-2 rounded-lg cursor-pointer transition-all duration-300 border border-transparent hover:border-[#2f54eb] hover:bg-black/5 dark:hover:bg-white/5 hover:-translate-y-0.5"
-                      :class="currentSessionId === session.id && currentView === 'chat' ? 'bg-black/5 dark:bg-white/10 shadow-sm' : ''"
-                    >
-                       <div class="flex items-center gap-2.5">
-                           <!-- Simple Avatar -->
-                           <div class="h-7 w-7 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
-                               <img 
-                                  v-if="getAgentIcon(session.agent_id)" 
-                                  :src="getAgentIcon(session.agent_id)" 
-                                  :alt="session.title" 
-                                  class="h-full w-full object-cover"
+            <div v-else class="space-y-1">
+               <template v-for="(group, gIndex) in groupedSessions" :key="group.agent.id">
+                   <Collapsible
+                       :open="isSidebarCollapsed || groupsState[group.agent.id]"
+                       @update:open="(val) => groupsState[group.agent.id] = val"
+                       class="space-y-1"
+                   >
+                       <!-- Group Header -->
+                       <div v-if="!isSidebarCollapsed" class="px-2 pt-3 pb-1 flex items-center justify-between group/header select-none">
+                           <CollapsibleTrigger class="flex items-center gap-2 w-full text-left hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background rounded-sm group/trigger cursor-pointer">
+                               <component 
+                                  :is="groupsState[group.agent.id] ? ChevronDown : ChevronRight" 
+                                  class="h-3 w-3 text-muted-foreground/50 transition-transform duration-200 group-hover/trigger:text-muted-foreground" 
                                />
-                               <img v-else src="/tiga.svg" class="h-full w-full object-cover opacity-80" />
-                           </div>
-
-                           <!-- Content -->
-                           <div class="flex-1 min-w-0">
-                              <div class="flex items-center justify-between gap-1">
-                                 <span class="text-sm font-medium truncate text-foreground/90 leading-tight">{{ session.title || '新对话' }}</span>
-                                 
-                                 <!-- Delete Button (Only visible on hover) -->
-                                  <button 
-                                    @click.stop="confirmDeleteSession(session.id)"
-                                    class="text-muted-foreground/50 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 p-0.5 rounded-md hover:bg-destructive/10"
-                                  >
-                                     <Trash2 class="h-3 w-3" />
-                                  </button>
-                              </div>
-                              <div class="flex items-center justify-between mt-0.5">
-                                  <span class="text-[10px] text-muted-foreground/60 leading-none">{{ formatDate(session.updated_at).split(' ')[0] }}</span>
-                                  <span v-if="session.mode === 'workflow' || session.mode === 'auto_task'" class="text-[10px] text-muted-foreground/60 leading-none">{{ getSessionProgress(session) }}%</span>
-                              </div>
-                           </div>
+                               <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate flex-1">
+                                   {{ group.agent.name || '默认助手' }}
+                               </h4>
+                           </CollapsibleTrigger>
+                           <span class="text-[10px] text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded-md opacity-0 group-hover/header:opacity-100 transition-opacity">
+                               {{ group.sessions.length }}
+                           </span>
                        </div>
+                       <Separator v-else-if="gIndex > 0" class="my-2 bg-border/30 mx-2" />
 
-                       <!-- Progress Bar -->
-                       <div v-if="session.mode === 'workflow' || session.mode === 'auto_task'" class="w-full h-0.5 bg-secondary/50 rounded-full overflow-hidden mt-0.5">
-                           <div 
-                             class="h-full bg-blue-500 transition-all duration-500 ease-out" 
-                             :style="{ width: `${getSessionProgress(session)}%` }"
-                           ></div>
-                       </div>
-                    </div>
-                    <Separator v-if="index < topSessions.length - 1" class="my-1 bg-border/60" />
-                </template>
+                       <CollapsibleContent class="data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up overflow-hidden">
+                           <div class="space-y-0.5">
+                               <div 
+                                 v-for="session in group.sessions" 
+                                 :key="session.id"
+                                 @click="selectSession(session.id)"
+                                 class="group relative flex flex-col gap-1.5 p-2 rounded-lg cursor-pointer transition-all duration-300 border border-transparent hover:bg-muted/50 dark:hover:bg-white/5"
+                                 :class="[
+                                    currentSessionId === session.id && currentView === 'chat' ? 'bg-muted dark:bg-white/10 shadow-sm' : '',
+                                    isSidebarCollapsed ? 'justify-center items-center' : ''
+                                 ]"
+                               >
+                                  <div class="flex items-center gap-2.5 w-full" :class="isSidebarCollapsed ? 'justify-center' : ''">
+                                      <!-- Simple Avatar -->
+                                      <div class="h-7 w-7 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
+                                          <img 
+                                             v-if="getAgentIcon(session.agent_id)" 
+                                             :src="getAgentIcon(session.agent_id)" 
+                                             :alt="session.title" 
+                                             class="h-full w-full object-cover"
+                                          />
+                                          <img v-else src="/tiga.svg" class="h-full w-full object-cover opacity-80" />
+                                      </div>
 
-               <Button v-if="sessions.length > 5 && !isSidebarCollapsed" variant="ghost" size="sm" class="w-full text-xs text-muted-foreground h-8 mt-2" @click="allSessionsModalVisible = true">
-                  查看更多
-               </Button>
+                                      <!-- Content -->
+                                      <div v-if="!isSidebarCollapsed" class="flex-1 min-w-0">
+                                         <div class="flex items-center justify-between gap-1">
+                                            <span class="text-sm font-medium truncate text-foreground/90 leading-tight">{{ session.title || '新对话' }}</span>
+                                            
+                                            <!-- Delete Button (Only visible on hover) -->
+                                             <button 
+                                               @click.stop="confirmDeleteSession(session.id)"
+                                               class="text-muted-foreground/50 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 p-0.5 rounded-md hover:bg-destructive/10"
+                                             >
+                                                <Trash2 class="h-3 w-3" />
+                                             </button>
+                                         </div>
+                                         <div class="flex items-center justify-between mt-0.5">
+                                             <span class="text-[10px] text-muted-foreground/60 leading-none">{{ formatDate(session.updated_at).split(' ')[0] }}</span>
+                                             <span v-if="session.mode === 'workflow' || session.mode === 'auto_task'" class="text-[10px] text-muted-foreground/60 leading-none">{{ getSessionProgress(session) }}%</span>
+                                         </div>
+                                      </div>
+                                  </div>
+
+                                  <!-- Progress Bar -->
+                                  <div v-if="!isSidebarCollapsed && (session.mode === 'workflow' || session.mode === 'auto_task')" class="w-full h-0.5 bg-secondary/50 rounded-full overflow-hidden mt-0.5">
+                                      <div 
+                                        class="h-full bg-blue-500 transition-all duration-500 ease-out" 
+                                        :style="{ width: `${getSessionProgress(session)}%` }"
+                                      ></div>
+                                  </div>
+                               </div>
+                           </div>
+                       </CollapsibleContent>
+                   </Collapsible>
+               </template>
             </div>
          </template>
 
@@ -383,7 +410,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, defineAsyncComponent } from 'vue';
+import { ref, onMounted, computed, defineAsyncComponent, reactive, watch } from 'vue';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
@@ -408,8 +435,13 @@ import AgentIcon from '@/shared/components/atoms/AgentIcon/AgentIcon.vue';
 import {
   Menu, X, Plus, MessageSquare, Clock, Search, Mic, BarChart, Calculator,
   LayoutGrid, Database, Film, Box, Workflow, Network, Share2,
-  Trash2, Settings, Cpu, MoreHorizontal
+  Trash2, Settings, Cpu, MoreHorizontal, ChevronRight, ChevronDown
 } from 'lucide-vue-next';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 // Initialize Theme
 const { isLightMode } = useTheme();
@@ -571,6 +603,41 @@ const deleteSession = async (id: any) => {
     }
 };
 
+const groupedSessions = computed(() => {
+    // 1. Sort sessions by date first
+    const sortedSessions = [...sessions.value].sort((a, b) => 
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    );
+
+    // 2. Group by agent
+    const groups: Record<string, { agent: any, sessions: any[] }> = {};
+    const defaultAgent = { id: 'default', name: '默认助手', icon: '/tiga.svg' };
+    
+    sortedSessions.forEach(session => {
+        const agentId = session.agent_id || 'default';
+        
+        if (!groups[agentId]) {
+            let agent = agents.value.find((a: any) => a.id === agentId);
+            if (!agent) {
+                 agent = agentId === 'default' ? defaultAgent : { id: agentId, name: '未知智能体', icon: '/tiga.svg' };
+            }
+            
+            groups[agentId] = {
+                agent,
+                sessions: []
+            };
+        }
+        groups[agentId].sessions.push(session);
+    });
+
+    // 3. Sort groups by latest session time
+    return Object.values(groups).sort((a, b) => {
+        const timeA = a.sessions.length > 0 ? new Date(a.sessions[0].updated_at).getTime() : 0;
+        const timeB = b.sessions.length > 0 ? new Date(b.sessions[0].updated_at).getTime() : 0;
+        return timeB - timeA;
+    });
+});
+
 const topSessions = computed(() => sessions.value.slice(0, 5));
 const filteredSessions = computed(() => {
     if (!sessionSearchKeyword.value) return sessions.value;
@@ -677,6 +744,16 @@ const handleBack = () => {
         currentView.value = 'etl_list';
     }
 };
+
+const groupsState = reactive<Record<string, boolean>>({});
+
+watch(() => groupedSessions.value, (newVal) => {
+    newVal.forEach(group => {
+        if (groupsState[group.agent.id] === undefined) {
+            groupsState[group.agent.id] = true;
+        }
+    });
+}, { immediate: true });
 
 onMounted(() => {
     fetchSessions();
