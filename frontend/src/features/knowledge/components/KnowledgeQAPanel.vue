@@ -1,22 +1,21 @@
 <template>
     <div v-show="visible" class="flex flex-col h-full border-l bg-background border-border w-[400px] shadow-xl transition-all duration-300 relative z-10">
         <!-- Header -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 bg-card">
-            <div class="flex items-center gap-2">
-                <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                    <Bot class="w-5 h-5 text-primary" />
+        <div class="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 bg-card/80 backdrop-blur-sm z-20">
+            <div class="flex items-center gap-2.5">
+                <div class="flex flex-col gap-0.5">
+                    <h3 class="font-semibold text-foreground text-lg leading-none">知识问答</h3>
                 </div>
-                <h3 class="font-semibold text-foreground text-sm">知识问答</h3>
             </div>
             <div class="flex items-center gap-1">
-                <Button variant="ghost" size="icon" class="h-8 w-8" @click="toggleHistoryPanel" title="历史会话">
-                    <History class="w-4 h-4" />
+                <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted/80 transition-colors" @click="toggleHistoryPanel" title="历史会话">
+                    <MessageSquare class="w-4 h-4 text-muted-foreground/70" />
                 </Button>
-                <Button variant="ghost" size="icon" class="h-8 w-8" @click="confirmClearChatHistory" title="新会话">
-                    <Plus class="w-4 h-4" />
+                <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted/80 transition-colors" @click="confirmClearChatHistory" title="新会话">
+                    <Plus class="w-4 h-4 text-muted-foreground/70" />
                 </Button>
-                <Button variant="ghost" size="icon" class="h-8 w-8" @click="$emit('close')" title="关闭">
-                    <X class="w-4 h-4" />
+                <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-red-50 hover:text-red-500 transition-colors" @click="$emit('close')" title="关闭">
+                    <X class="w-4 h-4 text-muted-foreground/70" />
                 </Button>
             </div>
         </div>
@@ -71,41 +70,59 @@
             <ScrollArea class="h-full px-4" ref="chatScrollArea">
                 <div class="py-4 space-y-6">
                     <!-- Empty State -->
-                    <div v-if="chatMessages.length === 0" class="flex flex-col items-center justify-center text-center mt-10 px-2">
-                        <div class="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-                            <Bot class="w-8 h-8 text-muted-foreground" />
+                    <div v-if="chatMessages.length === 0" class="flex flex-col items-center justify-center min-h-[400px] px-4 py-8 animate-in fade-in zoom-in duration-500">
+                        <div class="mb-8 text-center space-y-4">
+                            <div class="inline-flex items-center justify-center w-32 h-32 mb-2">
+                                <Vue3Lottie
+                                    :animationData="animationData"
+                                    :height="128"
+                                    :width="128"
+                                    :loop="true"
+                                    :autoPlay="true"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <h2 class="text-lg font-semibold tracking-tight text-foreground">知识问答助手</h2>
+                                <p class="text-sm text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
+                                    基于知识图谱与向量检索，为您提供精准的智能问答服务
+                                </p>
+                            </div>
                         </div>
-                        <h3 class="text-base font-medium text-foreground mb-2">问答助手</h3>
-                        <p class="text-xs text-muted-foreground leading-relaxed mb-8 max-w-[280px]">
-                            您可以问我任何知识中心内容的问题，我会结合知识图谱为您解答。
-                        </p>
                         
                         <!-- Mode Cards -->
-                        <div class="grid grid-cols-2 gap-2 w-full">
-                            <div 
+                        <div class="grid grid-cols-2 gap-3 w-full">
+                            <Card 
                                 v-for="card in modeCards" 
                                 :key="card.id"
-                                class="p-3 rounded-xl border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-all text-left group cursor-pointer"
+                                class="group relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/50 cursor-pointer bg-card/50 hover:bg-card border-muted"
                             >
-                                <div class="flex items-center gap-2 mb-2">
-                                    <div class="w-6 h-6 rounded-md bg-background flex items-center justify-center border border-border group-hover:border-primary/20">
-                                        <component :is="card.icon" class="w-3.5 h-3.5 text-primary" />
+                                <CardHeader class="p-3 pb-1 space-y-0">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="w-8 h-8 rounded-lg bg-background border shadow-sm flex items-center justify-center group-hover:text-primary group-hover:border-primary/30 transition-colors">
+                                            <component :is="card.icon" class="w-4 h-4" />
+                                        </div>
+                                        <ArrowUpRight class="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
                                     </div>
-                                    <span class="text-xs font-medium">{{ card.title }}</span>
-                                </div>
-                                <div class="space-y-1">
-                                    <div 
-                                        v-for="(ex, idx) in card.examples" 
-                                        :key="idx"
-                                        @click="handleSuggestion(ex)"
-                                        class="text-[10px] text-muted-foreground hover:text-primary cursor-pointer truncate flex items-center gap-1"
-                                        title="点击填入"
-                                    >
-                                        <div class="w-1 h-1 rounded-full bg-muted-foreground/30 group-hover:bg-primary"></div>
-                                        {{ ex }}
+                                    <CardTitle class="text-xs font-semibold">{{ card.title }}</CardTitle>
+                                </CardHeader>
+                                <CardContent class="p-3 pt-1">
+                                    <CardDescription class="text-[10px] text-muted-foreground/80 line-clamp-1 mb-2.5">
+                                        {{ card.desc }}
+                                    </CardDescription>
+                                    <div class="space-y-1 pt-1.5 border-t border-border/40">
+                                        <div 
+                                            v-for="(ex, idx) in card.examples.slice(0, 2)" 
+                                            :key="idx"
+                                            @click.stop="handleSuggestion(ex)"
+                                            class="text-[10px] text-muted-foreground hover:text-primary truncate flex items-center gap-1.5 py-0.5 transition-colors group/item cursor-pointer"
+                                            title="点击使用此示例"
+                                        >
+                                            <div class="w-1 h-1 rounded-full bg-primary/30 group-hover/item:bg-primary transition-colors"></div>
+                                            {{ ex }}
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
 
@@ -126,29 +143,29 @@
                             <div class="flex flex-col gap-2 max-w-[95%] w-full overflow-hidden">
                                 
                                 <!-- 1. Process Nodes (Collapsible) -->
-                                <div v-if="msg.steps && msg.steps.length > 0" class="border border-border rounded-lg overflow-hidden mb-1 bg-muted/30 w-full">
+                                <div v-if="msg.steps && msg.steps.length > 0" class="border border-amber-200/40 dark:border-amber-900/40 rounded-xl overflow-hidden mb-2 bg-amber-50/40 dark:bg-amber-950/20 w-full shadow-sm">
                                     <button 
                                         @click="toggleProcess(msg._id || index)"
-                                        class="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors"
+                                        class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-amber-100/30 dark:hover:bg-amber-900/30 transition-colors group"
                                     >
-                                        <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                            <Sparkles class="w-3.5 h-3.5 text-primary" />
-                                            <span>思考过程 ({{ msg.steps.length }} 步)</span>
+                                        <div class="flex items-center gap-2 text-xs font-medium text-amber-700/80 dark:text-amber-500/90">
+                                            <Brain class="w-3.5 h-3.5" :class="{'animate-pulse': chatLoading && index === chatMessages.length - 1}" />
+                                            <span>思考链 ({{ msg.steps.length }} 步)</span>
                                         </div>
                                         <ChevronRight 
-                                            class="w-3.5 h-3.5 text-muted-foreground transition-transform duration-200"
+                                            class="w-3.5 h-3.5 text-amber-600/50 dark:text-amber-500/50 transition-transform duration-200 group-hover:text-amber-600 dark:group-hover:text-amber-400"
                                             :class="isProcessExpanded(msg._id || index) ? 'rotate-90' : ''"
                                         />
                                     </button>
-                                    <div v-show="isProcessExpanded(msg._id || index)" class="bg-background px-3 py-2 border-t border-border">
-                                        <div class="space-y-2">
-                                            <div v-for="(step, sIdx) in msg.steps" :key="sIdx" class="flex gap-2">
-                                                <div class="flex flex-col items-center pt-1.5">
-                                                    <div class="w-1.5 h-1.5 rounded-full bg-primary/50"></div>
-                                                    <div v-if="sIdx < msg.steps.length - 1" class="w-px h-full bg-border my-0.5"></div>
+                                    <div v-show="isProcessExpanded(msg._id || index)" class="bg-background/40 px-3 py-2 border-t border-amber-200/30 dark:border-amber-900/30">
+                                        <div class="space-y-3 relative">
+                                            <div class="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-amber-200/50 dark:bg-amber-800/30"></div>
+                                            <div v-for="(step, sIdx) in msg.steps" :key="sIdx" class="flex gap-3 relative">
+                                                <div class="flex flex-col items-center pt-1.5 shrink-0 z-10">
+                                                    <div class="w-2.5 h-2.5 rounded-full bg-background border-2 border-amber-400/60 dark:border-amber-600/60 shadow-sm"></div>
                                                 </div>
                                                 <div class="pb-1 min-w-0 flex-1">
-                                                    <div class="text-[11px] text-muted-foreground break-words whitespace-pre-wrap font-mono">
+                                                    <div class="text-[11px] text-muted-foreground break-words whitespace-pre-wrap font-mono leading-relaxed">
                                                         {{ step.content }}
                                                     </div>
                                                 </div>
@@ -291,14 +308,14 @@
                     </div>
                     
                     <!-- Loading Indicator for new message -->
-                    <div v-if="chatLoading && (chatMessages.length === 0 || chatMessages[chatMessages.length - 1].role !== 'assistant')" class="flex gap-3 animate-pulse">
-                         <Avatar class="h-8 w-8 mt-0.5 border">
-                            <AvatarFallback class="bg-primary/10 text-primary">AI</AvatarFallback>
+                    <div v-if="chatLoading && (chatMessages.length === 0 || chatMessages[chatMessages.length - 1].role !== 'assistant')" class="flex gap-3 animate-in fade-in duration-300">
+                         <Avatar class="h-8 w-8 mt-0.5 border ring-2 ring-primary/5">
+                            <AvatarFallback class="bg-primary/10 text-primary font-semibold">AI</AvatarFallback>
                         </Avatar>
-                        <div class="flex items-center gap-1 p-3 bg-muted/30 rounded-2xl rounded-tl-sm w-fit border border-border">
-                            <div class="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style="animation-delay: 0s"></div>
-                            <div class="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                            <div class="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                        <div class="flex items-center gap-1.5 p-4 bg-muted/40 rounded-2xl rounded-tl-sm w-fit border border-border/50 shadow-sm">
+                            <div class="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                            <div class="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+                            <div class="w-2 h-2 bg-primary/80 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
                         </div>
                     </div>
                 </div>
@@ -306,26 +323,26 @@
         </div>
 
         <!-- Input Area -->
-        <div class="mt-auto pt-4 pb-4 px-4 border-t border-border bg-background">
-            <div class="relative">
-                <Input 
+        <div class="mt-auto pt-4 pb-6 px-4 border-t border-border bg-background/80 backdrop-blur-sm shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.03)] z-20">
+            <div class="relative group">
+                <Textarea 
                     v-model="chatInput" 
-                    @keyup.enter="sendChatMessage"
-                    type="text" 
-                    placeholder="输入问题..." 
-                    class="pr-12 py-6"
+                    @keydown.enter.prevent="handleInputKeydown"
+                    placeholder="输入您的问题..." 
+                    class="min-h-[52px] max-h-[200px] pr-12 py-3.5 rounded-xl resize-none border-muted-foreground/20 shadow-sm transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 bg-background/50 hover:bg-background hover:border-primary/30 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent"
                     :disabled="chatLoading"
                 />
                 <Button 
                     size="icon"
-                    class="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                    class="absolute right-2 bottom-2 h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-primary/90 hover:to-primary shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"
                     :disabled="chatLoading || !chatInput.trim()"
                     @click="sendChatMessage"
                 >
-                    <Send class="w-4 h-4" />
+                    <ArrowUpRight class="w-5 h-5 text-primary-foreground" />
                 </Button>
             </div>
-            <div class="text-[10px] text-center text-muted-foreground mt-2">
+            <div class="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground/60 mt-3 font-medium select-none">
+                <Sparkles class="w-3 h-3 text-primary/40" />
                 由混合检索引擎提供支持 (BM25 + Vector + Graph)
             </div>
         </div>
@@ -333,21 +350,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, reactive, nextTick, createVNode, onMounted } from 'vue';
+import { ref, watch, reactive, nextTick, createVNode, onMounted, h } from 'vue';
 import axios from 'axios';
 import { message, Modal } from 'ant-design-vue';
-import { ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons-vue';
 import { marked } from 'marked';
 import ChartFrame from '@/features/analytics/components/ChartFrame.vue';
 import { useChartOptimizer } from '@/features/analytics/composables/useChartOptimizer';
 import * as echarts from 'echarts';
+import { Vue3Lottie } from 'vue3-lottie';
+import animationData from '@/assets/data.json';
 
 // Shadcn UI Components
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { 
     Bot, 
     History, 
@@ -361,7 +386,17 @@ import {
     FileText, 
     Share2, 
     Send,
-    Loader2
+    Loader2,
+    ArrowUpRight,
+    AlertCircle,
+    Info,
+    Brain,
+    MessageSquare,
+    Search,
+    Wand2,
+    Cpu,
+    Zap,
+    SendHorizontal
 } from 'lucide-vue-next';
 
 // Props
@@ -477,21 +512,21 @@ const modeCards = [
     {
         id: 'auto',
         title: '智能问答',
-        icon: Sparkles,
+        icon: Wand2,
         desc: '自动识别意图，智能路由引擎',
         examples: ['分析这份文档的核心观点', '梳理关键实体关系']
     },
     {
         id: 'rag',
         title: '知识检索',
-        icon: FileText,
+        icon: Search,
         desc: '基于文档内容的精确问答',
         examples: ['什么是切片技术？', '文档中提到了哪些标准？']
     },
     {
         id: 'kg',
         title: '图谱分析',
-        icon: Share2,
+        icon: Zap,
         desc: '可视化实体关系与结构',
         examples: ['展示5G网络的关系图', '查看核心节点的关联']
     },
@@ -590,6 +625,13 @@ const fetchChatHistory = async (docId: number | string) => {
 const handleSuggestion = (text: string) => {
     if (chatLoading.value) return;
     chatInput.value = text;
+};
+
+const handleInputKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
 };
 
 const sendChatMessage = async () => {
@@ -753,7 +795,7 @@ const sendChatMessage = async () => {
 const confirmClearChatHistory = () => {
     Modal.confirm({
         title: '开启新会话？',
-        icon: createVNode(ExclamationCircleOutlined),
+        icon: h(AlertCircle, { class: 'text-amber-500 w-5 h-5' }),
         content: '这将开启一个新的空白会话，旧的记录将保留在历史中。',
         okText: '确认',
         cancelText: '取消',
@@ -795,13 +837,16 @@ const renderMarkdown = (content: string, hasStructuredSources = false) => {
                 const parsedThinkStr = typeof parsedThink === 'string' ? parsedThink : '';
                 const sanitizedThink = (parsedThinkStr || '').replace(/\[object\s+Object\]/gi, '').trim();
                 thinkHtml = `
-                <details class="mb-3 bg-amber-50/50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-900/30 overflow-hidden group" ${isPartial ? 'open' : ''}>
-                    <summary class="px-3 py-1.5 text-xs font-medium text-amber-600/70 dark:text-amber-500/70 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-2 select-none transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-                        思考过程
+                <details class="mb-4 rounded-xl border border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-r from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/10 overflow-hidden group shadow-sm" ${isPartial ? 'open' : ''}>
+                    <summary class="px-4 py-2 text-xs font-medium text-amber-700/80 dark:text-amber-400/90 cursor-pointer hover:bg-amber-100/30 dark:hover:bg-amber-900/30 flex items-center gap-2.5 select-none transition-all duration-300">
+                        <div class="relative flex items-center justify-center w-4 h-4">
+                             <svg class="w-4 h-4 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.907-3.25"/><path d="M18 18a4 4 0 0 0 1.907-3.25"/></svg>
+                        </div>
+                        <span class="tracking-wide">深度思考中...</span>
+                        <svg class="w-3.5 h-3.5 ml-auto opacity-50 group-open:rotate-180 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </summary>
-                    <div class="px-3 py-2 text-xs text-muted-foreground border-t border-amber-100/50 dark:border-amber-900/20 bg-background/50 leading-relaxed">
-                        ${sanitizedThink || '正在检索思考中...'}
+                    <div class="px-4 py-3 text-xs text-muted-foreground/90 border-t border-amber-200/30 dark:border-amber-900/30 bg-background/40 leading-relaxed animate-in slide-in-from-top-1 duration-300">
+                        ${sanitizedThink || '正在构建思维链...'}
                     </div>
                 </details>`;
             }
@@ -869,7 +914,7 @@ const handleCitationClick = (e: MouseEvent, msg: any) => {
         } else if (source.source === 'vector') {
              Modal.info({
                 title: `参考来源 [${idx + 1}]`,
-                icon: createVNode(InfoCircleOutlined),
+                icon: h(Info, { class: 'text-primary w-5 h-5' }),
                 width: 600,
                 content: createVNode('div', { class: 'space-y-3' }, [
                     createVNode('div', { class: 'text-xs text-muted-foreground flex items-center gap-2 pb-2 border-b border-border' }, [
@@ -1001,20 +1046,27 @@ watch(() => props.visible, (newVal) => {
 }
 .markdown-content :deep(strong) {
     font-weight: 600;
+    color: hsl(var(--foreground));
 }
 .markdown-content :deep(.entity-citation) {
     color: hsl(var(--primary));
-    background-color: hsl(var(--primary) / 0.1);
-    padding: 0px 4px;
-    border-radius: 4px;
-    border-bottom: 1px dashed hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.08);
+    padding: 2px 6px;
+    margin: 0 2px;
+    border-radius: 6px;
+    border: 1px solid hsl(var(--primary) / 0.2);
     cursor: pointer;
     font-weight: 500;
-    transition: all 0.2s;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
 }
 .markdown-content :deep(.entity-citation:hover) {
-    background-color: hsl(var(--primary) / 0.2);
-    border-bottom-style: solid;
+    background-color: hsl(var(--primary) / 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px -1px hsl(var(--primary) / 0.2);
 }
 .markdown-content :deep(.citation-icon) {
     display: inline-flex;
@@ -1022,23 +1074,24 @@ watch(() => props.visible, (newVal) => {
     justify-content: center;
     min-width: 16px;
     height: 16px;
-    background-color: hsl(var(--muted));
+    background-color: hsl(var(--muted)/0.5);
     color: hsl(var(--primary));
     border: 1px solid hsl(var(--border));
     border-radius: 4px;
     font-size: 9px;
     font-weight: 700;
-    margin: 0 2px;
-    padding: 0 3px;
+    margin: 0 1px 0 3px;
+    padding: 0 4px;
     cursor: pointer;
     vertical-align: super;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .markdown-content :deep(.citation-icon:hover) {
     background-color: hsl(var(--primary));
     border-color: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 .markdown-content.no-sources :deep(.citation-icon) {
     pointer-events: none;

@@ -869,7 +869,14 @@ import {
     ChevronDown, 
     Check,
     Globe,
-    Zap
+    Zap,
+    BrainCircuit,
+    FileText,
+    Share2,
+    BarChart3,
+    Sparkles,
+    History,
+    Send
 } from 'lucide-vue-next';
 
 const props = defineProps({
