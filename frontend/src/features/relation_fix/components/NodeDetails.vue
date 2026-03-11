@@ -21,7 +21,7 @@
           </Button>
       </div>
       
-      <ScrollArea class="h-[200px] border rounded-md bg-muted/10">
+      <ScrollArea class="flex-1 border rounded-md bg-muted/10">
           <div class="p-2 space-y-2">
             <div v-for="(attr, index) in otherAttributes" :key="index" class="group flex items-center gap-2">
                 <Input v-model="attr.key" placeholder="Key" class="h-8 text-xs font-mono w-1/3 bg-background shadow-sm" />

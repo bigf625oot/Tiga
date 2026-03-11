@@ -52,8 +52,13 @@ export const relationFixApi = {
   },
   
   searchNodes: async (q: string) => {
-      const response = await api.get<string[]>('/relation-fix/search', { params: { q } });
-      return response.data;
+    const response = await api.get<string[]>('/relation-fix/search', { params: { q } });
+    return response.data;
+  },
+  
+  getRandomNodes: async (limit = 10) => {
+    const response = await api.get<string[]>('/relation-fix/random', { params: { limit } });
+    return response.data;
   },
   
   getNodeRelations: async (nodeId: string) => {

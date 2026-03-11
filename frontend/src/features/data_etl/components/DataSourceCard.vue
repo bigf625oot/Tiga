@@ -10,7 +10,7 @@
     <!-- Selected Indicator Strip -->
     <div 
       v-if="isSelected"
-      class="absolute left-0 top-0 bottom-0 w-1 bg-primary"
+      class="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-full"
     ></div>
     <!-- Header Section -->
     <div class="flex justify-between items-start cursor-pointer" @click="$emit('select', data.id)">

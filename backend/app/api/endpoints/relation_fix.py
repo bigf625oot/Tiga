@@ -100,6 +100,13 @@ def search_nodes(q: str = Query(..., description="Query string for node name"), 
     """
     return relation_fix_service.search_nodes(q, limit)
 
+@router.get("/random", response_model=List[str])
+def get_random_nodes(limit: int = 10):
+    """
+    Get a random set of nodes.
+    """
+    return relation_fix_service.get_random_nodes(limit)
+
 class UpdateNodeRequest(BaseModel):
     node_id: str
     attributes: Dict[str, Any]

@@ -299,6 +299,16 @@ class RelationFixService:
 
         return results
 
+    def get_random_nodes(self, limit: int = 10) -> List[str]:
+        G = self._get_graph()
+        nodes = list(G.nodes())
+        import random
+        if not nodes:
+            return []
+        # Convert nodes to string to ensure serializability
+        nodes_str = [str(n) for n in nodes]
+        return random.sample(nodes_str, min(len(nodes), limit))
+
     def get_node_relations(self, node_id: str) -> Dict[str, Any]:
         G = self._get_graph()
         if node_id not in G:
