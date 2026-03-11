@@ -81,12 +81,15 @@
     </div>
 
     <!-- Desktop Sidebar -->
-    <aside 
-      class="hidden md:flex flex-col border-r dark:border-none bg-card dark:bg-transparent glass-sidebar transition-all duration-300 ease-in-out relative z-20"
-      :class="isSidebarCollapsed ? 'w-[72px]' : 'w-[280px]'"
+    <Sidebar 
+      :collapsed="isSidebarCollapsed"
+      class="hidden md:flex border-r dark:border-none bg-card dark:bg-transparent glass-sidebar"
     >
       <!-- Header / Logo -->
-      <div class="pt-6 pb-6 flex items-center transition-all duration-300 border-b border-border dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]" :class="isSidebarCollapsed ? 'px-0 justify-center' : 'p-4 justify-between'">
+      <SidebarHeader 
+        class="pt-6 pb-6 transition-all duration-300 border-b border-border dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]" 
+        :class="isSidebarCollapsed ? 'px-0 justify-center' : 'p-4 justify-between'"
+      >
          <div v-if="!isSidebarCollapsed" class="flex items-center gap-4 overflow-hidden flex-shrink-0 ml-1">
             <img :src="isLightMode ? '/logo_light.svg' : '/logo_dark.svg'" alt="TiGA Logo" class="h-6 w-auto flex-shrink-0" />
          </div>
@@ -95,7 +98,7 @@
                <path d="M7.77782 3.33325V16.6666M6.88893 3.33325H13.1112C14.3557 3.33325 14.978 3.33325 15.4534 3.57546C15.8715 3.78851 16.2114 4.12847 16.4245 4.54661C16.6667 5.02197 16.6667 5.64425 16.6667 6.88881V13.111C16.6667 14.3556 16.6667 14.9779 16.4245 15.4532C16.2114 15.8714 15.8715 16.2113 15.4534 16.4244C14.978 16.6666 14.3557 16.6666 13.1112 16.6666H6.88893C5.64437 16.6666 5.02209 16.6666 4.54673 16.4244C4.12859 16.2113 3.78863 15.8714 3.57558 15.4532C3.33337 14.9779 3.33337 14.3556 3.33337 13.111V6.88881C3.33337 5.64425 3.33337 5.02197 3.57558 4.54661C3.78863 4.12847 4.12859 3.78851 4.54673 3.57546C5.02209 3.33325 5.64437 3.33325 6.88893 3.33325Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
          </Button>
-      </div>
+      </SidebarHeader>
 
       <!-- New Chat Action -->
       <div class="p-4">
@@ -156,7 +159,7 @@
       </div>
 
       <!-- Content Area -->
-      <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1 custom-scrollbar">
+      <SidebarContent class="px-3 py-2 space-y-1">
          <!-- Task List -->
          <template v-if="sidebarTab === 'task'">
             <div v-if="isSessionsLoading" class="space-y-3 px-1">
@@ -297,11 +300,11 @@
                  </template>
              </div>
          </template>
-      </div>
+      </SidebarContent>
 
       <!-- User Profile -->
-      <div class="p-4 border-t border-border dark:border-none dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.05)] mt-auto">
-         <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group" :class="isSidebarCollapsed ? 'justify-center p-0' : ''">
+      <SidebarFooter class="border-t border-border dark:border-none dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.05)]">
+         <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group" :class="isSidebarCollapsed ? 'justify-center p-0 flex-col' : ''">
             <div class="h-9 w-9 rounded-full bg-muted overflow-hidden border border-border dark:border-none shadow-sm dark:avatar-breathing">
                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="Avatar" class="h-full w-full object-cover" />
             </div>
@@ -309,13 +312,36 @@
                <p class="text-sm font-medium truncate">管理员</p>
                <p class="text-xs text-muted-foreground truncate">数字化转型部</p>
             </div>
-            <ThemeToggle v-if="!isSidebarCollapsed" />
+            
+            <div v-if="!isSidebarCollapsed" class="flex items-center gap-1">
+                 <TooltipProvider :delay-duration="0">
+                     <Tooltip>
+                         <TooltipTrigger as-child>
+                             <Button variant="ghost" size="icon" @click="currentView = 'etl_settings'" class="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                 <Settings class="h-4 w-4" />
+                             </Button>
+                         </TooltipTrigger>
+                         <TooltipContent>系统设置</TooltipContent>
+                     </Tooltip>
+                 </TooltipProvider>
+                 <ThemeToggle />
+             </div>
          </div>
-         <div v-if="isSidebarCollapsed" class="mt-2 flex justify-center">
+         <div v-if="isSidebarCollapsed" class="mt-2 flex flex-col gap-2 items-center">
+             <TooltipProvider :delay-duration="0">
+                 <Tooltip>
+                     <TooltipTrigger as-child>
+                         <Button variant="ghost" size="icon" @click="currentView = 'etl_settings'" class="h-8 w-8 text-muted-foreground hover:text-foreground">
+                             <Settings class="h-4 w-4" />
+                         </Button>
+                     </TooltipTrigger>
+                     <TooltipContent side="right">系统设置</TooltipContent>
+                 </Tooltip>
+             </TooltipProvider>
              <ThemeToggle />
          </div>
-      </div>
-    </aside>
+      </SidebarFooter>
+    </Sidebar>
 
     <!-- Main Content Area -->
     <main class="flex-1 flex flex-col overflow-hidden relative bg-background">
@@ -442,6 +468,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import Sidebar from '@/components/ui/sidebar/Sidebar.vue';
+import SidebarHeader from '@/components/ui/sidebar/SidebarHeader.vue';
+import SidebarContent from '@/components/ui/sidebar/SidebarContent.vue';
+import SidebarFooter from '@/components/ui/sidebar/SidebarFooter.vue';
 
 // Initialize Theme
 const { isLightMode } = useTheme();
