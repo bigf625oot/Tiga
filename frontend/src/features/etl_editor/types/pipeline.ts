@@ -34,7 +34,8 @@ export enum SinkType {
   CLICKHOUSE = "clickhouse",
   NEO4J = "neo4j",
   REDIS = "redis",
-  ELASTICSEARCH = "elasticsearch"
+  ELASTICSEARCH = "elasticsearch",
+  POSTGRES = "postgres"
 }
 
 export enum PipelineStatus {

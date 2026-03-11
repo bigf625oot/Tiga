@@ -26,22 +26,28 @@
         <!-- Extra Tools Slot -->
         <slot name="extra-tools"></slot>
 
-        <!-- Theme Toggle -->
-        <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" @click="toggleTheme" aria-label="切换主题" title="切换主题">
-            <!-- Sun Icon (for Dark Mode) -->
-            <svg v-if="!isLightMode" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-            <!-- Moon Icon (for Light Mode) -->
-            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <button
+            class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+            :class="{ 'bg-blue-500 text-white dark:bg-blue-600': boxSelectionActive }"
+            :disabled="currentLayout === '3d'"
+            @click="$emit('toggleBoxSelection')"
+            aria-label="框选"
+            title="框选"
+        >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7a4 4 0 0 1 4-4h3v2H7a2 2 0 0 0-2 2v3H3V7zm16 3V7a2 2 0 0 0-2-2h-3V3h3a4 4 0 0 1 4 4v3h-2zM5 14v3a2 2 0 0 0 2 2h3v2H7a4 4 0 0 1-4-4v-3h2zm16 0v3a4 4 0 0 1-4 4h-3v-2h3a2 2 0 0 0 2-2v-3h2z"/></svg>
+        </button>
+        <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" @click="$emit('selectAll')" aria-label="全选" title="全选">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7a2 2 0 0 1 2-2h4v2H5v4H3V7zm16 4V7h-4V5h4a2 2 0 0 1 2 2v4h-2zM5 13v4h4v2H5a2 2 0 0 1-2-2v-4h2zm16 4a2 2 0 0 1-2 2h-4v-2h4v-4h2v4zM8 11h8v2H8v-2z"/></svg>
+        </button>
+        <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" @click="$emit('clearSelection')" aria-label="清空选择" title="清空选择">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v2H6V6zm4 0h8v2h-8V6zM6 10h2v2H6v-2zm4 0h8v2h-8v-2zM6 14h2v2H6v-2zm4 0h8v2h-8v-2z"/></svg>
         </button>
 
-        <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" :disabled="fullscreen" @click="$emit('enterFullscreen')" aria-label="最大化" title="最大化 (F)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" @click="$emit('resetView')" aria-label="重置视图" title="重置视图">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-6-6V4zm8 0v6h-6l2.2-2.2A7.96 7.96 0 0 1 20 12h2a9.96 9.96 0 0 0-2.93-7.07L20 4z"/></svg>
         </button>
-        <button v-show="fullscreen" class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" @click="$emit('exitFullscreen')" aria-label="最小化" title="最小化 (Esc)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
-        </button>
-        <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" :disabled="!selectedNodeId" @click="$emit('focusOnSelected')" aria-label="定位到选中" title="地图定位 (G)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" @click="$emit('fitToContents')" aria-label="自适应缩放" title="自适应缩放">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 9V4h5v2H6v3H4zm14-3h-3V4h5v5h-2V6zM6 18h3v2H4v-5h2v3zm14-3v5h-5v-2h3v-3h2z"/></svg>
         </button>
         <button class="tool-btn dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600" @click="$emit('zoomIn')" aria-label="放大" title="放大 (Ctrl +)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
@@ -71,18 +77,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { IGraphToolbarProps } from './types';
-import { useTheme } from '@/composables/useTheme';
 
-const { isLightMode, toggleTheme } = useTheme();
-
-defineProps<IGraphToolbarProps>();
-const emit = defineEmits(['enterFullscreen', 'exitFullscreen', 'focusOnSelected', 'zoomIn', 'zoomOut', 'switchScope', 'search']);
+const props = defineProps<IGraphToolbarProps>();
+const emit = defineEmits(['toggleBoxSelection', 'selectAll', 'clearSelection', 'resetView', 'fitToContents', 'zoomIn', 'zoomOut', 'switchScope', 'search']);
 
 const showTools = ref(true);
 const showSearch = ref(false);
 const searchQuery = ref('');
+
+const boxSelectionActive = computed(() => !!props.boxSelectionActive);
 
 const handleSearch = () => {
     if (searchQuery.value.trim()) {

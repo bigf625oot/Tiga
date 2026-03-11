@@ -57,7 +57,7 @@
                  </div>
               </div>
 
-              <div class="h-px bg-border/50 w-full" />
+              <div class="h-px bg-border w-full" />
 
               <!-- Knowledge Center -->
               <div class="space-y-3">
@@ -86,7 +86,7 @@
       :class="isSidebarCollapsed ? 'w-[72px]' : 'w-[280px]'"
     >
       <!-- Header / Logo -->
-      <div class="pt-6 pb-6 flex items-center transition-all duration-300 border-b border-border/40 dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]" :class="isSidebarCollapsed ? 'px-0 justify-center' : 'p-4 justify-between'">
+      <div class="pt-6 pb-6 flex items-center transition-all duration-300 border-b border-border dark:border-none dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)]" :class="isSidebarCollapsed ? 'px-0 justify-center' : 'p-4 justify-between'">
          <div v-if="!isSidebarCollapsed" class="flex items-center gap-4 overflow-hidden flex-shrink-0 ml-1">
             <img :src="isLightMode ? '/logo_light.svg' : '/logo_dark.svg'" alt="TiGA Logo" class="h-6 w-auto flex-shrink-0" />
          </div>
@@ -238,14 +238,14 @@
              <div class="space-y-1">
                  <template v-for="item in currentSidebarItems" :key="item.id || item.type || item.label">
                     
-                    <div v-if="item.type === 'separator'" class="h-px bg-border/40 my-2 mx-1" />
+                    <div v-if="item.type === 'separator'" class="h-px bg-border my-2 mx-1" />
 
                     <div v-else-if="item.type === 'group'" class="px-3 py-2 mt-2 first:mt-0">
                        <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2" v-if="!isSidebarCollapsed">
                           {{ item.label }}
                           <span v-if="item.badge" class="px-1.5 py-0.5 rounded-md text-[10px] bg-blue-500/10 text-blue-500 font-bold border border-blue-500/20 leading-none">{{ item.badge }}</span>
                        </h4>
-                       <div v-else class="h-px bg-border/40 my-2 mx-1" />
+                       <div v-else class="h-px bg-border my-2 mx-1" />
                     </div>
                     
                     <TooltipProvider v-else :delay-duration="0">
@@ -273,7 +273,7 @@
       </div>
 
       <!-- User Profile -->
-      <div class="p-4 border-t border-border/40 dark:border-none dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.05)] mt-auto">
+      <div class="p-4 border-t border-border dark:border-none dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.05)] mt-auto">
          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group" :class="isSidebarCollapsed ? 'justify-center p-0' : ''">
             <div class="h-9 w-9 rounded-full bg-muted overflow-hidden border border-border dark:border-none shadow-sm dark:avatar-breathing">
                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="Avatar" class="h-full w-full object-cover" />

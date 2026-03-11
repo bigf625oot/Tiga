@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
-import KnowledgeGraphViewer from '../KnowledgeGraphViewer.vue';
+import KnowledgeGraphView from '../KnowledgeGraphView.vue';
 import { nextTick } from 'vue';
 
 // Mock dependencies
@@ -36,6 +36,15 @@ vi.mock('../KnowledgeGraphSidebar.vue', () => ({
     }
 }));
 
+vi.mock('../KnowledgeQAPanel.vue', () => ({
+    default: {
+        name: 'KnowledgeQAPanel',
+        template: '<div class="qa-stub"></div>',
+        props: ['visible', 'docId', 'scope', 'nodes'],
+        emits: ['close', 'locate-node']
+    }
+}));
+
 // Mock Axios
 vi.mock('axios', () => ({
     default: {
@@ -60,15 +69,14 @@ vi.mock('axios', () => ({
     }
 }));
 
-describe('KnowledgeGraphViewer.vue', () => {
+describe('KnowledgeGraphView.vue', () => {
     let wrapper: any;
 
     beforeEach(() => {
-        wrapper = mount(KnowledgeGraphViewer, {
+        wrapper = mount(KnowledgeGraphView, {
             props: {
                 docId: 1,
-                initialScope: 'doc',
-                showChat: false
+                initialScope: 'doc'
             }
         });
     });

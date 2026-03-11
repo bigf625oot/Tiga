@@ -1,9 +1,10 @@
 <template>
     <div class="absolute top-4 right-4 z-10 flex gap-2 bg-white/80 dark:bg-slate-800/80 p-1 rounded-lg border border-border dark:border-slate-700 shadow-sm backdrop-blur-sm transition-colors">
-      <a-tooltip title="力导向布局 (Force)">
+      <a-tooltip title="力导向布局 (Force)" :getPopupContainer="(trigger: HTMLElement) => trigger.parentNode as HTMLElement">
         <a-button 
           type="text" 
           size="small" 
+          class="flex items-center justify-center"
           :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === 'force', 'text-slate-600 dark:text-slate-400': currentLayout !== 'force' }"
           @click="$emit('switchLayout', 'force')"
         >
@@ -12,10 +13,11 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip title="网格布局 (Grid)">
+      <a-tooltip title="网格布局 (Grid)" :getPopupContainer="(trigger: HTMLElement) => trigger.parentNode as HTMLElement">
         <a-button 
           type="text" 
           size="small" 
+          class="flex items-center justify-center"
           :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === 'grid', 'text-slate-600 dark:text-slate-400': currentLayout !== 'grid' }"
           @click="$emit('switchLayout', 'grid')"
         >
@@ -24,10 +26,11 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip title="环形布局 (Circle)">
+      <a-tooltip title="环形布局 (Circle)" :getPopupContainer="(trigger: HTMLElement) => trigger.parentNode as HTMLElement">
         <a-button 
           type="text" 
           size="small" 
+          class="flex items-center justify-center"
           :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === 'circle', 'text-slate-600 dark:text-slate-400': currentLayout !== 'circle' }"
           @click="$emit('switchLayout', 'circle')"
         >
@@ -36,10 +39,11 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip title="3D 视图 (3D)">
+      <a-tooltip title="3D 视图 (3D)" :getPopupContainer="(trigger: HTMLElement) => trigger.parentNode as HTMLElement">
         <a-button 
           type="text" 
           size="small" 
+          class="flex items-center justify-center"
           :class="{ 'bg-primary/10 dark:bg-blue-900/30 text-primary dark:text-blue-400': currentLayout === '3d', 'text-slate-600 dark:text-slate-400': currentLayout !== '3d' }"
           @click="$emit('switchLayout', '3d')"
         >

@@ -7,4 +7,5 @@ export interface IGraphToolbarProps {
   scope?: string;
   showScopeToggle?: boolean;
   selectedNodeId?: string | null;
+  boxSelectionActive?: boolean;
 }

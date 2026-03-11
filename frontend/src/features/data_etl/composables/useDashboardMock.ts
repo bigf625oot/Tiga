@@ -1,4 +1,12 @@
 import { ref, computed } from 'vue';
+import { NodeType, SourceType, TransformType, SinkType } from '@/features/etl_editor/types/pipeline';
+
+export type Pipeline = {
+  id: string;
+  name: string;
+  processed: number;
+  status: 'active' | 'inactive';
+};
 
 export type DataSource = {
   id: string;
@@ -7,10 +15,7 @@ export type DataSource = {
   status: 'healthy' | 'warning' | 'error';
   throughput: string;
   active_pipelines: number;
-  current_pipeline?: {
-    name: string;
-    processed: number;
-  };
+  pipelines: Pipeline[];
 };
 
 export type StorageNode = {
@@ -29,17 +34,19 @@ export type StorageNode = {
 
 export type FlowNode = {
   id: string;
-  type: 'classifier' | 'condition' | 'validator';
+  type: NodeType;
+  subType: SourceType | TransformType | SinkType;
   label: string;
   subLabel?: string;
   position: { x: number; y: number };
+  config?: Record<string, any>;
   stats: {
     total: number;
     pass_rate: number;
     passed: number;
     failed: number;
   };
-  throughput?: string; // Input/Output throughput for edges
+  throughput?: string;
 };
 
 export type LogEntry = {
@@ -49,8 +56,44 @@ export type LogEntry = {
   message: string;
 };
 
+export type PipelineMetrics = {
+  label: string;
+  value: string | number;
+  unit?: string;
+  trend?: 'up' | 'down';
+  description?: string;
+};
+
 export function useDashboardMock() {
   const mode = ref<'normal' | 'abnormal' | 'empty'>('normal');
+  const selectedPipelineId = ref<string | null>(null);
+
+  const pipelineMetrics = computed<PipelineMetrics[]>(() => {
+    if (!selectedPipelineId.value) return [];
+    
+    switch (selectedPipelineId.value) {
+      case 'p1': // 文档分类流水线
+        return [
+          { label: '处理文档数', value: 15234, unit: '个', trend: 'up', description: '本周累计处理的文档总量' },
+          { label: '分类准确率', value: '98.2', unit: '%', trend: 'up', description: 'AI 模型分类的置信度平均值' },
+          { label: '平均耗时', value: '1.2', unit: 's', trend: 'down', description: '单个文档从输入到入库的平均时间' },
+          { label: '文档类型数', value: 12, unit: '种', description: '识别到的不同文档类别数量' }
+        ];
+      case 'p2': // 元数据提取流水线
+        return [
+          { label: '实体节点数', value: '1.2M', unit: '个', trend: 'up', description: '知识图谱中提取的实体总数' },
+          { label: '关系边数', value: '3.5M', unit: '条', trend: 'up', description: '实体之间的关联关系数量' },
+          { label: '实体类型数', value: 45, unit: '种', description: '提取的实体类别总数' },
+          { label: '图谱密度', value: '0.8', unit: '', description: '图谱中实际边数与可能边数的比率' }
+        ];
+      default:
+        return [
+          { label: '实时吞吐', value: '1.0k', unit: '条/秒', description: '当前每秒处理的数据条数' },
+          { label: '平均延迟', value: '15', unit: 'ms', description: '数据处理的平均响应时间' },
+          { label: '错误率', value: '0.01', unit: '%', description: '处理失败的数据占比' }
+        ];
+    }
+  });
 
   const dataSources = computed<DataSource[]>(() => {
     if (mode.value === 'empty') return [];
@@ -62,8 +105,11 @@ export function useDashboardMock() {
         type: 'sftp',
         status: 'healthy',
         throughput: '1.2k/s',
-        active_pipelines: 1,
-        current_pipeline: { name: '问题分类器', processed: 15234 }
+        active_pipelines: 2,
+        pipelines: [
+          { id: 'p1', name: '文档分类流水线', processed: 15234, status: 'active' },
+          { id: 'p2', name: '元数据提取流水线', processed: 8452, status: 'active' }
+        ]
       },
       {
         id: '2',
@@ -72,7 +118,9 @@ export function useDashboardMock() {
         status: 'healthy',
         throughput: '850/s',
         active_pipelines: 1,
-        current_pipeline: { name: '条件判断', processed: 8921 }
+        pipelines: [
+          { id: 'p3', name: '新闻抓取流水线', processed: 8921, status: 'active' }
+        ]
       },
       {
         id: '3',
@@ -80,8 +128,12 @@ export function useDashboardMock() {
         type: 'database',
         status: 'healthy',
         throughput: '2.1k/s',
-        active_pipelines: 1,
-        current_pipeline: { name: 'Pydantic 校验', processed: 12456 }
+        active_pipelines: 3,
+        pipelines: [
+           { id: 'p4', name: '用户数据同步', processed: 12456, status: 'active' },
+           { id: 'p5', name: '订单清洗流水线', processed: 45231, status: 'active' },
+           { id: 'p6', name: '日志归档流水线', processed: 2311, status: 'inactive' }
+        ]
       }
     ];
 
@@ -136,44 +188,156 @@ export function useDashboardMock() {
   });
 
   const flowNodes = computed<FlowNode[]>(() => {
-    if (mode.value === 'empty') return [];
+    if (mode.value === 'empty' || !selectedPipelineId.value) return [];
 
-    const base: FlowNode[] = [
-      {
-        id: 'n1',
-        type: 'classifier',
-        label: '问题分类器',
-        subLabel: 'Classifier',
-        position: { x: 800, y: 200 },
-        stats: { total: 15234, pass_rate: 97.8, passed: 14892, failed: 342 },
-        throughput: '1.2k/s'
-      },
-      {
-        id: 'n2',
-        type: 'condition',
-        label: '条件判断',
-        subLabel: 'Condition',
-        position: { x: 800, y: 450 },
-        stats: { total: 8921, pass_rate: 96.9, passed: 8645, failed: 276 },
-        throughput: '850/s'
-      },
-      {
-        id: 'n3',
-        type: 'validator',
-        label: 'Pydantic 校验',
-        subLabel: 'Validator',
-        position: { x: 800, y: 700 },
-        stats: { total: 12456, pass_rate: 99.1, passed: 12344, failed: 112 },
-        throughput: '2.1k/s'
-      }
-    ];
+    // 根据选中的 pipeline ID 返回不同的节点配置
+    switch (selectedPipelineId.value) {
+      case 'p1': // 文档分类流水线
+        return [
+          {
+            id: 'n1',
+            type: NodeType.SOURCE,
+            subType: SourceType.SFTP,
+            label: 'SFTP 数据源',
+            subLabel: '输入文件',
+            position: { x: 100, y: 300 },
+            config: {
+              host: 'sftp.example.com',
+              port: 22,
+              username: 'user_docs',
+              path: '/incoming/docs',
+              file_pattern: '*.pdf'
+            },
+            stats: { total: 15234, pass_rate: 100, passed: 15234, failed: 0 },
+            throughput: '1.2k/s'
+          },
+          {
+            id: 'n2',
+            type: NodeType.TRANSFORM,
+            subType: TransformType.CLEAN_TEXT,
+            label: '文本清洗',
+            subLabel: '预处理',
+            position: { x: 450, y: 300 },
+            config: {
+              remove_stopwords: true,
+              lowercase: true,
+              remove_punctuation: true,
+              language: 'zh-CN'
+            },
+            stats: { total: 15234, pass_rate: 99.5, passed: 15158, failed: 76 },
+            throughput: '1.1k/s'
+          },
+          {
+            id: 'n3',
+            type: NodeType.TRANSFORM,
+            subType: TransformType.LLM_INTENT,
+            label: '分类器',
+            subLabel: 'LLM 分析',
+            position: { x: 800, y: 300 },
+            config: {
+              model: 'gpt-4',
+              temperature: 0.2,
+              prompt_template: 'Classify the following document type...',
+              categories: ['invoice', 'contract', 'resume']
+            },
+            stats: { total: 15158, pass_rate: 98.2, passed: 14892, failed: 266 },
+            throughput: '1.0k/s'
+          },
+          {
+            id: 'n4',
+            type: NodeType.SINK,
+            subType: SinkType.ELASTICSEARCH,
+            label: 'Elasticsearch',
+            subLabel: '索引存储',
+            position: { x: 1150, y: 300 },
+            config: {
+              hosts: ['http://es-node-1:9200'],
+              index_name: 'doc_classification',
+              shards: 3,
+              replicas: 1
+            },
+            stats: { total: 14892, pass_rate: 100, passed: 14892, failed: 0 },
+            throughput: '1.0k/s'
+          }
+        ];
+      
+      case 'p2': // 元数据提取流水线
+        return [
+          {
+            id: 'n1',
+            type: NodeType.SOURCE,
+            subType: SourceType.KAFKA,
+            label: 'Kafka 流',
+            subLabel: '元数据 Topic',
+            position: { x: 100, y: 300 },
+            config: {
+              bootstrap_servers: 'kafka:9092',
+              topic: 'raw_metadata',
+              group_id: 'meta_extractor_v1',
+              offset: 'latest'
+            },
+            stats: { total: 8452, pass_rate: 100, passed: 8452, failed: 0 },
+            throughput: '850/s'
+          },
+          {
+            id: 'n2',
+            type: NodeType.TRANSFORM,
+            subType: TransformType.FILTER,
+            label: '空值过滤',
+            subLabel: '数据质量',
+            position: { x: 450, y: 300 },
+            config: {
+              condition: "record.content != null && record.content != ''",
+              drop_nulls: true
+            },
+            stats: { total: 8452, pass_rate: 92.5, passed: 7818, failed: 634 },
+            throughput: '800/s'
+          },
+          {
+            id: 'n3',
+            type: NodeType.SINK,
+            subType: SinkType.POSTGRES,
+            label: 'Postgres 数据库',
+            subLabel: '元数据存储',
+            position: { x: 800, y: 300 },
+            config: {
+              host: 'postgres-db',
+              port: 5432,
+              database: 'metadata_db',
+              table: 'extracted_meta'
+            },
+            stats: { total: 7818, pass_rate: 99.9, passed: 7810, failed: 8 },
+            throughput: '800/s'
+          }
+        ];
 
-    if (mode.value === 'abnormal') {
-      base[1].stats.pass_rate = 45.0;
-      base[1].stats.failed = 4000;
+      default:
+        // 默认返回一个简单的示例
+        return [
+          {
+            id: 'n1',
+            type: NodeType.SOURCE,
+            subType: SourceType.API,
+            label: 'API 数据源',
+            subLabel: 'REST 接口',
+            position: { x: 200, y: 300 },
+            config: { endpoint: '/api/v1/data', method: 'GET' },
+            stats: { total: 1000, pass_rate: 100, passed: 1000, failed: 0 },
+            throughput: '100/s'
+          },
+          {
+            id: 'n2',
+            type: NodeType.SINK,
+            subType: SinkType.REDIS,
+            label: 'Redis 缓存',
+            subLabel: '缓存存储',
+            position: { x: 600, y: 300 },
+            config: { host: 'redis', port: 6379, db: 0 },
+            stats: { total: 1000, pass_rate: 100, passed: 1000, failed: 0 },
+            throughput: '100/s'
+          }
+        ];
     }
-
-    return base;
   });
 
   const logs = ref<LogEntry[]>([
@@ -187,12 +351,19 @@ export function useDashboardMock() {
     mode.value = m;
   };
 
+  const setSelectedPipeline = (id: string | null) => {
+    selectedPipelineId.value = id;
+  };
+
   return {
     mode,
     dataSources,
     storageNodes,
     flowNodes,
     logs,
-    setMode
+    setMode,
+    selectedPipelineId,
+    setSelectedPipeline,
+    pipelineMetrics
   };
 }

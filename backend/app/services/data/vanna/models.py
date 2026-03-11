@@ -32,8 +32,18 @@ class DbConnectionConfig(BaseModel):
     # Advanced Options
     timeout: Optional[int] = Field(30, description="Connection timeout in seconds")
     charset: Optional[str] = Field("utf8mb4", description="Charset")
+    ssl: Optional[bool] = Field(False, description="Enable SSL")
     ssl_mode: Optional[str] = Field("disable", description="SSL mode")
     pool_size: Optional[int] = Field(5, description="Connection pool size")
+
+    # SSH Tunnel Options
+    ssh: Optional[bool] = Field(False, description="Enable SSH Tunnel")
+    ssh_host: Optional[str] = None
+    ssh_port: Optional[int] = 22
+    ssh_user: Optional[str] = None
+    ssh_auth_type: Optional[str] = "password"
+    ssh_password: Optional[str] = None
+    ssh_key: Optional[str] = None
 
 
 # ----- Session Schemas -----

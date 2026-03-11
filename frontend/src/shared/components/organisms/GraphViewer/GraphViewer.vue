@@ -46,6 +46,7 @@
       v-model:layouts="layouts"
       :event-handlers="eventHandlers"
       v-model:selected-nodes="selectedNodes"
+      v-model:selected-edges="selectedEdges"
       v-model:zoom-level="zoomLevel"
     >
         <template #edge-label="{ edge, ...slotProps }">
@@ -69,10 +70,12 @@
         :scale="zoomLevel"
         :scope="scope"
         :show-scope-toggle="showScopeToggle"
-        :selected-node-id="selectedNodeId"
-        @enter-fullscreen="enterFullscreen"
-        @exit-fullscreen="exitFullscreen"
-        @focus-on-selected="focusOnSelected"
+        :box-selection-active="boxSelectionActive"
+        @toggle-box-selection="toggleBoxSelection"
+        @select-all="selectAll"
+        @clear-selection="clearSelection"
+        @reset-view="panToCenter"
+        @fit-to-contents="fitToContents"
         @zoom-in="zoomIn"
         @zoom-out="zoomOut"
         @switch-scope="$emit('switchScope', $event)"
@@ -84,33 +87,27 @@
     </GraphToolbar>
     
     <!-- Loading Overlay with Skeleton -->
-    <div v-if="loading" class="absolute inset-0 bg-background/80 dark:bg-slate-900/80 z-50 flex items-center justify-center backdrop-blur-sm">
-        <div class="relative w-full h-full overflow-hidden">
-             <!-- Skeleton Animation -->
-             <div class="absolute inset-0 animate-pulse opacity-20">
-                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                     <circle cx="50%" cy="50%" r="20" class="fill-foreground dark:fill-slate-400" />
-                     <circle cx="30%" cy="30%" r="15" class="fill-foreground dark:fill-slate-400" />
-                     <circle cx="70%" cy="70%" r="18" class="fill-foreground dark:fill-slate-400" />
-                     <circle cx="20%" cy="60%" r="12" class="fill-foreground dark:fill-slate-400" />
-                     <circle cx="80%" cy="40%" r="16" class="fill-foreground dark:fill-slate-400" />
-                     <circle cx="40%" cy="80%" r="14" class="fill-foreground dark:fill-slate-400" />
-                     
-                     <line x1="50%" y1="50%" x2="30%" y2="30%" stroke="currentColor" class="dark:stroke-slate-600" stroke-width="1" />
-                     <line x1="50%" y1="50%" x2="70%" y2="70%" stroke="currentColor" class="dark:stroke-slate-600" stroke-width="1" />
-                     <line x1="30%" y1="30%" x2="20%" y2="60%" stroke="currentColor" class="dark:stroke-slate-600" stroke-width="1" />
-                     <line x1="70%" y1="70%" x2="40%" y2="80%" stroke="currentColor" class="dark:stroke-slate-600" stroke-width="1" />
-                     <line x1="50%" y1="50%" x2="80%" y2="40%" stroke="currentColor" class="dark:stroke-slate-600" stroke-width="1" />
-                 </svg>
-             </div>
-             
-             <!-- Loading Text -->
-             <div class="absolute inset-0 flex items-center justify-center">
-                 <div class="bg-card dark:bg-slate-800 px-6 py-3 rounded-full border border-border dark:border-slate-700 shadow-lg flex items-center gap-3">
-                     <div class="w-5 h-5 border-2 border-primary dark:border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                     <span class="text-sm font-medium text-foreground dark:text-slate-200">图谱构建中...</span>
-                 </div>
-             </div>
+    <div v-if="loading" class="absolute inset-0 bg-background/80 dark:bg-slate-900/80 z-50 backdrop-blur-sm">
+        <div class="w-full h-full p-6 flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <Skeleton class="h-6 w-40" />
+                <div class="flex gap-2">
+                    <Skeleton class="h-8 w-8" />
+                    <Skeleton class="h-8 w-8" />
+                    <Skeleton class="h-8 w-8" />
+                </div>
+            </div>
+            <div class="flex-1 relative">
+                <Skeleton class="absolute inset-0 rounded-lg" />
+                <Skeleton class="absolute left-[18%] top-[22%] h-6 w-6 rounded-full" />
+                <Skeleton class="absolute left-[44%] top-[40%] h-8 w-8 rounded-full" />
+                <Skeleton class="absolute left-[68%] top-[28%] h-7 w-7 rounded-full" />
+                <Skeleton class="absolute left-[30%] top-[68%] h-6 w-6 rounded-full" />
+                <Skeleton class="absolute left-[72%] top-[70%] h-8 w-8 rounded-full" />
+            </div>
+            <div class="flex justify-center">
+                <Skeleton class="h-9 w-56 rounded-full" />
+            </div>
         </div>
     </div>
   </div>
@@ -125,7 +122,7 @@ import { useGraphLayout } from '@/shared/hooks/useGraphLayout';
 import { GraphToolbar } from '@/shared/components/molecules/GraphToolbar';
 import { GraphLayoutSwitch } from '@/shared/components/molecules/GraphLayoutSwitch';
 import { GraphNodeDetails } from '@/shared/components/molecules/GraphNodeDetails';
-import { Loading } from '@/shared/components/atoms/Loading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { createGraphLocator, type GraphLocatorAdapter } from '@/features/knowledge/utils/graphLocator';
 import type { IGraphViewerProps } from './types';
 import type { IGraphNode } from '@/shared/types/graph';
@@ -271,6 +268,7 @@ const computedConfigs = computed(() => {
 
 // Selection State
 const selectedNodes = ref<string[]>([]);
+const selectedEdges = ref<string[]>([]);
 const selectedNodeId = computed(() => selectedNodes.value.length > 0 ? selectedNodes.value[0] : null);
 const selectedNodeData = computed<IGraphNode | null>(() => {
     if (!selectedNodeId.value) return null;
@@ -308,6 +306,12 @@ const handleSelectNode = (nodeId: string) => {
 
 const clearSelection = () => {
     selectedNodes.value = [];
+    selectedEdges.value = [];
+};
+
+const selectAll = () => {
+    selectedNodes.value = Object.keys(props.nodes || {});
+    selectedEdges.value = Object.keys(props.edges || {});
 };
 
 // Graph Ref
@@ -327,12 +331,49 @@ watch([graphRef, currentLayout], async ([g, layout]) => {
     } else {
         locator.value = null;
     }
+
+    if (layout === '3d') {
+        boxSelectionActive.value = false;
+    }
 });
 
 // Event Handlers
 const handleNodeClick = (nodeId: string) => {
     selectedNodes.value = [nodeId];
     emit('nodeClick', nodeId);
+};
+
+const boxSelectionActive = ref(false);
+
+const startBoxSelection = async () => {
+    await nextTick();
+    const g: any = graphRef.value;
+    const fn = g?.startBoxSelection || g?.startBoxSelectionMode || g?.enableBoxSelection;
+    if (fn) {
+        fn.call(g);
+        boxSelectionActive.value = true;
+        return;
+    }
+    boxSelectionActive.value = false;
+};
+
+const stopBoxSelection = async () => {
+    await nextTick();
+    const g: any = graphRef.value;
+    const fn = g?.stopBoxSelection || g?.stopBoxSelectionMode || g?.disableBoxSelection;
+    if (fn) {
+        fn.call(g);
+    }
+    boxSelectionActive.value = false;
+};
+
+const toggleBoxSelection = async () => {
+    if (currentLayout.value === '3d') return;
+    if (boxSelectionActive.value) {
+        await stopBoxSelection();
+    } else {
+        await startBoxSelection();
+    }
 };
 
 const eventHandlers: vNG.EventHandlers = {
@@ -372,6 +413,50 @@ const zoomOut = () => {
     }
 };
 
+const panToCenter = async () => {
+    await nextTick();
+    if (currentLayout.value === '3d' && graph3DRef.value) {
+        if (graph3DRef.value.panToCenter) {
+            graph3DRef.value.panToCenter();
+            return;
+        }
+        if (graph3DRef.value.fitToContents) {
+            graph3DRef.value.fitToContents();
+            return;
+        }
+    }
+    const g: any = graphRef.value;
+    if (g?.panToCenter) {
+        g.panToCenter();
+        return;
+    }
+    if (g?.panTo) {
+        g.panTo({ x: 0, y: 0 });
+    }
+};
+
+const fitToContents = async () => {
+    await nextTick();
+    if (currentLayout.value === '3d' && graph3DRef.value) {
+        if (graph3DRef.value.fitToContents) {
+            graph3DRef.value.fitToContents();
+            return;
+        }
+        if (graph3DRef.value.panToCenter) {
+            graph3DRef.value.panToCenter();
+            return;
+        }
+    }
+    const g: any = graphRef.value;
+    if (g?.fitToContents) {
+        g.fitToContents();
+        return;
+    }
+    if (g?.panToCenter) {
+        g.panToCenter();
+    }
+};
+
 const focusNode = async (nodeId: string) => {
     if (!nodeId) return;
     await nextTick();
@@ -389,15 +474,11 @@ const focusNode = async (nodeId: string) => {
     }
 };
 
-const focusOnSelected = () => {
-    if (selectedNodeId.value) {
-        focusNode(selectedNodeId.value);
-    }
-};
-
 // Expose methods for parent components
 defineExpose({
     focusNode,
+    panToCenter,
+    fitToContents,
     zoomIn,
     zoomOut
 });

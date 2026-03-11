@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full" :class="isLightMode ? 'bg-[#F9FAFB]' : 'bg-[#0B0C10]'">
+  <div class="h-full w-full bg-background/50">
     <VueFlow
       v-model="nodes"
       v-model:edges="edges"
@@ -17,42 +17,38 @@
       @viewport-change="onViewportChange"
     >
       <Background 
-        :pattern-color="isLightMode ? '#9CA3AF' : '#3B82F6'" 
+        :pattern-color="isLightMode ? '#94a3b8' : '#475569'" 
         :gap="20" 
         :size="1" 
-        :variant="isLightMode ? 'dots' : 'dots'"
+        :variant="'dots'"
         class="transition-colors duration-300"
         :class="isLightMode ? 'opacity-10' : 'opacity-20'"
       />
       
       <!-- Custom Controls -->
       <div 
-        class="absolute top-4 right-4 border rounded-lg flex items-center p-1 shadow-lg transition-colors duration-300 z-10"
-        :class="isLightMode ? 'bg-white border-border' : 'bg-[#1F2937] border-gray-700'"
+        class="absolute top-4 right-4 border rounded-lg flex items-center p-1 shadow-lg transition-colors duration-300 z-10 bg-card border-border"
       >
         <button 
-          class="p-2 rounded" 
-          :class="isLightMode ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-400 hover:bg-gray-700 hover:text-white'"
+          class="p-2 rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           @click="zoomOut"
           title="缩小"
         >
           -
         </button>
-        <span class="mx-2 text-[13px] font-din w-12 text-center" :class="isLightMode ? 'text-gray-700' : 'text-gray-300'">
+        <span class="mx-2 text-[13px] font-din w-12 text-center text-foreground">
           {{ Math.round(zoom * 100) }}%
         </span>
         <button 
-          class="p-2 rounded"
-          :class="isLightMode ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-400 hover:bg-gray-700 hover:text-white'"
+          class="p-2 rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           @click="zoomIn"
           title="放大"
         >
           +
         </button>
-        <div class="w-px h-4 mx-1" :class="isLightMode ? 'bg-gray-200' : 'bg-gray-700'"></div>
+        <div class="w-px h-4 mx-1 bg-border"></div>
         <button 
-          class="p-2 rounded"
-          :class="isLightMode ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-400 hover:bg-gray-700 hover:text-white'"
+          class="p-2 rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           @click="fitView"
           title="适应视图"
         >

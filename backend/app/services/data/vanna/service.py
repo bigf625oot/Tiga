@@ -717,6 +717,70 @@ class SmartDataQueryService:
             logger.warning(f"Failed to get tables (possibly no database selected): {e}")
             return []
 
+    def get_database_stats(self, tables: List[str] = None) -> dict:
+        """
+        Get database statistics (table count, total row count).
+        Optimized for different dialects.
+        """
+        if not self.vanna_core.sql_runner:
+            return {"table_count": 0, "total_records": 0}
+        
+        try:
+            if tables is None:
+                tables = self.vanna_core.sql_runner.get_tables()
+
+            table_count = len(tables)
+            total_records = 0
+            
+            # Dialect-specific optimization
+            engine = self.vanna_core.sql_runner.engine
+            dialect_name = engine.dialect.name.lower()
+            
+            if 'mysql' in dialect_name:
+                # MySQL: Use information_schema
+                # Engine URL might not have database if it's not set, but here we assume we are connected
+                db_name = engine.url.database
+                if db_name:
+                    sql = f"SELECT SUM(TABLE_ROWS) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{db_name}'"
+                    try:
+                        df = self.vanna_core.sql_runner.run_sql(sql)
+                        if not df.empty and df.iloc[0, 0] is not None:
+                            total_records = int(float(df.iloc[0, 0])) # TABLE_ROWS can be approximate/float
+                            return {"table_count": table_count, "total_records": total_records}
+                    except Exception as e:
+                        logger.warning(f"MySQL stats failed: {e}")
+
+            elif 'postgresql' in dialect_name:
+                 # PostgreSQL: Use pg_stat_user_tables
+                 sql = "SELECT SUM(n_live_tup) FROM pg_stat_user_tables"
+                 try:
+                     df = self.vanna_core.sql_runner.run_sql(sql)
+                     if not df.empty and df.iloc[0, 0] is not None:
+                         total_records = int(df.iloc[0, 0])
+                         return {"table_count": table_count, "total_records": total_records}
+                 except Exception as e:
+                     logger.warning(f"PostgreSQL stats failed: {e}")
+
+            # Fallback: Iterate (slow but works for SQLite etc)
+            # Limit to avoid hanging on massive DBs if not optimized
+            for t in tables:
+                try:
+                    # Quoting table name might be needed depending on runner, but Vanna runner usually handles raw SQL
+                    # We assume simple names or rely on user to provide clean names
+                    sql = f"SELECT COUNT(*) FROM {t}"
+                    df = self.vanna_core.sql_runner.run_sql(sql)
+                    if not df.empty:
+                         total_records += int(df.iloc[0, 0])
+                except Exception as e:
+                    # Ignore individual table errors (e.g. permission denied)
+                    pass
+            
+            return {"table_count": table_count, "total_records": total_records}
+            
+        except Exception as e:
+            logger.error(f"Failed to get stats: {e}")
+            return {"table_count": 0, "total_records": 0}
+
     def get_table_data(self, table_name: str, limit: int = 100, offset: int = 0) -> dict:
         if not self.vanna_core.sql_runner:
             raise Exception("数据库未连接")

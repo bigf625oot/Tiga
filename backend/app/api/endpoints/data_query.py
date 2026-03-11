@@ -65,11 +65,18 @@ async def connect_database(config: DbConnectionConfig, request: Request):
 @router.get("/tables")
 async def get_tables():
     """
-    Get all table names from the connected database.
+    Get all table names from the connected database and basic stats.
     """
     try:
         tables = await run_in_threadpool(data_query_service.get_tables)
-        return {"tables": tables}
+        # Fetch stats (total records)
+        # We run this in threadpool too as it might be slow
+        stats = await run_in_threadpool(data_query_service.get_database_stats, tables=tables)
+        
+        return {
+            "tables": tables,
+            "stats": stats
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

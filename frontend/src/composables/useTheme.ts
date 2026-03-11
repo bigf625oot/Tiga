@@ -1,9 +1,11 @@
 import { ref, watch, computed } from 'vue';
 
 export type Theme = 'light' | 'dark' | 'system';
+export type ColorTheme = 'blue' | 'green' | 'orange' | 'purple' | 'red';
 
 // State
 const theme = ref<Theme>((localStorage.getItem('theme') as Theme) || 'system');
+const colorTheme = ref<ColorTheme>((localStorage.getItem('color-theme') as ColorTheme) || 'blue');
 const systemPreference = ref<'light' | 'dark'>(
   window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 );
@@ -27,6 +29,7 @@ const applyTheme = () => {
   
   root.classList.add(effectiveTheme);
   root.setAttribute('data-theme', effectiveTheme);
+  root.setAttribute('data-color-theme', colorTheme.value);
 };
 
 // Watchers
@@ -35,9 +38,18 @@ watch(theme, (val) => {
   applyTheme();
 }, { immediate: true });
 
+watch(colorTheme, (val) => {
+  localStorage.setItem('color-theme', val);
+  applyTheme();
+}, { immediate: true });
+
 export function useTheme() {
   const setTheme = (newTheme: Theme) => {
     theme.value = newTheme;
+  };
+
+  const setColorTheme = (newColorTheme: ColorTheme) => {
+    colorTheme.value = newColorTheme;
   };
 
   // Computed for legacy compatibility (read-only)
@@ -52,7 +64,9 @@ export function useTheme() {
 
   return {
     theme,
+    colorTheme,
     setTheme,
+    setColorTheme,
     isLightMode, // exposed as computed ref
     toggleTheme
   };

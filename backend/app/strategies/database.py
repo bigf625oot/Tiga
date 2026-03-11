@@ -77,11 +77,44 @@ class DatabaseSource(BaseSource):
 
         async with engine.connect() as conn:
             tables = await conn.run_sync(get_tables)
+            
+            # Optimized row count fetching
+            row_counts = {}
+            try:
+                # Check dialect via engine name or drivername
+                dialect = engine.dialect.name.lower()
+                
+                if 'mysql' in dialect:
+                    db_name = self.config.get('database')
+                    if db_name:
+                        # Use text() for raw SQL
+                        result = await conn.execute(text(f"SELECT TABLE_NAME, TABLE_ROWS FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{db_name}'"))
+                        for row in result:
+                            # row is a tuple-like object
+                            t_name = row[0]
+                            t_rows = row[1]
+                            row_counts[t_name] = int(t_rows) if t_rows is not None else 0
+                            
+                elif 'postgresql' in dialect:
+                    result = await conn.execute(text("SELECT relname, n_live_tup FROM pg_stat_user_tables"))
+                    for row in result:
+                        t_name = row[0]
+                        t_rows = row[1]
+                        row_counts[t_name] = int(t_rows) if t_rows is not None else 0
+                        
+            except Exception as e:
+                # Log error but continue without row counts
+                print(f"Failed to fetch row counts: {e}")
+
             for table in tables:
+                # Get row count from map, default to 0
+                rc = row_counts.get(table, 0)
+                
                 metadata_list.append(MetadataModel(
                     name=table,
                     type="table",
-                    description=f"Table in {self.config.get('database')}"
+                    description=f"Table in {self.config.get('database')}",
+                    schema_info={"row_count": rc}
                 ))
         return metadata_list
 

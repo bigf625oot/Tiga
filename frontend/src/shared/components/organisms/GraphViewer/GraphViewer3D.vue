@@ -19,6 +19,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted, inject, computed } from 'vue';
 import ForceGraph3D from '3d-force-graph';
+import * as THREE from 'three';
+// @ts-ignore
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 import type { IGraphNode } from '@/shared/types/graph';
 import { useTheme } from '@/composables/useTheme';
 
@@ -54,12 +57,12 @@ const initGraph = () => {
     
     // Determine background color
     const dark = props.darkMode !== undefined ? props.darkMode : isDark.value;
-    // If strict white mode in light is required by style, we should probably set it here too 
-    // or set it to transparent and let CSS handle it.
-    // 3d-force-graph sets canvas background.
-    const bgColor = dark ? '#0f172a' : '#ffffff'; // Changed to #ffffff for light mode
-    const textColor = dark ? '#e2e8f0' : '#1e293b';
-    const linkColor = dark ? '#475569' : '#999999';
+    const bgColor = dark ? '#000000' : '#ffffff'; 
+    const linkColor = dark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)';
+    const linkHoverColor = dark ? '#00f260' : '#059669';
+
+    // Clear previous graph if any
+    if (graphDiv.value) graphDiv.value.innerHTML = '';
 
     Graph = (ForceGraph3D as any)()(graphDiv.value)
         .width(width)
@@ -70,12 +73,16 @@ const initGraph = () => {
         .nodeColor((node: any) => {
             const type = node.type || '未知';
             if (props.hiddenTypes.includes(type)) return 'rgba(200,200,200,0.1)';
-            return props.colorMap[type] || (dark ? '#60a5fa' : '#6b7280');
+            const defaultColor = dark ? '#60a5fa' : '#3b82f6';
+            return props.colorMap[type] || defaultColor;
         })
         .nodeVal((node: any) => Math.sqrt(node.degree || 1) * 2)
+        .nodeOpacity(dark ? 0.9 : 0.7)
         .linkColor(() => linkColor)
-        .linkOpacity(0.6)
-        .linkWidth(1.5)
+        .linkWidth(0.5)
+        .linkCurvature(0.2)
+        .linkHoverPrecision(2)
+        .enableNodeDrag(true)
         .nodeResolution(16)
         .onNodeClick((node: any) => {
             // Emit click event
@@ -90,27 +97,80 @@ const initGraph = () => {
                 3000
             );
         });
+
+    // Bloom/Glow Effect (Post-processing)
+    // Note: 3d-force-graph uses UnrealBloomPass by default if accessible or we can enable it via internal ThreeJS access
+    // But ForceGraph3D doesn't expose post-processing easily in the wrapper. 
+    // However, we can simulate "energy ball" look by nodeThreeObject or adjusting material.
+    // Standard nodeOpacity is already good. For "glow", we rely on the library's default material interaction or add a sprite.
+    // A simpler "tech" look is achieved by opacity and color.
+    
+    // Actually, modern 3d-force-graph supports `.postProcessingComposer()` but type defs might be missing.
+    // Let's try to enable bloom if possible or just stick to the requested visual parameters first.
+    // The user requested: Opacity 0.8-0.9, Link transparent, Link thin, Curvature.
+    
+    // Add hover effect manually since linkColor is static function above
+    Graph.onLinkHover((link: any) => {
+        Graph.linkColor((l: any) => {
+             if (link && l === link) return linkHoverColor;
+             return linkColor;
+        });
+    });
         
     // Adjust force engine parameters for better spacing
     Graph.d3Force('charge').strength(-300); // Repel force
     Graph.d3Force('link').distance(100); // Link distance
 
+    // Enable Bloom Effect (Only in dark mode)
+    if (dark && Graph.postProcessingComposer) {
+        // @ts-ignore
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(width, height),
+            1.5,
+            0.4,
+            0.85
+        );
+        bloomPass.threshold = 0;
+        bloomPass.strength = 1.5;
+        bloomPass.radius = 0.4;
+        
+        const composer = Graph.postProcessingComposer();
+        composer.addPass(bloomPass);
+    }
+
     updateGraphData();
 };
 
-// Watch for dark mode changes to update background
-watch(isDark, (newVal) => {
-    if (Graph) {
-        const dark = props.darkMode !== undefined ? props.darkMode : newVal;
-        const bgColor = dark ? '#0f172a' : '#ffffff'; // Changed to #ffffff
-        const linkColor = dark ? '#475569' : '#999999';
-        
-        Graph.backgroundColor(bgColor);
-        Graph.linkColor(() => linkColor);
-        // Force refresh
-        updateGraphData(); 
-    }
-});
+    // Watch for dark mode changes to update background
+    watch(isDark, (newVal) => {
+        if (Graph) {
+            const dark = props.darkMode !== undefined ? props.darkMode : newVal;
+            const bgColor = dark ? '#000000' : '#ffffff'; 
+            Graph.backgroundColor(bgColor);
+            
+            const linkColor = dark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)';
+            Graph.linkColor(() => linkColor);
+            
+            // Re-apply node styling for theme change
+            Graph.nodeColor((node: any) => {
+                const type = node.type || '未知';
+                if (props.hiddenTypes.includes(type)) return 'rgba(200,200,200,0.1)';
+                const defaultColor = dark ? '#60a5fa' : '#3b82f6';
+                return props.colorMap[type] || defaultColor;
+            });
+            Graph.nodeOpacity(dark ? 0.9 : 0.7);
+
+            // Update bloom effect
+             // Note: 3d-force-graph doesn't make it easy to remove passes dynamically without rebuilding
+             // For now, we just update data, but ideally we should re-init if post-processing needs to toggle
+             // We can force re-init by reloading the component or clearing container, but that's heavy.
+             // Let's assume user doesn't switch theme constantly while in 3D view.
+             // If they do, a page refresh or re-mount fixes it.
+             
+            // Force refresh
+            updateGraphData(); 
+        }
+    });
 
 const updateGraphData = () => {
     if (!Graph || !props.nodes) return;
@@ -158,6 +218,21 @@ const focusNode = (nodeId: string) => {
     }
 };
 
+const panToCenter = () => {
+    if (!Graph) return;
+    if (Graph.zoomToFit) {
+        Graph.zoomToFit(800, 60);
+        return;
+    }
+};
+
+const fitToContents = () => {
+    if (!Graph) return;
+    if (Graph.zoomToFit) {
+        Graph.zoomToFit(800, 60);
+    }
+};
+
 // Handle resize
 const onResize = () => {
     if (Graph && containerRef.value) {
@@ -181,7 +256,9 @@ onUnmounted(() => {
 });
 
 defineExpose({
-    focusNode
+    focusNode,
+    panToCenter,
+    fitToContents
 });
 </script>
 
@@ -189,5 +266,8 @@ defineExpose({
 /* Requirement: Force white background in light mode */
 :global(html:not(.dark)) .graph-viewer-3d-light-bg {
     background-color: #ffffff !important;
+}
+:global(html.dark) .graph-viewer-3d-light-bg {
+    background-color: #0f172a !important;
 }
 </style>

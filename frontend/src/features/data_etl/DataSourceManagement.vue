@@ -1471,18 +1471,26 @@ const fetchDataSources = async () => {
       return;
     }
 
-    // Map backend data to frontend model if necessary, or just use as is
-    // Backend returns snake_case, frontend uses mixed but mostly relies on item properties
-    // Let's assume we use backend properties directly and adjust template if needed.
-    // The template uses item.name, item.type, item.status, item.metrics
-    // Backend doesn't return metrics yet (it's not in DataSourceOut schema), so we might need to mock or fetch separately
-    // For now, let's just use what we get and maybe add default metrics
-    dataSourceList.value = data.map(item => ({
-      ...item,
-      status: 'running', // Mock status for now as backend doesn't return it in list
-      throughput: '0/s', // Mock
-      metrics: {} // Mock
-    }));
+    // Map backend data to frontend model
+    dataSourceList.value = data.map(item => {
+      const config = item.config || {};
+      return {
+        ...item,
+        status: 'running', // Mock status for now
+        throughput: '0/s', // Mock
+        metrics: {
+          // Initialize metrics with config data
+          db_type: config.type || '未知类型',
+          table_count: 0,
+          total_records: 0,
+          // Preserve any existing metrics
+          ...(item as any).metrics
+        }
+      };
+    });
+
+    // Asynchronously fetch metadata for databases to populate metrics
+    loadDatabaseMetrics();
   } catch (error) {
     console.error('Failed to fetch data sources:', error);
     toast({
@@ -1493,6 +1501,57 @@ const fetchDataSources = async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+const loadDatabaseMetrics = async () => {
+  const dbItems = dataSourceList.value.filter(item => item.type === 'database');
+  
+  // Fetch metadata in parallel
+  const results = await Promise.allSettled(
+    dbItems.map(async (item) => {
+      try {
+        // 1. Try cache first
+        const cacheKey = `datasource_metrics_${item.id}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { timestamp, data } = JSON.parse(cached);
+          // 5 minutes TTL
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            item.metrics = { ...item.metrics, ...data };
+            return;
+          }
+        }
+
+        // 2. Fetch fresh metadata
+        const metadata = await dataSourceApi.fetchMetadata(item.id);
+        
+        if (Array.isArray(metadata)) {
+          const tableCount = metadata.length;
+          // Calculate total records from metadata schema_info
+          const totalRecords = metadata.reduce((acc, table) => {
+            const rc = table.schema_info?.row_count;
+            return acc + (typeof rc === 'number' ? rc : 0);
+          }, 0);
+
+          const metricsData = {
+            table_count: tableCount,
+            total_records: totalRecords
+          };
+
+          // Update item
+          item.metrics = { ...item.metrics, ...metricsData };
+          
+          // Update cache
+          localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            data: metricsData
+          }));
+        }
+      } catch (error) {
+        console.error(`Failed to fetch metadata for data source ${item.id}`, error);
+      }
+    })
+  );
 };
 
 onMounted(() => {
