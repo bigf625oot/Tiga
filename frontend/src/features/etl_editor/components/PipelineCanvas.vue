@@ -15,6 +15,7 @@ import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
+// import '@vue-flow/background/dist/style.css';
 
 const store = usePipelineStore();
 const { isLightMode } = useTheme();
@@ -37,6 +38,24 @@ const onConnect = (params: Connection) => {
   if (params.source === params.target) return;
   const exists = store.edges.some(e => e.source === params.source && e.target === params.target);
   if (exists) return;
+
+  // Validate connection types (Source -> Transform -> Sink)
+  const sourceNode = store.nodes.find(n => n.id === params.source);
+  const targetNode = store.nodes.find(n => n.id === params.target);
+
+  if (sourceNode && targetNode) {
+    const sourceType = sourceNode.data.type;
+    const targetType = targetNode.data.type;
+
+    // Rules:
+    // 1. Source cannot be a target (handled by handle type usually, but double check)
+    // 2. Sink cannot be a source
+    // 3. Source can connect to Transform or Sink
+    // 4. Transform can connect to Transform or Sink
+    
+    if (sourceType === 'sink') return; // Sink cannot be source
+    if (targetType === 'source') return; // Source cannot be target
+  }
 
   flowInstance.addEdges([{
     ...params,
@@ -128,7 +147,12 @@ const edgeOptions = computed(() => ({
       @node-click="(e) => store.setSelectedNode(e.node.id)"
       @pane-click="() => store.setSelectedNode(null)"
     >
-      <Background :pattern-color="patternColor" :bg-color="bgColor" :gap="20" />
+      <Background 
+        variant="dots"
+        :gap="20" 
+        :size="1.5" 
+        :pattern-color="isLightMode ? '#94a3b8' : '#475569'" 
+      />
       <Controls />
       <MiniMap />
       

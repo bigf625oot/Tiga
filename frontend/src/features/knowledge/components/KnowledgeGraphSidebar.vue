@@ -7,14 +7,15 @@
           节点搜索
         </h3>
 
-        <div v-if="!loading" class="relative">
+        <div v-if="!loading" class="relative" ref="searchContainerRef">
           <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             :model-value="localSearch"
             @update:model-value="(val) => { localSearch = String(val); onSearchChange(); }"
             placeholder="搜索节点名称/属性..."
             class="pl-9 pr-8 h-9 text-xs"
-            @keydown.enter="onSearch"
+            @keydown="handleKeydown"
+            @focus="showSuggestions = !!localSearch && suggestions.length > 0"
           />
           <button
             v-if="localSearch"
@@ -23,6 +24,19 @@
           >
             <X class="h-4 w-4" />
           </button>
+          
+          <!-- Suggestions Dropdown -->
+          <div v-if="showSuggestions && suggestions.length > 0" 
+               class="absolute top-full left-0 w-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+              <div v-for="(item, index) in suggestions" 
+                   :key="item"
+                   class="px-3 py-2 text-xs cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors truncate"
+                   :class="{'bg-zinc-100 dark:bg-zinc-700/50': index === activeSuggestionIndex}"
+                   @click="selectSuggestion(item)"
+              >
+                <span v-html="highlightMatch(item)"></span>
+              </div>
+          </div>
         </div>
         <div v-else class="space-y-2">
           <Skeleton class="h-9 w-full" />
@@ -209,6 +223,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { onClickOutside } from '@vueuse/core';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -233,6 +248,7 @@ const props = defineProps<{
   collapsed?: boolean;
   loading?: boolean;
   currentEvents?: any[];
+  allNodeNames?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -251,11 +267,76 @@ const loading = computed(() => !!props.loading);
 const localSearch = ref(props.searchQuery);
 const localSelectedTypes = ref(props.selectedTypes);
 const localTimeRange = ref<number[]>([...props.timeRange]);
+const showSuggestions = ref(false);
+const searchContainerRef = ref(null);
+const activeSuggestionIndex = ref(-1);
+
+const suggestions = computed(() => {
+    if (!localSearch.value || !props.allNodeNames) return [];
+    const query = localSearch.value.toLowerCase();
+    return props.allNodeNames
+        .filter(name => name.toLowerCase().includes(query) && name !== localSearch.value)
+        .slice(0, 10);
+});
+
+onClickOutside(searchContainerRef, () => {
+    showSuggestions.value = false;
+});
+
+const selectSuggestion = (name: string) => {
+    localSearch.value = name;
+    onSearchChange();
+    showSuggestions.value = false;
+};
+
+const handleKeydown = (e: KeyboardEvent) => {
+    if (!showSuggestions.value || suggestions.value.length === 0) {
+        if (e.key === 'Enter') onSearch();
+        return;
+    }
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeSuggestionIndex.value = (activeSuggestionIndex.value + 1) % suggestions.value.length;
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeSuggestionIndex.value = (activeSuggestionIndex.value - 1 + suggestions.value.length) % suggestions.value.length;
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (activeSuggestionIndex.value >= 0) {
+            selectSuggestion(suggestions.value[activeSuggestionIndex.value]);
+        } else {
+            onSearch();
+            showSuggestions.value = false;
+        }
+    } else if (e.key === 'Escape') {
+        showSuggestions.value = false;
+    }
+};
+
+const highlightMatch = (text: string) => {
+    if (!localSearch.value) return text;
+    const query = localSearch.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp(`(${query})`, 'gi'), '<span class="text-blue-500 font-medium">$1</span>');
+};
 
 // Sync with props
 watch(() => props.searchQuery, val => localSearch.value = val);
 watch(() => props.selectedTypes, val => localSelectedTypes.value = val);
 watch(() => props.timeRange, val => localTimeRange.value = [...val]);
+watch(localSearch, (val) => {
+    // Show suggestions if we have input and matches
+    if (val && props.allNodeNames) {
+        // Simple check to see if we have matches before showing
+        const hasMatches = props.allNodeNames.some(name => 
+            name.toLowerCase().includes(val.toLowerCase()) && name !== val
+        );
+        showSuggestions.value = hasMatches;
+    } else {
+        showSuggestions.value = false;
+    }
+    activeSuggestionIndex.value = -1;
+});
 
 // Event handlers
 const onSearchChange = () => {

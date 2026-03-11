@@ -677,10 +677,16 @@
 
                            <div class="flex items-center gap-2">
                                <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" @click="toggleAgentSelect">
-                                  <div class="w-5 h-5 rounded bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center border border-blue-500/20">
-                                      <img v-if="currentAgent?.icon || currentAgent?.icon_url" :src="currentAgent?.icon || currentAgent?.icon_url" class="w-3.5 h-3.5 object-cover" />
-                                      <Zap v-else class="w-3.5 h-3.5 text-blue-500" />
-                                  </div>
+                                  <Avatar class="w-5 h-5 border border-blue-500/20">
+                                      <AvatarImage 
+                                          v-if="currentAgent?.icon || currentAgent?.icon_url" 
+                                          :src="currentAgent?.icon || currentAgent?.icon_url" 
+                                          class="object-cover bg-white"
+                                      />
+                                      <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
+                                          <Zap class="w-3.5 h-3.5 text-blue-500" />
+                                      </AvatarFallback>
+                                  </Avatar>
                                   <Select 
                                       v-model="selectedAgentId" 
                                       @update:modelValue="handleAgentChange"

@@ -14,21 +14,21 @@
                <img v-if="isImage" :src="agent.icon" class="h-full w-full object-cover" />
                <component v-else :is="agent.iconComponent" class="h-6 w-6 text-foreground/80" />
            </div>
-           <div class="space-y-1">
+           <div class="space-y-2">
               <CardTitle class="text-base font-semibold leading-none tracking-tight line-clamp-1" :title="agent.name">
                 {{ agent.name }}
               </CardTitle>
-              <div class="flex items-center">
+              <div class="flex items-center gap-2">
                  <Badge 
                    variant="secondary" 
-                   class="text-xs font-normal h-5 px-1.5" 
+                   class="text-xs font-medium px-2.5 py-0.5 rounded-md" 
                    v-if="isTemplate"
                  >
                    模版
                  </Badge>
                  <Badge 
                    variant="outline" 
-                   class="text-xs font-normal h-5 px-1.5 text-primary bg-primary/5 border-primary/20" 
+                   class="text-xs font-medium px-2.5 py-0.5 rounded-md text-primary bg-primary/10 border-primary/20" 
                    v-else
                  >
                    我的助手
@@ -65,7 +65,7 @@
     <CardFooter class="p-6 pt-0 flex items-center justify-between">
         <div class="flex items-center gap-2">
             <div class="h-2 w-2 rounded-full" :class="agent.is_active !== false ? 'bg-green-500' : 'bg-muted-foreground/30'" />
-            <span class="text-xs text-muted-foreground font-medium">{{ agent.is_active !== false ? 'Active' : 'Inactive' }}</span>
+            <span class="text-xs text-muted-foreground font-medium">{{ agent.is_active !== false ? '已启用' : '未启用' }}</span>
         </div>
         <span class="text-xs text-muted-foreground font-mono opacity-60">ID: {{ agent.id ? agent.id.substring(0, 6) : '---' }}</span>
     </CardFooter>

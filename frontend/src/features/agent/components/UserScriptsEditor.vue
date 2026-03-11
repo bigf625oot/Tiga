@@ -1,23 +1,10 @@
 <template>
-  <div class="space-y-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="text-sm text-muted-foreground">为智能体预设常用对话场景，方便用户快速开始。</div>
-      <button 
-        @click="showCreate = true" 
-        class="p-4 py-1.5 text-xs font-medium rounded-lg bg-primary/10 text-primary hover:bg-blue-100 transition-colors flex items-center gap-1.5"
-        v-if="!showCreate"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-        添加剧本
-      </button>
-    </div>
-
+  <div class="h-full flex flex-col">
     <!-- Create Form -->
-    <div v-if="showCreate" class="p-4 border border-slate-200 rounded-lg bg-muted/50/50 animate-fade-in-down shadow-sm">
-      <div class="flex justify-between items-start m-4">
-        <h4 class="text-sm font-semibold text-slate-700">新建剧本</h4>
-        <button @click="cancelCreate" class="text-muted-foreground hover:text-slate-600">
+    <div v-if="showCreate" class="mx-4 mt-4 p-4 border border-border/60 rounded-lg bg-background animate-fade-in-down shadow-sm">
+      <div class="flex justify-between items-start mb-4">
+        <h4 class="text-sm font-semibold text-foreground">新建剧本</h4>
+        <button @click="cancelCreate" class="text-muted-foreground hover:text-foreground transition-colors">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
@@ -27,7 +14,7 @@
           <input 
             v-model="createForm.title" 
             maxlength="50" 
-            class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" 
+            class="w-full p-2 bg-muted/5 border border-input/60 rounded-md text-sm focus:bg-background focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
             placeholder="例如：翻译助手"
           >
         </div>
@@ -37,7 +24,7 @@
             v-model="createForm.content" 
             rows="3" 
             maxlength="500" 
-            class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none font-mono text-slate-600" 
+            class="w-full p-2 bg-muted/5 border border-input/60 rounded-md text-sm focus:bg-background focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none font-mono text-foreground" 
             placeholder="用户点击剧本后自动发送的内容..."
           ></textarea>
         </div>
@@ -46,19 +33,19 @@
           <input 
             v-model="createForm.description" 
             maxlength="200" 
-            class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" 
+            class="w-full p-2 bg-muted/5 border border-input/60 rounded-md text-sm focus:bg-background focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
             placeholder="简短描述该剧本的用途"
           >
         </div>
         
         <div class="flex justify-end gap-2 pt-2">
-            <button @click="cancelCreate" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">取消</button>
+            <button @click="cancelCreate" class="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-md transition-colors">取消</button>
             <button 
                 @click="submitCreate" 
-                class="px-4 py-2 text-xs font-medium bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-200" 
+                class="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm" 
                 :disabled="createLoading"
             >
-                <span v-if="createLoading" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span v-if="createLoading" class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
                 <span>保存剧本</span>
             </button>
         </div>
@@ -67,23 +54,23 @@
 
     <!-- List -->
     <div v-if="loading" class="py-8 flex justify-center">
-        <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
     </div>
     
-    <div v-else-if="items.length === 0 && !showCreate" class="py-8 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 rounded-lg bg-muted/50/50">
-        <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-2">
-            <svg class="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+    <div v-else-if="items.length === 0 && !showCreate" class="flex-1 flex flex-col items-center justify-center text-center p-8">
+        <div class="w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center mb-3">
+            <svg class="w-6 h-6 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
         </div>
         <span class="text-sm text-muted-foreground font-medium">暂无预设剧本</span>
-        <span class="text-xs text-muted-foreground mt-1">添加剧本以引导用户更好地使用智能体</span>
+        <span class="text-xs text-muted-foreground/60 mt-1">点击右上角“新建剧本”开始添加</span>
     </div>
 
-    <div v-else class="space-y-3">
+    <div v-else class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
       <div 
         v-for="(it, idx) in items" 
         :key="it.localId" 
-        class="group bg-white border border-slate-200 rounded-lg transition-all hover:shadow-md hover:border-blue-300"
-        :class="{'ring-2 ring-blue-100 border-blue-400': editingId === it.localId}"
+        class="group bg-background border border-border/40 rounded-lg transition-all hover:shadow-sm hover:border-primary/30"
+        :class="{'ring-1 ring-primary/20 border-primary/50 bg-primary/5': editingId === it.localId}"
         draggable="true" 
         @dragstart="dragStart(idx)" 
         @dragover.prevent 
@@ -91,10 +78,10 @@
       >
         <!-- View Mode -->
         <div v-if="editingId !== it.localId" class="p-4 flex items-start gap-4">
-            <div class="mt-1 text-slate-300 cursor-move hover:text-muted-foreground transition-colors" title="拖拽排序">
+            <div v-if="!readonly" class="mt-1 text-slate-300 cursor-move hover:text-muted-foreground transition-colors" title="拖拽排序">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
             </div>
-            <div class="flex-1 min-w-0 cursor-pointer" @click="startEdit(it)">
+            <div class="flex-1 min-w-0" :class="!readonly ? 'cursor-pointer' : ''" @click="!readonly && startEdit(it)">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="font-semibold text-slate-700 text-sm truncate">{{ it.title }}</span>
                     <span v-if="it.description" class="text-xs text-muted-foreground truncate border-l border-slate-200 pl-2 max-w-[200px]">{{ it.description }}</span>
@@ -103,7 +90,7 @@
                     {{ it.content }}
                 </div>
             </div>
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+            <div v-if="!readonly" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                 <button @click.stop="startEdit(it)" class="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors" title="编辑">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 </button>
@@ -151,7 +138,8 @@ import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { createVNode } from 'vue';
 
 const props = defineProps({
-  agentId: { type: String, required: true }
+  agentId: { type: String, required: true },
+  readonly: { type: Boolean, default: false }
 });
 
 const items = ref([]);
@@ -316,6 +304,9 @@ const dragDrop = async (idx) => {
   });
   dragIndex = -1;
 };
+defineExpose({
+  openCreate: () => { showCreate.value = true; }
+});
 </script>
 
 <style scoped>

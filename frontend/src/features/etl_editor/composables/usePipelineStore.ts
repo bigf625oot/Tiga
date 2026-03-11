@@ -19,10 +19,25 @@ export const usePipelineStore = defineStore('pipeline', () => {
   
   let pollTimer: any = null;
 
-  const startPolling = () => {
+  const startPolling = (id?: number) => {
     if (pollTimer) return;
+    const targetId = id || currentPipeline.value?.id;
+    if (!targetId) return;
+    
     pollTimer = setInterval(async () => {
-      if (!currentPipeline.value) return;
+      // If we are viewing a different pipeline, stop polling for the old one?
+      // Or we only poll for the currentPipeline.
+      // If id is provided, it means we might be polling for a background pipeline?
+      // For now, let's stick to polling for currentPipeline if it matches.
+      
+      if (!currentPipeline.value) {
+          stopPolling();
+          return;
+      }
+      
+      // If we were polling for a specific ID and currentPipeline changed, maybe stop?
+      // But usually startPolling is called when running.
+      
       try {
         // Silent fetch to update status
         const pipeline = await pipelineApi.get(currentPipeline.value.id);
@@ -47,8 +62,6 @@ export const usePipelineStore = defineStore('pipeline', () => {
                };
              }
            });
-           
-           // Force update if needed, but reactivity should handle deep changes
         }
 
         if (pipeline.status !== PipelineStatus.RUNNING) {
@@ -56,6 +69,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
         }
       } catch (e) {
         console.error('Status polling failed', e);
+        stopPolling(); // Stop on error to avoid spam
       }
     }, 2000);
   };
@@ -172,18 +186,28 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   };
 
-  const runPipeline = async () => {
-    // Auto save before run (creates if not exists)
-    await savePipeline();
-    
-    if (!currentPipeline.value) return;
+  const runPipeline = async (id?: number) => {
+    const targetId = id || currentPipeline.value?.id;
+    if (!targetId) return;
+
+    // Auto save before run (creates if not exists) only if running current pipeline
+    if (!id || (currentPipeline.value && id === currentPipeline.value.id)) {
+      await savePipeline();
+    }
     
     loading.value = true;
     try {
-      const result = await pipelineApi.run(currentPipeline.value.id);
-      // Optimistically update status
-      currentPipeline.value.status = PipelineStatus.RUNNING; 
-      startPolling(); // Start polling for metrics/status
+      const result = await pipelineApi.run(targetId);
+      
+      // Update pipeline in list
+      const p = pipelines.value.find(p => p.id === targetId);
+      if (p) p.status = PipelineStatus.RUNNING;
+
+      // Update current pipeline if matches
+      if (currentPipeline.value?.id === targetId) {
+        currentPipeline.value.status = PipelineStatus.RUNNING; 
+        startPolling(); // Start polling for metrics/status
+      }
       return result;
     } catch (e: any) {
       error.value = e.message;
@@ -193,14 +217,37 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   };
 
-  const stopPipeline = async () => {
-    if (!currentPipeline.value) return;
+  const stopPipeline = async (id?: number) => {
+    const targetId = id || currentPipeline.value?.id;
+    if (!targetId) return;
     
     loading.value = true;
     try {
-      await pipelineApi.stop(currentPipeline.value.id);
-      currentPipeline.value.status = PipelineStatus.STOPPED;
-      stopPolling(); // Stop polling
+      await pipelineApi.stop(targetId);
+      
+      // Update pipeline in list
+      const p = pipelines.value.find(p => p.id === targetId);
+      if (p) p.status = PipelineStatus.STOPPED;
+
+      if (currentPipeline.value?.id === targetId) {
+        currentPipeline.value.status = PipelineStatus.STOPPED;
+        stopPolling(); // Stop polling
+      }
+    } catch (e: any) {
+      error.value = e.message;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const deletePipeline = async (id: number) => {
+    loading.value = true;
+    try {
+      await pipelineApi.delete(id);
+      pipelines.value = pipelines.value.filter(p => p.id !== id);
+      if (currentPipeline.value?.id === id) {
+        currentPipeline.value = null;
+      }
     } catch (e: any) {
       error.value = e.message;
     } finally {
@@ -267,6 +314,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
     savePipeline,
     runPipeline,
     stopPipeline,
+    deletePipeline,
     addNode,
     removeNode,
     createVersion, // Export action

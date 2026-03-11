@@ -47,8 +47,8 @@
             <DropdownMenuItem @click="filterStatus = ''">所有状态</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem @click="filterStatus = 'running'">运行中</DropdownMenuItem>
-            <DropdownMenuItem @click="filterStatus = 'paused'">已暂停</DropdownMenuItem>
-            <DropdownMenuItem @click="filterStatus = 'completed'">已完成</DropdownMenuItem>
+            <DropdownMenuItem @click="filterStatus = 'stopped'">已停止</DropdownMenuItem>
+            <DropdownMenuItem @click="filterStatus = 'created'">已创建</DropdownMenuItem>
             <DropdownMenuItem @click="filterStatus = 'failed'">失败</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -95,16 +95,15 @@
               </TableHead>
               <TableHead>状态</TableHead>
               <TableHead>
-                <Button variant="ghost" class="-ml-4 h-8 data-[state=open]:bg-accent" @click="toggleSort('lastRunTime')">
+                <Button variant="ghost" class="-ml-4 h-8 data-[state=open]:bg-accent" @click="toggleSort('last_run_at')">
                   最近运行
-                  <ArrowUpDown class="ml-2 h-4 w-4" v-if="sortBy === 'lastRunTime'" />
+                  <ArrowUpDown class="ml-2 h-4 w-4" v-if="sortBy === 'last_run_at'" />
                 </Button>
               </TableHead>
-              <TableHead>成功率</TableHead>
               <TableHead>
-                <Button variant="ghost" class="-ml-4 h-8 data-[state=open]:bg-accent" @click="toggleSort('createTime')">
+                <Button variant="ghost" class="-ml-4 h-8 data-[state=open]:bg-accent" @click="toggleSort('created_at')">
                   创建时间
-                  <ArrowUpDown class="ml-2 h-4 w-4" v-if="sortBy === 'createTime'" />
+                  <ArrowUpDown class="ml-2 h-4 w-4" v-if="sortBy === 'created_at'" />
                 </Button>
               </TableHead>
               <TableHead class="text-right">操作</TableHead>
@@ -160,23 +159,11 @@
                 </TableCell>
                 <TableCell>
                   <div class="text-sm">
-                    {{ formatTimeAgo(pipeline.lastRunTime) }}
+                    {{ formatTimeAgo(pipeline.last_run_at) }}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div class="flex items-center gap-2">
-                    <div class="w-16 h-2 bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        class="h-full rounded-full transition-all"
-                        :class="pipeline.stats.successRate >= 90 ? 'bg-green-500' : 'bg-amber-500'"
-                        :style="{ width: `${pipeline.stats.successRate}%` }"
-                      ></div>
-                    </div>
-                    <span class="text-sm font-medium font-din">{{ pipeline.stats.successRate }}%</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span class="text-muted-foreground text-sm">{{ formatDate(pipeline.createTime) }}</span>
+                  <span class="text-muted-foreground text-sm">{{ formatDate(pipeline.created_at) }}</span>
                 </TableCell>
                 <TableCell class="text-right">
                   <div class="flex items-center justify-end gap-2">
@@ -375,7 +362,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/toast';
 import { usePipelineStore } from '@/features/etl_editor/composables/usePipelineStore';
-import { NodeType, SourceType, TransformType, SinkType } from '@/features/etl_editor/types/pipeline';
+import { NodeType, SourceType, TransformType, SinkType, PipelineStatus, type Pipeline } from '@/features/etl_editor/types/pipeline';
 import { PIPELINE_TEMPLATES, type PipelineTemplate } from '@/features/etl_editor/config/templates';
 
 dayjs.extend(relativeTime);
@@ -400,57 +387,29 @@ const selectTemplate = (template: PipelineTemplate) => {
   emit('create');
 };
 
-// Types
-interface Pipeline {
-  id: string;
-  name: string;
-  status: 'running' | 'paused' | 'completed' | 'failed';
-  createTime: string;
-  lastRunTime: string;
-  stats: {
-    successRate: number;
-    totalRuns: number;
-  };
-}
-
 // State
-const pipelines = ref<Pipeline[]>([]);
-const isLoading = ref(true);
+// const pipelines = ref<Pipeline[]>([]); // Use store.pipelines
+const isLoading = computed(() => pipelineStore.loading);
 const isRefreshing = ref(false);
 const searchQuery = ref('');
 const filterStatus = ref('');
-const sortBy = ref('createTime');
+const sortBy = ref('created_at'); // Changed from createTime
 const sortDirection = ref<'asc' | 'desc'>('desc');
-const selectedIds = ref<string[]>([]);
+const selectedIds = ref<number[]>([]); // Changed to number[]
 const currentPage = ref(1);
 const pageSize = ref(10);
 
-// Mock Data Generation
-const generatePipelines = (count: number): Pipeline[] => {
-  const statuses = ['running', 'paused', 'completed', 'failed'] as const;
-  return Array.from({ length: count }).map((_, i) => ({
-    id: `pl-${1000 + i}`,
-    name: `数据处理流水线 ${i + 1} - ${['每日同步', '实时清洗', '异常检测', '归档任务'][i % 4]}`,
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    createTime: dayjs().subtract(Math.floor(Math.random() * 30), 'day').toISOString(),
-    lastRunTime: dayjs().subtract(Math.floor(Math.random() * 24), 'hour').toISOString(),
-    stats: {
-      successRate: Math.floor(Math.random() * 20) + 80,
-      totalRuns: Math.floor(Math.random() * 1000)
-    }
-  }));
-};
-
 // Logic
-const refreshData = () => {
+const refreshData = async () => {
   isRefreshing.value = true;
-  isLoading.value = true;
-  setTimeout(() => {
-    pipelines.value = generatePipelines(25);
-    isLoading.value = false;
-    isRefreshing.value = false;
+  try {
+    await pipelineStore.fetchPipelines();
     toast({ title: '刷新成功', description: '数据已更新' });
-  }, 800);
+  } catch (e) {
+    toast({ title: '刷新失败', description: '无法获取流水线数据', variant: 'destructive' });
+  } finally {
+    isRefreshing.value = false;
+  }
 };
 
 onMounted(() => {
@@ -458,11 +417,11 @@ onMounted(() => {
 });
 
 const filteredPipelines = computed(() => {
-  let result = pipelines.value;
+  let result = pipelineStore.pipelines;
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    result = result.filter(p => p.name.toLowerCase().includes(query) || p.id.toLowerCase().includes(query));
+    result = result.filter(p => p.name.toLowerCase().includes(query) || p.id.toString().includes(query));
   }
 
   if (filterStatus.value) {
@@ -473,7 +432,6 @@ const filteredPipelines = computed(() => {
     let valA: any = a[sortBy.value as keyof Pipeline];
     let valB: any = b[sortBy.value as keyof Pipeline];
     
-    // Handle nested stats if needed, simplified here
     if (sortBy.value === 'name') {
        // string compare
     } else {
@@ -545,25 +503,30 @@ const toggleSelectAll = (checked: boolean) => {
   }
 };
 
-const togglePipelineStatus = (pipeline: Pipeline) => {
-  const newStatus = pipeline.status === 'running' ? 'paused' : 'running';
-  pipeline.status = newStatus;
-  toast({ 
-    title: newStatus === 'running' ? '流水线已启动' : '流水线已暂停',
-    description: `流水线 "${pipeline.name}" 状态已更新`
-  });
+const togglePipelineStatus = async (pipeline: Pipeline) => {
+  try {
+    if (pipeline.status === PipelineStatus.RUNNING) {
+      await pipelineStore.stopPipeline(pipeline.id);
+      toast({ title: '流水线已暂停', description: `流水线 "${pipeline.name}" 状态已更新` });
+    } else {
+      await pipelineStore.runPipeline(pipeline.id);
+      toast({ title: '流水线已启动', description: `流水线 "${pipeline.name}" 状态已更新` });
+    }
+  } catch (e) {
+    toast({ title: '操作失败', description: '无法更新流水线状态', variant: 'destructive' });
+  }
 };
 
-const duplicatePipeline = (pipeline: Pipeline) => {
-  const newPipeline = {
-    ...pipeline,
-    id: `pl-${Math.floor(Math.random() * 10000)}`,
-    name: `${pipeline.name} (副本)`,
-    createTime: dayjs().toISOString(),
-    status: 'paused' as const
-  };
-  pipelines.value.unshift(newPipeline);
-  toast({ title: '复制成功', description: '新流水线已创建' });
+const duplicatePipeline = async (pipeline: Pipeline) => {
+  try {
+    await pipelineStore.createPipeline({
+      name: `${pipeline.name} (副本)`,
+      dag_config: pipeline.dag_config || { nodes: [], edges: [] }
+    });
+    toast({ title: '复制成功', description: '新流水线已创建' });
+  } catch (e) {
+    toast({ title: '复制失败', description: '无法创建副本', variant: 'destructive' });
+  }
 };
 
 const isDeleteDialogOpen = ref(false);
@@ -581,49 +544,54 @@ const batchDelete = () => {
   isDeleteDialogOpen.value = true;
 };
 
-const executeDelete = () => {
-  if (isBatchDeleteMode.value) {
-    pipelines.value = pipelines.value.filter(p => !selectedIds.value.includes(p.id));
-    selectedIds.value = [];
-    toast({ title: '批量删除成功', description: '选中流水线已移除' });
-  } else if (pipelineToDelete.value) {
-    pipelines.value = pipelines.value.filter(p => p.id !== pipelineToDelete.value?.id);
-    toast({ title: '删除成功', description: '流水线已移除' });
+const executeDelete = async () => {
+  try {
+    if (isBatchDeleteMode.value) {
+      await Promise.all(selectedIds.value.map(id => pipelineStore.deletePipeline(id)));
+      selectedIds.value = [];
+      toast({ title: '批量删除成功', description: '选中流水线已移除' });
+    } else if (pipelineToDelete.value) {
+      await pipelineStore.deletePipeline(pipelineToDelete.value.id);
+      toast({ title: '删除成功', description: '流水线已移除' });
+    }
+  } catch (e) {
+    toast({ title: '删除失败', description: '无法移除流水线', variant: 'destructive' });
+  } finally {
+    isDeleteDialogOpen.value = false;
+    pipelineToDelete.value = null;
   }
-  isDeleteDialogOpen.value = false;
-  pipelineToDelete.value = null;
 };
 
 // Helpers
-const formatDate = (iso: string) => dayjs(iso).format('YYYY-MM-DD HH:mm');
-const formatTimeAgo = (iso: string) => dayjs(iso).fromNow();
+const formatDate = (iso: string) => iso ? dayjs(iso).format('YYYY-MM-DD HH:mm') : '-';
+const formatTimeAgo = (iso: string) => iso ? dayjs(iso).fromNow() : '从未运行';
 
 const getStatusLabel = (status: string) => {
   const map: Record<string, string> = {
-    running: '运行中',
-    paused: '已暂停',
-    completed: '已完成',
-    failed: '失败'
+    [PipelineStatus.RUNNING]: '运行中',
+    [PipelineStatus.STOPPED]: '已停止',
+    [PipelineStatus.CREATED]: '已创建',
+    [PipelineStatus.FAILED]: '失败'
   };
   return map[status] || status;
 };
 
 const getStatusColor = (status: string) => {
   switch(status) {
-    case 'running': return 'bg-green-500';
-    case 'paused': return 'bg-amber-500';
-    case 'completed': return 'bg-blue-500';
-    case 'failed': return 'bg-red-500';
+    case PipelineStatus.RUNNING: return 'bg-green-500';
+    case PipelineStatus.STOPPED: return 'bg-amber-500';
+    case PipelineStatus.CREATED: return 'bg-blue-500';
+    case PipelineStatus.FAILED: return 'bg-red-500';
     default: return 'bg-gray-500';
   }
 };
 
 const getStatusBadgeVariant = (status: string) => {
   switch(status) {
-    case 'running': return 'outline'; // custom styling usually needed for specific colors if not using default variants
-    case 'paused': return 'secondary';
-    case 'completed': return 'default';
-    case 'failed': return 'destructive';
+    case PipelineStatus.RUNNING: return 'outline'; 
+    case PipelineStatus.STOPPED: return 'secondary';
+    case PipelineStatus.CREATED: return 'default';
+    case PipelineStatus.FAILED: return 'destructive';
     default: return 'outline';
   }
 };

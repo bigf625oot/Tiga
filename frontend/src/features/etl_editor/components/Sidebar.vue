@@ -10,8 +10,17 @@ const props = defineProps<{
 
 const onDragStart = (event: DragEvent, type: NodeType, subType: string, label: string) => {
   if (event.dataTransfer) {
-    event.dataTransfer.setData('application/vueflow', JSON.stringify({ type, subType, label }));
+    const data = JSON.stringify({ type, subType, label });
+    event.dataTransfer.setData('application/vueflow', data);
     event.dataTransfer.effectAllowed = 'move';
+    
+    // Create a custom drag image
+    const dragImage = document.createElement('div');
+    dragImage.className = 'p-3 bg-background border border-primary rounded-lg shadow-lg flex items-center gap-2 w-48';
+    dragImage.innerHTML = `<span class="text-sm font-medium">${label}</span>`;
+    document.body.appendChild(dragImage);
+    event.dataTransfer.setDragImage(dragImage, 10, 10);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
   }
 };
 

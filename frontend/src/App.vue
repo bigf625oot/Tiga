@@ -15,7 +15,7 @@
         <SheetContent side="bottom" class="h-[85vh] rounded-t-[20px] p-0 flex flex-col">
            <div class="p-6 pb-2">
               <Button @click="createNewChat(); mobileMenuOpen = false" class="w-full h-12 text-lg font-medium shadow-md">
-                <Plus class="mr-2 h-5 w-5" /> 新建任务
+                <Plus class="mr-2 h-5 w-5" /> 新建对话
               </Button>
            </div>
            
@@ -113,10 +113,10 @@
                  :class="isSidebarCollapsed ? 'h-10 w-10 justify-center p-0' : ''"
                >
                  <Plus class="h-5 w-5" />
-                <span v-if="!isSidebarCollapsed">新建任务</span>
+                <span v-if="!isSidebarCollapsed">新建对话</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right" v-if="isSidebarCollapsed">新建任务</TooltipContent>
+            <TooltipContent side="right" v-if="isSidebarCollapsed">新建对话</TooltipContent>
            </Tooltip>
          </TooltipProvider>
       </div>
@@ -177,7 +177,7 @@
                </div>
                <h3 class="font-medium text-sm text-foreground">暂无任务记录</h3>
                <p class="text-xs text-muted-foreground mt-1 max-w-[12rem]">
-                  点击左上角“新建任务”开始新的对话
+                  点击左上角“新建对话”开始新的对话
                </p>
             </div>
             <div v-else class="space-y-1">
@@ -361,12 +361,12 @@
                v-bind="currentViewProps" 
                @back="handleBack"
                @view-detail="viewDetail"
-               @navigate="currentView = $event"
-               @navigate-to-extraction="handleNavigateToExtraction"
-               @create="currentView = 'etl_pipeline'"
-               @edit="currentView = 'etl_pipeline'"
-             />
-          </div>
+           @navigate="currentView = $event"
+           @navigate-to-extraction="handleNavigateToExtraction"
+           @create="handleCreatePipeline"
+           @edit="handleEditPipeline"
+         />
+      </div>
        </div>
     </main>
 
@@ -568,11 +568,13 @@ const currentViewComponent = computed(() => {
 // Dynamic Props
 const selectedRecording = ref<any>();
 const prefilledIndicator = ref<any>();
+const selectedPipelineId = ref<number>();
 
 const currentViewProps = computed(() => {
     if (currentView.value === 'detail') return { recording: selectedRecording.value };
     if (currentView.value === 'metrics') return { prefilledIndicator: prefilledIndicator.value };
     if (currentView.value === 'knowledge_graph') return { initialScope: 'global' };
+    if (currentView.value === 'etl_pipeline') return { pipelineId: selectedPipelineId.value };
     return {};
 });
 
@@ -724,6 +726,16 @@ const formatDate = (date: any) => {
 const handleNavigateToExtraction = (indicator: any) => {
     prefilledIndicator.value = indicator;
     currentView.value = 'metrics';
+};
+
+const handleEditPipeline = (pipeline: any) => {
+    selectedPipelineId.value = pipeline.id;
+    currentView.value = 'etl_pipeline';
+};
+
+const handleCreatePipeline = () => {
+    selectedPipelineId.value = undefined;
+    currentView.value = 'etl_pipeline';
 };
 
 interface SidebarItem {

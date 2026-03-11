@@ -120,7 +120,7 @@
     </header>
 
     <!-- Guided Stepper -->
-    <div class="h-10 bg-muted/20 border-b flex items-center justify-center gap-8 px-4 z-10 select-none">
+    <div class="h-10 flex items-center justify-center gap-8 px-4 z-10 select-none">
       <div 
         v-for="(step, index) in STEPS" 
         :key="index"
@@ -180,7 +180,7 @@
              <!-- Background Decoration -->
              <div class="absolute inset-0 bg-grid-slate-200/50 [mask-image:radial-gradient(ellipse_at_center,white,transparent)] pointer-events-none opacity-20"></div>
 
-             <div class="relative bg-background/80 backdrop-blur-md p-8 md:p-12 rounded-2xl border shadow-xl flex flex-col items-center gap-6 max-w-lg w-full text-center animate-in fade-in zoom-in-95 duration-300">
+             <div class="relative flex flex-col items-center gap-6 max-w-lg w-full text-center animate-in fade-in zoom-in-95 duration-300">
                  
                  <!-- Icon & Title Group -->
                  <div class="flex flex-col items-center gap-4">

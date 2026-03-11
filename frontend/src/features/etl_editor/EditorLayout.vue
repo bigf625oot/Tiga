@@ -1,19 +1,53 @@
 <script setup lang="ts">
-import { Box, Search, ArrowLeft, X, Play, Save, Square, Edit2 } from 'lucide-vue-next';
+import { Box, Search, ArrowLeft, X, Play, Save, Square, Edit2, PanelLeft, CalendarClock } from 'lucide-vue-next';
 import PipelineCanvas from './components/PipelineCanvas.vue';
 import Sidebar from './components/Sidebar.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import VersionHistory from './components/VersionHistory.vue';
 import RunLogs from './components/RunLogs.vue';
+import ScheduleConfigDialog from './components/ScheduleConfigDialog.vue';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { usePipelineStore } from './composables/usePipelineStore';
-import { ref, watch, computed, nextTick } from 'vue';
+import { ref, watch, computed, nextTick, onMounted } from 'vue';
+import { useToast } from '@/components/ui/toast';
+
+const props = defineProps<{
+  pipelineId?: number;
+}>();
 
 const emit = defineEmits(['back']);
 const searchQuery = ref('');
 const store = usePipelineStore();
+const isSidebarOpen = ref(true);
+const { toast } = useToast();
+const isScheduleDialogOpen = ref(false);
+
+onMounted(() => {
+  if (props.pipelineId) {
+    store.loadPipeline(props.pipelineId);
+  }
+});
+
+const handleSaveSchedule = async (config: any) => {
+  if (store.currentPipeline) {
+    store.currentPipeline.schedule_config = config;
+    try {
+      await store.savePipeline();
+      toast({ title: '调度配置已保存', description: config.enabled ? '自动调度已启用' : '自动调度已禁用' });
+    } catch (e) {
+      toast({ title: '保存失败', description: '无法更新调度配置', variant: 'destructive' });
+    }
+  }
+};
+
+
+watch(() => props.pipelineId, (newId) => {
+  if (newId) {
+    store.loadPipeline(newId);
+  }
+});
 
 // Property Panel Resize Logic
 const panelWidth = ref(450);
@@ -86,36 +120,54 @@ const isPropertyPanelOpen = computed({
 <template>
   <div class="flex h-screen w-full bg-background overflow-hidden">
     <!-- Left Sidebar - Component Library -->
-    <div class="w-64 bg-card border-r border-border flex flex-col z-10 shadow-sm">
-      <div class="p-4 border-b border-border space-y-4">
-        <div class="flex items-center gap-2">
-          <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('back')">
-            <ArrowLeft class="w-4 h-4" />
-          </Button>
-          <div class="p-1.5 bg-primary/10 rounded-md">
-            <Box class="w-5 h-5 text-primary" />
+    <div 
+      class="border-r border-border flex flex-col bg-background/95 backdrop-blur transition-all duration-300 ease-in-out overflow-hidden"
+      :class="isSidebarOpen ? 'w-64 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-4'"
+    >
+      <div class="w-64 flex flex-col h-full">
+        <div class="p-4 border-b border-border space-y-4 shrink-0">
+          <div class="relative">
+            <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              v-model="searchQuery"
+              placeholder="搜索组件..." 
+              class="pl-9 h-9 bg-muted/50"
+            />
           </div>
-          <h1 class="font-semibold text-foreground tracking-tight">ETL Studio</h1>
         </div>
-        <div class="relative">
-          <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            v-model="searchQuery"
-            placeholder="搜索组件..." 
-            class="pl-9 h-9 bg-background/50"
-          />
-        </div>
+        
+        <Sidebar :search-query="searchQuery" />
       </div>
-      
-      <Sidebar :search-query="searchQuery" />
     </div>
 
     <!-- Main Canvas Area -->
     <div class="flex-1 relative flex flex-col min-w-0">
       <!-- Top Toolbar -->
       <div class="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4 shrink-0 z-20">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-4">
+          <!-- Navigation & Toggle -->
+          <div class="flex items-center gap-2 mr-2">
+            <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('back')" title="返回列表">
+              <ArrowLeft class="w-4 h-4" />
+            </Button>
+            <div class="h-4 w-px bg-border mx-1"></div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              class="h-8 w-8" 
+              :class="isSidebarOpen ? 'bg-accent text-accent-foreground' : ''"
+              @click="isSidebarOpen = !isSidebarOpen"
+              title="组件库"
+            >
+              <PanelLeft class="w-4 h-4" />
+            </Button>
+          </div>
+
+          <!-- Pipeline Info -->
           <div class="flex items-center gap-2 group">
+            <div class="p-1.5 bg-primary/10 rounded-md mr-1">
+              <Box class="w-5 h-5 text-primary" />
+            </div>
             <template v-if="isEditingName">
               <Input 
                 name="pipeline-name"
@@ -143,6 +195,19 @@ const isPropertyPanelOpen = computed({
           <RunLogs />
           <VersionHistory />
           
+          <div class="h-4 w-px bg-border mx-1"></div>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            class="gap-2 h-8" 
+            :class="store.currentPipeline?.schedule_config?.enabled ? 'text-primary border-primary/30 bg-primary/5' : ''"
+            @click="isScheduleDialogOpen = true"
+          >
+            <CalendarClock class="w-4 h-4" />
+            <span class="hidden sm:inline">定时</span>
+          </Button>
+
           <Button variant="outline" size="sm" class="gap-2 h-8" @click="store.savePipeline" :disabled="store.loading">
             <Save class="w-4 h-4" />
             <span class="hidden sm:inline">保存</span>
@@ -196,9 +261,15 @@ const isPropertyPanelOpen = computed({
           <X class="w-4 h-4" />
         </Button>
 
+
         <PropertyPanel />
       </div>
     </Transition>
+    <ScheduleConfigDialog 
+      v-model:open="isScheduleDialogOpen" 
+      :config="store.currentPipeline?.schedule_config"
+      @save="handleSaveSchedule"
+    />
   </div>
 </template>
 

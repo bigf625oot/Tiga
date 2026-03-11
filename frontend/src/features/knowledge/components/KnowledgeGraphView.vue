@@ -40,6 +40,7 @@
                      :stats="stats"
                     :timeBounds="timeBounds"
                     :currentEvents="currentEvents"
+                    :allNodeNames="allNodeNames"
                     class="h-full border-none bg-transparent"
                 />
              </div>
@@ -123,6 +124,14 @@ const selectedTypes = ref<string[]>([]);
 const allTypes = ref<string[]>([]);
 const timeRange = ref<[number, number]>([0, 0]);
 const timeBounds = ref({ min: 0, max: 0 });
+
+const allNodeNames = computed(() => {
+    const names = new Set<string>();
+    Object.values(rawNodes.value).forEach((n: any) => {
+        if (n.name) names.add(n.name);
+    });
+    return Array.from(names);
+});
 
 const api = axios.create({ baseURL: '/api/v1' });
 

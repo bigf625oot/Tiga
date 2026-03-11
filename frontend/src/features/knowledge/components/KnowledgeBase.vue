@@ -131,9 +131,9 @@
                         @click="file.is_folder ? openFolder(file) : null"
                     >
                          <!-- File Icon -->
-                         <div class="w-8 h-8 flex items-center justify-center flex-shrink-0 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
-                             <Folder v-if="file.is_folder" class="w-5 h-5 text-blue-500 dark:text-blue-400" fill="currentColor" />
-                             <img v-else :src="getFileIcon(file.filename)" class="w-5 h-5 object-contain opacity-80" alt="icon" />
+                         <div class="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                             <Folder v-if="file.is_folder" class="w-full h-full text-blue-500 dark:text-blue-400" fill="currentColor" />
+                             <img v-else :src="getFileIcon(file.filename)" class="w-full h-full object-contain opacity-80" alt="icon" />
                          </div>
                          <div class="flex flex-col overflow-hidden">
                             <span class="truncate font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ file.filename }}</span>

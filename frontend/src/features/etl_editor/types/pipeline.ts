@@ -67,6 +67,27 @@ export interface NodeData {
   color?: string;
 }
 
+export interface LogEntry {
+  timestamp: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+  message: string;
+  node_id?: string;
+}
+
+export interface PipelineRunResponse {
+  pipeline_id: number;
+  status: string;
+  message: string;
+}
+
+export interface ScheduleConfig {
+  enabled: boolean;
+  type: 'interval' | 'cron';
+  value: string; // e.g., "30s", "5m", "0 0 * * *"
+  description?: string; // Human readable description
+  next_run_at?: string;
+}
+
 export interface Pipeline {
   id: number;
   name: string;
@@ -76,6 +97,7 @@ export interface Pipeline {
     nodes: any[]; // Vue Flow Nodes
     edges: any[]; // Vue Flow Edges
   };
+  schedule_config?: ScheduleConfig;
   created_at: string;
   updated_at?: string;
   last_run_at?: string;
@@ -88,6 +110,7 @@ export interface PipelineCreate {
     nodes: any[];
     edges: any[];
   };
+  schedule_config?: ScheduleConfig;
 }
 
 export interface PipelineUpdate {
@@ -96,17 +119,5 @@ export interface PipelineUpdate {
     nodes: any[];
     edges: any[];
   };
-}
-
-export interface LogEntry {
-  timestamp: string;
-  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
-  message: string;
-  node_id?: string;
-}
-
-export interface PipelineRunResponse {
-  pipeline_id: number;
-  status: string;
-  message: string;
+  schedule_config?: ScheduleConfig;
 }
