@@ -97,16 +97,31 @@ import type { RelationFix } from '../api';
 const props = defineProps<{
   fixes: RelationFix[];
   loading?: boolean;
+  mainNode?: string;
+  keyword?: string;
 }>();
 
 const emit = defineEmits<{
   (e: 'detect', mainNode: string, keyword: string): void;
   (e: 'apply', fixes: RelationFix[]): void;
+  (e: 'update:mainNode', val: string): void;
+  (e: 'update:keyword', val: string): void;
 }>();
 
-const localMainNode = ref('');
-const localKeyword = ref('');
+const localMainNode = ref(props.mainNode || '');
+const localKeyword = ref(props.keyword || '');
 const selectedFixes = ref<RelationFix[]>([]);
+
+watch(() => props.mainNode, (val) => {
+  if (val) localMainNode.value = val;
+});
+
+watch(() => props.keyword, (val) => {
+  if (val) localKeyword.value = val;
+});
+
+watch(localMainNode, (val) => emit('update:mainNode', val));
+watch(localKeyword, (val) => emit('update:keyword', val));
 
 const allSelected = computed(() => {
   return props.fixes.length > 0 && selectedFixes.value.length === props.fixes.length;

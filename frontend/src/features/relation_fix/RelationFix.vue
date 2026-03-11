@@ -4,17 +4,17 @@
     <header class="h-14 flex-none px-4 border-b bg-background/95 backdrop-blur flex items-center justify-between z-20">
       <div class="flex items-center gap-4 flex-1">
         <div class="flex items-center gap-3">
-          <div class="p-1.5 bg-primary/10 rounded-md">
-            <Share2Icon class="h-5 w-5 text-primary" />
-          </div>
-          <h2 class="text-base font-semibold tracking-tight">图谱治理</h2>
+          <h2 class="text-lg font-semibold tracking-tight">图谱治理</h2>
         </div>
         
         <div class="h-4 w-px bg-border/60"></div>
         
-        <!-- Global Search -->
-        <div class="relative w-full max-w-sm">
-          <Popover v-model:open="showSearchSuggestions">
+        <!-- Global Search (Hidden in step 0) -->
+        <div 
+            class="relative w-full max-w-sm transition-all duration-300 origin-left"
+            :class="currentStep === 0 ? 'opacity-0 scale-95 pointer-events-none w-0 hidden' : 'opacity-100 scale-100 w-full max-w-sm'"
+        >
+          <Popover v-model:open="showHeaderSearchSuggestions">
             <PopoverTrigger asChild>
                <div class="relative w-full">
                   <SearchIcon class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
@@ -23,14 +23,14 @@
                     @keyup.enter="handleSearch"
                     placeholder="搜索节点 ID 或名称..." 
                     class="pl-9 pr-9 h-9 text-sm bg-muted/30 focus:bg-background transition-colors"
-                    @focus="showSearchSuggestions = searchResults.length > 0"
+                    @focus="activeSearchLocation = 'header'; showHeaderSearchSuggestions = searchResults.length > 0"
                   />
                   <Button 
                     v-if="searchQuery"
                     variant="ghost"
                     size="icon"
                     class="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground z-10"
-                    @click="searchQuery = ''; showSearchSuggestions = false;"
+                    @click="searchQuery = ''; showHeaderSearchSuggestions = false;"
                   >
                     <XIcon class="h-3.5 w-3.5" />
                   </Button>
@@ -59,7 +59,12 @@
             </PopoverContent>
           </Popover>
         </div>
-        <div class="flex items-center gap-1">
+        
+        <!-- Toolbar Actions (Hidden in step 0) -->
+        <div 
+            class="flex items-center gap-1 transition-all duration-300"
+            :class="currentStep === 0 ? 'opacity-0 translate-x-4 pointer-events-none' : 'opacity-100 translate-x-0'"
+        >
           <Button variant="outline" size="icon" class="h-9 w-9" @click="handleRandomExplore" title="随机探索">
               <ShuffleIcon class="h-4 w-4" />
           </Button>
@@ -70,31 +75,36 @@
       </div>
 
       <div class="flex items-center space-x-2">
-         <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" class="h-9 px-3 text-xs gap-2" @click="handleBackup">
-                  <SaveIcon class="h-3.5 w-3.5" />
-                  <span>备份</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>创建当前图谱快照</TooltipContent>
-            </Tooltip>
-         </TooltipProvider>
+         <div 
+            class="flex items-center space-x-2 transition-all duration-300"
+            :class="currentStep === 0 ? 'opacity-0 translate-x-4 pointer-events-none' : 'opacity-100 translate-x-0'"
+         >
+            <TooltipProvider>
+                <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" class="h-9 px-3 text-xs gap-2" @click="handleBackup">
+                    <SaveIcon class="h-3.5 w-3.5" />
+                    <span>备份</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>创建当前图谱快照</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
 
-         <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" class="h-9 px-3 text-xs gap-2 text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/5" @click="handleRestore">
-                  <RotateCcwIcon class="h-3.5 w-3.5" />
-                  <span>回滚</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>恢复到最近一次备份</TooltipContent>
-            </Tooltip>
-         </TooltipProvider>
+            <TooltipProvider>
+                <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" class="h-9 px-3 text-xs gap-2 text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/5" @click="handleRestore">
+                    <RotateCcwIcon class="h-3.5 w-3.5" />
+                    <span>回滚</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>恢复到最近一次备份</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
 
-         <div class="w-px h-4 bg-border/60 mx-1"></div>
+            <div class="w-px h-4 bg-border/60 mx-1"></div>
+         </div>
 
          <Button 
             variant="ghost" 
@@ -109,16 +119,48 @@
       </div>
     </header>
 
+    <!-- Guided Stepper -->
+    <div class="h-10 bg-muted/20 border-b flex items-center justify-center gap-8 px-4 z-10 select-none">
+      <div 
+        v-for="(step, index) in STEPS" 
+        :key="index"
+        class="flex items-center gap-2 text-xs font-medium transition-colors cursor-pointer"
+        :class="[
+          currentStep === index ? 'text-primary' : 'text-muted-foreground',
+          index < currentStep ? 'text-primary/70' : ''
+        ]"
+        @click="goToStep(index)"
+      >
+        <div 
+          class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] border transition-all"
+          :class="[
+             currentStep === index ? 'bg-primary text-primary-foreground border-primary' : 
+             index < currentStep ? 'bg-primary/20 text-primary border-primary/20' : 'bg-transparent border-muted-foreground'
+          ]"
+        >
+          {{ index + 1 }}
+        </div>
+        <span>{{ step.title }}</span>
+        <div v-if="index < STEPS.length - 1" class="w-8 h-px bg-border/50 ml-2"></div>
+      </div>
+    </div>
+
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
       <!-- Left Sidebar (Fixes) -->
-      <aside class="w-80 flex-shrink-0 border-r bg-background z-10 flex flex-col">
-        <RelationFixPanel 
-          :fixes="fixes"
-          :loading="loading"
-          @detect="handleDetect"
-          @apply="handleApplyFixes"
-        />
+      <aside 
+        class="flex-shrink-0 bg-background z-10 flex flex-col transition-all duration-300 ease-in-out overflow-hidden"
+        :class="currentStep === 0 ? 'w-0 border-none opacity-0' : 'w-80 border-r opacity-100'"
+      >
+        <div class="w-80 h-full flex flex-col">
+          <RelationFixPanel 
+            :fixes="fixes"
+            :loading="loading"
+            :main-node="currentMainNodeLabel"
+            @detect="handleDetect"
+            @apply="handleApplyFixes"
+          />
+        </div>
       </aside>
 
       <!-- Center Content (Graph) -->
@@ -134,20 +176,110 @@
              </div>
         </div>
 
-        <div v-if="Object.keys(nodes).length === 0 && !loading" class="flex-1 flex flex-col items-center justify-center text-muted-foreground z-10">
-             <div class="bg-background/80 backdrop-blur-sm p-8 rounded-xl border shadow-lg flex flex-col items-center gap-4 max-w-md text-center pointer-events-auto">
-                 <div class="p-4 rounded-full bg-primary/10 mb-2">
-                    <Share2Icon class="h-8 w-8 text-primary" />
+        <div v-if="Object.keys(nodes).length === 0 && !loading" class="flex-1 flex flex-col items-center justify-center text-muted-foreground z-10 p-6">
+             <!-- Background Decoration -->
+             <div class="absolute inset-0 bg-grid-slate-200/50 [mask-image:radial-gradient(ellipse_at_center,white,transparent)] pointer-events-none opacity-20"></div>
+
+             <div class="relative bg-background/80 backdrop-blur-md p-8 md:p-12 rounded-2xl border shadow-xl flex flex-col items-center gap-6 max-w-lg w-full text-center animate-in fade-in zoom-in-95 duration-300">
+                 
+                 <!-- Icon & Title Group -->
+                 <div class="flex flex-col items-center gap-4">
+                    <div class="relative group">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                        <div class="relative p-4 rounded-full bg-background border shadow-sm">
+                            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-primary">
+                              <!-- 连线 -->
+                              <path d="M24 10L12 30" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="opacity-20"/>
+                              <path d="M24 10L36 30" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="opacity-20"/>
+                              <path d="M12 30L36 30" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 4"/>
+                              
+                              <!-- 节点 -->
+                              <circle cx="24" cy="10" r="5" class="fill-primary/10 stroke-current" stroke-width="2"/>
+                              <circle cx="12" cy="30" r="4" class="fill-background stroke-muted-foreground" stroke-width="2"/>
+                              <circle cx="36" cy="30" r="4" class="fill-background stroke-muted-foreground" stroke-width="2"/>
+                              
+                              <!-- 装饰：修复的光芒 -->
+                              <path d="M24 28L24 32M22 30L26 30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                              
+                              <!-- 浮动的小元素 -->
+                              <circle cx="38" cy="12" r="2" class="fill-primary animate-pulse"/>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <h3 class="text-2xl font-bold tracking-tight text-foreground">开始图谱治理</h3>
+                        <p class="text-sm text-muted-foreground max-w-[300px] mx-auto leading-relaxed">
+                            通过智能诊断发现潜在的关系缺失，或手动搜索定位特定实体进行维护。
+                        </p>
+                    </div>
                  </div>
-                 <h3 class="text-lg font-semibold text-foreground">开始图谱治理</h3>
-                 <p class="text-sm">
-                   您可以搜索特定节点，或者使用随机探索功能发现潜在的数据问题。
-                 </p>
-                 <div class="flex gap-3 mt-2">
-                    <Button variant="outline" @click="handleRandomExplore">
-                       <ShuffleIcon class="h-4 w-4 mr-2" />
-                       随机探索
-                    </Button>
+                 
+                 <!-- Center Search Box -->
+                 <div class="w-full relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-purple-500/30 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                    <div class="relative bg-background rounded-lg">
+                        <Popover v-model:open="showCenterSearchSuggestions">
+                        <PopoverTrigger asChild>
+                            <div class="relative">
+                                <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    v-model="searchQuery" 
+                                    class="pl-9 h-11 shadow-sm border-muted-foreground/20" 
+                                    placeholder="搜索节点 ID 或名称..."
+                                    @focus="activeSearchLocation = 'center'; showCenterSearchSuggestions = searchResults.length > 0"
+                                    @keyup.enter="handleSearch"
+                                />
+                            </div>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                            class="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-y-auto" 
+                            align="start" 
+                            :sideOffset="4"
+                            @openAutoFocus.prevent
+                        >
+                            <div class="p-1">
+                                <div 
+                                v-for="result in searchResults" 
+                                :key="result"
+                                class="px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2"
+                                @click="selectSuggestion(result)"
+                                >
+                                <SearchIcon class="h-3.5 w-3.5 text-muted-foreground" />
+                                <span class="truncate">{{ result }}</span>
+                                </div>
+                                <div v-if="searchResults.length === 0" class="p-4 text-center text-xs text-muted-foreground">
+                                未找到相关节点
+                                </div>
+                            </div>
+                        </PopoverContent>
+                        </Popover>
+                    </div>
+                 </div>
+                 
+                 <div class="relative flex py-1 items-center w-full">
+                    <div class="flex-grow border-t border-border"></div>
+                    <span class="flex-shrink-0 mx-4 text-[10px] text-muted-foreground uppercase tracking-wider">快速开始</span>
+                    <div class="flex-grow border-t border-border"></div>
+                 </div>
+
+                 <!-- Quick Actions -->
+                 <div class="w-full grid grid-cols-1 gap-3">
+                    <div 
+                        class="group/btn relative overflow-hidden rounded-xl border bg-card p-3 hover:shadow-md transition-all cursor-pointer hover:border-primary/30 text-left"
+                        @click="handleRandomExplore"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover/btn:bg-primary/20 transition-colors">
+                                <ShuffleIcon class="h-5 w-5 text-primary" />
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-medium leading-none mb-1 text-foreground group-hover/btn:text-primary transition-colors">随机探索</h4>
+                                <p class="text-xs text-muted-foreground">随机抽取节点进行数据质量检查</p>
+                            </div>
+                            <ArrowRightIcon class="h-4 w-4 text-muted-foreground group-hover/btn:translate-x-1 transition-transform group-hover/btn:text-primary" />
+                        </div>
+                    </div>
                  </div>
              </div>
         </div>
@@ -218,7 +350,9 @@ import {
   RotateCcw as RotateCcwIcon,
   Share2 as Share2Icon,
   X as XIcon,
-  Shuffle as ShuffleIcon
+  Shuffle as ShuffleIcon,
+  Sparkles as SparklesIcon,
+  ArrowRight as ArrowRightIcon
 } from 'lucide-vue-next';
 import GraphViewer from '@/shared/components/organisms/GraphViewer/GraphViewer.vue';
 import RelationFixPanel from './components/RelationFixPanel.vue';
@@ -233,6 +367,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 const { toast } = useToast();
 
+const STEPS = [
+  { title: '定位实体' },
+  { title: '智能诊断' },
+  { title: '确认修复' }
+];
+const currentStep = ref(0);
+
 const nodes = ref<Record<string, any>>({});
 const edges = ref<Record<string, any>>({});
 const loading = ref(false);
@@ -243,7 +384,28 @@ const graphViewerRef = ref();
 const currentNodeId = ref<string>('');
 const searchQuery = ref('');
 const searchResults = ref<string[]>([]);
-const showSearchSuggestions = ref(false);
+const showHeaderSearchSuggestions = ref(false);
+const showCenterSearchSuggestions = ref(false);
+const activeSearchLocation = ref<'header' | 'center'>('header');
+
+const currentMainNodeLabel = computed(() => {
+  if (currentNodeId.value && nodes.value[currentNodeId.value]) {
+    return nodes.value[currentNodeId.value].name || currentNodeId.value;
+  }
+  return '';
+});
+
+const goToStep = (step: number) => {
+    if (step === 1 && !currentNodeId.value) {
+        toast({ description: "请先定位并选择一个实体节点", variant: "destructive" });
+        return;
+    }
+    if (step === 2 && fixes.value.length === 0) {
+         toast({ description: "请先运行检测以发现问题", variant: "destructive" });
+         return;
+    }
+    currentStep.value = step;
+};
 
 const debouncedSearch = useDebounceFn(async (query: string) => {
   if (!query.trim()) {
@@ -253,7 +415,14 @@ const debouncedSearch = useDebounceFn(async (query: string) => {
   try {
     const results = await relationFixApi.searchNodes(query);
     searchResults.value = results;
-    showSearchSuggestions.value = results.length > 0;
+    
+    if (activeSearchLocation.value === 'header') {
+        showHeaderSearchSuggestions.value = results.length > 0;
+        showCenterSearchSuggestions.value = false;
+    } else {
+        showCenterSearchSuggestions.value = results.length > 0;
+        showHeaderSearchSuggestions.value = false;
+    }
   } catch (e) {
     console.error(e);
   }
@@ -262,7 +431,8 @@ const debouncedSearch = useDebounceFn(async (query: string) => {
 watch(searchQuery, (newQuery) => {
   if (!newQuery) {
     searchResults.value = [];
-    showSearchSuggestions.value = false;
+    showHeaderSearchSuggestions.value = false;
+    showCenterSearchSuggestions.value = false;
   } else {
     debouncedSearch(newQuery);
   }
@@ -270,7 +440,8 @@ watch(searchQuery, (newQuery) => {
 
 const selectSuggestion = (nodeId: string) => {
   searchQuery.value = nodeId;
-  showSearchSuggestions.value = false;
+  showHeaderSearchSuggestions.value = false;
+  showCenterSearchSuggestions.value = false;
   handleSearch();
 };
 
@@ -295,6 +466,9 @@ const handleSearch = async () => {
   if (!searchQuery.value.trim()) return;
   
   loading.value = true;
+  showHeaderSearchSuggestions.value = false;
+  showCenterSearchSuggestions.value = false;
+
   try {
     const results = await relationFixApi.searchNodes(searchQuery.value);
     if (results.length > 0) {
@@ -372,6 +546,9 @@ const loadNode = async (nodeId: string, setGlobalLoading = true) => {
     
     nodes.value = newNodes;
     edges.value = newEdges;
+
+    // Advance to Diagnosis step
+    currentStep.value = 1;
     
     // Focus
     await nextTick();
@@ -428,6 +605,7 @@ const handleDetect = async (mainNode: string, keyword: string) => {
             title: "检测完成",
             description: `发现了 ${results.length} 个潜在的缺失关系`
         });
+        currentStep.value = 2; // Move to Review
     }
   } catch (e) {
       console.error(e);
@@ -579,6 +757,7 @@ const refreshGraph = async () => {
   edges.value = {};
   searchQuery.value = '';
   fixes.value = [];
+  currentStep.value = 0;
   
   await loadLogs();
   
