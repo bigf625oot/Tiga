@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from app.db.session import AsyncSessionLocal
-from app.services.rag.engines.lightrag import lightrag_engine
+from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 
 
 async def run():

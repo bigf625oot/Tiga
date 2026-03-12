@@ -9,7 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from app.services.data.vanna.models import (
+from app.services.chatbi.vanna.models import (
     DataQueryMessageResponse,
     DataQuerySessionCreate,
     DataQuerySessionResponse,
@@ -17,7 +17,7 @@ from app.services.data.vanna.models import (
     DbConnectionConfig,
     VannaRequest,
 )
-from app.services.data.vanna.service import data_query_service
+from app.services.chatbi.vanna.service import data_query_service
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -122,7 +122,7 @@ async def get_conversion_status(job_id: str):
     return status
 
 
-from app.services.kg_query.service import KGQueryService
+from app.services.rag.kg_query import KGQueryService
 from app.services.nlu.classifier import IntentClassifier, QueryIntent
 
 # Initialize Services

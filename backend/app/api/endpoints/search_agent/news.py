@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from app.schemas.search_agent.news_schemas import CustomNewsSearchRequest, NewsSearchRequest, NewsSearchResponse
-from app.services.agent.search.news_service import (
+from app.services.search.news_service import (
     execute_custom_news_search,
     execute_custom_news_search_stream,
     search_news,

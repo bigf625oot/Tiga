@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.services.agent.executor import get_executor
+from app.services.eah_agent.core.executor import get_executor
 import logging
 
 logger = logging.getLogger(__name__)

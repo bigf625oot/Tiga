@@ -17,7 +17,7 @@ from app.schemas.graph_export import (
     GraphExportConfigCreate,
     GraphExportConfigUpdate,
 )
-from app.services.rag.engines.lightrag import lightrag_engine
+from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 
 
 def get_database_schema(url: str) -> str:

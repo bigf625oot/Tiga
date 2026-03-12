@@ -10,21 +10,21 @@ from app.crud.crud_chat import chat as crud_chat
 from app.models.agent import Agent
 from app.models.llm_model import LLMModel
 from app.models.knowledge import KnowledgeDocument
-from app.services.agent.manager import agent_manager
+from app.services.eah_agent.core.agent_manager import agent_manager
 from app.services.llm.factory import ModelFactory
 from app.services.rag.knowledge_base import kb_service
 from app.core.config import settings
 from agno.agent import Agent as AgnoAgent
 from agno.models.openai import OpenAIChat
 from openai import OpenAI
-from app.services.agent.tools.duckduckgo import DuckDuckGoTools
-from app.services.agent.tools.runner import run_reasoning_tool_loop
+from app.services.eah_agent.tools.libs.duckduckgo import DuckDuckGoTools
+from app.services.eah_agent.tools.libs.runner import run_reasoning_tool_loop
 from app.core.agent_pool import agent_pool
-from app.services.agent.stream_processor import parse_thinking_stream
+from app.services.eah_agent.core.stream_processor import parse_thinking_stream
 from datetime import datetime
 from app.services.nlu.classifier import IntentClassifier, QueryIntent
-from app.services.kg_query.service import KGQueryService
-from app.services.data.vanna.service import data_query_service
+from app.services.rag.kg_query import KGQueryService
+from app.services.chatbi.vanna.service import data_query_service
 
 # Initialize Services
 kg_query_service = KGQueryService.get_instance()
@@ -374,7 +374,7 @@ class ChatService:
     def _get_default_tools(self, mode="chat"):
         tools = []
         try:
-            from app.services.rag.engines.lightrag import lightrag_engine
+            from app.services.rag.retrieval.engines.lightrag import lightrag_engine
             if lightrag_engine.rag:
                 from app.services.rag.mcp_server import search_knowledge_base, query_knowledge_graph
                 tools.extend([search_knowledge_base, query_knowledge_graph])

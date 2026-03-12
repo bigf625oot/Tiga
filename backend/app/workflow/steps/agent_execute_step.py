@@ -4,14 +4,14 @@ import inspect
 from typing import AsyncGenerator, Any, List, Dict
 from app.workflow.context import AgentContext
 from app.workflow.exceptions import WorkflowStepError
-from app.services.agent.manager import agent_manager, has_global_api_key
+from app.services.eah_agent.core.agent_manager import agent_manager, has_global_api_key
 from app.db.session import AsyncSessionLocal
 from sqlalchemy import select
 from app.models.agent import Agent
 from app.models.llm_model import LLMModel
 from openai import OpenAI
-from app.services.agent.tools.runner import run_reasoning_tool_loop
-from app.services.agent.tools.duckduckgo import DuckDuckGoTools
+from app.services.eah_agent.tools.libs.runner import run_reasoning_tool_loop
+from app.services.eah_agent.tools.libs.duckduckgo import DuckDuckGoTools
 from agno.agent import Agent as AgnoAgent
 from agno.models.openai import OpenAIChat
 from app.services.llm.factory import ModelFactory
@@ -84,8 +84,8 @@ async def agent_execute_step(context: AgentContext) -> AgentContext:
                      default_tools = []
                      try:
                          from app.services.rag.knowledge_base import kb_service
-                         from app.services.rag.engines.lightrag import lightrag_engine
-                         # Check if LightRAG is initialized
+                         from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+                        # Check if LightRAG is initialized
                          if lightrag_engine.rag:
                              from app.services.rag.mcp_server import search_knowledge_base, query_knowledge_graph
                              default_tools.extend([search_knowledge_base, query_knowledge_graph])
@@ -105,8 +105,8 @@ async def agent_execute_step(context: AgentContext) -> AgentContext:
                      # [Fix] Global Default Agent also needs knowledge tools
                      default_tools = []
                      try:
-                         from app.services.rag.engines.lightrag import lightrag_engine
-                         if lightrag_engine.rag:
+                        from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+                        if lightrag_engine.rag:
                              from app.services.rag.mcp_server import search_knowledge_base, query_knowledge_graph
                              default_tools.extend([search_knowledge_base, query_knowledge_graph])
                      except Exception:
@@ -185,8 +185,8 @@ async def agent_execute_step(context: AgentContext) -> AgentContext:
              if kb_service.knowledge is None: # Wait, kb_service.knowledge is now None in new implementation!
                  # We need a new way to check if KB is ready.
                  # Let's check lightrag engine directly or a flag in kb_service.
-                 from app.services.rag.engines.lightrag import lightrag_engine
-                 if lightrag_engine.rag:
+                from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+                if lightrag_engine.rag:
                      has_kb_tools = True
 
         if has_kb_tools:

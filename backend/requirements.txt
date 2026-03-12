@@ -106,3 +106,9 @@ jieba
 scikit-learn
 nltk
 textblob
+
+# --- Financial & Data Tools ---
+yfinance
+openbb
+duckdb
+financial-datasets

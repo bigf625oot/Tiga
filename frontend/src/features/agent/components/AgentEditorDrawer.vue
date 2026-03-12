@@ -56,7 +56,7 @@
                                             <span class="text-xs text-muted-foreground">{{ form.name.length }}/50</span>
                                         </div>
                                         <Input id="name" v-model="form.name" :readonly="isReadOnly" maxlength="50" placeholder="智能体名称..." 
-                                        class="h-8 text-sm bg-muted/20 border-border/30 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300" />
+                                        class="h-8 text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
                                     </div>
 
                                     <!-- Description -->
@@ -66,7 +66,7 @@
                                             <span class="text-xs text-muted-foreground">{{ form.description.length }}/200</span>
                                         </div>
                                         <Textarea id="desc" v-model="form.description" :readonly="isReadOnly" maxlength="200" placeholder="简短描述它的功能..." 
-                                            class="min-h-[60px] text-sm bg-muted/20 border-border/30 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 resize-none" rows="2" />
+                                            class="min-h-[60px] text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none" rows="2" />
                                     </div>
                                 </div>
                             </div>
@@ -86,7 +86,7 @@
                                 <div class="col-span-1 grid gap-1.5">
                                     <Label class="text-xs font-medium">基座模型</Label>
                                     <Select v-model="form.model_config.model_id" :disabled="isReadOnly">
-                                        <SelectTrigger class="h-8 text-sm bg-muted/20 border-border/20 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
+                                        <SelectTrigger class="h-8 text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all">
                                             <SelectValue placeholder="选择模型..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -191,22 +191,19 @@
                                     <p class="text-sm">暂无可用知识库</p>
                                     <Button variant="link" size="sm" class="text-xs h-6 text-primary">去创建</Button>
                                 </div>
-                                <div v-else class="grid grid-cols-1 gap-2">
+                                <div v-else class="grid grid-cols-2 gap-3">
                                     <div v-for="kb in knowledgeBases" :key="kb.id"
-                                        class="flex items-center justify-between p-3 rounded-lg border border-transparent bg-background hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer group"
-                                        :class="{ 'ring-1 ring-primary/20 bg-primary/5': form.knowledge_config.document_ids.includes(kb.id) }"
+                                        class="relative flex items-start justify-between p-3 gap-3 rounded-lg border border-border bg-background hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group shadow-sm"
+                                        :class="{ 'ring-1 ring-primary bg-primary/5': form.knowledge_config.document_ids.includes(kb.id) }"
                                         @click="toggleKb(kb.id)">
-                                        <div class="flex items-center gap-3 overflow-hidden">
-                                            <div class="p-2 rounded-md bg-muted/20 text-muted-foreground group-hover:text-primary transition-colors">
-                                                <FileText class="w-4 h-4" />
-                                            </div>
-                                            <div class="grid gap-0.5">
-                                                <label class="text-sm font-medium leading-none cursor-pointer truncate max-w-[200px]">{{ kb.filename }}</label>
-                                                <p class="text-xs text-muted-foreground">{{ formatSize(kb.file_size) }}</p>
-                                            </div>
+                                        
+                                        <div class="grid gap-1 min-w-0">
+                                            <label class="text-sm font-medium leading-snug cursor-pointer line-clamp-2 break-all" :title="kb.filename">{{ kb.filename }}</label>
+                                            <p class="text-[10px] text-muted-foreground">{{ formatSize(kb.file_size) }}</p>
                                         </div>
+
                                         <Checkbox :id="kb.id" :checked="form.knowledge_config.document_ids.includes(kb.id)" @click.stop="toggleKb(kb.id)" 
-                                            class="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                                            class="mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary shrink-0" />
                                     </div>
                                 </div>
                             </ScrollArea>
@@ -214,54 +211,123 @@
 
                         <!-- Tools & Skills -->
                         <Card class="p-5 border-border/40 shadow-sm bg-muted/5 space-y-4">
-                            <div class="flex items-center justify-between pb-2 border-b border-border/40">
-                                <div class="flex items-center gap-2">
-                                    <div class="p-1.5 bg-orange-100/50 text-orange-600 rounded-md">
-                                        <Wrench class="w-4 h-4" />
+                            <div class="flex flex-col gap-3">
+                                <!-- Toolbox Header -->
+                                <div class="flex items-center justify-between pb-2 border-b border-border/40">
+                                    <div class="flex items-center gap-2">
+                                        <div class="p-1.5 bg-orange-100/50 text-orange-600 rounded-md">
+                                            <Wrench class="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-sm text-foreground">工具箱</h4>
+                                            <p class="text-xs text-muted-foreground">扩展智能体的操作能力</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 class="font-semibold text-sm text-foreground">工具箱</h4>
-                                        <p class="text-xs text-muted-foreground">扩展智能体的操作能力</p>
-                                    </div>
-                                </div>
-                                <Button variant="outline" size="sm" class="h-7 text-xs border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50" @click="openToolSelector('skill')">
-                                    <Plus class="w-3.5 h-3.5 mr-1" /> 添加技能
-                                </Button>
-                            </div>
-
-                            <div class="grid gap-3">
-                                <!-- Built-in Tools -->
-                                <div v-for="tool in defaultTools" :key="tool.value" 
-                                    class="flex items-start space-x-3 p-3 rounded-lg border border-transparent bg-background hover:border-primary/20 transition-all cursor-pointer"
-                                    :class="{ 'ring-1 ring-primary/20 bg-primary/5': form.tools_config.includes(tool.value) }"
-                                    @click="!form.tools_config.includes(tool.value) ? form.tools_config.push(tool.value) : (form.tools_config = form.tools_config.filter(t => t !== tool.value))">
-                                    <Checkbox :id="tool.value" :checked="form.tools_config.includes(tool.value)" class="mt-1 data-[state=checked]:bg-primary" @click.stop />
-                                    <div class="grid gap-1">
-                                        <label :for="tool.value" class="text-sm font-medium leading-none cursor-pointer text-foreground">
-                                            {{ tool.label }}
-                                        </label>
-                                        <p class="text-xs text-muted-foreground leading-snug">
-                                            {{ tool.desc }}
-                                        </p>
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex items-center gap-1.5 bg-background px-2 py-1 rounded-full border border-border/40" title="开启后，终端会显示模型思考和调用工具的过程">
+                                            <Terminal class="w-3 h-3 text-muted-foreground" />
+                                            <Label for="show-tools" class="text-[10px] text-muted-foreground cursor-pointer whitespace-nowrap">监控</Label>
+                                            <Switch id="show-tools" :checked="form.model_config.show_tool_calls" @update:checked="(val) => form.model_config.show_tool_calls = val" class="scale-75 origin-right" />
+                                        </div>
+                                        <Button variant="outline" size="sm" class="h-7 text-xs border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50" @click="openToolSelector('skill')">
+                                            <Plus class="w-3.5 h-3.5 mr-1" /> 添加技能
+                                        </Button>
                                     </div>
                                 </div>
+                                
+                                <!-- Category Filter -->
+                                <div v-if="toolboxCategories.length > 1" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                                    <Badge 
+                                        v-for="cat in toolboxCategories" 
+                                        :key="cat"
+                                        variant="outline"
+                                        class="cursor-pointer transition-all whitespace-nowrap hover:border-primary/50 text-[10px] h-5 px-2"
+                                        :class="selectedToolboxCategory === cat ? 'bg-primary/10 border-primary text-primary' : 'bg-background text-muted-foreground border-border/60'"
+                                        @click="selectedToolboxCategory = cat"
+                                    >
+                                        {{ getCategoryLabel(cat) }}
+                                        <span class="ml-1 opacity-60">{{ getCategoryCount(cat) }}</span>
+                                    </Badge>
+                                </div>
 
-                                <!-- External Skills -->
-                                <div v-if="skillTools.length > 0" class="grid grid-cols-2 gap-3 mt-2">
-                                    <div v-for="(tool, idx) in skillTools" :key="idx"
-                                        class="flex items-center justify-between p-2.5 border border-border/40 rounded-lg bg-background group hover:border-red-200 hover:bg-red-50/30 transition-colors">
-                                        <div class="flex items-center gap-2.5 overflow-hidden">
-                                            <div class="p-1.5 bg-green-100/50 text-green-600 rounded-md shrink-0">
-                                                <Blocks class="w-3.5 h-3.5" />
+                                <div class="grid gap-3 grid-cols-2">
+                                    <!-- Built-in Tools -->
+                                    <div v-for="tool in filteredDefaultTools" :key="tool.value" 
+                                        class="flex flex-col space-y-2 p-3 rounded-lg border border-border bg-background hover:border-primary/50 hover:shadow-md transition-all cursor-pointer shadow-sm group"
+                                        :class="{ 'ring-1 ring-primary bg-primary/5': isToolEnabled(tool.value) }"
+                                        @click="toggleTool(tool)">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="mt-1">
+                                                <Checkbox :id="tool.value" :checked="isToolEnabled(tool.value)" class="data-[state=checked]:bg-primary" @click.stop="toggleTool(tool)" />
                                             </div>
-                                            <div class="grid gap-0.5 min-w-0">
-                                                <span class="text-xs font-medium truncate">{{ tool.name }}</span>
-                                                <span class="text-xs text-muted-foreground">v{{ tool.version || '1.0' }}</span>
+                                            <div class="grid gap-1 flex-1 min-w-0">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <label :for="tool.value" class="text-sm font-medium leading-none cursor-pointer text-foreground capitalize truncate">
+                                                        {{ tool.label }}
+                                                    </label>
+                                                    <Badge v-if="tool.category" variant="secondary" class="text-[10px] px-1 h-4 font-normal text-muted-foreground bg-muted/50 border-border/50 shrink-0">
+                                                        {{ tool.category }}
+                                                    </Badge>
+                                                </div>
+                                                <p class="text-xs text-muted-foreground leading-snug line-clamp-2 h-8">
+                                                    {{ tool.desc }}
+                                                </p>
                                             </div>
                                         </div>
-                                        <Button variant="ghost" size="icon" class="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-100/50 opacity-0 group-hover:opacity-100 transition-opacity" @click="removeSkill(tool)">
-                                            <Trash2 class="w-3 h-3" />
-                                        </Button>
+                                        
+                                        <!-- Dynamic Config Form -->
+                                        <div v-if="isToolEnabled(tool.value) && tool.config_schema && Object.keys(tool.config_schema.properties || {}).length > 0" 
+                                             class="mt-2 pl-1 pr-1 py-2 border-t border-border/30 animate-fade-in" @click.stop>
+                                            <div class="grid gap-3">
+                                                <div v-for="(prop, key) in tool.config_schema.properties" :key="key" class="grid gap-1.5">
+                                                    <Label :for="`${tool.value}-${key}`" class="text-xs text-muted-foreground font-normal">
+                                                        {{ prop.title || key }} 
+                                                        <span v-if="tool.config_schema.required?.includes(key)" class="text-red-500">*</span>
+                                                    </Label>
+                                                    
+                                                    <!-- String Input -->
+                                                    <Input v-if="prop.type === 'string' || !prop.type" 
+                                                        :id="`${tool.value}-${key}`" 
+                                                        :value="getToolConfigValue(tool.value, key) || prop.default || ''"
+                                                        @input="e => updateToolConfig(tool.value, key, e.target.value)"
+                                                        :placeholder="prop.description || ''"
+                                                        class="h-7 text-xs bg-muted/20 border-border/30 focus:bg-white" />
+                                                    
+                                                    <!-- Boolean Switch -->
+                                                    <div v-else-if="prop.type === 'boolean'" class="flex items-center gap-2">
+                                                        <Switch :id="`${tool.value}-${key}`" 
+                                                            :checked="getToolConfigValue(tool.value, key) ?? prop.default ?? false"
+                                                            @update:checked="val => updateToolConfig(tool.value, key, val)"
+                                                            class="scale-75 origin-left" />
+                                                    </div>
+    
+                                                    <!-- Integer Input -->
+                                                    <Input v-else-if="prop.type === 'integer' || prop.type === 'number'" 
+                                                        type="number"
+                                                        :id="`${tool.value}-${key}`" 
+                                                        :value="getToolConfigValue(tool.value, key) ?? prop.default"
+                                                        @input="e => updateToolConfig(tool.value, key, Number(e.target.value))"
+                                                        :placeholder="prop.description || ''"
+                                                        class="h-7 text-xs bg-muted/20 border-border/30 focus:bg-white" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+    
+                                    <!-- External Skills -->
+                                <div v-if="skillTools.length > 0 && (selectedToolboxCategory === '全部' || selectedToolboxCategory === '技能')" class="grid grid-cols-2 gap-3 mt-2 col-span-2">
+                                    <div v-for="(tool, idx) in skillTools" :key="idx"
+                                            class="flex items-center justify-between p-2.5 border border-border/40 rounded-lg bg-background group hover:border-red-200 hover:bg-red-50/30 transition-colors">
+                                            <div class="flex items-center gap-2.5 overflow-hidden">
+                                                <div class="grid gap-0.5 min-w-0">
+                                                    <span class="text-xs font-medium truncate">{{ tool.name }}</span>
+                                                    <span class="text-xs text-muted-foreground">v{{ tool.version || '1.0' }}</span>
+                                                </div>
+                                            </div>
+                                            <Button variant="ghost" size="icon" class="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-100/50 opacity-0 group-hover:opacity-100 transition-opacity" @click="removeSkill(tool)">
+                                                <Trash2 class="w-3 h-3" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -296,7 +362,7 @@
                             </div>
                             
                             <div v-else class="space-y-3">
-                                <div v-for="(mcp, idx) in form.mcp_config" :key="idx" class="border border-border/40 rounded-xl overflow-hidden bg-background shadow-sm group transition-all hover:shadow-md hover:border-primary/20">
+                                <div v-for="(mcp, idx) in form.mcp_config" :key="idx" class="border border-border rounded-xl overflow-hidden bg-background shadow-sm group transition-all hover:shadow-md hover:border-primary/50">
                                     <div class="bg-muted/30 px-3 py-2 border-b border-border/40 flex items-center justify-between group-hover:bg-muted/40 transition-colors">
                                         <div class="flex items-center gap-2 flex-1">
                                             <Badge variant="secondary" class="text-xs h-5 px-1.5 font-mono bg-background border-border/50 text-muted-foreground shadow-sm">
@@ -641,14 +707,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, h } from 'vue';
+import { ref, computed, watch, h, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import UserScriptsEditor from './UserScriptsEditor.vue';
 import { 
     X, Save, Upload, Download, Plus, Trash2, Settings2, Database, Wrench, 
     FileText, Bot, ChevronRight, Search, Check, AlertCircle, Loader2,
     MessageSquareCode, Cpu, Server, Blocks, ShoppingBag,
-    Sparkles, Copy, Wand2, Info, HelpCircle, Filter
+    Sparkles, Copy, Wand2, Info, HelpCircle, Filter, Terminal
 } from 'lucide-vue-next';
 
 // Shadcn Components
@@ -747,11 +813,107 @@ const defaultSkillsConfig = {
     browser: { enabled: false, headless: true, search_engine: 'duckduckgo' }
 };
 
-const defaultTools = [
-    { label: 'DuckDuckGo Search', value: 'duckduckgo', desc: '网络搜索工具，支持实时信息检索' },
-    { label: 'Calculator', value: 'calculator', desc: '数学计算工具，支持复杂运算' },
-    { label: 'N8N Workflow', value: 'n8n', desc: '工作流自动化，连接外部服务' }
-];
+const defaultTools = ref([]);
+
+const fetchAvailableTools = async () => {
+    try {
+        const res = await fetch('/api/v1/tools/available');
+        if (res.ok) {
+            const tools = await res.json();
+            // Category translation map based on new grouping
+            const categoryTranslation = {
+                'search': '基础工具',
+                'utilities': '基础工具',
+                'file': '基础工具',
+                'json': '基础工具',
+                'finance': '专业数据',
+                'analysis': '专业数据',
+                'data': '专业数据',
+                'media': '专业数据',
+                'productivity': '效率办公',
+                'integration': '效率办公',
+                'development': '开发工具',
+                'dev': '开发工具',
+                'news': '基础工具', // Or Professional Data? Search is Basic.
+                'uncategorized': '未分类'
+            };
+
+            // Fallback mapping based on tool name to match the screenshot requirements
+            const toolNameCategoryMap = {
+                // 1. 基础工具
+                'calculator': '基础工具',
+                'duckduckgo': '基础工具',
+                'google_search': '基础工具',
+                'file_tools': '基础工具',
+                'json_tools': '基础工具',
+                'website_tools': '基础工具',
+                'wikipedia': '基础工具',
+                'pdf_tools': '基础工具',
+                'exa': '基础工具',
+                'tavily': '基础工具',
+
+                // 2. 专业数据
+                'yfinance': '专业数据',
+                'openbb': '专业数据',
+                'duckdb': '专业数据',
+                'sql_tools': '专业数据',
+                'arxiv': '专业数据',
+                'pandas': '专业数据',
+                'youtube': '专业数据',
+
+                // 3. 效率办公
+                'n8n': '效率办公',
+                // Future: notion, slack, email, google_calendar
+
+                // 4. 开发工具
+                'sandbox': '开发工具',
+                'github': '开发工具',
+                'shell': '开发工具'
+            };
+
+            defaultTools.value = tools.map(t => {
+                let cat = t.category;
+                
+                // 1. Force mapping based on tool name (highest priority)
+                if (toolNameCategoryMap[t.name]) {
+                    cat = toolNameCategoryMap[t.name];
+                }
+                // 2. Try to translate existing category if not mapped
+                else if (cat && categoryTranslation[cat.toLowerCase()]) {
+                    cat = categoryTranslation[cat.toLowerCase()];
+                }
+                // 3. Fallback to uncategorized
+                else if (!cat || cat === 'uncategorized') {
+                    cat = '未分类';
+                }
+                
+                return {
+                    label: t.label || t.name, 
+                    value: t.name,
+                    desc: t.description,
+                    config_schema: t.config_schema,
+                    category: cat
+                };
+            });
+        }
+    } catch (e) {
+        console.error("Failed to fetch available tools", e);
+        // Fallback to static defaults if backend fails
+        defaultTools.value = [
+            { label: '网络搜索 (DuckDuckGo)', value: 'duckduckgo', desc: '网络搜索工具，支持实时信息检索', category: '基础工具' },
+            { label: '计算器', value: 'calculator', desc: '数学计算工具，支持复杂运算', category: '基础工具' },
+            { label: 'N8N 工作流', value: 'n8n', desc: '工作流自动化，连接外部服务', category: '效率办公' },
+            { label: 'GitHub', value: 'github', desc: '代码仓库管理工具', category: '开发工具' },
+            { label: 'YouTube', value: 'youtube', desc: '视频内容解析工具', category: '专业数据' },
+            { label: 'Exa 搜索', value: 'exa', desc: 'AI 驱动的语义搜索引擎', category: '基础工具' },
+            { label: 'Tavily 搜索', value: 'tavily', desc: '针对 LLM 优化的搜索引擎', category: '基础工具' }
+        ];
+    }
+};
+
+onMounted(() => {
+    fetchAvailableTools();
+});
 
 const form = ref({
     id: null,
@@ -759,7 +921,7 @@ const form = ref({
     description: '',
     icon: '/tiga.svg',
     system_prompt: '',
-    model_config: { model_id: '', reasoning: false },
+    model_config: { model_id: '', reasoning: false, show_tool_calls: false },
     tools_config: [],
     mcp_config: [],
     skills_config: defaultSkillsConfig,
@@ -768,6 +930,7 @@ const form = ref({
 
 const activeAgentId = computed(() => form.value.id || '');
 const selectedCategory = ref('全部');
+const selectedToolboxCategory = ref('全部');
 
 const categoryMap = {
     'productivity': '生产力',
@@ -788,14 +951,37 @@ const categoryMap = {
 };
 
 const getCategoryLabel = (cat) => {
-    if (cat === '全部') return '全部';
-    if (!cat) return '未分类';
-    // If it's already Chinese (likely if backend returns Chinese or defaulted to '未分类'), return it
-    if (/[\u4e00-\u9fa5]/.test(cat)) return cat;
-    
-    const lower = cat.toLowerCase();
-    return categoryMap[lower] || cat;
+    return cat;
 };
+
+const getCategoryCount = (cat) => {
+    if (cat === '全部') {
+        return defaultTools.value.length + skillTools.value.length;
+    }
+    if (cat === '技能') {
+        return skillTools.value.length;
+    }
+    return defaultTools.value.filter(t => (t.category || '未分类') === cat).length;
+};
+
+const toolboxCategories = computed(() => {
+    const cats = new Set(defaultTools.value.map(t => t.category || '未分类'));
+    // Add 'skill' category if there are skill tools
+    if (skillTools.value.length > 0) cats.add('技能');
+    
+    const sorted = Array.from(cats).sort();
+    if (sorted.length <= 1 && !cats.has('技能')) return [];
+    
+    // Custom label for skill
+    const labels = ['全部', ...sorted];
+    return labels;
+});
+
+const filteredDefaultTools = computed(() => {
+    if (selectedToolboxCategory.value === '全部') return defaultTools.value;
+    if (selectedToolboxCategory.value === '技能') return []; // Skills are handled separately in template
+    return defaultTools.value.filter(t => (t.category || '未分类') === selectedToolboxCategory.value);
+});
 
 const filteredMcpTools = computed(() => {
     if (!mcpToolSearchQuery.value) return currentMcpTools.value;
@@ -908,7 +1094,7 @@ function resetForm() {
         description: '',
         icon: 'globe',
         system_prompt: '',
-        model_config: { model_id: '', reasoning: false },
+        model_config: { model_id: '', reasoning: false, show_tool_calls: false },
         tools_config: [],
         mcp_config: [],
         skills_config: defaultSkillsConfig,
@@ -922,7 +1108,11 @@ function buildAgentPayload(agentLike) {
         description: agentLike?.description || '',
         icon: agentLike?.icon || 'globe',
         system_prompt: agentLike?.system_prompt || '',
-        model_config: agentLike?.model_config || { model_id: '', reasoning: false },
+        model_config: { 
+            model_id: agentLike?.model_config?.model_id || '', 
+            reasoning: agentLike?.model_config?.reasoning || false,
+            show_tool_calls: agentLike?.model_config?.show_tool_calls || false
+        },
         tools_config: Array.isArray(agentLike?.tools_config) ? agentLike.tools_config : [],
         mcp_config: Array.isArray(agentLike?.mcp_config) ? agentLike.mcp_config : [],
         skills_config: agentLike?.skills_config || defaultSkillsConfig,
@@ -1034,7 +1224,7 @@ const viewMcpTools = async (mcp) => {
 };
 
 const removeSkill = (tool) => {
-    const index = form.value.tools_config.findIndex(t => t === tool || (typeof t === 'object' && t.name === tool.name));
+    const index = form.value.tools_config.findIndex(t => t === tool || (typeof t === 'object' && t.name === tool.name && t.type === 'skill'));
     if (index > -1) form.value.tools_config.splice(index, 1);
 };
 
@@ -1076,7 +1266,9 @@ const isToolSelected = (tool) => {
     } else {
         return form.value.tools_config.some(t => {
             if (typeof t === 'string') return t === tool.name;
-            return t.id === tool.id || t.name === tool.name;
+            // Distinguish between dynamic tools (no type or type='tool') and skills (type='skill')
+            // Market skills have type='skill'
+            return t.name === tool.name && t.type === 'skill';
         });
     }
 };
@@ -1107,7 +1299,63 @@ const selectToolFromMarket = (tool) => {
     }
 };
 
-const exportConfig = () => {
+const isToolEnabled = (toolValue) => {
+        return form.value.tools_config.some(t => {
+            if (typeof t === 'string') return t === toolValue;
+            return t.name === toolValue;
+        });
+    };
+
+    const toggleTool = (tool) => {
+        const index = form.value.tools_config.findIndex(t => {
+            if (typeof t === 'string') return t === tool.value;
+            return t.name === tool.value;
+        });
+
+        if (index > -1) {
+            // Remove
+            form.value.tools_config.splice(index, 1);
+        } else {
+            // Add
+            // If tool has config schema, add as object
+            if (tool.config_schema && Object.keys(tool.config_schema.properties || {}).length > 0) {
+                form.value.tools_config.push({
+                    name: tool.value,
+                    config: {} // Start empty
+                });
+            } else {
+                form.value.tools_config.push(tool.value);
+            }
+        }
+    };
+
+    const getToolConfigValue = (toolValue, key) => {
+        const entry = form.value.tools_config.find(t => typeof t === 'object' && t.name === toolValue);
+        return entry?.config?.[key];
+    };
+
+    const updateToolConfig = (toolValue, key, value) => {
+        const index = form.value.tools_config.findIndex(t => typeof t === 'object' && t.name === toolValue);
+        if (index > -1) {
+            const entry = form.value.tools_config[index];
+            if (!entry.config) entry.config = {};
+            entry.config[key] = value;
+            // Vue reactivity might need help if deep
+            form.value.tools_config[index] = { ...entry };
+        } else {
+            // Should not happen if UI is correct, but just in case
+            // If it was a string, convert to object
+             const strIndex = form.value.tools_config.findIndex(t => t === toolValue);
+             if (strIndex > -1) {
+                 form.value.tools_config[strIndex] = {
+                     name: toolValue,
+                     config: { [key]: value }
+                 };
+             }
+        }
+    };
+
+    const exportConfig = () => {
     const dataStr = JSON.stringify(form.value, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

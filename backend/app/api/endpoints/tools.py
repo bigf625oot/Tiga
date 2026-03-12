@@ -1,8 +1,16 @@
 from fastapi import APIRouter, Depends
 from app.api import deps
 from app.models.user_tool import UserTool
+from app.services.eah_agent.tools.registry import discover_tools
 
 router = APIRouter()
+
+@router.get("/available")
+async def list_available_tools():
+    """
+    List all available tools and their configuration schemas.
+    """
+    return discover_tools(include_metadata=True)
 
 @router.post("/{tool_id}/invoke")
 async def invoke_tool(

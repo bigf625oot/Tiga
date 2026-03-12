@@ -13,7 +13,7 @@ except ImportError as e:
     # Fallback or re-raise with clear message
     raise ImportError(f"Failed to import FastMCP. Please ensure 'mcp' and 'pywin32' (on Windows) are installed. Error: {e}")
 
-from app.services.rag.engines.lightrag import lightrag_engine
+from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 
 # Initialize MCP Server
 try:

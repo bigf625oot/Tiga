@@ -14,8 +14,8 @@ from app.db.session import get_db
 from app.models.agent import Agent
 from app.models.llm_model import LLMModel
 from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatSessionUpdate
-from app.services.agent.manager import agent_manager
-from app.services.agent.qa import qa_service  # Fallback
+from app.services.eah_agent.core.agent_manager import agent_manager
+from app.services.eah_agent.core.qa import qa_service  # Fallback
 
 router = APIRouter()
 

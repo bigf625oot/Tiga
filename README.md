@@ -16,10 +16,10 @@ Tiga/
 │   │   ├── core/         # 核心配置与工具
 │   │   ├── services/     # 业务逻辑服务
 │   │   │   ├── agent/    # 智能体核心 (Planner, Skills, Tools)
+│   │   │   ├── graph/    # 图谱关系修复与管理
 │   │   │   ├── openclaw/ # 分布式任务节点与网关
 │   │   │   ├── pathway/  # 实时数据流 ETL 引擎
 │   │   │   ├── rag/      # RAG 引擎 (LightRAG, GraphitiRAG)
-│   │   │   ├── relation_fix_service.py # 图谱关系修复
 │   │   │   └── sandbox/  # 代码沙箱 (E2B, Codebox)
 │   └── ...
 ├── frontend/

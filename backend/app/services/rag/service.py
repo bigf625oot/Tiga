@@ -2,8 +2,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.llm_model import LLMModel
-from app.services.rag.engines.lightrag import lightrag_engine
-from app.services.rag.models import (
+from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.rag.schemas import (
     AugmentRequest,
     AugmentResponse,
     EmbedRequest,
@@ -13,7 +13,7 @@ from app.services.rag.models import (
     SearchRequest,
     SearchResponse,
 )
-from app.services.rag.providers import LightRAGVectorStore, OpenAICompatLLM, OpenAIEmbedder
+from app.services.rag.retrieval.providers import LightRAGVectorStore, OpenAICompatLLM, OpenAIEmbedder
 
 
 class RagService:

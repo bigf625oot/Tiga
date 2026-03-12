@@ -10,6 +10,7 @@ from app.workflow.steps.agent_execute_step import agent_execute_step
 from app.workflow.steps.persist_step import persist_step
 from app.workflow.steps.plan_step import plan_step
 from app.core.config import settings
+from app.services.eah_agent.tools.libs.duckduckgo import DuckDuckGoTools
 
 logger = logging.getLogger(__name__)
 
@@ -90,9 +91,9 @@ class AppWorkflow(Workflow):
         # Attach to specific loggers
         # We capture logs from tool runner and general workflow
         target_loggers = [
-            logging.getLogger("app.services.agent.tools.runner"),
+            logging.getLogger("app.services.eah_agent.tools.libs.runner"),
             logging.getLogger("app.workflow"),
-            logging.getLogger("app.services.agent.tools.duckduckgo") # If distinct
+            logging.getLogger("app.services.eah_agent.tools.libs.duckduckgo") # If distinct
         ]
         
         for l in target_loggers:

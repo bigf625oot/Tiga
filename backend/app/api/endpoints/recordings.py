@@ -21,7 +21,7 @@ from app.models.llm_model import LLMModel
 from app.services.media.asr import aliyun_asr_service
 from app.services.storage.service import storage_service
 from app.services.llm.factory import ModelFactory
-from app.services.rag.engines.lightrag import lightrag_engine
+from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 from agno.agent import Agent
 
 logger = logging.getLogger(__name__)

@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.knowledge import KnowledgeDocument
-from app.services.rag.parser import parse_document
-from app.services.data.extraction import run_extraction, generate_prompt
+from app.services.rag.knowledge.parser import parse_document
+from app.services.chatbi.extraction import run_extraction, generate_prompt
 from app.services.storage.service import storage_service
 
 router = APIRouter()

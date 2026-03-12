@@ -30,7 +30,7 @@
                         <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-auto">
                             <TabsList class="grid w-full grid-cols-3 h-9 bg-muted/50 p-1">
                                 <TabsTrigger value="all" class="text-xs px-4">全部</TabsTrigger>
-                                <TabsTrigger value="my-agents" class="text-xs px-4">我的智能体</TabsTrigger>
+                                <TabsTrigger value="my-agents" class="text-xs px-4">自定义智能体</TabsTrigger>
                                 <TabsTrigger value="discover" class="text-xs px-4">发现模版</TabsTrigger>
                             </TabsList>
                         </Tabs>
@@ -74,7 +74,7 @@
                                         <h3
                                             class="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2 pl-1">
                                             <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
-                                            我的智能体
+                                            自定义智能体
                                             <span class="text-xs font-normal text-muted-foreground ml-1">({{
                                                 filteredMyAgents.length }})</span>
                                         </h3>
@@ -517,7 +517,7 @@ const fetchAgents = async () => {
                     else agent.category = '其他';
                 }
                 // Default category for My Agents
-                if (!agent.is_template) {
+                if (!agent.category && !agent.is_template) {
                      agent.category = '我的助手';
                 }
                 return agent;

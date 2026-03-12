@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from app.services.relation_fix_service import relation_fix_service
+from app.services.graph.relation_fix_service import relation_fix_service
 
 router = APIRouter()
 
