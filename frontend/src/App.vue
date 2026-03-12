@@ -100,8 +100,10 @@
          </Button>
       </SidebarHeader>
 
+
+
       <!-- New Chat Action -->
-      <div class="p-4">
+      <div class="p-4 pt-0">
          <TooltipProvider :delay-duration="0">
            <Tooltip>
              <TooltipTrigger as-child>
@@ -432,6 +434,7 @@
           </DialogFooter>
        </DialogContent>
     </Dialog>
+
   </div>
 </template>
 
@@ -461,7 +464,8 @@ import AgentIcon from '@/shared/components/atoms/AgentIcon/AgentIcon.vue';
 import {
   Menu, X, Plus, MessageSquare, Clock, Search, Mic, BarChart, Calculator,
   LayoutGrid, Database, Film, Box, Workflow, Network, Share2,
-  Trash2, Settings, Cpu, MoreHorizontal, ChevronRight, ChevronDown
+  Trash2, Settings, Cpu, MoreHorizontal, ChevronRight, ChevronDown, Users,
+  GitBranch
 } from 'lucide-vue-next';
 import {
   Collapsible,
@@ -493,12 +497,14 @@ const ModelManagement = defineAsyncComponent(() => import('@/features/system/com
 const DatabaseManagement = defineAsyncComponent(() => import('@/features/system/components/DatabaseManagement.vue'));
 const AgentManagement = defineAsyncComponent(() => import('@/features/agent/components/AgentManagement.vue'));
 const ServiceMarket = defineAsyncComponent(() => import('@/features/agent/components/ServiceMarket.vue'));
+const AgentFlow = defineAsyncComponent(() => import('@/features/agent/components/AgentFlow.vue'));
 const WorkflowManagement = defineAsyncComponent(() => import('@/features/workflow/components/WorkflowManagement.vue'));
 const DataDashboard = defineAsyncComponent(() => import('@/features/data_etl/DataDashboard.vue'));
 const DataSourceManagement = defineAsyncComponent(() => import('@/features/data_etl/DataSourceManagement.vue'));
 const EtlPipelineList = defineAsyncComponent(() => import('@/features/data_etl/EtlPipelineList.vue'));
 const EditorLayout = defineAsyncComponent(() => import('@/features/etl_editor/EditorLayout.vue'));
 const SystemSettings = defineAsyncComponent(() => import('@/features/data_etl/SystemSettings.vue'));
+const SmartTeam = defineAsyncComponent(() => import('@/features/team/components/SmartTeam.vue'));
 
 // Setup Axios
 const api = axios.create({
@@ -536,8 +542,11 @@ const mobileMenuOpen = ref(false);
 const currentView = ref('chat');
 const sidebarTab = ref('task');
 
+
+
 // Component Mapping
 const componentMap: Record<string, any> = {
+    'smart_team': SmartTeam,
     'metrics': MetricsExtraction,
     'batch_metrics': BatchExtraction,
     'indicators': IndicatorManagement,
@@ -551,6 +560,7 @@ const componentMap: Record<string, any> = {
     'model': ModelManagement,
     'agent': AgentManagement,
     'service_market': ServiceMarket,
+    'agent_flow': AgentFlow,
     'workflow': WorkflowManagement,
     'data_dashboard': DataDashboard,
     'data_source': DataSourceManagement,
@@ -747,8 +757,10 @@ interface SidebarItem {
 }
 
 const agentSidebarItems: SidebarItem[] = [
-    { id: 'agent', label: '智能体中心', icon: Box },
     { id: 'service_market', label: '工具市场', icon: LayoutGrid },
+    { id: 'agent', label: '智能体中心', icon: Box },
+    { id: 'smart_team', label: '智能团队', icon: Users },
+    { id: 'agent_flow', label: '智能体流', icon: GitBranch },
     { type: 'separator' },
     { id: 'search', label: '智能爬取', icon: Search },
     { id: 'metrics', label: '指标提取', icon: BarChart },

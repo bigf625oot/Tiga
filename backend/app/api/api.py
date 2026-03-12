@@ -28,6 +28,7 @@ from app.api.endpoints import (
     openclaw,
     nodes,
     agent,
+    teams,
 )
 from app.api.endpoints.search_agent import news
 from app.services.pathway.api import router as pathway_router
@@ -49,6 +50,7 @@ api_router.include_router(metrics_tool.router, prefix="/metrics", tags=["metrics
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
+api_router.include_router(teams.router, prefix="/teams", tags=["teams"])
 api_router.include_router(mcp.router, prefix="/mcp", tags=["mcp"])
 api_router.include_router(workflow.router, prefix="/workflows", tags=["workflows"])
 api_router.include_router(agent_workflow.router, prefix="/agent-workflows", tags=["agent-workflows"])

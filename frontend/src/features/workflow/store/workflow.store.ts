@@ -292,7 +292,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         return map[step] || step;
     };
 
-    const runWorkflow = async (message: string, agentId?: string) => {
+    const runWorkflow = async (message: string, agentId?: string, attachments?: string[]) => {
         if (isRunning.value) return;
         isRunning.value = true;
         // Reset tasks for new run? 
@@ -315,7 +315,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
                     session_id: sessionId.value,
                     message: message,
                     agent_id: agentId,
-                    mode: 'dynamic' // Use dynamic for full experience
+                    mode: 'dynamic', // Use dynamic for full experience
+                    params: {
+                        attachments
+                    }
                 })
             });
 

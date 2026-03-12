@@ -3,14 +3,21 @@ import { DialogPortal, DialogOverlay, DialogContent, type DialogContentEmits, ty
 import { X } from 'lucide-vue-next'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { ref } from 'vue'
 
 interface SheetContentProps extends DialogContentProps {
   side?: 'top' | 'bottom' | 'left' | 'right'
   class?: string
+  overlay?: boolean
+  resizable?: boolean
+  defaultWidth?: number
 }
 
 const props = withDefaults(defineProps<SheetContentProps>(), {
   side: 'right',
+  overlay: true,
+  resizable: false,
+  defaultWidth: 600
 })
 
 const emits = defineEmits<DialogContentEmits>()
@@ -34,17 +41,56 @@ const sheetVariants = cva(
     },
   },
 )
+
+// Resize Logic
+const width = ref(props.defaultWidth)
+const isResizing = ref(false)
+
+const startResize = (e: MouseEvent) => {
+  isResizing.value = true
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = 'ew-resize'
+}
+
+const handleResize = (e: MouseEvent) => {
+  if (!isResizing.value) return
+  
+  if (props.side === 'right') {
+    width.value = Math.max(300, Math.min(window.innerWidth - 50, window.innerWidth - e.clientX))
+  } else if (props.side === 'left') {
+    width.value = Math.max(300, Math.min(window.innerWidth - 50, e.clientX))
+  }
+}
+
+const stopResize = () => {
+  isResizing.value = false
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+}
 </script>
 
 <template>
   <DialogPortal>
     <DialogOverlay
+      v-if="overlay"
       class="fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
     />
     <DialogContent
       v-bind="forwarded"
       :class="cn(sheetVariants({ side }), props.class)"
+      :style="resizable ? { width: width + 'px', maxWidth: '100vw' } : {}"
     >
+      <div 
+        v-if="resizable && (side === 'left' || side === 'right')"
+        class="absolute top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-primary/20 active:bg-primary/40 transition-colors z-[60]"
+        :class="side === 'right' ? 'left-0' : 'right-0'"
+        @mousedown="startResize"
+      />
+      
       <slot />
 
       <DialogClose

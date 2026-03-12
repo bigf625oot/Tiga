@@ -2,46 +2,50 @@
     <div class="h-full flex flex-col bg-background overflow-hidden">
         <!-- Compact Header (Knowledge Base Style) -->
         <div
-            class="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-            <div class="flex items-center gap-3">
-                <h2 class="text-lg font-semibold tracking-tight text-foreground">智能体中心</h2>
-                <div class="h-4 w-px bg-border"></div>
-                <p class="text-muted-foreground text-xs truncate max-w-xl">
-                    管理智能体与应用模版
-                </p>
+            class="px-8 py-5 border-b border-border/60 flex items-center justify-between flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 shadow-sm">
+            <div class="flex items-center gap-4">
+                <div class="p-2 bg-primary/10 rounded-lg text-primary">
+                    <Box class="h-5 w-5" />
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold tracking-tight text-foreground leading-none">智能体中心</h2>
+                    <p class="text-muted-foreground text-xs mt-1.5 font-medium">
+                        管理您的智能体助手与应用模版
+                    </p>
+                </div>
             </div>
 
-            <div class="flex items-center gap-2">
-                <Button @click="openCreateModal" size="sm" class="h-9 shadow-sm">
+            <div class="flex items-center gap-3">
+                <Button @click="openCreateModal" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95">
                     <Plus class="mr-2 h-4 w-4" />
                     创建智能体
                 </Button>
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
-            <div class="max-w-[1600px] mx-auto w-full flex flex-col gap-6">
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-muted/10">
+            <div class="max-w-[1800px] mx-auto w-full flex flex-col gap-8">
 
                 <Loading v-if="isLoading" type="skeleton-card" />
 
                 <template v-else>
                     <!-- Filter Tabs & Search -->
-                    <div class="flex items-center justify-between">
-                        <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-auto">
-                            <TabsList class="grid w-full grid-cols-3 h-9 bg-muted/50 p-1">
-                                <TabsTrigger value="all" class="text-xs px-4">全部</TabsTrigger>
-                                <TabsTrigger value="my-agents" class="text-xs px-4">自定义智能体</TabsTrigger>
-                                <TabsTrigger value="discover" class="text-xs px-4">发现模版</TabsTrigger>
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 py-2 -my-2 bg-muted/10 backdrop-blur-sm">
+                        <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-full md:w-auto">
+                            <TabsList class="grid w-full grid-cols-3 h-10 bg-muted/80 p-1 rounded-lg border border-border/50">
+                                <TabsTrigger value="all" class="text-xs font-medium px-6 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">全部</TabsTrigger>
+                                <TabsTrigger value="my-agents" class="text-xs font-medium px-6 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">自定义智能体</TabsTrigger>
+                                <TabsTrigger value="discover" class="text-xs font-medium px-6 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">发现模版</TabsTrigger>
                             </TabsList>
                         </Tabs>
 
-                        <div class="relative w-64">
-                            <Search class="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <div class="relative w-full md:w-72 group">
+                            <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             <Input v-model="searchQuery" @focus="showSuggestions = true" @blur="handleSearchBlur"
                                 @input="showSuggestions = true" placeholder="搜索智能体..."
-                                class="pl-8 h-9 bg-muted/50 border-input focus-visible:ring-1 pr-8" />
+                                class="pl-9 h-10 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
                             <button v-if="searchQuery" @click="searchQuery = ''; showSuggestions = false"
-                                class="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground transition-colors">
+                                class="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors">
                                 <X class="h-4 w-4" />
                             </button>
 
@@ -59,7 +63,7 @@
                     </div>
 
                     <!-- Agent List -->
-                    <div class="flex flex-col gap-6">
+                    <div class="flex flex-col gap-8">
                         <!-- Search Header -->
                         <div v-if="searchQuery" class="flex items-center gap-2">
                             <h3 class="text-lg font-semibold tracking-tight text-foreground">搜索结果</h3>
@@ -69,13 +73,13 @@
                         <div v-if="displayedAgents.length > 0">
                             <!-- Grouped View for 'all' tab -->
                             <template v-if="activeTab === 'all'">
-                                <div class="flex flex-col gap-8">
-                                    <div v-if="filteredMyAgents.length > 0" class="flex flex-col gap-4">
+                                <div class="flex flex-col gap-12">
+                                    <div v-if="filteredMyAgents.length > 0" class="flex flex-col gap-5">
                                         <h3
-                                            class="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2 pl-1">
-                                            <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
+                                            class="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 pl-1">
+                                            <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                                             自定义智能体
-                                            <span class="text-xs font-normal text-muted-foreground ml-1">({{
+                                            <span class="text-xs font-normal text-muted-foreground/70 ml-1">({{
                                                 filteredMyAgents.length }})</span>
                                         </h3>
                                         <div
@@ -85,12 +89,12 @@
                                         </div>
                                     </div>
 
-                                    <div v-if="filteredDiscoverAgents.length > 0" class="flex flex-col gap-4">
+                                    <div v-if="filteredDiscoverAgents.length > 0" class="flex flex-col gap-5">
                                         <h3
-                                            class="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2 pl-1">
-                                            <div class="w-1 h-4 bg-purple-500 rounded-full"></div>
+                                            class="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 pl-1">
+                                            <div class="w-1.5 h-4 bg-purple-500 rounded-full"></div>
                                             发现模版
-                                            <span class="text-xs font-normal text-muted-foreground ml-1">({{
+                                            <span class="text-xs font-normal text-muted-foreground/70 ml-1">({{
                                                 filteredDiscoverAgents.length }})</span>
                                         </h3>
                                         <div

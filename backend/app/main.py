@@ -69,6 +69,7 @@ async def lifespan(app: FastAPI):
         user_tool,
         workflow,
         task,
+        team,
     )
 
     async with engine.begin() as conn:

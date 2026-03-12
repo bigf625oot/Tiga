@@ -147,7 +147,7 @@ const isPropertyPanelOpen = computed({
         <div class="flex items-center gap-4">
           <!-- Navigation & Toggle -->
           <div class="flex items-center gap-2 mr-2">
-            <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('back')" title="返回列表">
+            <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('back')" title="返回流水线列表">
               <ArrowLeft class="w-4 h-4" />
             </Button>
             <div class="h-4 w-px bg-border mx-1"></div>

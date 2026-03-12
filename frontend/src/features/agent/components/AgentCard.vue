@@ -1,73 +1,88 @@
 <template>
   <Card 
-    class="group hover:shadow-lg transition-all duration-300 cursor-pointer border-border bg-card text-card-foreground" 
+    class="group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 bg-card/50 hover:bg-card hover:-translate-y-1" 
     @click="$emit('click', agent)"
   >
-    <CardHeader class="p-6 pb-2 space-y-0">
+    <!-- Background Gradient for Templates -->
+    <div v-if="isTemplate" class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full -mr-8 -mt-8 transition-opacity opacity-50 group-hover:opacity-100"></div>
+
+    <CardHeader class="p-5 pb-3 space-y-0 relative z-10">
       <div class="flex items-start justify-between gap-4">
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 w-full overflow-hidden">
            <!-- Icon -->
            <div 
-             class="h-12 w-12 rounded-lg flex items-center justify-center overflow-hidden border border-border/50 transition-colors"
-             :class="isTemplate ? 'bg-muted/50' : 'bg-primary/5'"
+             class="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-border/50 shadow-sm transition-all group-hover:scale-105 group-hover:shadow-md"
+             :class="isTemplate ? 'bg-gradient-to-br from-muted/50 to-muted' : 'bg-white dark:bg-slate-800'"
            >
                <img v-if="isImage" :src="agent.icon" class="h-full w-full object-cover" />
                <component v-else :is="agent.iconComponent" class="h-6 w-6 text-foreground/80" />
            </div>
-           <div class="space-y-2">
-              <CardTitle class="text-base font-semibold leading-none tracking-tight line-clamp-1" :title="agent.name">
-                {{ agent.name }}
-              </CardTitle>
+           
+           <div class="space-y-1.5 flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <CardTitle class="text-base font-bold leading-tight tracking-tight truncate pr-2" :title="agent.name">
+                    {{ agent.name }}
+                </CardTitle>
+                
+                <!-- Actions (Dropdown) -->
+                <div v-if="!isTemplate" @click.stop class="opacity-0 group-hover:opacity-100 transition-opacity -mr-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button variant="ghost" size="icon" class="h-7 w-7">
+                                <MoreVertical class="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem @click="$emit('edit', agent)" class="cursor-pointer">
+                                <Edit class="mr-2 h-4 w-4" /> 编辑
+                            </DropdownMenuItem>
+                            <DropdownMenuItem @click="$emit('delete', agent)" class="text-destructive focus:text-destructive cursor-pointer">
+                                <Trash2 class="mr-2 h-4 w-4" /> 删除
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+              </div>
+              
               <div class="flex items-center gap-2">
                  <Badge 
                    variant="secondary" 
-                   class="text-xs font-medium px-2.5 py-0.5 rounded-md" 
+                   class="text-[10px] font-medium px-1.5 py-0 h-5 rounded-md bg-secondary/50 text-secondary-foreground" 
                    v-if="isTemplate"
                  >
                    模版
                  </Badge>
                  <Badge 
                    variant="outline" 
-                   class="text-xs font-medium px-2.5 py-0.5 rounded-md text-primary bg-primary/10 border-primary/20" 
+                   class="text-[10px] font-medium px-1.5 py-0 h-5 rounded-md text-primary bg-primary/5 border-primary/20" 
                    v-else
                  >
                    我的助手
                  </Badge>
+                 <span v-if="agent.category" class="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-md truncate max-w-[80px]">
+                    {{ agent.category }}
+                 </span>
               </div>
            </div>
         </div>
-        
-        <!-- Actions (Dropdown) -->
-        <div v-if="!isTemplate" @click.stop>
-            <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" class="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreVertical class="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="$emit('edit', agent)" class="cursor-pointer">
-                        <Edit class="mr-2 h-4 w-4" /> 编辑
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="$emit('delete', agent)" class="text-destructive focus:text-destructive cursor-pointer">
-                        <Trash2 class="mr-2 h-4 w-4" /> 删除
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
       </div>
     </CardHeader>
-    <CardContent class="p-6 pt-4 pb-4 h-[88px]">
-       <p class="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+    
+    <CardContent class="p-5 pt-2 pb-4 min-h-[5rem]">
+       <p class="text-xs text-muted-foreground/80 line-clamp-3 leading-relaxed">
          {{ agent.description || '暂无描述信息...' }}
        </p>
     </CardContent>
-    <CardFooter class="p-6 pt-0 flex items-center justify-between">
+    
+    <CardFooter class="p-5 pt-0 flex items-center justify-between mt-auto border-t border-border/30 pt-3">
         <div class="flex items-center gap-2">
-            <div class="h-2 w-2 rounded-full" :class="agent.is_active !== false ? 'bg-green-500' : 'bg-muted-foreground/30'" />
-            <span class="text-xs text-muted-foreground font-medium">{{ agent.is_active !== false ? '已启用' : '未启用' }}</span>
+            <div class="relative flex h-2 w-2">
+              <span v-if="agent.is_active !== false" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2" :class="agent.is_active !== false ? 'bg-green-500' : 'bg-slate-300'"></span>
+            </div>
+            <span class="text-[10px] text-muted-foreground font-medium">{{ agent.is_active !== false ? '运行中' : '未启用' }}</span>
         </div>
-        <span class="text-xs text-muted-foreground font-mono opacity-60">ID: {{ agent.id ? agent.id.substring(0, 6) : '---' }}</span>
+        <span class="text-[10px] text-muted-foreground/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">ID: {{ agent.id ? agent.id.substring(0, 6) : '---' }}</span>
     </CardFooter>
   </Card>
 </template>
