@@ -11,12 +11,18 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[AgentResponse])
-async def read_agents(db: AsyncSession = Depends(get_db), skip: int = 0, limit: int = 100):
+async def read_agents(
+    db: AsyncSession = Depends(get_db), 
+    skip: int = 0, 
+    limit: int = 100,
+    q: str = None,
+    is_template: bool = None
+):
     """
     Retrieve agents.
     """
     from app.services.agent.service import agent_service
-    agents = await agent_service.get_agents(db, skip=skip, limit=limit)
+    agents = await agent_service.get_agents(db, skip=skip, limit=limit, query=q, is_template=is_template)
     return agents
 
 

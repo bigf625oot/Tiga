@@ -243,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h, createVNode, watch, nextTick, onUnmounted } from 'vue';
+import { ref, computed, onMounted, h, createVNode, watch, nextTick, onUnmounted, markRaw, defineComponent } from 'vue';
 import Splitting from "splitting";
 import "splitting/dist/splitting.css";
 import gsap from 'gsap';
@@ -259,7 +259,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Plus, Box, X } from 'lucide-vue-next';
 
 // Helper to create simple SVG icons without runtime compiler dependency
-const createIcon = (d) => ({
+const createIcon = (d) => markRaw(defineComponent({
     render: () => h('svg', {
         xmlns: 'http://www.w3.org/2000/svg',
         fill: 'none',
@@ -273,7 +273,7 @@ const createIcon = (d) => ({
             d: d
         })
     ])
-});
+}));
 
 // Icons
 const GlobeAltIcon = createIcon('M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S12 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S12 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418');
@@ -337,6 +337,13 @@ const initCardAnimation = () => {
     });
 };
 
+onMounted(() => {
+    fetchAgents();
+    fetchKnowledgeBases();
+    fetchModels();
+    Splitting();
+});
+
 onUnmounted(() => {
     if (animationCtx) animationCtx.revert();
 });
@@ -371,131 +378,122 @@ const currentTabAgents = computed(() => {
 });
 
 const filterAgents = (agents, query) => {
-    if (!query) return agents;
-    const q = query.toLowerCase();
-    return agents.filter(a => a.name.toLowerCase().includes(q) || (a.description && a.description.toLowerCase().includes(q)));
+    // Server-side filtering is implemented, so we return the agents directly
+    return agents;
 };
 
-const filteredMyAgents = computed(() => filterAgents(myAgents.value, searchQuery.value));
-const filteredDiscoverAgents = computed(() => filterAgents(discoverAgents.value, searchQuery.value));
+const displayedAgents = computed(() => {
+    let agents = [];
+    if (activeTab.value === 'all') {
+        agents = [...myAgents.value, ...discoverAgents.value];
+    } else if (activeTab.value === 'my-agents') {
+        agents = myAgents.value;
+    } else if (activeTab.value === 'discover') {
+        agents = discoverAgents.value;
+    }
+    
+    if (!searchQuery.value) return agents;
+    
+    const query = searchQuery.value.toLowerCase();
+    return agents.filter(agent => 
+        agent.name.toLowerCase().includes(query) || 
+        (agent.description && agent.description.toLowerCase().includes(query))
+    );
+});
+
+const filteredMyAgents = computed(() => {
+    if (!searchQuery.value) return myAgents.value;
+    const query = searchQuery.value.toLowerCase();
+    return myAgents.value.filter(agent => 
+        agent.name.toLowerCase().includes(query) || 
+        (agent.description && agent.description.toLowerCase().includes(query))
+    );
+});
+
+const filteredDiscoverAgents = computed(() => {
+    let agents = discoverAgents.value;
+    
+    // Category filter
+    if (selectedCategory.value !== '全部') {
+        agents = agents.filter(a => a.category === selectedCategory.value);
+    }
+    
+    if (!searchQuery.value) return agents;
+    
+    const query = searchQuery.value.toLowerCase();
+    return agents.filter(agent => 
+        agent.name.toLowerCase().includes(query) || 
+        (agent.description && agent.description.toLowerCase().includes(query))
+    );
+});
 
 const discoverCategories = computed(() => {
-    // Unique categories from discoverAgents
-    const cats = new Set(discoverAgents.value.map(a => a.category || '其他'));
-    return ['全部', ...Array.from(cats)];
+    const categories = new Set(discoverAgents.value.map(a => a.category).filter(Boolean));
+    return ['全部', ...Array.from(categories)];
 });
 
 const groupedDiscoverAgents = computed(() => {
-    // 1. Filter by Search Query
-    const agents = filteredDiscoverAgents.value;
-    
-    // 2. Filter by Category Selection
-    let targetAgents = agents;
-    if (selectedCategory.value !== '全部') {
-        targetAgents = agents.filter(a => (a.category || '其他') === selectedCategory.value);
-    }
-    
-    // 3. Group
     const groups = {};
-    
-    if (selectedCategory.value === '全部') {
-        // Show all groups
-        targetAgents.forEach(a => {
-            const cat = a.category || '其他';
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(a);
-        });
-    } else {
-        // Only one group
-        const cat = selectedCategory.value;
-        if (targetAgents.length > 0) {
-            groups[cat] = targetAgents;
-        }
-    }
-    
+    filteredDiscoverAgents.value.forEach(agent => {
+        const cat = agent.category || '其他';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(agent);
+    });
     return groups;
-});
-
-const displayedAgents = computed(() => {
-    return filterAgents(currentTabAgents.value, searchQuery.value);
 });
 
 const searchSuggestions = computed(() => {
     if (!searchQuery.value) return [];
     const query = searchQuery.value.toLowerCase();
-    const matches = currentTabAgents.value
-        .filter(a => a.name.toLowerCase().includes(query) && a.name.toLowerCase() !== query)
-        .map(a => a.name);
-    return [...new Set(matches)].slice(0, 5);
+    const allAgents = [...myAgents.value, ...discoverAgents.value];
+    // Use Set to avoid duplicates
+    const names = new Set(allAgents
+        .filter(agent => agent.name.toLowerCase().includes(query))
+        .map(agent => agent.name));
+    return Array.from(names).slice(0, 5);
 });
 
-const selectSuggestion = (name) => {
-    searchQuery.value = name;
+const selectSuggestion = (suggestion) => {
+    searchQuery.value = suggestion;
     showSuggestions.value = false;
-};
-
-const handleSearchBlur = () => {
-    setTimeout(() => {
-        showSuggestions.value = false;
-    }, 200);
+    fetchAgents();
 };
 
 const highlightMatch = (text) => {
     if (!searchQuery.value) return text;
     const regex = new RegExp(`(${searchQuery.value})`, 'gi');
-    return text.replace(regex, '<span class="text-blue-500 font-medium">$1</span>');
+    return text.replace(regex, '<span class="text-blue-500 font-bold">$1</span>');
 };
 
-onMounted(() => {
-    fetchAgents();
-    fetchModels();
-    fetchKnowledgeBases();
-
-    // Initialize Splitting
+const handleSearchBlur = () => {
+    // Delay to allow click on suggestion
     setTimeout(() => {
-        Splitting();
-        if (activeTab.value === 'discover') initCardAnimation();
-    }, 100);
-});
-
-watch(activeTab, (newVal) => {
-    if (newVal === 'discover') {
-        setTimeout(() => {
-            Splitting();
-            initCardAnimation();
-        }, 100);
-    } else {
-        if (animationCtx) animationCtx.revert();
-    }
-});
+        showSuggestions.value = false;
+    }, 200);
+};
 
 const fetchAgents = async () => {
     isLoading.value = true;
     try {
-        const res = await fetch('/api/v1/agents/');
+        let url = '/api/v1/agents/?limit=100';
+        
+        if (searchQuery.value) {
+            url += `&q=${encodeURIComponent(searchQuery.value)}`;
+        }
+
+        if (activeTab.value === 'my-agents') {
+            url += '&is_template=false';
+        } else if (activeTab.value === 'discover') {
+            url += '&is_template=true';
+        }
+
+        const res = await fetch(url);
         if (res.ok) {
-            const allAgents = await res.json();
-
-            if (!allAgents || allAgents.length === 0) {
-                const mockAgents = [
-                    { id: 'ab126f', name: '通用智能体', description: '基于大语言模型的通用对话助手，支持多轮对话、上下文理解与多语言翻译。', is_active: true, is_template: false, icon: 'globe' },
-                    { id: '792a8e', name: '知识库查询', description: '专注于企业内部知识库检索与问答，支持文档解析与精准溯源。', is_active: true, is_template: false, icon: 'book' },
-                    { id: '57f7a0', name: '顶层规划', description: '协助进行企业战略规划、顶层设计与宏观分析，提供专业的咨询建议。', is_active: true, is_template: true, icon: 'presentation' },
-                    { id: '226219', name: '市场洞察', description: '分析市场趋势、竞争对手动态与行业数据，生成深度洞察报告。', is_active: true, is_template: true, icon: 'chart' },
-                    { id: '9c851f', name: '专题研究', description: '针对特定领域进行深入研究，整合多源信息，产出高质量研究报告。', is_active: true, is_template: true, icon: 'document' },
-                    { id: 'f13732', name: '政策解读', description: '解读最新政策法规，分析其对企业的影响与应对策略。', is_active: true, is_template: true, icon: 'lightbulb' },
-                    { id: '9297de', name: '领导讲话', description: '辅助撰写各类领导讲话稿，风格严谨，逻辑清晰，符合公文规范。', is_active: true, is_template: true, icon: 'globe' },
-                    { id: 'bc6255', name: '解决方案', description: '针对具体业务痛点提供系统性的解决方案与实施建议。', is_active: true, is_template: true, icon: 'globe' }
-                ];
-                myAgents.value = mockAgents.filter(a => !a.is_template);
-                discoverAgents.value = mockAgents.filter(a => a.is_template);
-            } else {
-                myAgents.value = allAgents.filter(a => !a.is_template);
-                discoverAgents.value = allAgents.filter(a => a.is_template);
-            }
-
-            // Map icon strings to components for discover agents if needed
-            discoverAgents.value.forEach(agent => {
+            const agents = await res.json();
+            
+            // Process agents (categories, icons)
+            const processedAgents = agents.map(agent => {
+                // Map icon strings to components
                 const gradients = [
                     'linear-gradient(140.57deg, #ff9ba2 17.28%, #f56a79 91.19%)',
                     'linear-gradient(180deg, #a7c0ff 0%, #6892fd 100%)',
@@ -504,9 +502,11 @@ const fetchAgents = async () => {
                     'linear-gradient(135.82deg, #d194ff 0%, #8a8eff 93.32%)',
                     'linear-gradient(132.83deg, #46c3ff 14.35%, #47aafd 84.99%)'
                 ];
-                agent.gradient = gradients[agent.name.length % gradients.length];
-                // Map icon string to component using the availableIcons map
-                agent.iconComponent = availableIcons[agent.icon] || GlobeAltIcon;
+                if (agent.is_template) {
+                     agent.gradient = gradients[agent.name.length % gradients.length];
+                }
+                const iconComp = availableIcons[agent.icon] || GlobeAltIcon;
+                agent.iconComponent = markRaw(iconComp);
                 
                 // Assign categories if missing
                 if (!agent.category) {
@@ -516,42 +516,75 @@ const fetchAgents = async () => {
                     else if (['领导讲话'].includes(agent.name)) agent.category = '内容创作';
                     else agent.category = '其他';
                 }
+                // Default category for My Agents
+                if (!agent.is_template) {
+                     agent.category = '我的助手';
+                }
+                return agent;
             });
 
-            // Also map icons for myAgents to ensure they display correctly if they have icon strings
-            myAgents.value.forEach(agent => {
-                agent.iconComponent = availableIcons[agent.icon] || GlobeAltIcon;
-                // Default category for My Agents (optional, but good for consistency if we grouped them too)
-                agent.category = '我的助手';
-            });
+            if (activeTab.value === 'my-agents') {
+                 myAgents.value = processedAgents;
+                 discoverAgents.value = [];
+            } else if (activeTab.value === 'discover') {
+                 myAgents.value = [];
+                 discoverAgents.value = processedAgents;
+            } else {
+                 myAgents.value = processedAgents.filter(a => !a.is_template);
+                 discoverAgents.value = processedAgents.filter(a => a.is_template);
+            }
+        } else {
+            throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
         }
     } catch (e) {
         console.error("Failed to fetch agents", e);
         // Fallback on error too
-        const mockAgents = [
-            { id: 'ab126f', name: '通用智能体', category: '通用助手', description: '基于大语言模型的通用对话助手，支持多轮对话、上下文理解与多语言翻译。', is_active: true, is_template: false, icon: 'globe' },
-            { id: '792a8e', name: '知识库查询', category: '企业办公', description: '专注于企业内部知识库检索与问答，支持文档解析与精准溯源。', is_active: true, is_template: false, icon: 'book' },
-            { id: '57f7a0', name: '顶层规划', category: '企业办公', description: '协助进行企业战略规划、顶层设计与宏观分析，提供专业的咨询建议。', is_active: true, is_template: true, icon: 'presentation' },
-            { id: '226219', name: '市场洞察', category: '数据分析', description: '分析市场趋势、竞争对手动态与行业数据，生成深度洞察报告。', is_active: true, is_template: true, icon: 'chart' },
-            { id: '9c851f', name: '专题研究', category: '数据分析', description: '针对特定领域进行深入研究，整合多源信息，产出高质量研究报告。', is_active: true, is_template: true, icon: 'document' },
-            { id: 'f13732', name: '政策解读', category: '企业办公', description: '解读最新政策法规，分析其对企业的影响与应对策略。', is_active: true, is_template: true, icon: 'lightbulb' },
-            { id: '9297de', name: '领导讲话', category: '内容创作', description: '辅助撰写各类领导讲话稿，风格严谨，逻辑清晰，符合公文规范。', is_active: true, is_template: true, icon: 'globe' },
-            { id: 'bc6255', name: '解决方案', category: '通用助手', description: '针对具体业务痛点提供系统性的解决方案与实施建议。', is_active: true, is_template: true, icon: 'globe' }
-        ];
-        myAgents.value = mockAgents.filter(a => !a.is_template);
-        discoverAgents.value = mockAgents.filter(a => a.is_template);
-        
-        // Map icons for fallback
-        [...myAgents.value, ...discoverAgents.value].forEach(agent => {
-            agent.iconComponent = availableIcons[agent.icon] || GlobeAltIcon;
-        });
+         const mockAgents = [
+             { id: 'ab126f', name: '通用智能体', category: '通用助手', description: '基于大语言模型的通用对话助手，支持多轮对话、上下文理解与多语言翻译。', is_active: true, is_template: false, icon: 'globe' },
+             { id: '792a8e', name: '知识库查询', category: '企业办公', description: '专注于企业内部知识库检索与问答，支持文档解析与精准溯源。', is_active: true, is_template: false, icon: 'book' },
+             { id: '57f7a0', name: '顶层规划', category: '企业办公', description: '协助进行企业战略规划、顶层设计与宏观分析，提供专业的咨询建议。', is_active: true, is_template: true, icon: 'presentation' },
+             { id: '226219', name: '市场洞察', category: '数据分析', description: '分析市场趋势、竞争对手动态与行业数据，生成深度洞察报告。', is_active: true, is_template: true, icon: 'chart' },
+             { id: '9c851f', name: '专题研究', category: '数据分析', description: '针对特定领域进行深入研究，整合多源信息，产出高质量研究报告。', is_active: true, is_template: true, icon: 'document' },
+             { id: 'f13732', name: '政策解读', category: '企业办公', description: '解读最新政策法规，分析其对企业的影响与应对策略。', is_active: true, is_template: true, icon: 'lightbulb' },
+             { id: '9297de', name: '领导讲话', category: '内容创作', description: '辅助撰写各类领导讲话稿，风格严谨，逻辑清晰，符合公文规范。', is_active: true, is_template: true, icon: 'globe' },
+             { id: 'bc6255', name: '解决方案', category: '通用助手', description: '针对具体业务痛点提供系统性的解决方案与实施建议。', is_active: true, is_template: true, icon: 'globe' }
+         ];
+         
+         const processedMocks = mockAgents.map(agent => {
+            const iconComp = availableIcons[agent.icon] || GlobeAltIcon;
+            agent.iconComponent = markRaw(iconComp);
+            return agent;
+         });
+
+         myAgents.value = processedMocks.filter(a => !a.is_template);
+         discoverAgents.value = processedMocks.filter(a => a.is_template);
     } finally {
         isLoading.value = false;
         if (activeTab.value === 'discover') {
-            nextTick(() => initCardAnimation());
+            nextTick(() => {
+                initCardAnimation();
+                Splitting();
+            });
         }
     }
 };
+
+const debouncedFetchAgents = ((fn, delay) => {
+    let timeoutId;
+    return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+    };
+})(fetchAgents, 300);
+
+watch(searchQuery, () => {
+    // Only fetch if query is empty or long enough to avoid spamming
+    debouncedFetchAgents();
+});
+
+watch(activeTab, () => {
+    fetchAgents();
+});
 
 const fetchKnowledgeBases = async () => {
     try {

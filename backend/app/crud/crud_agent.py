@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.agent import Agent
@@ -11,8 +11,18 @@ class CRUDAgent:
         result = await db.execute(select(Agent).filter(Agent.id == id))
         return result.scalars().first()
 
-    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100):
-        result = await db.execute(select(Agent).offset(skip).limit(limit).order_by(Agent.created_at.desc()))
+    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100, query: str = None, is_template: bool = None):
+        stmt = select(Agent)
+        
+        if is_template is not None:
+            stmt = stmt.filter(Agent.is_template == is_template)
+            
+        if query:
+            search = f"%{query}%"
+            stmt = stmt.filter(or_(Agent.name.ilike(search), Agent.description.ilike(search)))
+            
+        stmt = stmt.offset(skip).limit(limit).order_by(Agent.created_at.desc())
+        result = await db.execute(stmt)
         return result.scalars().all()
 
     async def create(self, db: AsyncSession, obj_in: AgentCreate, commit: bool = True):

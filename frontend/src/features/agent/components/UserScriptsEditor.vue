@@ -78,15 +78,15 @@
       >
         <!-- View Mode -->
         <div v-if="editingId !== it.localId" class="p-4 flex items-start gap-4">
-            <div v-if="!readonly" class="mt-1 text-slate-300 cursor-move hover:text-muted-foreground transition-colors" title="拖拽排序">
+            <div v-if="!readonly" class="mt-1 text-muted-foreground cursor-move hover:text-foreground transition-colors" title="拖拽排序">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
             </div>
             <div class="flex-1 min-w-0" :class="!readonly ? 'cursor-pointer' : ''" @click="!readonly && startEdit(it)">
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="font-semibold text-slate-700 text-sm truncate">{{ it.title }}</span>
-                    <span v-if="it.description" class="text-xs text-muted-foreground truncate border-l border-slate-200 pl-2 max-w-[200px]">{{ it.description }}</span>
+                    <span class="font-semibold text-foreground text-sm truncate">{{ it.title }}</span>
+                    <span v-if="it.description" class="text-xs text-muted-foreground truncate border-l border-border pl-2 max-w-[200px]">{{ it.description }}</span>
                 </div>
-                <div class="bg-muted/50 p-4 py-2 rounded-lg text-xs text-slate-600 font-mono line-clamp-2 border border-border group-hover:bg-primary/10/30 group-hover:border-blue-100 transition-colors">
+                <div class="bg-muted/50 p-4 py-2 rounded-lg text-xs text-muted-foreground font-mono line-clamp-2 border border-border group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
                     {{ it.content }}
                 </div>
             </div>
@@ -101,7 +101,7 @@
         </div>
 
         <!-- Edit Mode -->
-        <div v-else class="p-4 bg-primary/10/30 space-y-3 rounded-lg">
+        <div v-else class="p-4 bg-primary/5 space-y-3 rounded-lg border border-primary/10">
             <div class="flex justify-between items-center mb-1">
                 <span class="text-xs font-semibold text-primary uppercase tracking-wider">编辑剧本</span>
             </div>
@@ -109,21 +109,21 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="text-[10px] text-muted-foreground font-medium">标题</label>
-                        <input v-model="it.editTitle" class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                        <input v-model="it.editTitle" class="w-full p-2 bg-background border border-input rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
                     </div>
                     <div class="space-y-1">
                         <label class="text-[10px] text-muted-foreground font-medium">描述</label>
-                        <input v-model="it.editDescription" class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
+                        <input v-model="it.editDescription" class="w-full p-2 bg-background border border-input rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
                     </div>
                 </div>
                 <div class="space-y-1">
                     <label class="text-[10px] text-muted-foreground font-medium">内容</label>
-                    <textarea v-model="it.editContent" rows="3" class="w-full p-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none font-mono text-slate-600"></textarea>
+                    <textarea v-model="it.editContent" rows="3" class="w-full p-2 bg-background border border-input rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none font-mono text-foreground"></textarea>
                 </div>
             </div>
             <div class="flex justify-end gap-2 pt-1">
-                <button @click="cancelEdit(it)" class="p-4 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">取消</button>
-                <button @click="saveEdit(it)" class="p-4 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm">保存修改</button>
+                <button @click="cancelEdit(it)" class="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors">取消</button>
+                <button @click="saveEdit(it)" class="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors shadow-sm">保存修改</button>
             </div>
         </div>
       </div>
@@ -138,7 +138,7 @@ import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { createVNode } from 'vue';
 
 const props = defineProps({
-  agentId: { type: String, required: true },
+  agentId: { type: String, required: false, default: null },
   readonly: { type: Boolean, default: false }
 });
 
@@ -151,6 +151,10 @@ const editingId = ref(null);
 const createForm = ref({ title: '', description: '', content: '' });
 
 const fetchItems = async () => {
+  if (!props.agentId) {
+      items.value = [];
+      return;
+  }
   loading.value = true;
   try {
     const res = await fetch(`/api/v1/user_scripts?agent_id=${props.agentId}`);
@@ -162,7 +166,8 @@ const fetchItems = async () => {
           localId: `${x.id}-${Math.random()}`,
           editTitle: x.title,
           editContent: x.content,
-          editDescription: x.description
+          editDescription: x.description,
+          isTemp: false
       }));
     }
   } catch (e) {
@@ -186,6 +191,27 @@ const submitCreate = async () => {
   }
 
   createLoading.value = true;
+  
+  // Local only mode (when creating new agent)
+  if (!props.agentId) {
+      const newItem = {
+          id: `temp-${Date.now()}`,
+          localId: `temp-${Date.now()}-${Math.random()}`,
+          title: createForm.value.title.trim(),
+          content: createForm.value.content.trim(),
+          description: (createForm.value.description || '').trim(),
+          sort_order: items.value.length + 1,
+          isTemp: true,
+          editTitle: createForm.value.title.trim(),
+          editContent: createForm.value.content.trim(),
+          editDescription: (createForm.value.description || '').trim()
+      };
+      items.value.push(newItem);
+      cancelCreate();
+      createLoading.value = false;
+      return;
+  }
+
   try {
     const payload = {
       agent_id: props.agentId,
@@ -209,7 +235,8 @@ const submitCreate = async () => {
         localId: `${obj.id}-${Math.random()}`,
         editTitle: obj.title,
         editContent: obj.content,
-        editDescription: obj.description
+        editDescription: obj.description,
+        isTemp: false
     });
     cancelCreate();
     message.success('添加成功');
@@ -234,6 +261,14 @@ const cancelEdit = (it) => {
 
 const saveEdit = async (it) => {
     if (!it.id) return;
+    
+    if (it.isTemp) {
+        it.title = it.editTitle;
+        it.content = it.editContent;
+        it.description = it.editDescription;
+        editingId.value = null;
+        return;
+    }
     
     try {
         const payload = {
@@ -275,6 +310,12 @@ const confirmDelete = (it) => {
 
 const removeItem = async (it) => {
   if (!it.id) return;
+  
+  if (it.isTemp) {
+      items.value = items.value.filter(x => x.localId !== it.localId);
+      return;
+  }
+  
   try {
       const res = await fetch(`/api/v1/user_scripts/${it.id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -296,6 +337,9 @@ const dragDrop = async (idx) => {
   // Update sort order for all
   items.value.forEach(async (x, i) => {
     x.sort_order = i + 1;
+    
+    if (x.isTemp) return; // Skip temp items
+
     await fetch(`/api/v1/user_scripts/${x.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -304,8 +348,41 @@ const dragDrop = async (idx) => {
   });
   dragIndex = -1;
 };
+
+const savePendingScripts = async (realAgentId) => {
+    if (!realAgentId) return;
+    
+    const tempItems = items.value.filter(i => i.isTemp);
+    if (tempItems.length === 0) return;
+
+    try {
+        await Promise.all(tempItems.map((item, index) => {
+            const payload = {
+                agent_id: realAgentId,
+                title: item.title,
+                content: item.content,
+                description: item.description,
+                sort_order: index + 1 // Use current index
+            };
+            return fetch('/api/v1/user_scripts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }));
+        
+        // Refresh items after saving
+        // Actually, the parent component might close or refresh, but let's clear temp items or refresh
+        // But since we usually close or reload, maybe just return
+    } catch (e) {
+        console.error("Failed to save pending scripts", e);
+        message.error("部分剧本保存失败");
+    }
+};
+
 defineExpose({
-  openCreate: () => { showCreate.value = true; }
+  openCreate: () => { showCreate.value = true; },
+  savePendingScripts
 });
 </script>
 

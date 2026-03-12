@@ -33,8 +33,8 @@ class AgentService:
     async def get_agent(self, db: AsyncSession, agent_id: str) -> Agent:
         return await crud_agent.get(db, agent_id)
 
-    async def get_agents(self, db: AsyncSession, skip: int = 0, limit: int = 100):
-        return await crud_agent.get_multi(db, skip=skip, limit=limit)
+    async def get_agents(self, db: AsyncSession, skip: int = 0, limit: int = 100, query: str = None, is_template: bool = None):
+        return await crud_agent.get_multi(db, skip=skip, limit=limit, query=query, is_template=is_template)
 
     async def update_agent(self, db: AsyncSession, agent_id: str, obj_in: AgentUpdate) -> Agent:
         db_obj = await crud_agent.get(db, agent_id)
