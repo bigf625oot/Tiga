@@ -68,3 +68,19 @@ def get_executor(mode: str, session_id: str) -> BaseAgentExecutor:
         # Default to Chat
         logger.warning(f"Unknown mode {mode}, defaulting to ChatAgentExecutor")
         return ChatAgentExecutor(session_id)
+
+class ExecutorAgent:
+    """
+    Agent responsible for executing specific tasks assigned by the PlannerAgent.
+    """
+    def __init__(self, agent_manager, db):
+        self.agent_manager = agent_manager
+        self.db = db
+        
+    async def run_task(self, task_id: str, context: Optional[Dict] = None):
+        """
+        Execute a specific task.
+        """
+        logger.info(f"ExecutorAgent running task {task_id}")
+        # Implementation to be added
+        pass

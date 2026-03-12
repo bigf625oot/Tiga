@@ -12,6 +12,7 @@ from agno.tools import Toolkit
 # Trigger reload for new tools
 TOOL_DIRECTORIES = [
     Path(__file__).parent / "libs",  # app/services/eah_agent/tools/libs/
+    Path(__file__).parent.parent / "skills", # app/services/eah_agent/skills/
 ]
 
 class ToolMetadata(BaseModel):
@@ -96,6 +97,8 @@ def discover_tools(include_metadata: bool = False) -> Union[Dict[str, Type[Toolk
         # Determine base package based on directory
         if tools_dir.name == "libs" and tools_dir.parent.name == "tools":
             base_package = "app.services.eah_agent.tools.libs"
+        elif tools_dir.name == "skills" and tools_dir.parent.name == "eah_agent":
+            base_package = "app.services.eah_agent.skills"
         else:
             continue
 
@@ -103,7 +106,7 @@ def discover_tools(include_metadata: bool = False) -> Union[Dict[str, Type[Toolk
             module_name = module_info.name
             
             # Skip internal modules
-            if module_name in ["discovery", "mcp_toolbox", "__init__", "factory", "runner", "mcp_tool"]:
+            if module_name in ["discovery", "mcp_toolbox", "__init__", "factory", "runner", "mcp_tool", "manager", "loaders", "utils", "errors", "validator", "skill"]:
                 continue
                 
             try:
