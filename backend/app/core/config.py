@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Taichi Agent"
+    PROJECT_NAME: str = "Agentic：国产信创版Manus"
     API_V1_STR: str = "/api/v1"
 
     # Logging

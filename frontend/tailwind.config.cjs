@@ -21,6 +21,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: [
+          'DIN Alternate',
           'SF Pro Display',
           'SF Pro Text',
           '-apple-system',

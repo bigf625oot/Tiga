@@ -79,6 +79,12 @@ export interface Attachment {
   size: number;
   file?: File | null; // For local files
   id?: string; // For knowledge docs
+  status?: 'uploading' | 'parsing' | 'success' | 'error';
+  progress?: number; // 0-100
+  summary?: string; // Document summary after parsing
+  pageCount?: number;
+  wordCount?: number;
+  errorMessage?: string;
 }
 
 export interface KnowledgeDoc {

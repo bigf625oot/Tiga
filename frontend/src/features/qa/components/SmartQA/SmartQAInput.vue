@@ -1,11 +1,78 @@
 <template>
-  <div class="w-full relative flex flex-col bg-background/80 backdrop-blur-xl rounded-2xl border border-border/50 shadow-lg focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300">
+  <div 
+    class="w-full relative flex flex-col bg-background/80 backdrop-blur-xl rounded-2xl border shadow-lg focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300"
+    :class="[
+      isDragging ? 'border-primary ring-2 ring-primary/20 bg-muted/50' : 'border-border/50'
+    ]"
+    @dragover.prevent="isDragging = true"
+    @dragleave.prevent="isDragging = false"
+    @drop.prevent="handleDrop"
+  >
     <!-- Attachments Preview -->
     <div v-if="selectedAttachments.length > 0" class="flex flex-wrap gap-2 px-3 pt-3">
-      <Badge v-for="(att, idx) in selectedAttachments" :key="idx" variant="secondary" class="flex items-center gap-1 px-2 py-1 bg-muted/50 border-border/50">
-        <Paperclip class="w-3 h-3" />
-        <span class="max-w-[100px] truncate">{{ att.name }}</span>
-        <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive ml-1" @click="$emit('remove-attachment', idx)" />
+      <Badge 
+        v-for="(att, idx) in selectedAttachments" 
+        :key="idx" 
+        variant="secondary" 
+        class="flex items-center gap-1.5 px-2 py-1 bg-muted/50 border-border/50 group/att"
+        :class="{'border-red-200 bg-red-50 text-red-600': att.status === 'error', 'border-green-200 bg-green-50 text-green-600': att.status === 'success'}"
+      >
+        <!-- Icon based on status -->
+        <Loader2 v-if="att.status === 'uploading' || att.status === 'parsing'" class="w-3 h-3 animate-spin text-muted-foreground" />
+        <FileX v-else-if="att.status === 'error'" class="w-3 h-3" />
+        <FileCheck v-else-if="att.status === 'success'" class="w-3 h-3" />
+        <Paperclip v-else class="w-3 h-3 text-muted-foreground" />
+        
+        <!-- Name & Progress -->
+        <div class="flex flex-col min-w-0 max-w-[140px]">
+            <span class="truncate text-xs">{{ att.name }}</span>
+            <Progress 
+                v-if="att.status === 'uploading' || att.status === 'parsing'" 
+                :model-value="att.progress || 0" 
+                class="h-0.5 w-full mt-0.5 bg-muted-foreground/20" 
+            />
+        </div>
+
+        <!-- Success Hover Card -->
+        <div v-if="att.status === 'success'" class="inline-flex">
+            <HoverCard :open-delay="200">
+                <HoverCardTrigger as-child>
+                    <div class="w-4 h-4 flex items-center justify-center cursor-help ml-0.5 hover:bg-green-200/50 rounded-full transition-colors">
+                        <Info class="w-3 h-3 opacity-50 hover:opacity-100" />
+                    </div>
+                </HoverCardTrigger>
+                <HoverCardContent align="start" class="w-72 p-3 z-50">
+                    <div class="space-y-1.5">
+                        <h4 class="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                            <FileCheck class="w-3.5 h-3.5 text-green-500" />
+                            文档解析完成
+                        </h4>
+                        <p class="text-[10px] text-muted-foreground leading-relaxed line-clamp-4">
+                            {{ att.summary || '暂无摘要信息。' }}
+                        </p>
+                        <div class="flex items-center gap-2 pt-1.5 mt-1 border-t border-border/50">
+                            <Badge variant="secondary" class="text-[9px] h-4 px-1">页数: {{ att.pageCount || '-' }}</Badge>
+                            <Badge variant="secondary" class="text-[9px] h-4 px-1">字数: {{ att.wordCount || '-' }}</Badge>
+                        </div>
+                    </div>
+                </HoverCardContent>
+            </HoverCard>
+        </div>
+
+        <!-- Error Tooltip -->
+        <TooltipProvider v-if="att.status === 'error'">
+            <Tooltip>
+                <TooltipTrigger>
+                    <div class="w-4 h-4 flex items-center justify-center cursor-help ml-0.5 hover:bg-red-200/50 rounded-full transition-colors">
+                        <Info class="w-3 h-3 opacity-50 hover:opacity-100" />
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent>{{ att.errorMessage || '解析失败' }}</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+        
+        <div class="w-px h-3 bg-border/50 mx-0.5"></div>
+        <Trash2 class="w-3 h-3 cursor-pointer hover:text-destructive opacity-50 hover:opacity-100 transition-opacity" @click="$emit('remove-attachment', att)" />
       </Badge>
     </div>
 
@@ -13,7 +80,11 @@
     <textarea
       ref="textareaRef"
       v-model="inputValue"
-      @keydown.enter.prevent="handleEnter"
+      @keydown.enter="handleEnter"
+      @paste="handlePaste"
+      @keydown.esc="handleEsc"
+      @focus="isFocused = true"
+      @blur="isFocused = false"
       rows="1"
       :placeholder="currentPlaceholder"
       :class="[
@@ -40,6 +111,23 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <!-- Shortcut Hint (Shows when focused) -->
+        <div class="hidden sm:flex items-center gap-2 mr-2 text-[10px] text-muted-foreground transition-opacity duration-300" 
+             :class="isFocused ? 'opacity-100' : 'opacity-0'">
+            <span class="flex items-center gap-1">
+                <kbd class="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                    <span class="text-xs">↵</span>
+                </kbd>
+                <span>发送</span>
+            </span>
+            <span class="flex items-center gap-1">
+                <kbd class="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                    Shift + ↵
+                </kbd>
+                <span>换行</span>
+            </span>
+        </div>
+
         <!-- Agent Selector -->
         <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
           <Avatar class="w-5 h-5">
@@ -94,18 +182,39 @@
           </TooltipProvider>
         </template>
 
-        <Button 
-          @click="handleSend" 
-          size="icon" 
-          class="h-8 w-8 rounded-full shadow-sm transition-all active:scale-95 relative overflow-hidden" 
-          :variant="(inputValue.trim() || isTaskRunning) ? 'default' : 'secondary'" 
-          :disabled="(!inputValue.trim() && !isTaskRunning) || isStopping"
-        >
-          <span v-if="isRippleActive" class="absolute inset-0 rounded-full bg-white/30 animate-ripple pointer-events-none"></span>
-          <Loader2 v-if="isStopping" class="w-4 h-4 animate-spin relative z-10" />
-          <Square v-else-if="isTaskRunning" class="w-3 h-3 fill-current relative z-10" />
-          <ArrowUp v-else class="w-4 h-4 relative z-10" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <!-- Wrapper div to ensure Tooltip works even when button is disabled -->
+              <div class="inline-block cursor-pointer">
+                <Button 
+                  @click="handleSend" 
+                  size="icon" 
+                  class="h-8 w-8 rounded-full shadow-sm transition-all active:scale-95 relative overflow-hidden" 
+                  :variant="(inputValue.trim() || isTaskRunning) ? 'default' : 'secondary'" 
+                  :disabled="(!inputValue.trim() && !isTaskRunning) || isStopping"
+                >
+                  <span v-if="isRippleActive" class="absolute inset-0 rounded-full bg-white/30 animate-ripple pointer-events-none"></span>
+                  <Loader2 v-if="isStopping" class="w-4 h-4 animate-spin relative z-10" />
+                  <Square v-else-if="isTaskRunning" class="w-3 h-3 fill-current relative z-10" />
+                  <ArrowUp v-else class="w-4 h-4 relative z-10" />
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="end" :side-offset="10">
+              <div class="flex flex-col gap-1 text-xs text-muted-foreground">
+                <div class="flex items-center justify-between gap-4">
+                  <span>发送</span>
+                  <span class="font-mono bg-muted px-1 rounded text-[10px]">Enter</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <span>换行</span>
+                  <span class="font-mono bg-muted px-1 rounded text-[10px]">Shift + Enter</span>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   </div>
@@ -119,7 +228,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Paperclip, Trash2, Globe, Zap, Loader2, Square, ArrowUp } from 'lucide-vue-next';
+import { Paperclip, Trash2, Globe, Zap, Loader2, Square, ArrowUp, FileCheck, FileX, Info } from 'lucide-vue-next';
+import { useToast } from '@/components/ui/toast/use-toast';
+import { Progress } from '@/components/ui/progress';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 import type { Agent, Attachment, Team } from '../../types';
 
 const props = defineProps<{
@@ -144,8 +260,13 @@ const emit = defineEmits([
   'send',
   'stop',
   'open-attachment',
-  'remove-attachment'
+  'remove-attachment',
+  'add-attachment'
 ]);
+
+const { toast } = useToast();
+const isDragging = ref(false);
+const isFocused = ref(false);
 
 const agentIcon = computed(() => {
   if (!props.currentAgent) return undefined;
@@ -172,8 +293,56 @@ watch(() => props.modelValue, () => {
 });
 
 const handleEnter = (e: KeyboardEvent) => {
-  if (e.shiftKey) return;
-  handleSend();
+  if (e.isComposing) return;
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+};
+
+const handleEsc = (e: KeyboardEvent) => {
+  if (props.isTaskRunning) {
+    e.preventDefault();
+    emit('stop');
+  }
+};
+
+const handleDrop = (e: DragEvent) => {
+  isDragging.value = false;
+  const files = e.dataTransfer?.files;
+  if (files && files.length > 0) {
+    emit('add-attachment', Array.from(files));
+    toast({
+      title: "已添加附件",
+      description: `成功添加 ${files.length} 个文件`,
+    });
+  }
+};
+
+const handlePaste = (e: ClipboardEvent) => {
+  // 1. Files
+  if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+    e.preventDefault();
+    emit('add-attachment', Array.from(e.clipboardData.files));
+    toast({
+      title: "已添加附件",
+      description: `成功添加 ${e.clipboardData.files.length} 个文件`,
+    });
+    return;
+  }
+
+  // 2. Long text
+  const text = e.clipboardData?.getData('text');
+  if (text && text.length > 300) {
+    e.preventDefault();
+    const blob = new Blob([text], { type: 'text/plain' });
+    const file = new File([blob], `paste-${Date.now()}.txt`, { type: 'text/plain' });
+    emit('add-attachment', [file]);
+    toast({
+      title: "文本过长",
+      description: "已自动转换为TXT附件",
+    });
+  }
 };
 
 const isRippleActive = ref(false);

@@ -8,6 +8,7 @@
       :isWorkflowMode="isWorkflowMode"
       :attachmentsCount="attachmentsCount"
       :hasKnowledgeBase="hasKnowledgeBase"
+      @close="$emit('close')"
     />
   </div>
 </template>

@@ -326,19 +326,24 @@ async def upload_document(
 @router.get("/list")
 async def list_documents(
     parent_id: Optional[int] = Query(None),
+    keyword: Optional[str] = Query(None),
     show_deleted: bool = Query(False),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    logger.info(f"查询文档列表 parent_id={parent_id} show_deleted={show_deleted} page={page}")
+    logger.info(f"查询文档列表 parent_id={parent_id} keyword={keyword} show_deleted={show_deleted} page={page}")
     stmt = select(KnowledgeDocument)
     
     if not show_deleted:
         stmt = stmt.where(KnowledgeDocument.is_deleted == False) # Default to False if null
 
+    if keyword:
+        stmt = stmt.where(KnowledgeDocument.filename.ilike(f"%{keyword}%"))
+
     if parent_id is None:
-        stmt = stmt.where(KnowledgeDocument.parent_id.is_(None))
+        if not keyword: # Only filter by parent_id if not searching globally
+            stmt = stmt.where(KnowledgeDocument.parent_id.is_(None))
     else:
         stmt = stmt.where(KnowledgeDocument.parent_id == parent_id)
         

@@ -3,8 +3,9 @@
     <!-- Header -->
     <div class="p-6 py-4 border-b border-border flex justify-between items-center bg-background/95 backdrop-blur-sm sticky top-0 z-20">
       <div class="flex items-center gap-4">
-        <div>
-          <h3 class="font-semibold text-foreground text-base m-0 tracking-tight">自动任务工作台</h3>
+        <div class="flex items-center gap-2">
+          <h3 class="font-semibold text-foreground text-base m-0 tracking-tight">控制中心</h3>
+          <div class="h-4 w-[1px] bg-border mx-1"></div>
           <p class="text-xs text-muted-foreground m-0">自动化任务管理</p>
         </div>
         <div class="bg-muted p-0.5 rounded-lg flex items-center ml-4">

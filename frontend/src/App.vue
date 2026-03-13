@@ -103,7 +103,7 @@
 
 
       <!-- New Chat Action -->
-      <div class="p-4 pt-0">
+      <div class="p-4">
          <TooltipProvider :delay-duration="0">
            <Tooltip>
              <TooltipTrigger as-child>
@@ -672,32 +672,34 @@ const groupedSessions = computed(() => {
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     );
 
-    // 2. Group by agent
+    // 2. Group by mode
     const groups: Record<string, { agent: any, sessions: any[] }> = {};
-    const defaultAgent = { id: 'default', name: '默认助手', icon: '/tiga.svg' };
+    
+    const modeInfo: Record<string, any> = {
+        'chat': { id: 'chat', name: '智能问答' },
+        'workflow': { id: 'workflow', name: '任务工作流' },
+        'auto_task': { id: 'auto_task', name: '自主任务' },
+        'default': { id: 'default', name: '其他任务' }
+    };
     
     sortedSessions.forEach(session => {
-        const agentId = session.agent_id || 'default';
+        // Default to 'chat' if mode is missing or empty
+        const mode = session.mode || 'chat';
+        const groupKey = modeInfo[mode] ? mode : 'default';
         
-        if (!groups[agentId]) {
-            let agent = agents.value.find((a: any) => a.id === agentId);
-            if (!agent) {
-                 agent = agentId === 'default' ? defaultAgent : { id: agentId, name: '未知智能体', icon: '/tiga.svg' };
-            }
-            
-            groups[agentId] = {
-                agent,
+        if (!groups[groupKey]) {
+            groups[groupKey] = {
+                agent: modeInfo[groupKey], // Reusing 'agent' prop for mode info to minimize template changes
                 sessions: []
             };
         }
-        groups[agentId].sessions.push(session);
+        groups[groupKey].sessions.push(session);
     });
 
-    // 3. Sort groups by latest session time
+    // 3. Sort groups by defined order
+    const order = ['chat', 'workflow', 'auto_task', 'default'];
     return Object.values(groups).sort((a, b) => {
-        const timeA = a.sessions.length > 0 ? new Date(a.sessions[0].updated_at).getTime() : 0;
-        const timeB = b.sessions.length > 0 ? new Date(b.sessions[0].updated_at).getTime() : 0;
-        return timeB - timeA;
+        return order.indexOf(a.agent.id) - order.indexOf(b.agent.id);
     });
 });
 

@@ -97,11 +97,9 @@ class ChatService:
                             yield self._format_sse("meta", {"msg_type": "intelligent_query"})
                             
                             # Stream from Data Query Service (Vanna)
-                            # We need to adapt the generator from data_query_service.query which yields JSON strings
-                            # to our SSE format (think/text/chart)
-                            
-                            # Note: data_query_service.query is an async generator
-                            dq_generator = data_query_service.query(message, session_id)
+                            # We pass session_id=None to avoid data_query_service saving the message to the wrong table (DataQueryMessage)
+                            # We will save it manually to ChatMessage table later.
+                            dq_generator = data_query_service.query(message, session_id=None)
                             
                             full_content = ""
                             generated_sql = None
@@ -119,13 +117,13 @@ class ChatService:
                                         yield self._format_sse("think", content)
                                     elif b_type == "error":
                                         yield self._format_sse("error", content)
+                                        full_content += f"\nError: {content}\n"
                                     elif b_type == "sql":
                                         # SQL is sent as special text block or meta
-                                        # For now, append to content or send as special event if supported
-                                        # ChatCard expects SQL in message.sql_query, but here we are streaming text
-                                        # We can send it as text block for now, and save it in meta later
                                         generated_sql = content.replace("```sql\n", "").replace("\n```", "").strip()
-                                        yield self._format_sse("text", f"\n```sql\n{generated_sql}\n```\n")
+                                        sql_block = f"\n```sql\n{generated_sql}\n```\n"
+                                        yield self._format_sse("text", sql_block)
+                                        full_content += sql_block
                                     elif b_type == "data":
                                         # Table data (markdown)
                                         yield self._format_sse("text", content)
@@ -140,10 +138,14 @@ class ChatService:
                                                 chart_json = json.loads(match.group(1).strip())
                                                 chart_config = chart_json
                                                 yield self._format_sse("chart", chart_json)
+                                                # Append echarts block to full_content for persistence
+                                                full_content += f"\n::: echarts\n{json.dumps(chart_json, ensure_ascii=False)}\n:::\n"
                                             except:
                                                 yield self._format_sse("text", content)
+                                                full_content += content
                                         else:
                                             yield self._format_sse("text", content)
+                                            full_content += content
                                     else:
                                         # Normal text
                                         yield self._format_sse("text", content)
@@ -161,9 +163,8 @@ class ChatService:
                                 "chart_config": chart_config,
                                 "msg_type": "intelligent_query"
                             }
-                            # Update the last assistant message (created by data_query_service internally? No, we passed session_id)
-                            # data_query_service.query calls add_message internally!
-                            # So we don't need to save again, BUT we might need to sync the frontend state if it relies on this stream closing.
+                            # Save manually as we bypassed data_query_service's internal save
+                            await self._save_assistant_message(db, session_id, full_content, meta)
                             
                             yield self._format_sse("done", "[DONE]")
                             return

@@ -194,7 +194,7 @@
                                 <div v-else class="grid grid-cols-2 gap-3">
                                     <div v-for="kb in knowledgeBases" :key="kb.id"
                                         class="relative flex items-start justify-between p-3 gap-3 rounded-lg border border-border bg-background hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group shadow-sm"
-                                        :class="{ 'ring-1 ring-primary bg-primary/5': form.knowledge_config.document_ids.includes(kb.id) }"
+                                        :class="{ 'border-primary bg-primary/5': form.knowledge_config.document_ids.includes(kb.id) }"
                                         @click="toggleKb(kb.id)">
                                         
                                         <div class="grid gap-1 min-w-0">

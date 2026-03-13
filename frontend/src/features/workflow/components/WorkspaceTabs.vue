@@ -11,6 +11,9 @@
           {{ store.isRunning ? '执行中' : '空闲' }}
         </Badge>
       </div>
+      <Button variant="ghost" size="icon" class="h-6 w-6" @click="$emit('close')">
+        <X class="w-4 h-4 text-muted-foreground" />
+      </Button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-hidden bg-background relative">
@@ -34,7 +37,8 @@ import { ref, watch, onMounted, computed } from 'vue';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import TaskPanel from '@/features/workflow/components/TaskPanel.vue';
 import { Badge } from '@/components/ui/badge';
-import { LayoutDashboard } from 'lucide-vue-next';
+import { LayoutDashboard, X } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
 
 const props = defineProps({
   sessionId: { type: String, default: '' },
@@ -42,6 +46,8 @@ const props = defineProps({
   isWorkflowMode: { type: Boolean, default: true },
   attachmentsCount: { type: Number, default: 0 }
 });
+
+const emit = defineEmits(['close']);
 
 const store = useWorkflowStore();
 const taskPanelRef = ref(null);

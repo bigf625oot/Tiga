@@ -47,6 +47,7 @@
             @open-doc-space="handleOpenDocSpace"
             @open-attachment="attachmentModalVisible = true"
             @remove-attachment="removeAttachment"
+            @add-attachment="addLocalAttachments"
           />
         </div>
 
@@ -79,8 +80,7 @@
 
     <!-- Standalone Chat UI -->
     <div v-else class="h-full flex flex-col bg-background overflow-hidden relative">
-      <div class="flex-1 flex flex-col h-full relative min-w-0">
-        <SmartQAHeader
+      <SmartQAHeader
           v-if="messages.length > 0 && !embedded"
           :is-left-collapsed="false"
           :is-right-collapsed="false"
@@ -89,33 +89,47 @@
           :current-agent="currentAgent"
           :current-mode-id="currentModeId"
           :show-controls="false"
+      />
+
+      <div class="flex-1 flex min-h-0 relative overflow-hidden">
+        <!-- File Sidebar for Quick Mode -->
+        <FileSidebar 
+          v-if="(!currentModeId || currentModeId === 'quick') && messages.length > 0"
+          :is-open="isFileSidebarOpen"
+          :attachments="selectedAttachments"
+          @toggle="isFileSidebarOpen = !isFileSidebarOpen"
+          @add-files="attachmentModalVisible = true"
+          @remove-file="removeAttachment"
         />
-        
-        <SmartQAChatArea
-          v-model="input"
-          :messages="messages"
-          :modes="MODES"
-          :current-mode-id="currentModeId"
-          :embedded="embedded"
-          :is-loading="isLoading"
-          :is-task-running="isTaskRunning"
-          :is-stopping="isStopping"
-          :selected-attachments="selectedAttachments"
-          :current-agent="currentAgent"
-          :selected-agent-id="selectedAgentId"
-          :agent-list="currentModeId === 'team' ? teams : agents"
-          :user-scripts="userScripts"
-          v-model:is-network-search-enabled="isNetworkSearchEnabled"
-          @update:selectedAgentId="selectedAgentId = $event"
-          @send="onSendMessage"
-          @stop="onStop"
-          @select-mode="handleModeSelect"
-          @send-script="onSendScript"
-          @locate-node="handleLocateNode"
-          @open-doc-space="handleOpenDocSpace"
-          @open-attachment="attachmentModalVisible = true"
-          @remove-attachment="removeAttachment"
-        />
+
+        <div class="flex-1 flex flex-col h-full relative min-w-0">
+          <SmartQAChatArea
+            v-model="input"
+            :messages="messages"
+            :modes="MODES"
+            :current-mode-id="currentModeId"
+            :embedded="embedded"
+            :is-loading="isLoading"
+            :is-task-running="isTaskRunning"
+            :is-stopping="isStopping"
+            :selected-attachments="selectedAttachments"
+            :current-agent="currentAgent"
+            :selected-agent-id="selectedAgentId"
+            :agent-list="currentModeId === 'team' ? teams : agents"
+            :user-scripts="userScripts"
+            v-model:is-network-search-enabled="isNetworkSearchEnabled"
+            @update:selectedAgentId="selectedAgentId = $event"
+            @send="onSendMessage"
+            @stop="onStop"
+            @select-mode="handleModeSelect"
+            @send-script="onSendScript"
+            @locate-node="handleLocateNode"
+            @open-doc-space="handleOpenDocSpace"
+            @open-attachment="attachmentModalVisible = true"
+            @remove-attachment="removeAttachment"
+            @add-attachment="addLocalAttachments"
+          />
+        </div>
       </div>
     </div>
 
@@ -128,6 +142,7 @@
       :filtered-knowledge-docs="filteredKnowledgeDocs"
       :selected-knowledge-row-keys="selectedKnowledgeRowKeys"
       :knowledge-loading="knowledgeLoading"
+      :search-suggestions="searchSuggestions"
       @file-change="onFileChange"
       @remove-local-file="removeLocalFile"
       @refresh-knowledge="onRefreshKnowledge"
@@ -148,6 +163,7 @@ import SmartQAHeader from './SmartQA/SmartQAHeader.vue';
 import SmartQAChatArea from './SmartQA/SmartQAChatArea.vue';
 import SmartQATaskPanel from './SmartQA/SmartQATaskPanel.vue';
 import AttachmentDialog from './SmartQA/AttachmentDialog.vue';
+import FileSidebar from './SmartQA/FileSidebar.vue';
 
 // Composables
 import { useChatSession } from '../composables/useChatSession';
@@ -179,6 +195,7 @@ const blobColors = computed(() => isDark.value
 const input = ref('');
 const mode = ref<ModeType>('chat');
 const currentModeId = ref<string | null>(null);
+const isFileSidebarOpen = ref(true);
 const isNetworkSearchEnabled = ref(true);
 const isWorkflowMode = computed(() => mode.value === 'workflow');
 const isAutoTaskMode = computed(() => mode.value === 'auto_task');
@@ -204,7 +221,8 @@ const {
 const {
   attachmentModalVisible, activeAttachmentTab, localFileList, knowledgeDocs,
   selectedKnowledgeRowKeys, knowledgeSearchKeyword, knowledgeLoading, selectedAttachments,
-  fetchKnowledgeDocs, handleLocalUpload, removeLocalFile, handleAttachmentOk, removeAttachment, filteredKnowledgeDocs
+  fetchKnowledgeDocs, handleLocalUpload, removeLocalFile, handleAttachmentOk, removeAttachment, filteredKnowledgeDocs, addLocalAttachments,
+  searchSuggestions
 } = useAttachments();
 
 const {
@@ -377,13 +395,13 @@ const onFileChange = (files: File[]) => {
   files.forEach(f => handleLocalUpload(f));
 };
 
-const onRefreshKnowledge = () => {
+const onRefreshKnowledge = (keyword?: string) => {
   const agent = currentAgent.value as Agent | undefined;
   // Team does not have knowledge_config, so we check existence
   if (agent && 'knowledge_config' in agent) {
-    fetchKnowledgeDocs(agent.knowledge_config);
+    fetchKnowledgeDocs(agent.knowledge_config, keyword);
   } else {
-    fetchKnowledgeDocs();
+    fetchKnowledgeDocs(undefined, keyword);
   }
 };
 
@@ -425,6 +443,16 @@ watch(() => props.sessionId, (newId) => {
 
 watch(isNetworkSearchEnabled, (val) => {
     try { localStorage.setItem(STORAGE_KEYS.IS_NETWORK_SEARCH_ENABLED, String(val)); } catch {}
+});
+
+// Auto-fetch knowledge docs when tab is active
+watch([attachmentModalVisible, activeAttachmentTab], ([visible, tab]) => {
+  if (visible && tab === 'knowledge') {
+    // Check if we already have docs to avoid unnecessary fetching? 
+    // Or just fetch every time to be fresh. Let's fetch if empty or force refresh logic needed.
+    // For now, simple fetch.
+    onRefreshKnowledge();
+  }
 });
 </script>
 
