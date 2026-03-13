@@ -1,6 +1,5 @@
 <template>
-  <div class="w-full h-[420px] xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-muted/30 z-20 transition-all duration-150 flex flex-col overflow-hidden"
-    :style="style">
+  <div class="w-full h-full flex flex-col overflow-hidden">
     <AutoTaskPanel v-if="isAutoTaskMode" @run-task="$emit('run-task', $event)" @close="$emit('close')" class="!border-0 !shadow-none" />
     <WorkspaceTabs v-else
       ref="workspaceTabsRef"
@@ -19,7 +18,6 @@ import AutoTaskPanel from '../AutoTaskPanel.vue';
 import WorkspaceTabs from '@/features/workflow/components/WorkspaceTabs.vue';
 
 defineProps<{
-  style: any;
   isAutoTaskMode: boolean;
   isWorkflowMode: boolean;
   sessionId: string | null;

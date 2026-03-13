@@ -1,0 +1,13 @@
+- 模式选择卡片 (Quick模式, Solo模式, etc.)
+
+- 代码位置 : SmartQAChatArea.vue
+- 实现逻辑 : 这里遍历了 modes 数组来渲染那 5 个卡片。
+- 数据来源 : 模式的定义（如图标、名称、描述）位于常量文件 index.ts 中。
+- 输入框与联网搜索 (描述您的需求..., 联网搜索)
+
+- 代码位置 : SmartQAInput.vue
+- 实现逻辑 : SmartQAChatArea 引入了 SmartQAInput 组件。其中“联网搜索”开关位于 SmartQAInput.vue:L41-L49 。
+- 快捷指令 (帮我把文档翻译成中文)
+
+- 代码位置 : SmartQAChatArea.vue
+- 实现逻辑 : 这里渲染了 userScripts 列表，对应截图下方的快捷指令卡片。

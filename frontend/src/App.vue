@@ -326,6 +326,16 @@
                          <TooltipContent>系统设置</TooltipContent>
                      </Tooltip>
                  </TooltipProvider>
+                 <TooltipProvider :delay-duration="0">
+                     <Tooltip>
+                         <TooltipTrigger as-child>
+                            <Button variant="ghost" size="icon" @click="openDocs" class="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                <BookOpen class="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>用户操作手册</TooltipContent>
+                     </Tooltip>
+                 </TooltipProvider>
                  <ThemeToggle />
              </div>
          </div>
@@ -340,6 +350,16 @@
                      <TooltipContent side="right">系统设置</TooltipContent>
                  </Tooltip>
              </TooltipProvider>
+             <TooltipProvider :delay-duration="0">
+                 <Tooltip>
+                     <TooltipTrigger as-child>
+                            <Button variant="ghost" size="icon" @click="openDocs" class="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                <BookOpen class="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">用户操作手册</TooltipContent>
+                 </Tooltip>
+             </TooltipProvider>
              <ThemeToggle />
          </div>
       </SidebarFooter>
@@ -352,7 +372,8 @@
        <div class="flex-1 overflow-hidden relative">
           <SmartQA 
             v-if="currentView === 'chat' || currentView === 'smart_qa'" 
-            :session-id="currentSessionId" 
+            :session-id="currentSessionId ?? null" 
+            :embedded="false"
             @refresh-sessions="fetchSessions" 
             class="w-full h-full"
           />
@@ -465,7 +486,7 @@ import {
   Menu, X, Plus, MessageSquare, Clock, Search, Mic, BarChart, Calculator,
   LayoutGrid, Database, Film, Box, Workflow, Network, Share2,
   Trash2, Settings, Cpu, MoreHorizontal, ChevronRight, ChevronDown, Users,
-  GitBranch
+  GitBranch, BookOpen
 } from 'lucide-vue-next';
 import {
   Collapsible,
@@ -748,6 +769,10 @@ const handleCreatePipeline = () => {
     currentView.value = 'etl_pipeline';
 };
 
+const openDocs = () => {
+    window.open('/docs/', '_blank');
+};
+
 interface SidebarItem {
     id?: string;
     label?: string;
@@ -757,6 +782,7 @@ interface SidebarItem {
 }
 
 const agentSidebarItems: SidebarItem[] = [
+    { id: 'model', label: '模型管理', icon: Cpu },
     { id: 'service_market', label: '工具市场', icon: LayoutGrid },
     { id: 'agent', label: '智能体中心', icon: Box },
     { id: 'smart_team', label: '智能团队', icon: Users },
@@ -768,7 +794,6 @@ const agentSidebarItems: SidebarItem[] = [
     { id: 'indicators', label: '指标管理', icon: Calculator },
     { id: 'list', label: '录音纪要', icon: Mic },
     { id: 'data_query', label: '智能问数', icon: Database },
-    { id: 'model', label: '模型管理', icon: Cpu },
     { id: 'workflow', label: '工作流', icon: Workflow }
 ];
 

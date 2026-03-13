@@ -9,7 +9,7 @@
     <!-- Avatar -->
     <div 
       v-if="showAvatar" 
-      class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden mt-1 transition-all duration-300 hover:scale-105"
+      class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden mt-0 transition-all duration-300 hover:scale-105"
       :class="[isUser ? 'bg-indigo-600 ml-4' : 'bg-muted mr-4']"
     >
       <img v-if="isUser" src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="user" class="w-full h-full object-cover" />
@@ -22,15 +22,20 @@
       class="flex flex-col max-w-[85%]" 
       :class="[isUser ? 'items-end' : 'items-start']"
     >
-      <!-- Sender Name & Time -->
-      <div v-if="showMeta" class="flex items-center gap-2 mb-1 text-xs text-muted-foreground px-1">
-        <span v-if="!isUser" class="font-medium text-muted-foreground">{{ agent?.name || 'Tiga' }}</span>
-        <span>{{ formatTime(message.timestamp) }}</span>
+      <!-- Sender Name & Time (Agent) -->
+      <div v-if="!isUser" class="flex items-center gap-2 mb-2 px-1">
+        <span class="text-xs font-medium text-muted-foreground/70">{{ agent?.name || 'Tiga' }}</span>
+        <span class="text-[10px] text-muted-foreground/50">{{ formatTime(message.timestamp) }}</span>
+      </div>
+
+      <!-- Sender Name & Time (User - Optional, usually hidden or on right) -->
+      <div v-if="isUser && showMeta" class="flex items-center gap-2 mb-2 px-1 text-xs text-muted-foreground">
+         <span>{{ formatTime(message.timestamp) }}</span>
       </div>
 
       <!-- Bubble -->
       <div 
-        class="relative px-4 p-4 text-sm leading-relaxed transition-all duration-200 shadow-sm"
+        class="relative px-5 py-4 text-sm leading-relaxed transition-all duration-200 shadow-sm"
         :class="bubbleClasses"
       >
         <!-- User Mode: Simple Text -->
@@ -198,7 +203,11 @@ const bubbleClasses = computed(() => {
   if (props.isUser) {
     return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm';
   } else {
-    return 'bg-muted/50 text-foreground rounded-2xl rounded-tl-sm';
+    // #F0F4F8 is slate-50/blue-50 like, #1F2937 is gray-800
+    // Using Tailwind classes to approximate: bg-slate-100 text-gray-800
+    // Or custom style if needed. Let's use Tailwind's slate palette which is close.
+    // rounded-xl is 12px usually (0.75rem = 12px)
+    return 'bg-[#F0F4F8] text-[#1F2937] rounded-xl border-none';
   }
 });
 

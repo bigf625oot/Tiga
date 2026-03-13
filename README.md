@@ -52,6 +52,7 @@ Tiga/
 | **分布式执行** | **OpenClaw**：分布式任务节点管理，支持负载均衡、心跳监测与任务分发 |
 | **安全沙箱** | 集成 E2B 与 Codebox，支持安全执行 Python/Node.js 代码与文件操作 |
 | **MCP 支持** | 全面支持 Model Context Protocol，可作为 MCP Client 连接多种 MCP Server |
+| **用户手册** | 基于 **VitePress** 构建，遵循 **尼尔森十大交互原则**，采用 **Shadcn/UI** 标准，提供详尽的操作指南与组件参考 |
 
 ---
 
@@ -109,9 +110,14 @@ API 文档：`http://localhost:8000/docs`
 cd frontend
 npm install
 npm run dev
+
+# 启动用户操作手册（可选）
+npm run docs:dev
+# 访问：http://localhost:5173/docs/
 ```
 
-访问：`http://localhost:5173`
+访问应用：`http://localhost:5173`
+访问手册：应用侧边栏底部入口或 `http://localhost:5173/docs/`
 
 ---
 

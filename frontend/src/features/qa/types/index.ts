@@ -94,4 +94,5 @@ export interface ModeConfig {
   icon: any; // Component type
   value: ModeType;
   description: string;
+  themeColor?: 'blue' | 'green' | 'purple' | 'orange' | 'rose' | 'slate';
 }
