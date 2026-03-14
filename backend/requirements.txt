@@ -112,3 +112,11 @@ yfinance
 openbb
 duckdb
 financial-datasets
+
+# --- Localization ---
+Babel>=2.14.0
+
+# --- Vector Database ---
+qdrant-client>=1.17.0
+pymilvus>=2.0.0
+

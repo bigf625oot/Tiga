@@ -1,3 +1,17 @@
+"""
+Tasks Endpoint
+前端接口：
+- HTTP POST `/tasks/` 接口作用：创建新任务
+- HTTP GET `/tasks/{task_id}` 接口作用：获取指定任务详情
+前端功能：
+- 管理和配置任务
+- 支持任务的查询、创建和详情查看
+前端文件：
+- `app/frontend/src/pages/Tasks.vue`
+功能模块：
+- 任务管理
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db, AsyncSessionLocal

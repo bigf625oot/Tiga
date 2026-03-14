@@ -1,3 +1,19 @@
+"""
+Recordings Endpoint
+前端接口：
+- HTTP POST `/recordings/` 接口作用：上传新录音
+- HTTP GET `/recordings/` 接口作用：获取所有录音
+- HTTP GET `/recordings/{recording_id}` 接口作用：获取指定录音详情
+- HTTP DELETE `/recordings/{recording_id}` 接口作用：删除指定录音
+前端功能：
+- 管理和配置录音
+- 支持录音的上传、查询和删除
+前端文件：
+- `app/frontend/src/pages/Recordings.vue`
+功能模块：
+- 录音管理
+"""
+
 import logging
 import os
 import uuid

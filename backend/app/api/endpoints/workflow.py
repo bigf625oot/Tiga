@@ -1,3 +1,20 @@
+"""
+Workflows Endpoint
+前端接口：
+- HTTP POST `/workflows/` 接口作用：创建新工作流
+- HTTP GET `/workflows/` 接口作用：获取所有工作流
+- HTTP GET `/workflows/{workflow_id}` 接口作用：获取指定工作流详情
+- HTTP PUT `/workflows/{workflow_id}` 接口作用：更新指定工作流
+- HTTP DELETE `/workflows/{workflow_id}` 接口作用：删除指定工作流
+前端功能：
+- 管理和配置工作流
+- 支持工作流的查询、创建、更新和删除
+前端文件：
+- `app/frontend/src/pages/Workflows.vue`
+功能模块：
+- 工作流管理
+"""
+
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException

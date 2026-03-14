@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any, Optional
 from agno.agent import Agent as AgnoAgent
 from app.models.agent_plan import AgentPlan, AgentTask
+from app.core.i18n import _
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -51,8 +52,8 @@ class PlannerAgent:
             tasks.append(AgentTask(
                 plan_id=plan.id,
                 sequence=sequence,
-                name="Research",
-                description=f"Search for information about: {user_goal}",
+                name=_("Research"),
+                description=_("Search for information about: {}").format(user_goal),
                 assigned_agent_role="researcher", # We will map this to an actual agent ID later
                 status="pending"
             ))
@@ -62,8 +63,8 @@ class PlannerAgent:
              tasks.append(AgentTask(
                 plan_id=plan.id,
                 sequence=sequence,
-                name="Coding",
-                description=f"Write and execute code to solve: {user_goal}",
+                name=_("Coding"),
+                description=_("Write and execute code to solve: {}").format(user_goal),
                 assigned_agent_role="coder",
                 status="pending"
             ))
@@ -74,7 +75,7 @@ class PlannerAgent:
              tasks.append(AgentTask(
                 plan_id=plan.id,
                 sequence=sequence,
-                name="General Task",
+                name=_("General Task"),
                 description=user_goal,
                 assigned_agent_role="general",
                 status="pending"

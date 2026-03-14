@@ -1,0 +1,323 @@
+# Chinese (Simplified, China) translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-03-14 10:17+0800\n"
+"PO-Revision-Date: 2026-03-14 10:08+0800\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_Hans_CN\n"
+"Language-Team: zh_Hans_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: app/main.py:40
+msgid "Starting up..."
+msgstr "系统启动中..."
+
+#: app/main.py:109
+msgid "Redis Task Stream infrastructure initialized."
+msgstr "Redis 任务流基础设施已初始化。"
+
+#: app/main.py:113
+msgid "Shutting down..."
+msgstr "系统关闭中..."
+
+#: app/main.py:163
+msgid "Welcome to Agentic：国产信创版Manus API"
+msgstr "欢迎使用 Agentic：国产信创版 Manus API"
+
+#: app/api/endpoints/agents.py:14
+msgid "Retrieve agents"
+msgstr "获取 Agent 列表"
+
+#: app/api/endpoints/agents.py:14
+msgid "Retrieve a list of agents with pagination and filtering."
+msgstr "获取带有分页和过滤功能的 Agent 列表。"
+
+#: app/api/endpoints/agents.py:30
+msgid "Create agent"
+msgstr "创建 Agent"
+
+#: app/api/endpoints/agents.py:30
+msgid "Create a new agent."
+msgstr "创建一个新的 Agent。"
+
+#: app/api/endpoints/agents.py:40
+msgid "Get agent"
+msgstr "获取 Agent"
+
+#: app/api/endpoints/agents.py:40
+msgid "Get an agent by ID."
+msgstr "根据 ID 获取 Agent。"
+
+#: app/api/endpoints/agents.py:48 app/api/endpoints/agents.py:60
+#: app/api/endpoints/agents.py:72
+msgid "Agent not found"
+msgstr "未找到该 Agent"
+
+#: app/api/endpoints/agents.py:52
+msgid "Update agent"
+msgstr "更新 Agent"
+
+#: app/api/endpoints/agents.py:52
+msgid "Update an existing agent."
+msgstr "更新现有的 Agent。"
+
+#: app/api/endpoints/agents.py:64
+msgid "Delete agent"
+msgstr "删除 Agent"
+
+#: app/api/endpoints/agents.py:64
+msgid "Delete an agent by ID."
+msgstr "根据 ID 删除 Agent。"
+
+#: app/schemas/agent.py:9
+msgid "The name of the agent"
+msgstr "Agent 的名称"
+
+#: app/schemas/agent.py:10
+msgid "A brief description of the agent's purpose"
+msgstr "Agent 用途的简要描述"
+
+#: app/schemas/agent.py:11
+msgid "URL or path to the agent's icon"
+msgstr "Agent 图标的 URL 或路径"
+
+#: app/schemas/agent.py:12
+msgid "The system prompt that defines the agent's behavior"
+msgstr "定义 Agent 行为的系统提示词"
+
+#: app/schemas/agent.py:17
+msgid "Configuration for the LLM model"
+msgstr "LLM 模型配置"
+
+#: app/schemas/agent.py:18
+msgid "List of tools enabled for this agent"
+msgstr "为此 Agent 启用的工具列表"
+
+#: app/schemas/agent.py:19
+msgid "Configuration for MCP (Model Context Protocol) servers"
+msgstr "MCP (Model Context Protocol) 服务器配置"
+
+#: app/schemas/agent.py:20
+msgid "Configuration for agent skills"
+msgstr "Agent 技能配置"
+
+#: app/schemas/agent.py:21
+msgid "Configuration for knowledge base access"
+msgstr "知识库访问配置"
+
+#: app/schemas/agent.py:22
+msgid "Configuration for agent memory"
+msgstr "Agent 记忆配置"
+
+#: app/schemas/agent.py:23
+msgid "Configuration for storage"
+msgstr "存储配置"
+
+#: app/schemas/agent.py:24
+msgid "Whether the agent is active"
+msgstr "Agent 是否激活"
+
+#: app/schemas/agent.py:25
+msgid "Whether this agent is a template"
+msgstr "此 Agent 是否为模板"
+
+#: app/schemas/chat.py:9
+msgid "Role of the message sender (user, assistant, system)"
+msgstr "消息发送者的角色 (user, assistant, system)"
+
+#: app/schemas/chat.py:10
+msgid "Content of the message"
+msgstr "消息内容"
+
+#: app/schemas/chat.py:11
+msgid "Type of the message (text, image, etc.)"
+msgstr "消息类型 (text, image 等)"
+
+#: app/schemas/chat.py:12
+msgid "Additional metadata for the message"
+msgstr "消息的附加元数据"
+
+#: app/schemas/chat.py:28
+msgid "Title of the chat session"
+msgstr "聊天会话的标题"
+
+#: app/schemas/chat.py:29
+msgid "ID of the agent used in this session"
+msgstr "此会话使用的 Agent ID"
+
+#: app/schemas/chat.py:30
+msgid "Mode of the session (chat, task, etc.)"
+msgstr "会话模式 (chat, task 等)"
+
+#: app/schemas/chat.py:31
+msgid "Current state of the workflow"
+msgstr "工作流的当前状态"
+
+#: app/services/eah_agent/agent/prompt.py:10
+msgid "You are a helpful assistant."
+msgstr "你是一个乐于助人的助手。"
+
+#: app/services/eah_agent/agent/prompt.py:40
+msgid ""
+"\n"
+"## OpenClaw Capabilities\n"
+"You have FULL access to OpenClaw tools for automation tasks. You can and "
+"should use them directly:\n"
+"1. `oc_web_search` / `oc_web_fetch`: Search and read web content.\n"
+"2. `oc_browser`: Control a browser for screenshots, PDF generation, or UI"
+" interaction.\n"
+"3. `oc_cron`: Create, list, and delete scheduled crawl tasks. USE THIS to"
+" create new tasks.\n"
+"4. `oc_nodes`: Manage and execute commands on connected nodes.\n"
+"5. `oc_message`: Send notifications.\n"
+"\n"
+"When the user asks to \"create a task\", \"crawl a site\", or \"configure"
+" automation\", you MUST use these tools.\n"
+"Do not say you cannot access the configuration; instead, use the tools to"
+" perform the actions.\n"
+msgstr ""
+"\n"
+"## OpenClaw 能力\n"
+"您拥有 OpenClaw 自动化任务工具的完全访问权限。您可以且应该直接使用它们：\n"
+"1. `oc_web_search` / `oc_web_fetch`：搜索和读取网页内容。\n"
+"2. `oc_browser`：控制浏览器进行截图、生成 PDF 或 UI 交互。\n"
+"3. `oc_cron`：创建、列出和删除定时抓取任务。使用此工具来创建新任务。\n"
+"4. `oc_nodes`：管理和执行已连接节点上的命令。\n"
+"5. `oc_message`：发送通知。\n"
+"\n"
+"当用户要求“创建任务”、“抓取网站”或“配置自动化”时，您必须使用这些工具。\n"
+"不要说您无法访问配置；相反，请使用工具执行操作。\n"
+
+#: app/services/eah_agent/agent/prompt.py:58
+msgid ""
+"\n"
+"## Sandbox Capabilities\n"
+"You have access to a secure E2B sandbox environment. You can:\n"
+"1. Execute Python code using `run_code`.\n"
+"2. Run shell commands using `run_shell` (e.g., install packages, run "
+"other languages).\n"
+"3. Manage files using `read_file`, `write_file`, `list_files`.\n"
+"\n"
+"When asked to write code or perform tasks:\n"
+"- Always check the environment first if unsure (e.g., `list_files`).\n"
+"- Write necessary files before executing them.\n"
+"- If you need to install packages, use `run_shell('pip install "
+"package')`.\n"
+msgstr ""
+"\n"
+"## 沙箱能力\n"
+"您可以使用安全的 E2B 沙箱环境。您可以：\n"
+"1. 使用 `run_code` 执行 Python 代码。\n"
+"2. 使用 `run_shell` 运行 Shell 命令（例如安装包、运行其他语言）。\n"
+"3. 使用 `read_file`、`write_file`、`list_files` 管理文件。\n"
+"\n"
+"当被要求编写代码或执行任务时：\n"
+"- 如果不确定，请始终先检查环境（例如 `list_files`）。\n"
+"- 在执行之前编写必要的文件。\n"
+"- 如果需要安装包，请使用 `run_shell('pip install package')`。\n"
+
+#: app/services/eah_agent/agent/prompt.py:76
+msgid ""
+"\n"
+"## Knowledge Base Capabilities\n"
+"You have access to an advanced Knowledge Graph retrieval system via "
+"tools:\n"
+"1. `search_knowledge_base`: Use for finding specific documents or text "
+"chunks (Vector Search).\n"
+"2. `query_knowledge_graph`: Use for complex questions requiring "
+"understanding of entity relationships, global themes, or multi-hop "
+"reasoning (Graph Search).\n"
+"   - Use `mode='local'` for specific entities.\n"
+"   - Use `mode='global'` for high-level summaries.\n"
+"   - Use `mode='mix'` (default) for best hybrid results.\n"
+msgstr ""
+"\n"
+"## 知识库能力\n"
+"您可以通过工具访问高级知识图谱检索系统：\n"
+"1. `search_knowledge_base`：用于查找特定文档或文本块（向量搜索）。\n"
+"2. `query_knowledge_graph`：用于需要理解实体关系、全局主题或多跳推理的复杂问题（图搜索）。\n"
+"   - 使用 `mode='local'` 针对特定实体。\n"
+"   - 使用 `mode='global'` 获取高级摘要。\n"
+"   - 使用 `mode='mix'`（默认）获取最佳混合结果。\n"
+
+#: app/services/eah_agent/core/control_plane.py:64
+msgid "I'm not sure what you mean."
+msgstr "我不太明白您的意思。"
+
+#: app/services/eah_agent/core/control_plane.py:73
+msgid "I'm having trouble thinking right now."
+msgstr "我现在思考有点困难。"
+
+#: app/services/eah_agent/core/control_plane.py:80
+msgid "Service temporarily unavailable (Gateway disconnected)."
+msgstr "服务暂时不可用（网关断开连接）。"
+
+#: app/services/eah_agent/core/control_plane.py:99
+#, python-brace-format
+msgid "Task completed successfully: {}"
+msgstr "任务执行成功：{}"
+
+#: app/services/eah_agent/core/control_plane.py:106
+#, python-brace-format
+msgid "Task failed (Code {}): {}"
+msgstr "任务失败 (代码 {}): {}"
+
+#: app/services/eah_agent/core/control_plane.py:108
+#, python-brace-format
+msgid "Task finished with status: {}"
+msgstr "任务结束，状态：{}"
+
+#: app/services/eah_agent/core/control_plane.py:111
+msgid "Task execution timed out."
+msgstr "任务执行超时。"
+
+#: app/services/eah_agent/core/control_plane.py:114
+#, python-brace-format
+msgid "An error occurred while executing the task: {}"
+msgstr "执行任务时发生错误：{}"
+
+#: app/services/eah_agent/core/planner.py:55
+msgid "Research"
+msgstr "调研"
+
+#: app/services/eah_agent/core/planner.py:56
+#, python-brace-format
+msgid "Search for information about: {}"
+msgstr "搜索关于 {} 的信息"
+
+#: app/services/eah_agent/core/planner.py:66
+msgid "Coding"
+msgstr "编程"
+
+#: app/services/eah_agent/core/planner.py:67
+#, python-brace-format
+msgid "Write and execute code to solve: {}"
+msgstr "编写并执行代码以解决：{}"
+
+#: app/services/eah_agent/core/planner.py:78
+msgid "General Task"
+msgstr "通用任务"
+
+#: app/services/eah_agent/core/service.py:22
+msgid "Default Script"
+msgstr "默认剧本"
+
+#: app/services/eah_agent/core/service.py:23
+msgid ""
+"# Default Script\n"
+"\n"
+"This is an auto-generated script template."
+msgstr ""
+"# 默认剧本\n"
+"\n"
+"这是一个自动生成的剧本模板。"

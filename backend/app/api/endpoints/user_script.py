@@ -1,3 +1,20 @@
+"""
+User Scripts Endpoint
+前端接口：
+- HTTP POST `/user_scripts/` 接口作用：创建新用户脚本
+- HTTP GET `/user_scripts/` 接口作用：获取所有用户脚本
+- HTTP GET `/user_scripts/{script_id}` 接口作用：获取指定用户脚本详情
+- HTTP PUT `/user_scripts/{script_id}` 接口作用：更新指定用户脚本
+- HTTP DELETE `/user_scripts/{script_id}` 接口作用：删除指定用户脚本
+前端功能：
+- 管理和配置用户脚本
+- 支持用户脚本的查询、创建、更新和删除
+前端文件：
+- `app/frontend/src/pages/UserScripts.vue`
+功能模块：
+- 用户脚本管理
+"""
+
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query

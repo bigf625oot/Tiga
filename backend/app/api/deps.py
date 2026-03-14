@@ -1,3 +1,8 @@
+"""
+依赖项模块
+
+"""
+
 from typing import AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status, Header, Path
 from sqlalchemy.ext.asyncio import AsyncSession

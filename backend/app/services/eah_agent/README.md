@@ -84,7 +84,7 @@ eah_agent/
 │   ├── libs/           # 本地化工具库 (Cloud, Data, Coding, etc.)
 │   ├── loader.py       # 统一加载器 (Tools + Skills + MCP)
 │   └── registry.py     # 自动发现与注册机制
-└── workflow/           # [工作流] 编排引擎
+└── workflows/           # [工作流] 编排引擎
     ├── base.py         # EAHWorkflow 基类 (状态管理)
     ├── pipelines/      # 流水线实现 (Dynamic, ResearchReport)
     └── schemas/        # 状态模型 (Pydantic Models)
@@ -200,7 +200,7 @@ response = await team_agent.run("检查服务器磁盘空间，如果大于 90% 
 ### 场景三：执行可视化工作流 (Workflow)
 
 ```python
-from app.services.eah_agent.workflow.pipelines.dynamic import DynamicWorkflow
+from app.services.eah_agent.workflows.pipelines.dynamic import DynamicWorkflow
 
 # 前端传来的 DAG 配置
 dag_config = { "nodes": [...] }
@@ -224,7 +224,7 @@ async for event in workflow.run_stream():
 3. 无需注册，`tools/registry.py` 会自动发现。
 
 ### 添加新流水线
-1. 在 `workflow/pipelines/` 下新建文件。
+1. 在 `workflows/pipelines/` 下新建文件。
 2. 继承 `EAHWorkflow`。
 3. 实现 `run_stream` 方法，使用 `yield format_workflow_event(...)` 返回状态。
 

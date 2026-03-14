@@ -1,3 +1,16 @@
+"""
+Task Modes Endpoint
+前端接口：
+- HTTP POST `/tasks/` 接口作用：创建新任务
+- HTTP GET `/tasks/{task_id}` 接口作用：获取指定任务详情
+前端功能：
+- 管理和配置任务模式
+- 支持任务模式的查询、创建和详情查看
+前端文件：
+- `app/frontend/src/pages/TaskModes.vue`
+功能模块：
+- 任务模式管理
+"""
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 

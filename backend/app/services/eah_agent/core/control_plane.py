@@ -1,21 +1,40 @@
 import asyncio
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, AsyncGenerator
 
 from app.core.config import settings
+from app.core.i18n import _
 from app.services.eah_agent.core.nlu import NluService, IntentResult
 from app.services.openclaw.clients.agno import AgnoGatewayClient
 from app.models.llm_model import LLMModel
+from app.services.eah_agent.storage.session_history import SessionHistory
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# Handlers
+from app.services.eah_agent.handlers.quick_handler import QuickHandler
+from app.services.eah_agent.handlers.plan_handler import PlanHandler
+from app.services.eah_agent.handlers.team_handler import TeamHandler
+from app.services.eah_agent.handlers.flow_handler import FlowHandler
+from app.services.eah_agent.handlers.data_handler import DataHandler
 
 logger = logging.getLogger("agno.control_plane")
 
 class AgnoControlPlane:
     """
     Agno Intelligent Agent as the sole control plane.
+    Refactored to dispatch to specialized handlers.
     """
 
     def __init__(self, llm_model: Optional[LLMModel] = None):
+        self.llm_model = llm_model
         self.nlu = NluService(llm_model)
+        
+        # Initialize Handlers
+        self.quick_handler = QuickHandler(llm_model)
+        self.plan_handler = PlanHandler(llm_model)
+        self.team_handler = TeamHandler(llm_model)
+        self.flow_handler = FlowHandler(llm_model)
+        self.data_handler = DataHandler(llm_model)
         
         # Initialize WS Client
         # Using settings or defaults
@@ -40,43 +59,101 @@ class AgnoControlPlane:
         """Stops the control plane."""
         await self.client.close()
 
+    async def process_stream(self, user_input: str, db: Optional[AsyncSession] = None, session_id: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        New main entry point supporting streaming.
+        Dispatches to handlers based on NLU intent.
+        """
+        # 1. Intent Understanding
+        try:
+            result: IntentResult = await self.nlu.analyze(user_input)
+            logger.info(f"Intent Analysis: {result}")
+        except Exception as e:
+            logger.error(f"NLU Analysis failed: {e}")
+            yield {"type": "error", "content": _("I couldn't understand that.")}
+            return
+
+        # 2. Session Persistence (Save User Message)
+        history = None
+        if db and session_id:
+            try:
+                history = SessionHistory(db)
+                # Check if session exists, if not create
+                session = await history.get_session(session_id)
+                if not session:
+                    # In a real app, user_id should come from auth context
+                    await history.create_session(user_id="guest", agent_id=None, title=user_input[:50])
+                
+                await history.add_message(session_id, "user", user_input)
+            except Exception as e:
+                logger.error(f"Failed to save user message: {e}")
+
+        # 3. Dispatch & Stream
+        full_response = ""
+        
+        try:
+            handler_stream = None
+            if result.intent == "chat" or result.confidence < 0.85:
+                handler_stream = self.quick_handler.process(user_input, result, db=db, session_id=session_id)
+            elif result.intent == "task":
+                # Special case for now: _handle_task is blocking
+                task_response = await self._handle_task(result.task_params)
+                full_response = task_response
+                yield {"type": "content", "content": task_response}
+                # No stream to iterate
+            elif result.intent == "team":
+                 handler_stream = self.team_handler.process(user_input, result, db=db, session_id=session_id)
+            elif result.intent == "workflow":
+                 handler_stream = self.flow_handler.process(user_input, result, db=db, session_id=session_id)
+            elif result.intent == "data_query" or result.intent == "kg_qa":
+                 handler_stream = self.data_handler.process(user_input, result, db=db, session_id=session_id)
+            else:
+                handler_stream = self.quick_handler.process(user_input, result, db=db, session_id=session_id)
+            
+            if handler_stream:
+                async for chunk in handler_stream:
+                    if chunk.get("type") == "content":
+                        content = chunk.get("content")
+                        if isinstance(content, str):
+                            full_response += content
+                    yield chunk
+
+        except Exception as e:
+            logger.error(f"Processing failed: {e}")
+            yield {"type": "error", "content": _("An error occurred during processing.")}
+            full_response += "\n[Error occurred]"
+        
+        # 4. Session Persistence (Save Assistant Message)
+        if history and session_id and full_response:
+            try:
+                await history.add_message(session_id, "assistant", full_response)
+            except Exception as e:
+                logger.error(f"Failed to save assistant message: {e}")
+
     async def process_input(self, user_input: str) -> str:
         """
-        Main entry point for user interaction.
-        1. Understand Intent (NLU)
-        2. Chat -> Generate Reply
-        3. Task -> Execute on Gateway
+        Legacy entry point for backward compatibility.
+        Consumes the stream and returns full string.
         """
-        
-        # 1. Intent Understanding
-        result: IntentResult = await self.nlu.analyze(user_input)
-        logger.info(f"Intent Analysis: {result}")
-
-        # 2. Chat Branch
-        if result.intent == "chat" or result.confidence < 0.85:
-            return await self._handle_chat(user_input)
-
-        # 3. Task Branch
-        if result.intent == "task":
-            return await self._handle_task(result.task_params)
-
-        return "I'm not sure what you mean."
-
-    async def _handle_chat(self, user_input: str) -> str:
-        # Simple chat response using the same model or a dedicated one
+        full_response = ""
         try:
-            response = self.nlu.model.response(user_input)
-            return response.content
+            async for chunk in self.process_stream(user_input):
+                if chunk.get("type") == "content":
+                    full_response += str(chunk.get("content", ""))
+                elif chunk.get("type") == "error":
+                    full_response += f"\n[Error: {chunk.get('content')}]"
         except Exception as e:
-            logger.error(f"Chat generation failed: {e}")
-            return "I'm having trouble thinking right now."
+            logger.error(f"Process input failed: {e}")
+            return _("An error occurred.")
+            
+        return full_response
 
     async def _handle_task(self, params: Dict[str, Any]) -> str:
         if not self.client.is_connected:
             # Auto-connect if not connected
             await self.start()
             if not self.client.is_connected:
-                 return "Service temporarily unavailable (Gateway disconnected)."
+                 return _("Service temporarily unavailable (Gateway disconnected).")
 
         task_type = params.get("task_type")
         target = params.get("target")
@@ -95,22 +172,22 @@ class AgnoControlPlane:
             
             method = event.get("method")
             if method == "task_completed":
-                return f"Task completed successfully: {event.get('params', {}).get('result')}"
+                return _("Task completed successfully: {}").format(event.get('params', {}).get('result'))
             elif method == "task_failed":
                 error = event.get('params', {}).get('error', {})
                 code = error.get('code')
                 msg = error.get('message')
                 # Auto-retry logic could be here if not handled by gateway, 
                 # but requirement says "agno auto parses error_code, decides retry or human"
-                return f"Task failed (Code {code}): {msg}"
+                return _("Task failed (Code {}): {}").format(code, msg)
             else:
-                return f"Task finished with status: {method}"
+                return _("Task finished with status: {}").format(method)
 
         except TimeoutError:
-            return "Task execution timed out."
+            return _("Task execution timed out.")
         except Exception as e:
             logger.error(f"Task execution error: {e}")
-            return f"An error occurred while executing the task: {str(e)}"
+            return _("An error occurred while executing the task: {}").format(str(e))
 
     async def _on_task_event(self, event: Dict):
         """

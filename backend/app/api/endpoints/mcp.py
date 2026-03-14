@@ -1,3 +1,20 @@
+"""
+MCP Server Endpoint
+前端接口：
+- HTTP POST `/mcp/servers/` 接口作用：创建新的MCP服务器
+- HTTP GET `/mcp/servers/` 接口作用：获取所有MCP服务器
+- HTTP GET `/mcp/servers/{server_id}` 接口作用：获取指定MCP服务器详情
+- HTTP PATCH `/mcp/servers/{server_id}` 接口作用：更新指定MCP服务器
+- HTTP DELETE `/mcp/servers/{server_id}` 接口作用：删除指定MCP服务器
+前端功能：
+- 管理和配置MCP服务器
+- 支持服务器的创建、更新、删除和查询
+前端文件：
+- `app/frontend/src/pages/MCPServers.vue`
+功能模块：
+- MCP服务器管理
+
+"""
 import asyncio
 import logging
 from typing import Any, Dict, List, Optional

@@ -1,5 +1,21 @@
-import logging
 
+"""
+OpenClaw Endpoint
+前端接口：
+- HTTP POST `/openclaw/register/` 接口作用：注册新节点
+- HTTP GET `/openclaw/nodes/` 接口作用：获取所有节点
+- HTTP GET `/openclaw/nodes/{node_id}` 接口作用：获取指定节点详情
+- HTTP POST `/openclaw/nodes/{node_id}/heartbeat/` 接口作用：节点心跳
+- HTTP POST `/openclaw/nodes/{node_id}/command/` 接口作用：节点执行命令
+前端功能：
+- 管理和配置OpenClaw节点
+- 支持节点的注册、查询、心跳和命令执行
+前端文件：
+- `app/frontend/src/pages/OpenClaw.vue`
+功能模块：
+- OpenClaw节点管理
+"""
+import logging
 import uuid
 from typing import List, Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException

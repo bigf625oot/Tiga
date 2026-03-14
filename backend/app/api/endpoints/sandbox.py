@@ -1,3 +1,17 @@
+"""
+Sandbox Endpoint
+前端接口：
+- HTTP POST `/sandbox/run/` 接口作用：运行沙箱代码
+前端功能：
+- 运行沙箱代码，支持多种编程语言
+- 支持代码模板和参数化输入
+- 提供会话管理，支持持久化上下文
+前端文件：
+- `app/frontend/src/pages/Sandbox.vue`
+功能模块：
+- 代码沙箱管理
+"""
+
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List

@@ -1,6 +1,23 @@
+"""
+Knowledge Endpoint
+前端接口：
+- HTTP POST `/knowledge/` 接口作用：创建新文档
+- HTTP GET `/knowledge/` 接口作用：获取所有文档
+- HTTP GET `/knowledge/{doc_id}` 接口作用：获取指定文档详情
+- HTTP PUT `/knowledge/{doc_id}` 接口作用：更新指定文档
+- HTTP DELETE `/knowledge/{doc_id}` 接口作用：删除指定文档
+前端功能：
+- 管理和配置文档
+- 支持文档的查询、创建、更新和删除
+前端文件：
+- `app/frontend/src/pages/Knowledge.vue`
+功能模块：
+- 文档管理
+"""
 import os
 import shutil
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse

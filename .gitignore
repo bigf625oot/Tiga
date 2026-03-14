@@ -1,3 +1,7 @@
+# Localization
+*.mo
+*.pot
+
 # n8n data
 .n8n_data/
 

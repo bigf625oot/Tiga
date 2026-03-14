@@ -28,6 +28,7 @@ from app.api.api import api_router
 from app.core.config import settings
 from app.core.exceptions import global_exception_handler
 from app.core.logger import logger, setup_logging
+from app.core.i18n import _
 
 # Setup logging
 setup_logging()
@@ -36,7 +37,7 @@ setup_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Connect to DB, Redis, S3 checks
-    logger.info("Starting up...")
+    logger.info(_("Starting up..."))
 
     # Create uploads dir if not exists (Use absolute path)
     BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -105,11 +106,11 @@ async def lifespan(app: FastAPI):
     # Initialize Redis Streams
     from app.core.task_stream import task_stream
     await task_stream.ensure_infrastructure()
-    logger.info("Redis Task Stream infrastructure initialized.")
+    logger.info(_("Redis Task Stream infrastructure initialized."))
 
     yield
     # Shutdown: Close connections
-    logger.info("Shutting down...")
+    logger.info(_("Shutting down..."))
     await task_worker.stop()
     await node_monitor.stop()
 
@@ -159,4 +160,4 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to Agentic：国产信创版Manus API"}
+    return {"message": _("Welcome to Agentic：国产信创版Manus API")}

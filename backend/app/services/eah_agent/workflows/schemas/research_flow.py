@@ -4,7 +4,7 @@
 
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
-from app.services.eah_agent.workflow.base import EAHWorkflowState
+from app.services.eah_agent.workflows.base import EAHWorkflowState
 
 class ResearchStep(BaseModel):
     name: str

@@ -1,4 +1,5 @@
 import logging
+from typing import AsyncGenerator, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.agent_plan import AgentPlan, AgentTask, PlanStatus, TaskStatus
@@ -13,29 +14,38 @@ class AgentWorkflowEngine:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def start_workflow(self, session_id: str, user_goal: str) -> str:
+    async def start_workflow(self, session_id: str, user_goal: str) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Starts a new workflow:
         1. Gets a Planner Agent.
         2. Creates a Plan and Tasks (persisted).
         3. Kicks off execution.
+        Yields events for progress tracking.
         """
         logger.info(f"Starting workflow for session {session_id}")
+        yield {"type": "status", "content": "Initializing workflow..."}
         
         # 1. Get Planner
         planner = await agent_manager.get_planner_agent(self.db)
         
         # 2. Create Plan (this saves to DB)
+        yield {"type": "status", "content": "Creating execution plan..."}
         plan_id = await planner.create_plan(session_id, user_goal)
         
         # 3. Execute
-        await self.execute_plan(plan_id)
+        async for event in self.execute_plan(plan_id):
+            yield event
         
-        return plan_id
+        yield {"type": "content", "content": f"Workflow completed. Plan ID: {plan_id}"}
 
-    async def execute_plan(self, plan_id: str):
+    async def execute_plan(self, plan_id: str) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Executes tasks in a plan sequentially (for now).
+        Yields events:
+        - status: High-level status updates
+        - task_start: When a task begins
+        - task_complete: When a task finishes
+        - error: If something fails
         """
         logger.info(f"Executing plan {plan_id}")
         
@@ -44,6 +54,7 @@ class AgentWorkflowEngine:
         plan = result.scalars().first()
         if not plan:
             logger.error(f"Plan {plan_id} not found")
+            yield {"type": "error", "content": f"Plan {plan_id} not found"}
             return
 
         plan.status = PlanStatus.RUNNING
@@ -68,14 +79,19 @@ class AgentWorkflowEngine:
                 break
                 
             logger.info(f"Picked up task {task.name} ({task.id})")
+            yield {"type": "status", "content": f"Executing task: {task.name}"}
             
             try:
                 # Execute
+                # TODO: If executor.execute_task supports streaming, we should stream its output too
+                # For now, it's a single await call
                 await executor.execute_task(task)
+                yield {"type": "status", "content": f"Completed task: {task.name}"}
             except Exception as e:
                 logger.error(f"Workflow stopped due to task failure: {e}")
                 plan.status = PlanStatus.FAILED
                 await self.db.commit()
+                yield {"type": "error", "content": f"Task '{task.name}' failed: {e}"}
                 return
 
         # Check if all tasks completed
@@ -90,7 +106,9 @@ class AgentWorkflowEngine:
         if not remaining:
             plan.status = PlanStatus.COMPLETED
             logger.info(f"Plan {plan_id} completed successfully.")
+            yield {"type": "status", "content": "All tasks completed successfully."}
         else:
             logger.warning(f"Plan {plan_id} finished loop but has incomplete tasks (maybe failed?).")
+            yield {"type": "error", "content": "Workflow finished but some tasks are incomplete."}
             
         await self.db.commit()

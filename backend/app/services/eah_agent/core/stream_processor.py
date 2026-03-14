@@ -3,15 +3,41 @@ from typing import AsyncGenerator, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-async def parse_thinking_stream(stream: AsyncGenerator[str, None]) -> AsyncGenerator[Dict[str, str], None]:
+async def parse_thinking_stream(stream: AsyncGenerator[Any, None]) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Robust stream parser for <think>...</think> blocks.
     Handles split tags across chunks correctly.
+    Passthrough for non-string chunks (like tool events).
+    
+    Standardized Output Format:
+    {
+        "type": "content" | "think" | "status" | "error",
+        "content": str | dict
+    }
     """
     buffer = ""
     in_think = False
     
     async for chunk in stream:
+        # Passthrough non-string events (assuming they are already dicts or objects we want to yield)
+        if not isinstance(chunk, str):
+            # Flush buffer if any
+            if buffer:
+                if in_think:
+                    yield {"type": "think", "content": buffer}
+                else:
+                    yield {"type": "content", "content": buffer}
+                buffer = ""
+            
+            # If chunk is already a dict with 'type', pass it through
+            if isinstance(chunk, dict) and "type" in chunk:
+                yield chunk
+            else:
+                # Wrap unknown objects in status or content?
+                # For now, assume it's status or similar event
+                yield {"type": "status", "content": chunk}
+            continue
+
         buffer += chunk
         
         while True:
@@ -30,10 +56,6 @@ async def parse_thinking_stream(stream: AsyncGenerator[str, None]) -> AsyncGener
                 else:
                     # No start tag found yet.
                     # Check if buffer ends with partial tag <, <t, <th, <thi, <thin, <think
-                    # Max length 6 chars needed to match <think (length 6) before fully matched at 7
-                    # Actually check for partial match logic:
-                    # If buffer ends with a potential start of <think>, keep it.
-                    # Otherwise yield.
                     
                     # Optimization: find last '<'
                     last_lt = buffer.rfind('<')
@@ -42,6 +64,7 @@ async def parse_thinking_stream(stream: AsyncGenerator[str, None]) -> AsyncGener
                         if buffer:
                             yield {"type": "content", "content": buffer}
                         buffer = ""
+                        break
                     else:
                         # Potential tag start found at last_lt
                         # Check if it matches prefix of <think>
@@ -51,17 +74,18 @@ async def parse_thinking_stream(stream: AsyncGenerator[str, None]) -> AsyncGener
                             if last_lt > 0:
                                 yield {"type": "content", "content": buffer[:last_lt]}
                             buffer = potential
+                            break
                         else:
-                            # Not a valid prefix, but might be just text like "<b"
-                            # If we are sure it's not <think>, we can yield.
-                            # But wait, what if it's "<t"?
-                            # So strictly check if it starts with any valid tag prefix?
-                            # Or just yield up to last_lt and keep potential?
-                            # To be safe, keep from last_lt.
+                            # Not a valid prefix, yield up to last_lt
                             if last_lt > 0:
                                 yield {"type": "content", "content": buffer[:last_lt]}
                             buffer = buffer[last_lt:]
-                    break # Get next chunk
+                            # Check if buffer matches partial <think> start?
+                            # If not, yield it too.
+                            if not "<think>".startswith(buffer):
+                                 yield {"type": "content", "content": buffer}
+                                 buffer = ""
+                            break
             
             else: # Inside <think>
                 # Look for </think>
@@ -83,18 +107,23 @@ async def parse_thinking_stream(stream: AsyncGenerator[str, None]) -> AsyncGener
                         if buffer:
                             yield {"type": "think", "content": buffer}
                         buffer = ""
+                        break
                     else:
                         potential = buffer[last_lt:]
                         if "</think>".startswith(potential):
                             if last_lt > 0:
                                 yield {"type": "think", "content": buffer[:last_lt]}
                             buffer = potential
+                            break
                         else:
                             # Not a closing tag prefix
                             if last_lt > 0:
                                 yield {"type": "think", "content": buffer[:last_lt]}
                             buffer = buffer[last_lt:]
-                    break # Get next chunk
+                            if not "</think>".startswith(buffer):
+                                 yield {"type": "think", "content": buffer}
+                                 buffer = ""
+                            break
 
     # Flush remaining
     if buffer:

@@ -1,3 +1,14 @@
+"""
+Render Data Endpoint
+前端接口：
+- HTTP GET `/render-data/` 接口作用：渲染数据
+前端功能：
+- 渲染数据用于前端展示
+前端文件：
+- `app/frontend/src/pages/RenderData.vue`
+功能模块：
+- 数据渲染管理
+"""
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import desc, select

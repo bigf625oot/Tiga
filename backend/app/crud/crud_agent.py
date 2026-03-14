@@ -11,11 +11,14 @@ class CRUDAgent:
         result = await db.execute(select(Agent).filter(Agent.id == id))
         return result.scalars().first()
 
-    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100, query: str = None, is_template: bool = None):
+    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100, query: str = None, is_template: bool = None, is_active: bool = None):
         stmt = select(Agent)
         
         if is_template is not None:
             stmt = stmt.filter(Agent.is_template == is_template)
+            
+        if is_active is not None:
+            stmt = stmt.filter(Agent.is_active == is_active)
             
         if query:
             search = f"%{query}%"

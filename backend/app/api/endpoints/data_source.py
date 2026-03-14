@@ -1,3 +1,20 @@
+"""
+Data Source Endpoint
+前端接口：
+- HTTP POST `/data_source/`  接口作用：创建新的数据来源
+- HTTP GET `/data_source/` 接口作用：获取所有数据来源
+- HTTP GET `/data_source/{data_source_id}` 接口作用：获取指定数据来源详情
+- HTTP PUT `/data_source/{data_source_id}` 接口作用：更新指定数据来源
+- HTTP DELETE `/data_source/{data_source_id}` 接口作用：删除指定数据来源
+前端功能：
+- 管理和配置数据来源
+- 支持不同类型的数据来源（如数据库、文件等）
+- 提供数据来源的连接测试和验证
+前端文件：
+- `app/frontend/src/pages/DataSource.vue`
+功能模块：
+- 数据来源管理
+"""
 from typing import Any, List, Optional
 import json
 

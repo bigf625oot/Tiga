@@ -1,4 +1,11 @@
-"""Skill validation logic following the Agent Skills spec."""
+"""Skill validation logic following the Agent Skills spec.
+核心功能：
+1. 验证技能目录结构是否符合规范。
+2. 检查技能元数据是否包含必要字段。
+3. 验证技能名称是否符合格式要求。
+4. 检查技能描述是否符合长度限制。
+5. 验证技能兼容性描述是否符合格式要求。
+"""
 
 import unicodedata
 from pathlib import Path

@@ -25,6 +25,7 @@ from datetime import datetime
 from app.services.nlu.classifier import IntentClassifier, QueryIntent
 from app.services.rag.kg_query import KGQueryService
 from app.services.chatbi.vanna.service import data_query_service
+from app.core.shared_state import StateManager, SharedState, AgentConfig
 
 # Initialize Services
 kg_query_service = KGQueryService.get_instance()
@@ -56,6 +57,18 @@ class ChatService:
                 logger.error(f"[CHAT] Session {session_id} not found")
                 yield self._format_sse("error", "Session not found")
                 return
+
+            # [New] State Management
+            state_manager = StateManager.get_instance()
+            shared_state = await state_manager.get_state(session_id)
+            if not shared_state:
+                shared_state = SharedState(session_id=session_id, mode=session.mode if session else "chat")
+                await state_manager.save_state(session_id, shared_state)
+            
+            if session and session.mode != shared_state.mode:
+                await state_manager.update_mode(session_id, session.mode)
+                # Refresh local state object
+                shared_state = await state_manager.get_state(session_id)
 
             # 2. Save User Message
             logger.debug(f"[CHAT] User message: {message[:50]}...")
@@ -198,6 +211,31 @@ class ChatService:
                     )
                 
                 if agent:
+                    # Save Agent Config to SharedState
+                    try:
+                        mid = ""
+                        if hasattr(agent.model, "id"): mid = agent.model.id
+                        elif hasattr(agent.model, "model_id"): mid = agent.model.model_id
+                        
+                        inst = getattr(agent, "instructions", "")
+                        if isinstance(inst, list): inst = "\n".join(inst)
+                        
+                        tool_names = []
+                        if agent.tools:
+                             for t in agent.tools:
+                                 if hasattr(t, "name"): tool_names.append(t.name)
+                                 elif hasattr(t, "__name__"): tool_names.append(t.__name__)
+                        
+                        if shared_state:
+                             shared_state.agent_config = AgentConfig(
+                                 model_id=str(mid),
+                                 instructions=str(inst),
+                                 tools=tool_names
+                             )
+                             await state_manager.save_state(session_id, shared_state)
+                    except Exception as e:
+                        logger.warning(f"Failed to save agent config to shared state: {e}")
+
                     agent_pool.put(cache_key, (agent, agent_obj, deepseek_like))
             
             if not agent:
@@ -211,7 +249,7 @@ class ChatService:
                 target_agent_runner = None # Use deepseek loop
             else:
                 async def _standard_runner():
-                    return await agent.arun(message, stream=True, messages=agno_history)
+                    return await agent.arun(message, stream=True, stream_events=True, messages=agno_history)
                 
                 async def _fallback_runner():
                     res = await agent.arun(message, stream=False, messages=agno_history)
@@ -247,6 +285,37 @@ class ChatService:
             except Exception as se:
                 logger.warning(f"Retrieval failed: {se}")
 
+            # [New] Temp KB Search
+            try:
+                from app.services.rag.temp_kb import TempKnowledgeBase
+                temp_kb = TempKnowledgeBase.get_instance()
+                temp_refs = await temp_kb.search(session_id, message, top_k=5)
+                if temp_refs:
+                    references.extend(temp_refs)
+                    # Re-sort and limit
+                    references.sort(key=lambda x: x.get("score", 0), reverse=True)
+                    references = references[:5]
+                    
+                    # Manually add temp refs to structured_refs
+                    for tr in temp_refs:
+                        structured_refs.append({
+                            "id": 0,
+                            "docId": 0,
+                            "title": tr.get("title"),
+                            "createTime": None,
+                            "updateTime": None,
+                            "coverImage": None,
+                            "summary": tr.get("preview"),
+                            "text": tr.get("content"),
+                            "score": tr.get("score"),
+                            "tags": ["temporary"],
+                            "chunkId": tr.get("chunk_id"),
+                            "pageNo": tr.get("page"),
+                            "nodeId": tr.get("node_id")
+                        })
+            except Exception as e:
+                logger.warning(f"Temp KB search failed: {e}")
+
             # 6. Stream Execution with CoT Parsing
             full_response = ""
             reasoning_content = ""
@@ -272,14 +341,23 @@ class ChatService:
             stream_gen = self._process_stream(stream)
             
             async for item in parse_thinking_stream(stream_gen):
-                 if item["type"] == "think":
+                 if isinstance(item, dict) and item.get("type") == "think":
                       # Reasoning chunk
-                      reasoning_content += item["content"]
-                      yield self._format_sse("think", item["content"])
-                 else:
+                      content = item.get("content", "")
+                      reasoning_content += content
+                      yield self._format_sse("think", content)
+                 elif isinstance(item, dict) and item.get("type") in ["tool_start", "tool_end", "tool_error"]:
+                      # Tool events
+                      yield self._format_sse(item["type"], item)
+                 elif isinstance(item, dict) and item.get("type") == "content":
                       # Content chunk
-                      full_response += item["content"]
-                      yield self._format_sse("text", item["content"])
+                      content = item.get("content", "")
+                      full_response += content
+                      yield self._format_sse("text", content)
+                 elif isinstance(item, str):
+                      # Fallback for raw string
+                      full_response += item
+                      yield self._format_sse("text", item)
             
             # Append References
             if references:
@@ -466,8 +544,15 @@ Do not say you cannot access the configuration; instead, use the tools to perfor
                     msg_dict["reasoning_content"] = ""
             agno_history.append(msg_dict)
             
-        from app.core.context_utils import get_optimized_context
-        return get_optimized_context(agno_history)
+        # Use ContextCompressor for intelligent context management
+        try:
+            from app.core.context_compressor import ContextCompressor
+            compressor = ContextCompressor()
+            return await compressor.compress_context(agno_history)
+        except Exception as e:
+            logger.error(f"Context compression failed: {e}. Falling back to simple truncation.")
+            from app.core.context_utils import get_optimized_context
+            return get_optimized_context(agno_history)
 
     async def _get_allowed_docs(self, db, agent_obj, attachments, strict_mode):
         doc_ids = []
@@ -675,7 +760,43 @@ Do not say you cannot access the configuration; instead, use the tools to perfor
                 if isinstance(item, str):
                     yield item
                 elif hasattr(item, "content"):
-                    yield str(item.content) if item.content is not None else ""
+                    # Handle RunOutputEvent from Agno
+                    event_type = getattr(item, "event", None)
+                    
+                    # 1. Text Content
+                    if event_type in ["RunContent", "RunIntermediateContent", "RunContentCompleted", "ReasoningContentDelta"]:
+                         if hasattr(item, "content") and item.content:
+                             yield str(item.content)
+                         elif hasattr(item, "reasoning_content") and item.reasoning_content:
+                             # Map Agno reasoning to <think> format if not already
+                             yield f"<think>{item.reasoning_content}</think>"
+                    
+                    # 2. Tool Call Started
+                    elif event_type == "ToolCallStarted":
+                        tool = getattr(item, "tool", None)
+                        if tool:
+                            tool_dict = tool.to_dict() if hasattr(tool, "to_dict") else str(tool)
+                            yield {"type": "tool_start", "tool": tool_dict}
+                    
+                    # 3. Tool Call Completed
+                    elif event_type == "ToolCallCompleted":
+                        tool = getattr(item, "tool", None)
+                        content = getattr(item, "content", None)
+                        if tool:
+                            tool_dict = tool.to_dict() if hasattr(tool, "to_dict") else str(tool)
+                            yield {"type": "tool_end", "tool": tool_dict, "result": str(content)}
+                            
+                    # 4. Tool Call Error
+                    elif event_type == "ToolCallError":
+                        tool = getattr(item, "tool", None)
+                        error = getattr(item, "error", None)
+                        if tool:
+                            tool_dict = tool.to_dict() if hasattr(tool, "to_dict") else str(tool)
+                            yield {"type": "tool_error", "tool": tool_dict, "error": str(error)}
+                    
+                    # Fallback for legacy objects or simple RunResponse
+                    elif not event_type: 
+                        yield str(item.content) if item.content is not None else ""
                 else:
                     yield str(item)
         else:

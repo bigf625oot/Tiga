@@ -1,3 +1,22 @@
+"""
+RAG Endpoint
+前端接口：
+- HTTP POST `/rag/embed/` 接口作用：嵌入文档
+- HTTP POST `/rag/search/` 接口作用：搜索文档
+- HTTP POST `/rag/augment/` 接口作用：增强提示
+- HTTP GET `/rag/health/` 接口作用：健康检查
+前端功能：
+- 管理和配置RAG系统
+- 支持文档嵌入、搜索和增强提示
+- 提供系统健康检查
+前端文件：
+- `app/frontend/src/pages/RAG.vue`
+功能模块：
+- RAG系统管理
+"""
+
+
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 

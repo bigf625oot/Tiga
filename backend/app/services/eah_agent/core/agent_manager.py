@@ -1,6 +1,6 @@
 import logging
 import inspect
-from typing import Optional, List, Any, TYPE_CHECKING
+from typing import Optional, List, Any, TYPE_CHECKING, Dict
 
 from agno.agent import Agent as AgnoAgent
 # from agno.tools.duckduckgo import DuckDuckGoTools # Removed: Handled by loader
@@ -18,6 +18,8 @@ from app.models.llm_model import LLMModel
 from app.services.rag.knowledge_base import kb_service
 from app.services.eah_agent.skills.manager import Skills as FileSkillsManager
 from app.services.eah_agent.skills.loaders.local import LocalSkills
+from app.services.eah_agent.domain.config import AgentConfig, TeamConfig
+from app.services.eah_agent.core.agent_factory import AgentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,19 @@ class AgentManager:
             return await builder.build(session_id, enable_search)
         except Exception as e:
             logger.exception(f"Error creating agent {agent_id}")
+            raise e
+
+    async def create_agent_from_config(self, config: Dict[str, Any], db: Optional[AsyncSession] = None, llm_model: Optional[LLMModel] = None) -> AgnoAgent:
+        """
+        New Method: Creates an AgnoAgent instance from a configuration dictionary or object.
+        Delegates to AgentFactory.
+        """
+        try:
+            # Validate/Parse config into AgentConfig model
+            agent_config = AgentConfig(**config)
+            return await AgentFactory.create_agent(agent_config, db, llm_model)
+        except Exception as e:
+            logger.exception(f"Error creating agent from config: {e}")
             raise e
 
     async def create_team(self, db: AsyncSession, team_type: str, config: dict) -> AgnoAgent:

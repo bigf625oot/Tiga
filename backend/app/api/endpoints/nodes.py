@@ -1,3 +1,19 @@
+"""
+节点管理 Endpoint
+前端接口：
+- HTTP POST `/nodes/register/` 接口作用：注册新节点
+- HTTP GET `/nodes/` 接口作用：获取所有节点
+- HTTP GET `/nodes/{node_id}` 接口作用：获取指定节点详情
+- HTTP POST `/nodes/{node_id}/heartbeat/` 接口作用：节点心跳
+- HTTP POST `/nodes/{node_id}/command/` 接口作用：节点执行命令
+前端功能：
+- 管理和配置节点
+- 支持节点的注册、查询、心跳和命令执行
+前端文件：
+- `app/frontend/src/pages/NodeManagement.vue`
+功能模块：
+- 节点管理
+"""
 import logging
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request

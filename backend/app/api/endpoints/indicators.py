@@ -1,3 +1,18 @@
+"""
+Indicator Endpoint
+前端接口：
+- HTTP GET `/indicators/` 接口作用：获取指标列表
+- HTTP POST `/indicators/` 接口作用：创建新指标
+- HTTP PATCH `/indicators/{indicator_id}` 接口作用：更新指标
+- HTTP DELETE `/indicators/{indicator_id}` 接口作用：删除指标
+前端功能：
+- 管理和配置指标
+- 支持指标的创建、更新、删除和查询
+前端文件：
+- `app/frontend/src/pages/Indicators.vue`
+功能模块：
+- 指标管理
+"""
 import io
 from typing import List, Optional
 

@@ -1,3 +1,20 @@
+"""
+Graph Export Endpoint
+前端接口：
+- HTTP POST `/graph_export/`  接口作用：创建新的图导出配置
+- HTTP GET `/graph_export/` 接口作用：获取所有图导出配置
+- HTTP GET `/graph_export/{export_id}` 接口作用：获取指定图导出配置详情
+- HTTP PUT `/graph_export/{export_id}` 接口作用：更新指定图导出配置
+- HTTP DELETE `/graph_export/{export_id}` 接口作用：删除指定图导出配置
+前端功能：
+- 管理和配置图导出
+- 支持不同类型的图导出（如CSV、JSON等）
+- 提供图导出的执行和状态监控
+前端文件：
+- `app/frontend/src/pages/GraphExport.vue`
+功能模块：
+- 图导出配置管理
+"""
 import json
 import os
 import tempfile
@@ -273,15 +290,8 @@ def run_export_task(config_data: dict):
     import yaml
     # from backend.scripts.export_graph_data import GraphExporter # Incorrect import
 
-    # Correct import path relative to app execution context
-    try:
-        from app.scripts.export_graph_data import GraphExporter
-    except ImportError:
-        # Fallback for direct script execution or different python path
-        import sys
-
-        sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
-        from backend.scripts.export_graph_data import GraphExporter
+    # 正确导入路径，相对于应用执行上下文
+    from app.scripts.export_graph_data import GraphExporter
 
     # Create temp config file
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as tmp:

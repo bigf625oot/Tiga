@@ -1,3 +1,20 @@
+"""
+Relation Fix Endpoint
+前端接口：
+- HTTP POST `/relation_fix/detect/` 接口作用：检测缺失关系
+- HTTP POST `/relation_fix/fix/` 接口作用：修复缺失关系
+- HTTP POST `/relation_fix/create/` 接口作用：创建新关系
+- HTTP POST `/relation_fix/delete/` 接口作用：删除关系
+- HTTP POST `/relation_fix/restore/` 接口作用：恢复关系
+前端功能：
+- 管理和修复节点之间的关系
+- 支持检测缺失关系、批量修复、创建新关系、删除关系和恢复关系
+前端文件：
+- `app/frontend/src/pages/RelationFix.vue`
+功能模块：
+- 关系修复管理
+"""
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional

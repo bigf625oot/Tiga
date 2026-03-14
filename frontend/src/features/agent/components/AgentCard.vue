@@ -1,6 +1,11 @@
 <template>
   <Card 
-    class="group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 bg-card/50 hover:bg-card hover:-translate-y-1" 
+    class="group relative overflow-hidden transition-all duration-300 cursor-pointer flex flex-col h-full min-h-[180px]" 
+    :class="[
+      selected 
+        ? 'border-primary shadow-md bg-primary/5 ring-1 ring-primary' 
+        : 'border-muted hover:shadow-lg hover:border-primary/40 bg-gradient-to-br from-card to-muted/10 hover:-translate-y-1'
+    ]"
     @click="$emit('click', agent)"
   >
     <!-- Background Gradient for Templates -->
@@ -11,24 +16,24 @@
         <div class="flex items-center gap-4 w-full overflow-hidden">
            <!-- Icon -->
            <div 
-             class="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-border/50 shadow-sm transition-all group-hover:scale-105 group-hover:shadow-md"
-             :class="isTemplate ? 'bg-gradient-to-br from-muted/50 to-muted' : 'bg-white dark:bg-slate-800'"
+             class="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden  transition-all"
+             :class="isTemplate ? 'bg-gradient-to-br from-muted/50 to-muted' : 'bg-white dark:bg-transparent'"
            >
                <img v-if="isImage" :src="agent.icon" class="h-full w-full object-cover" />
                <component v-else :is="agent.iconComponent" class="h-6 w-6 text-foreground/80" />
            </div>
            
-           <div class="space-y-1.5 flex-1 min-w-0">
+           <div class="space-y-1.5 flex-1 min-w-0 relative">
               <div class="flex items-center justify-between">
-                <CardTitle class="text-base font-bold leading-tight tracking-tight truncate pr-2" :title="agent.name">
+                <CardTitle class="text-base font-bold leading-tight tracking-tight truncate pr-8" :title="agent.name">
                     {{ agent.name }}
                 </CardTitle>
                 
                 <!-- Actions (Dropdown) -->
-                <div v-if="!isTemplate" @click.stop class="opacity-0 group-hover:opacity-100 transition-opacity -mr-2">
+                <div v-if="!isTemplate" @click.stop class="absolute right-[-8px] top-[-4px] opacity-0 group-hover:opacity-100 transition-opacity z-20">
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
-                            <Button variant="ghost" size="icon" class="h-7 w-7">
+                            <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted/80">
                                 <MoreVertical class="h-4 w-4 text-muted-foreground" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -99,6 +104,10 @@ const props = defineProps({
   agent: {
     type: Object,
     required: true
+  },
+  selected: {
+    type: Boolean,
+    default: false
   }
 });
 

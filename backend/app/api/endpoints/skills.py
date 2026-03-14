@@ -1,3 +1,20 @@
+"""
+Skills Endpoint
+前端接口：
+- HTTP POST `/skills/` 接口作用：创建新技能
+- HTTP GET `/skills/` 接口作用：获取所有技能
+- HTTP GET `/skills/{skill_id}` 接口作用：获取指定技能详情
+- HTTP PUT `/skills/{skill_id}` 接口作用：更新指定技能
+- HTTP DELETE `/skills/{skill_id}` 接口作用：删除指定技能
+前端功能：
+- 管理和配置技能
+- 支持技能的查询、创建、更新和删除
+前端文件：
+- `app/frontend/src/pages/Skills.vue`
+功能模块：
+- 技能管理
+"""
+
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query

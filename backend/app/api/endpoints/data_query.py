@@ -1,3 +1,20 @@
+"""
+Data Query Endpoint
+前端接口：
+- HTTP POST `/data_query/`  接口作用：执行数据库查询
+- HTTP GET `/data_query/` 接口作用：获取所有查询会话
+- HTTP GET `/data_query/{query_id}` 接口作用：获取指定查询会话详情
+- HTTP PUT `/data_query/{query_id}` 接口作用：更新指定查询会话
+- HTTP DELETE `/data_query/{query_id}` 接口作用：删除指定查询会话
+前端功能：
+- 执行数据库查询
+- 支持参数化查询
+- 提供查询结果和执行日志
+前端文件：
+- `app/frontend/src/pages/DataQuery.vue`
+功能模块：
+- 数据查询管理
+"""
 import json
 import logging
 import os

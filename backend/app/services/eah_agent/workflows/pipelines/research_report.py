@@ -4,9 +4,9 @@
 
 from typing import AsyncGenerator, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.eah_agent.workflow.base import EAHWorkflow
-from app.services.eah_agent.workflow.schemas.research_flow import ResearchFlowState
-from app.services.eah_agent.workflow.helpers import format_workflow_event, persist_workflow_state
+from app.services.eah_agent.workflows.base import EAHWorkflow
+from app.services.eah_agent.workflows.schemas.research_flow import ResearchFlowState
+from app.services.eah_agent.workflows.helpers import format_workflow_event, persist_workflow_state
 from app.services.eah_agent.core.agent_manager import agent_manager
 
 class ResearchReportWorkflow(EAHWorkflow):

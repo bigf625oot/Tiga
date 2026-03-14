@@ -1,3 +1,17 @@
+"""
+Agent Workflow Endpoint
+前端接口：
+- HTTP POST `/agent_workflow/` 
+- HTTP GET `/agent_workflow/`
+- HTTP GET `/agent_workflow/{workflow_id}`
+- HTTP PUT `/agent_workflow/{workflow_id}`
+- HTTP DELETE `/agent_workflow/{workflow_id}`
+前端
+功能：
+- 管理和执行智能体工作流
+- 支持创建、更新、查询和删除工作流
+- 提供实时的工作流执行状态和日志
+"""
 from typing import Any, Dict, Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -97,7 +111,7 @@ async def run_workflow(request: WorkflowRunRequest, db: AsyncSession = Depends(g
         history_msgs = await crud_chat.get_history(db, request.session_id)
         history = [{"role": m.role, "content": m.content} for m in history_msgs]
         
-        executor = get_executor(request.mode, request.session_id)
+        executor = get_executor(request.mode, request.session_id, db)
         result = await executor.execute(
             message=request.message,
             agent_id=request.agent_id,
@@ -123,7 +137,7 @@ async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = De
         history_msgs = await crud_chat.get_history(db, request.session_id)
         history = [{"role": m.role, "content": m.content} for m in history_msgs]
         
-        executor = get_executor(request.mode, request.session_id)
+        executor = get_executor(request.mode, request.session_id, db)
         
         # 执行工作流并返回流式事件
         async def event_generator():

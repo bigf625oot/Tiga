@@ -1,3 +1,16 @@
+"""
+Metrics Tool Endpoint
+前端接口：
+- HTTP POST `/metrics_tool/parse_doc/` 接口作用：解析上传的文档
+- HTTP POST `/metrics_tool/parse_knowledge_doc/` 接口作用：解析知识库文档
+前端功能：
+- 解析上传的文档内容
+- 解析知识库文档内容
+前端文件：
+- `app/frontend/src/pages/MetricsTool.vue`
+功能模块：
+- 指标工具管理
+"""
 from typing import List, Optional
 
 import requests

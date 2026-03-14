@@ -1,3 +1,19 @@
+"""
+Teams Endpoint
+前端接口：
+- HTTP GET `/teams/` 接口作用：获取所有团队
+- HTTP POST `/teams/` 接口作用：创建新团队
+- HTTP GET `/teams/{team_id}` 接口作用：获取指定团队详情
+- HTTP PUT `/teams/{team_id}` 接口作用：更新指定团队
+- HTTP DELETE `/teams/{team_id}` 接口作用：删除指定团队
+前端功能：
+- 管理和配置团队
+- 支持团队的查询、创建、更新和删除
+前端文件：
+- `app/frontend/src/pages/Teams.vue`
+功能模块：
+- 团队管理
+"""
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession

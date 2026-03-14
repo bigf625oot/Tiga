@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+from typing import List, Dict, Any, Optional
 
 import docx
 import pypdf
@@ -40,10 +41,24 @@ def is_text_valid(text: str) -> bool:
 def parse_local_file(file_path: str) -> str:
     """
     Parse a local file and return text content.
+    Wrapper around parse_local_file_chunks for backward compatibility.
+    """
+    chunks = parse_local_file_chunks(file_path)
+    full_text = "\n".join([c.get("text", "") for c in chunks])
+    
+    # Add markdown formatting if needed (compatibility)
+    filename = os.path.basename(file_path).lower()
+    full_text = to_markdown(full_text, {"source": "local", "title": os.path.splitext(os.path.basename(file_path))[0]})
+    return full_text
+
+def parse_local_file_chunks(file_path: str) -> List[Dict[str, Any]]:
+    """
+    Parse a local file and return a list of page/chunk dictionaries.
+    Returns: [{"page": 1, "text": "..."}, ...]
     """
     filename = os.path.basename(file_path).lower()
-    logger.info(f"Parsing local file: {file_path}")
-    text = ""
+    logger.info(f"Parsing local file chunks: {file_path}")
+    results = []
 
     try:
         if filename.endswith(".pdf"):
@@ -52,93 +67,92 @@ def parse_local_file(file_path: str) -> str:
             # 1) PyMuPDF
             try:
                 import fitz
-
                 doc = fitz.open(file_path)
                 try:
-                    parts = []
                     for i in range(doc.page_count):
                         p = doc.load_page(i)
-                        parts.append(p.get_text("text") or "")
-                    text = "\n".join(parts)
-                    if is_text_valid(text):
+                        text = p.get_text("text") or ""
+                        if text.strip():
+                            results.append({"page": i + 1, "text": sanitize_text(text)})
+                    if results:
                         parsed = True
                         logger.info(f"PyMuPDF parsed successfully. Pages: {doc.page_count}")
-                    else:
-                        logger.warning("PyMuPDF parsed text invalid (garbled), falling back...")
-                        text = ""
                 finally:
                     doc.close()
             except Exception as e1:
                 logger.warning(f"PyMuPDF parse failed: {e1}")
+            
             # 2) pdfplumber
             if not parsed:
                 try:
                     import pdfplumber
-
-                    parts = []
                     with pdfplumber.open(file_path) as pdf:
-                        for page in pdf.pages:
-                            parts.append(page.extract_text() or "")
-                    text = "\n".join(parts)
-                    if is_text_valid(text):
+                        for i, page in enumerate(pdf.pages):
+                            text = page.extract_text() or ""
+                            if text.strip():
+                                results.append({"page": i + 1, "text": sanitize_text(text)})
+                    if results:
                         parsed = True
-                        logger.info(f"pdfplumber parsed successfully. Pages: {len(parts)}")
-                    else:
-                        logger.warning("pdfplumber parsed text invalid (garbled), falling back...")
-                        text = ""
+                        logger.info(f"pdfplumber parsed successfully. Pages: {len(results)}")
                 except Exception as e2:
                     logger.warning(f"pdfplumber parse failed: {e2}")
+            
             # 3) pypdf
             if not parsed:
                 try:
                     with open(file_path, "rb") as f:
                         reader = pypdf.PdfReader(f)
-                        parts = []
                         for i, page in enumerate(reader.pages):
                             try:
-                                parts.append(page.extract_text() or "")
+                                text = page.extract_text() or ""
+                                if text.strip():
+                                    results.append({"page": i + 1, "text": sanitize_text(text)})
                             except Exception:
-                                parts.append("")
-                        text = "\n".join(parts)
-                    if is_text_valid(text):
+                                pass
+                    if results:
                         parsed = True
-                        logger.info(f"pypdf parsed successfully. Pages: {len(parts)}")
-                    else:
-                        logger.warning("pypdf parsed text invalid (garbled), falling back...")
-                        text = ""
+                        logger.info(f"pypdf parsed successfully. Pages: {len(results)}")
                 except Exception as e3:
                     logger.warning(f"pypdf parse failed: {e3}")
 
             # OCR Fallback
-            if not parsed or (settings and getattr(settings, "OCR_ENABLED", False) and not (text or "").strip()):
+            if not parsed or (settings and getattr(settings, "OCR_ENABLED", False) and not results):
                 try:
                     import fitz
                     import pytesseract
-
+                    
+                    # Clear partial results
+                    results = []
+                    
                     doc = fitz.open(file_path)
                     try:
-                        parts = []
                         for i in range(doc.page_count):
                             p = doc.load_page(i)
                             pm = p.get_pixmap()
                             img_bytes = pm.tobytes("png")
                             img = Image.open(io.BytesIO(img_bytes))
-                            parts.append(pytesseract.image_to_string(img))
-                        text = "\n".join(parts)
+                            text = pytesseract.image_to_string(img)
+                            if text.strip():
+                                results.append({"page": i + 1, "text": sanitize_text(text)})
                         logger.info(f"OCR parsed successfully. Pages: {doc.page_count}")
                     finally:
                         doc.close()
                 except Exception as eocr:
                     logger.warning(f"OCR parse failed: {eocr}")
+
         elif filename.endswith(".docx"):
             logger.info("Parsing DOCX file...")
             doc = docx.Document(file_path)
+            # DOCX doesn't have strict pages, treat as page 1
+            text = ""
             for para in doc.paragraphs:
                 text += para.text + "\n"
+            results.append({"page": 1, "text": sanitize_text(text)})
             logger.info(f"DOCX parsed successfully. Paragraphs: {len(doc.paragraphs)}")
         else:
             # Try plain text
             logger.info("Parsing plain text file...")
+            text = ""
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     text = f.read()
@@ -148,14 +162,13 @@ def parse_local_file(file_path: str) -> str:
                         text = f.read()
                 except:
                     pass
+            results.append({"page": 1, "text": sanitize_text(text)})
             logger.info("Plain text parsed.")
 
-        text = sanitize_text(text.strip())
-        text = to_markdown(text, {"source": "local", "title": os.path.splitext(os.path.basename(file_path))[0]})
-        return text
+        return results
     except Exception as e:
         logger.error(f"Error parsing local file {file_path}: {e}")
-        return ""
+        return []
 
 
 def sanitize_text(text: str) -> str:

@@ -3,10 +3,10 @@ import json
 import logging
 from typing import Any, Dict, List, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.eah_agent.workflow.base import EAHWorkflow
-from app.services.eah_agent.workflow.schemas.dynamic_flow import DynamicFlowState, WorkflowNode
+from app.services.eah_agent.workflows.base import EAHWorkflow
+from app.services.eah_agent.workflows.schemas.dynamic_flow import DynamicFlowState, WorkflowNode
 from app.services.eah_agent.core.agent_manager import agent_manager
-from app.services.eah_agent.workflow.helpers import format_workflow_event, persist_workflow_state
+from app.services.eah_agent.workflows.helpers import format_workflow_event, persist_workflow_state
 
 logger = logging.getLogger(__name__)
 

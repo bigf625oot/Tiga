@@ -156,6 +156,13 @@ class AgentBuilder:
         if (knowledge_config or has_documents):
              self.instruction_builder.add_knowledge_capabilities()
 
+        # Chain of Thought
+        enable_cot = getattr(self.agent_model, "enable_cot", None)
+        # Default to True if not set? Or False?
+        # Let's say if not set, check if model is not reasoning model.
+        if enable_cot:
+            self.instruction_builder.add_cot_prompt()
+
     async def build(self, session_id: str = None, enable_search: bool = True) -> AgnoAgent:
         """
         Build and return the AgnoAgent instance.
@@ -173,7 +180,14 @@ class AgentBuilder:
         
         # 4. Create Model Instance
         model = ModelFactory.create_model(self.llm_model)
-        is_reasoning = ModelFactory.should_use_agno_reasoning(self.llm_model)
+        
+        # Determine reasoning mode
+        # Priority: Agent Config > Model Factory Heuristic
+        enable_react = getattr(self.agent_model, "enable_react", None)
+        if enable_react is not None:
+            is_reasoning = enable_react
+        else:
+            is_reasoning = ModelFactory.should_use_agno_reasoning(self.llm_model)
         
         model_config = getattr(self.agent_model, "model_config", {}) or {}
         show_tool_calls = model_config.get("show_tool_calls", False)

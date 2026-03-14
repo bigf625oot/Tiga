@@ -1,3 +1,17 @@
+"""
+Tools Endpoint
+前端接口：
+- HTTP GET `/tools/available` 接口作用：获取所有可用工具
+- HTTP POST `/tools/{tool_id}/invoke` 接口作用：调用指定工具
+- HTTP GET `/tools/{tool_id}/config` 接口作用：获取指定工具配置
+前端功能：
+- 管理和配置工具
+- 支持工具的查询、调用和配置
+前端文件：
+- `app/frontend/src/pages/Tools.vue`
+功能模块：
+- 工具管理
+"""
 from fastapi import APIRouter, Depends
 from app.api import deps
 from app.models.user_tool import UserTool

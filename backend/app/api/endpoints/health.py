@@ -1,3 +1,16 @@
+"""
+Health Check Endpoint
+前端接口：
+- HTTP GET `/health/` 接口作用：检查应用健康状态
+- HTTP GET `/health/retrieval` 接口作用：检查检索系统健康状态
+前端功能：
+- 提供应用和检索系统的健康状态检查
+- 支持不同类型的健康检查（如数据库连接、服务可用性等）
+前端文件：
+- `app/frontend/src/pages/Health.vue`
+功能模块：
+- 健康状态检查
+"""
 from typing import Any, Dict
 import time
 

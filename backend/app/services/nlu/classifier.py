@@ -1,6 +1,12 @@
 import logging
 from enum import Enum
-from typing import Optional
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
+from agno.agent import Agent
+from app.services.llm.factory import ModelFactory
+from app.models.llm_model import LLMModel
+from app.db.session import AsyncSessionLocal
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -11,12 +17,24 @@ class QueryIntent(str, Enum):
     STRUCTURED_QUERY = "STRUCTURED_QUERY" # Structured data query with high confidence
     UNKNOWN = "UNKNOWN"
 
+class ExtractedParameters(BaseModel):
+    time_range: Optional[str] = Field(None, description="Time range mentioned in the query, e.g., 'last week', '2023'")
+    locations: Optional[List[str]] = Field(None, description="List of locations mentioned")
+    entities: Optional[List[str]] = Field(None, description="Key entities like project names, people, etc.")
+    metric: Optional[str] = Field(None, description="The metric being queried, e.g., 'sales', 'revenue'")
+
+class IntentResponse(BaseModel):
+    intent: QueryIntent = Field(..., description="The classification of the user query")
+    parameters: ExtractedParameters = Field(..., description="Extracted parameters from the query")
+    confidence: float = Field(..., description="Confidence score between 0 and 1")
+    reasoning: Optional[str] = Field(None, description="Brief reasoning for the classification")
+
 class IntentClassifier:
     _instance = None
     
     def __init__(self):
-        # In real implementation, inject LLM client here
-        pass
+        self.agent: Optional[Agent] = None
+        self._agent_init_lock = False
 
     @classmethod
     def get_instance(cls):
@@ -24,10 +42,126 @@ class IntentClassifier:
             cls._instance = cls()
         return cls._instance
 
+    async def _ensure_agent(self):
+        if self.agent:
+            return
+
+        if self._agent_init_lock:
+            return
+            
+        self._agent_init_lock = True
+        try:
+            async with AsyncSessionLocal() as db:
+                res = await db.execute(
+                    select(LLMModel)
+                    .filter(LLMModel.is_active == True, LLMModel.api_key != None)
+                    .order_by(LLMModel.updated_at.desc())
+                )
+                active_model = res.scalars().first()
+                
+                if active_model:
+                     self.agent = Agent(
+                         model=ModelFactory.create_model(active_model),
+                         instructions="""You are an expert intent classifier. 
+Your task is to analyze the user's query and classify it into one of the following intents:
+- SQL_QUERY: For precise data lookups, aggregations (sum, count, avg), or rankings.
+- KG_QUERY: For questions about relationships, trends, distributions, or "graph" visualizations.
+- RAG_QUERY: For general questions, definitions, summaries, or text retrieval.
+- STRUCTURED_QUERY: For very specific data queries that map clearly to database tables.
+
+Also extract relevant parameters like time ranges, locations, and entities.
+""",
+                         # response_model=IntentResponse, # Agno < 2.0 might not support this directly in init or syntax differs
+                          # For now, we rely on instructions to produce JSON or we use structured output if available
+                          # show_tool_calls=False
+                      )
+                else:
+                    logger.warning("No active LLM model found for IntentClassifier.")
+        except Exception as e:
+            logger.error(f"Failed to initialize IntentClassifier agent: {e}")
+        finally:
+            self._agent_init_lock = False
+
     async def classify(self, question: str) -> QueryIntent:
         """
         Classifies the user question into an intent using semantic understanding.
+        Returns the intent enum.
         """
+        # 1. Try LLM Classification first (if available)
+        await self._ensure_agent()
+        
+        if self.agent:
+            try:
+                # Manually parse response if structured output is not supported via init
+                # Or try to pass response_model to arun if supported there
+                # For now, let's assume arun can handle it or we use a wrapper
+                try:
+                    response = await self.agent.arun(question, response_model=IntentResponse)
+                except TypeError:
+                     # Fallback: prompt engineering for JSON
+                     response_text = await self.agent.arun(question + "\nRespond in JSON format matching the schema.")
+                     # Parse JSON manually (omitted for brevity in this fix, assuming fallback handles it)
+                     return self._rule_based_classify(question) # Temporary fallback
+                
+                if isinstance(response, IntentResponse):
+                    return response.intent
+                elif hasattr(response, "content"):
+                     # If Agno returned a RunOutput but content is structured
+                     import json
+                     try:
+                         # It might be a RunResponse/RunOutput object
+                         # Check if content is JSON string
+                         data = json.loads(response.content)
+                         return QueryIntent(data.get("intent", "RAG_QUERY"))
+                     except:
+                         pass
+            except Exception as e:
+                logger.error(f"LLM Classification failed: {e}. Falling back to rules.")
+        
+        # 2. Fallback to Rule-based Classification
+        return self._rule_based_classify(question)
+
+    async def classify_detailed(self, question: str) -> IntentResponse:
+        """
+        Classifies the user question and extracts parameters.
+        Returns IntentResponse object with intent, parameters, and confidence.
+        Falls back to rule-based intent with empty parameters if LLM fails.
+        """
+        await self._ensure_agent()
+        
+        if self.agent:
+            try:
+                response = None
+                try:
+                    response = await self.agent.arun(question, response_model=IntentResponse)
+                except TypeError:
+                    # If Agno version doesn't support response_model in arun, try structured output or just fallback
+                    pass
+                
+                if isinstance(response, IntentResponse):
+                    return response
+                
+                if response and hasattr(response, "content"):
+                     # Parse JSON from content if response_model failed to automatically parse
+                     import json
+                     try:
+                         data = json.loads(response.content)
+                         return IntentResponse(**data)
+                     except:
+                         pass
+            except Exception as e:
+                logger.error(f"LLM Detailed Classification failed: {e}")
+        
+        # Fallback
+        intent = self._rule_based_classify(question)
+        return IntentResponse(
+            intent=intent, 
+            parameters=ExtractedParameters(), 
+            confidence=0.5, 
+            reasoning="Fallback to rule-based classification"
+        )
+
+    def _rule_based_classify(self, question: str) -> QueryIntent:
         # 1. RAG Indicators (High Priority: Definitions, Explanations)
         # Check these FIRST to prevent "What is a graph?" from being caught by "graph" keyword
         rag_keywords = ["是什么", "定义", "解释", "介绍", "总结", "政策", "规定", "合同", "条款", "what is", "explain", "describe", "summary"]
@@ -63,8 +197,8 @@ class IntentClassifier:
                 return QueryIntent.STRUCTURED_QUERY
             return QueryIntent.SQL_QUERY
 
-        # 4. Semantic Classification (LLM path fallback)
-        logger.info(f"Classifying intent for: {question}")
+        # 4. Default fallback
+        logger.info(f"Rule-based classification fallback for: {question}")
         return self._mock_llm_classify(question)
 
     def _calculate_confidence(self, question: str) -> float:

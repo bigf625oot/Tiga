@@ -1,3 +1,19 @@
+"""
+LLM Model Endpoint
+前端接口：
+- HTTP POST `/llm/models/` 接口作用：创建新的LLM模型
+- HTTP GET `/llm/models/` 接口作用：获取所有LLM模型
+- HTTP GET `/llm/models/{model_id}` 接口作用：获取指定LLM模型详情
+- HTTP PATCH `/llm/models/{model_id}` 接口作用：更新指定LLM模型
+- HTTP DELETE `/llm/models/{model_id}` 接口作用：删除指定LLM模型
+前端功能：
+- 管理和配置LLM模型
+- 支持模型的创建、更新、删除和查询
+前端文件：
+- `app/frontend/src/pages/LLMModels.vue`
+功能模块：
+- LLM模型管理
+"""
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException

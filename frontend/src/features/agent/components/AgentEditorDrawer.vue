@@ -59,6 +59,26 @@
                                         class="h-8 text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
                                     </div>
 
+                                    <!-- Category -->
+                                    <div class="grid gap-1.5">
+                                        <div class="flex justify-between items-center">
+                                            <Label for="category" class="text-xs font-medium">分类</Label>
+                                        </div>
+                                        <Select v-model="form.category" :disabled="isReadOnly">
+                                            <SelectTrigger id="category" class="h-8 text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all">
+                                                <SelectValue placeholder="选择分类..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="通用助手">通用助手</SelectItem>
+                                                <SelectItem value="企业办公">企业办公</SelectItem>
+                                                <SelectItem value="数据分析">数据分析</SelectItem>
+                                                <SelectItem value="内容创作">内容创作</SelectItem>
+                                                <SelectItem value="我的助手">我的助手</SelectItem>
+                                                <SelectItem value="其他">其他</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
                                     <!-- Description -->
                                     <div class="grid gap-1.5">
                                         <div class="flex justify-between items-center">
@@ -72,6 +92,41 @@
                             </div>
                         </Card>
 
+                        <Card class="p-4 border-border/40 shadow-sm bg-muted/5 shrink-0 flex flex-col gap-3">
+                            <div class="flex items-center gap-2 border-b border-border/40 pb-2">
+                                <div class="p-1 bg-purple-100/50 text-purple-600 rounded-md">
+                                    <Eye class="w-3.5 h-3.5" />
+                                </div>
+                                <h4 class="font-semibold text-sm text-foreground">发布与可见性</h4>
+                            </div>
+
+                            <div class="flex items-start justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-background transition-all">
+                                <div class="space-y-1 pr-4">
+                                    <div class="flex items-center gap-2">
+                                        <Label class="text-sm font-medium cursor-pointer text-foreground" for="is-template">发布为模版</Label>
+                                        <Badge v-if="form.is_template" variant="secondary" class="text-[10px] h-4 px-1 bg-purple-50 text-purple-700 border-purple-200">已发布</Badge>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-[11px] text-muted-foreground leading-snug">
+                                            发布后，该智能体会显示在“发现模版”中，供他人复制使用（保存后生效）。
+                                        </p>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                    <HelpCircle class="w-3 h-3 text-muted-foreground/60" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p class="text-xs">发布为模版会改变展示位置；如需编辑，请在“自定义智能体”中打开。</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                </div>
+                                <Switch id="is-template" :disabled="isReadOnly" :checked="form.is_template" @update:checked="(val) => form.is_template = val"
+                                    class="data-[state=checked]:bg-purple-500 hover:data-[state=checked]:bg-purple-600 transition-all shadow-sm mt-0.5" />
+                            </div>
+                        </Card>
+
                         <!-- Model Configuration Section -->
                         <Card class="p-4 border-border/40 shadow-sm bg-muted/5 shrink-0 flex flex-col gap-3">
                             <div class="flex items-center gap-2 border-b border-border/40 pb-2">
@@ -81,12 +136,12 @@
                                 <h4 class="font-semibold text-sm text-foreground">模型配置</h4>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 gap-4">
                                 <!-- Model Select -->
-                                <div class="col-span-1 grid gap-1.5">
-                                    <Label class="text-xs font-medium">基座模型</Label>
+                                <div class="grid gap-2">
+                                    <Label class="text-xs font-medium text-muted-foreground">基座模型</Label>
                                     <Select v-model="form.model_config.model_id" :disabled="isReadOnly">
-                                        <SelectTrigger class="h-8 text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all">
+                                        <SelectTrigger class="h-9 text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all">
                                             <SelectValue placeholder="选择模型..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -105,14 +160,45 @@
                                     </Select>
                                 </div>
 
-                                <!-- Reasoning Switch -->
-                                <div class="col-span-1 flex flex-col justify-end pb-1.5">
-                                    <div class="flex items-center gap-2">
+                                <!-- Reasoning Capabilities -->
+                                <div class="grid gap-3 pt-1">
+                                    <Label class="text-xs font-medium text-muted-foreground">思考能力配置</Label>
+                                    
+                                    <!-- ReAct Card -->
+                                    <div class="flex items-start justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-background transition-all group/react">
+                                        <div class="flex gap-3">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2">
+                                                    <Label class="text-sm font-medium cursor-pointer text-foreground" for="react-mode">任务规划与执行 (ReAct)</Label>
+                                                    <Badge v-if="form.enable_react" variant="secondary" class="text-[10px] h-4 px-1 bg-green-50 text-green-700 border-green-200">已开启</Badge>
+                                                </div>
+                                                <p class="text-[11px] text-muted-foreground leading-snug max-w-[320px]">
+                                                    允许智能体将复杂问题拆解为步骤，并自主调用工具完成目标。
+                                                    <span class="text-amber-600 block mt-0.5" v-if="!form.enable_react && form.tools_config.length > 0">
+                                                        <AlertCircle class="w-3 h-3 inline mr-0.5 -mt-0.5" />
+                                                        注意：关闭后智能体将无法主动使用已配置的工具。
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Switch id="react-mode" :disabled="isReadOnly" :checked="form.enable_react" @update:checked="(val) => form.enable_react = val" 
+                                            class="data-[state=checked]:bg-green-500 ml-2" />
+                                    </div>
+
+                                    <!-- CoT Card -->
+                                    <div class="flex items-start justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-background transition-all group/cot">
+                                        <div class="flex gap-3">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2">
+                                                    <Label class="text-sm font-medium cursor-pointer text-foreground" for="reasoning">深度思维链 (Chain of Thought)</Label>
+                                                </div>
+                                                <p class="text-[11px] text-muted-foreground leading-snug max-w-[320px]">
+                                                    强制模型在回答前进行逐步逻辑推导。能显著提升复杂问题的准确率，但会增加响应耗时。
+                                                </p>
+                                            </div>
+                                        </div>
                                         <Switch id="reasoning" :disabled="isReadOnly" :checked="form.model_config.reasoning" @update:checked="(val) => form.model_config.reasoning = val" 
-                                            class="scale-75 origin-left data-[state=checked]:bg-blue-500 hover:data-[state=checked]:bg-blue-600 transition-all shadow-sm" />
-                                        <Label for="reasoning" class="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none flex items-center gap-1.5">
-                                            启用推理模式 (Chain of Thought)
-                                        </Label>
+                                            class="data-[state=checked]:bg-blue-500 ml-2" />
                                     </div>
                                 </div>
                             </div>
@@ -281,7 +367,7 @@
                                             <div class="grid gap-3">
                                                 <div v-for="(prop, key) in tool.config_schema.properties" :key="key" class="grid gap-1.5">
                                                     <Label :for="`${tool.value}-${key}`" class="text-xs text-muted-foreground font-normal">
-                                                        {{ prop.title || key }} 
+                                                        {{ prop.title || getToolConfigLabel(key) }} 
                                                         <span v-if="tool.config_schema.required?.includes(key)" class="text-red-500">*</span>
                                                     </Label>
                                                     
@@ -290,7 +376,7 @@
                                                         :id="`${tool.value}-${key}`" 
                                                         :value="getToolConfigValue(tool.value, key) || prop.default || ''"
                                                         @input="e => updateToolConfig(tool.value, key, e.target.value)"
-                                                        :placeholder="prop.description || ''"
+                                                        :placeholder="getToolConfigPlaceholder(key, prop)"
                                                         class="h-7 text-xs bg-muted/20 border-border/30 focus:bg-white" />
                                                     
                                                     <!-- Boolean Switch -->
@@ -307,7 +393,7 @@
                                                         :id="`${tool.value}-${key}`" 
                                                         :value="getToolConfigValue(tool.value, key) ?? prop.default"
                                                         @input="e => updateToolConfig(tool.value, key, Number(e.target.value))"
-                                                        :placeholder="prop.description || ''"
+                                                        :placeholder="getToolConfigPlaceholder(key, prop)"
                                                         class="h-7 text-xs bg-muted/20 border-border/30 focus:bg-white" />
                                                 </div>
                                             </div>
@@ -386,14 +472,14 @@
                                                 <div class="absolute inset-y-0 left-2 flex items-center pointer-events-none opacity-50">
                                                     <span class="text-xs font-mono text-muted-foreground">>_</span>
                                                 </div>
-                                                <Input v-model="mcp.command" class="font-mono text-xs h-7 pl-6 bg-muted/20 border-border/20 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" placeholder="Enter command or URL..." />
+                                                <Input v-model="mcp.command" class="font-mono text-xs h-7 pl-6 bg-muted/20 border-border/20 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" placeholder="请输入命令或 URL 地址..." />
                                             </div>
                                         </div>
                                         
                                         <!-- Args Row -->
                                         <div class="flex items-center gap-2">
                                             <div class="w-16 shrink-0 text-xs text-muted-foreground font-medium text-right">参数</div>
-                                            <Input v-model="mcp.args" class="flex-1 font-mono text-xs h-7 bg-muted/20 border-border/20 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" placeholder='["arg1", "arg2"]' />
+                                            <Input v-model="mcp.args" class="flex-1 font-mono text-xs h-7 bg-muted/20 border-border/20 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" placeholder='例如：["arg1", "arg2"]' />
                                         </div>
                                     </div>
 
@@ -714,7 +800,7 @@ import {
     X, Save, Upload, Download, Plus, Trash2, Settings2, Database, Wrench, 
     FileText, Bot, ChevronRight, Search, Check, AlertCircle, Loader2,
     MessageSquareCode, Cpu, Server, Blocks, ShoppingBag,
-    Sparkles, Copy, Wand2, Info, HelpCircle, Filter, Terminal
+    Eye, Copy, Wand2, Info, HelpCircle, Filter, Terminal
 } from 'lucide-vue-next';
 
 // Shadcn Components
@@ -920,13 +1006,17 @@ const form = ref({
     name: '',
     description: '',
     icon: '/tiga.svg',
+    category: '其他',
     system_prompt: '',
+    is_template: false, // Default not a template
+    enable_react: true, // Default ReAct
     model_config: { model_id: '', reasoning: false, show_tool_calls: false },
     tools_config: [],
     mcp_config: [],
     skills_config: defaultSkillsConfig,
     knowledge_config: { document_ids: [], strict_only: false }
 });
+const initialIsTemplate = ref(false);
 
 const activeAgentId = computed(() => form.value.id || '');
 const selectedCategory = ref('全部');
@@ -962,6 +1052,618 @@ const getCategoryCount = (cat) => {
         return skillTools.value.length;
     }
     return defaultTools.value.filter(t => (t.category || '未分类') === cat).length;
+};
+
+const getToolConfigLabel = (key, title) => {
+    const map = {
+        'api_key': 'API 密钥',
+        'timeout': '超时时间 (秒)',
+        'max_results': '最大结果数',
+        'language': '语言',
+        'region': '地区',
+        'base_url': 'API 地址',
+        'server_url': '服务器地址',
+        'model': '模型名称',
+        'temperature': '温度系数',
+        'top_p': 'Top P',
+        'user_id': '用户 ID',
+        'username': '用户名',
+        'password': '密码',
+        'token': '访问令牌 (Token)',
+        'auth_token': '认证令牌',
+        'api_token': 'API 令牌',
+        'email': '邮箱',
+        'host': '主机地址',
+        'port': '端口',
+        'database': '数据库名',
+        'project_id': '项目 ID',
+        'org_id': '组织 ID',
+        'client_id': '客户端 ID',
+        'client_secret': '客户端密钥',
+        'redirect_uri': '重定向地址',
+        'scope': '权限范围',
+        'domain': '域名',
+        'path': '路径',
+        'method': '方法',
+        'headers': '请求头',
+        'body': '请求体',
+        'query': '查询参数',
+        'limit': '限制数量',
+        'offset': '偏移量',
+        'page': '页码',
+        'per_page': '每页数量',
+        'sort': '排序字段',
+        'order': '排序方式',
+        'filter': '过滤条件',
+        'search': '搜索关键字',
+        'q': '查询词',
+        'id': 'ID',
+        'name': '名称',
+        'description': '描述',
+        'type': '类型',
+        'status': '状态',
+        'created_at': '创建时间',
+        'updated_at': '更新时间',
+        'deleted_at': '删除时间',
+        'is_active': '是否启用',
+        'is_public': '是否公开',
+        'is_official': '是否官方',
+        'tags': '标签',
+        'category': '分类',
+        'icon': '图标',
+        'color': '颜色',
+        'avatar': '头像',
+        'url': '链接',
+        'link': '链接',
+        'image': '图片',
+        'file': '文件',
+        'content': '内容',
+        'title': '标题',
+        'summary': '摘要',
+        'author': '作者',
+        'version': '版本',
+        'source': '来源',
+        'target': '目标',
+        'context': '上下文',
+        'prompt': '提示词',
+        'response': '回复',
+        'result': '结果',
+        'error': '错误',
+        'message': '消息',
+        'code': '代码',
+        'data': '数据',
+        'meta': '元数据',
+        'config': '配置',
+        'settings': '设置',
+        'options': '选项',
+        'params': '参数',
+        'args': '参数',
+        'kwargs': '关键字参数',
+        'env': '环境',
+        'debug': '调试模式',
+        'verbose': '详细模式',
+        'dry_run': '试运行',
+        'force': '强制执行',
+        'confirm': '确认',
+        'cancel': '取消',
+        'submit': '提交',
+        'save': '保存',
+        'delete': '删除',
+        'edit': '编辑',
+        'create': '创建',
+        'update': '更新',
+        'list': '列表',
+        'show': '显示',
+        'hide': '隐藏',
+        'enable': '启用',
+        'disable': '禁用',
+        'start': '开始',
+        'stop': '停止',
+        'restart': '重启',
+        'pause': '暂停',
+        'resume': '恢复',
+        'upload': '上传',
+        'download': '下载',
+        'import': '导入',
+        'export': '导出',
+        'login': '登录',
+        'logout': '登出',
+        'register': '注册',
+        'reset': '重置',
+        'search': '搜索',
+        'filter': '过滤',
+        'sort': '排序',
+        'group': '分组',
+        'view': '视图',
+        'preview': '预览',
+        'print': '打印',
+        'share': '分享',
+        'copy': '复制',
+        'paste': '粘贴',
+        'cut': '剪切',
+        'select': '选择',
+        'check': '检查',
+        'verify': '验证',
+        'validate': '校验',
+        'test': '测试',
+        'run': '运行',
+        'execute': '执行',
+        'build': '构建',
+        'deploy': '部署',
+        'release': '发布',
+        'publish': '发布',
+        'install': '安装',
+        'uninstall': '卸载',
+        'update': '更新',
+        'upgrade': '升级',
+        'downgrade': '降级',
+        'configure': '配置',
+        'setup': '设置',
+        'init': '初始化',
+        'clean': '清理',
+        'clear': '清除',
+        'remove': '移除',
+        'add': '添加',
+        'new': '新建',
+        'open': '打开',
+        'close': '关闭',
+        'exit': '退出',
+        'quit': '退出',
+        'help': '帮助',
+        'info': '信息',
+        'warn': '警告',
+        'error': '错误',
+        'fatal': '致命错误',
+        'log': '日志',
+        'trace': '追踪',
+        'debug': '调试',
+        'profile': '性能分析',
+        'monitor': '监控',
+        'status': '状态',
+        'health': '健康状况',
+        'metrics': '指标',
+        'stats': '统计',
+        'usage': '使用情况',
+        'limit': '限制',
+        'quota': '配额',
+        'bill': '账单',
+        'invoice': '发票',
+        'payment': '支付',
+        'plan': '计划',
+        'subscription': '订阅',
+        'account': '账户',
+        'profile': '个人资料',
+        'security': '安全',
+        'privacy': '隐私',
+        'notification': '通知',
+        'preference': '偏好设置',
+        'theme': '主题',
+        'language': '语言',
+        'timezone': '时区',
+        'currency': '货币',
+        'country': '国家',
+        'city': '城市',
+        'address': '地址',
+        'phone': '电话',
+        'email': '邮箱',
+        'website': '网站',
+        'social': '社交媒体',
+        'bio': '简介',
+        'avatar': '头像',
+        'banner': '横幅',
+        'cover': '封面',
+        'logo': 'Logo',
+        'icon': '图标',
+        'favicon': 'Favicon',
+        'screenshot': '截图',
+        'video': '视频',
+        'audio': '音频',
+        'document': '文档',
+        'file': '文件',
+        'folder': '文件夹',
+        'archive': '归档',
+        'backup': '备份',
+        'restore': '恢复',
+        'sync': '同步',
+        'clone': '克隆',
+        'fork': '复刻',
+        'pull': '拉取',
+        'push': '推送',
+        'commit': '提交',
+        'merge': '合并',
+        'branch': '分支',
+        'tag': '标签',
+        'release': '发布',
+        'issue': '问题',
+        'pr': '合并请求',
+        'wiki': 'Wiki',
+        'project': '项目',
+        'team': '团队',
+        'org': '组织',
+        'user': '用户',
+        'role': '角色',
+        'permission': '权限',
+        'group': '组',
+        'member': '成员',
+        'admin': '管理员',
+        'owner': '所有者',
+        'guest': '访客',
+        'public': '公开',
+        'private': '私有',
+        'protected': '受保护',
+        'internal': '内部',
+        'external': '外部',
+        'api': 'API',
+        'sdk': 'SDK',
+        'cli': 'CLI',
+        'gui': 'GUI',
+        'web': 'Web',
+        'mobile': '移动端',
+        'desktop': '桌面端',
+        'server': '服务端',
+        'client': '客户端',
+        'database': '数据库',
+        'cache': '缓存',
+        'queue': '队列',
+        'storage': '存储',
+        'network': '网络',
+        'compute': '计算',
+        'security': '安全',
+        'monitor': '监控',
+        'log': '日志',
+        'alert': '告警',
+        'report': '报告',
+        'dashboard': '仪表盘',
+        'chart': '图表',
+        'table': '表格',
+        'list': '列表',
+        'form': '表单',
+        'dialog': '对话框',
+        'modal': '模态框',
+        'toast': '提示框',
+        'tooltip': '工具提示',
+        'popover': '弹出框',
+        'dropdown': '下拉菜单',
+        'menu': '菜单',
+        'nav': '导航',
+        'tab': '标签页',
+        'card': '卡片',
+        'button': '按钮',
+        'input': '输入框',
+        'select': '选择框',
+        'checkbox': '复选框',
+        'radio': '单选框',
+        'switch': '开关',
+        'slider': '滑块',
+        'progress': '进度条',
+        'spinner': '加载中',
+        'badge': '徽章',
+        'tag': '标签',
+        'avatar': '头像',
+        'image': '图片',
+        'icon': '图标',
+        'text': '文本',
+        'link': '链接',
+        'code': '代码',
+        'markdown': 'Markdown',
+        'html': 'HTML',
+        'css': 'CSS',
+        'js': 'JS',
+        'ts': 'TS',
+        'json': 'JSON',
+        'xml': 'XML',
+        'yaml': 'YAML',
+        'sql': 'SQL',
+        'sh': 'Shell',
+        'py': 'Python',
+        'go': 'Go',
+        'java': 'Java',
+        'c': 'C',
+        'cpp': 'C++',
+        'rust': 'Rust',
+        'php': 'PHP',
+        'rb': 'Ruby',
+        'swift': 'Swift',
+        'kt': 'Kotlin',
+        'scala': 'Scala',
+        'pl': 'Perl',
+        'lua': 'Lua',
+        'r': 'R',
+        'matlab': 'Matlab',
+        'dart': 'Dart',
+        'elixir': 'Elixir',
+        'haskell': 'Haskell',
+        'clojure': 'Clojure',
+        'erlang': 'Erlang',
+        'fsharp': 'F#',
+        'vb': 'VB',
+        'cs': 'C#',
+        'groovy': 'Groovy',
+        'powershell': 'PowerShell',
+        'bash': 'Bash',
+        'zsh': 'Zsh',
+        'fish': 'Fish',
+        'cmd': 'CMD',
+        'bat': 'Bat',
+        'ps1': 'PS1',
+        'dockerfile': 'Dockerfile',
+        'makefile': 'Makefile',
+        'jenkinsfile': 'Jenkinsfile',
+        'ignore': 'Ignore',
+        'conf': 'Conf',
+        'ini': 'Ini',
+        'toml': 'Toml',
+        'env': 'Env',
+        'lock': 'Lock',
+        'log': 'Log',
+        'txt': 'Txt',
+        'md': 'Md',
+        'rst': 'Rst',
+        'adoc': 'Adoc',
+        'tex': 'Tex',
+        'pdf': 'Pdf',
+        'doc': 'Doc',
+        'docx': 'Docx',
+        'xls': 'Xls',
+        'xlsx': 'Xlsx',
+        'ppt': 'Ppt',
+        'pptx': 'Pptx',
+        'csv': 'Csv',
+        'tsv': 'Tsv',
+        'zip': 'Zip',
+        'tar': 'Tar',
+        'gz': 'Gz',
+        '7z': '7z',
+        'rar': 'Rar',
+        'iso': 'Iso',
+        'dmg': 'Dmg',
+        'exe': 'Exe',
+        'msi': 'Msi',
+        'deb': 'Deb',
+        'rpm': 'Rpm',
+        'apk': 'Apk',
+        'ipa': 'Ipa',
+        'jar': 'Jar',
+        'war': 'War',
+        'ear': 'Ear',
+        'class': 'Class',
+        'so': 'So',
+        'dll': 'Dll',
+        'lib': 'Lib',
+        'a': 'A',
+        'o': 'O',
+        'obj': 'Obj',
+        'bin': 'Bin',
+        'hex': 'Hex',
+        'img': 'Img',
+        'iso': 'Iso',
+        'vmdk': 'Vmdk',
+        'qcow2': 'Qcow2',
+        'vdi': 'Vdi',
+        'ova': 'Ova',
+        'ovf': 'Ovf',
+        'docker': 'Docker',
+        'k8s': 'Kubernetes',
+        'helm': 'Helm',
+        'terraform': 'Terraform',
+        'ansible': 'Ansible',
+        'chef': 'Chef',
+        'puppet': 'Puppet',
+        'salt': 'Salt',
+        'vagrant': 'Vagrant',
+        'packer': 'Packer',
+        'consul': 'Consul',
+        'nomad': 'Nomad',
+        'vault': 'Vault',
+        'boundary': 'Boundary',
+        'waypoint': 'Waypoint',
+        'cdktf': 'CDKTF',
+        'cdk8s': 'CDK8s',
+        'cdk': 'CDK',
+        'aws': 'AWS',
+        'azure': 'Azure',
+        'gcp': 'GCP',
+        'aliyun': 'Aliyun',
+        'tencent': 'Tencent',
+        'huawei': 'Huawei',
+        'oracle': 'Oracle',
+        'ibm': 'IBM',
+        'digitalocean': 'DigitalOcean',
+        'linode': 'Linode',
+        'vultr': 'Vultr',
+        'heroku': 'Heroku',
+        'vercel': 'Vercel',
+        'netlify': 'Netlify',
+        'firebase': 'Firebase',
+        'supabase': 'Supabase',
+        'appwrite': 'Appwrite',
+        'pocketbase': 'PocketBase',
+        'nhost': 'Nhost',
+        'hasura': 'Hasura',
+        'prisma': 'Prisma',
+        'typeorm': 'TypeORM',
+        'sequelize': 'Sequelize',
+        'mongoose': 'Mongoose',
+        'knex': 'Knex',
+        'mikroorm': 'MikroORM',
+        'objection': 'Objection',
+        'bookshelf': 'Bookshelf',
+        'waterline': 'Waterline',
+        'loopback': 'LoopBack',
+        'feathers': 'Feathers',
+        'nestjs': 'NestJS',
+        'express': 'Express',
+        'koa': 'Koa',
+        'fastify': 'Fastify',
+        'hapi': 'Hapi',
+        'meteor': 'Meteor',
+        'sails': 'Sails',
+        'adonis': 'Adonis',
+        'nextjs': 'Next.js',
+        'nuxtjs': 'Nuxt.js',
+        'sveltekit': 'SvelteKit',
+        'remix': 'Remix',
+        'gatsby': 'Gatsby',
+        'astro': 'Astro',
+        'eleventy': 'Eleventy',
+        'jekyll': 'Jekyll',
+        'hugo': 'Hugo',
+        'hexo': 'Hexo',
+        'vue': 'Vue',
+        'react': 'React',
+        'angular': 'Angular',
+        'svelte': 'Svelte',
+        'preact': 'Preact',
+        'solid': 'Solid',
+        'alpine': 'Alpine',
+        'jquery': 'jQuery',
+        'bootstrap': 'Bootstrap',
+        'tailwind': 'Tailwind',
+        'bulma': 'Bulma',
+        'foundation': 'Foundation',
+        'materialize': 'Materialize',
+        'semantic': 'Semantic',
+        'uikit': 'UIkit',
+        'pure': 'Pure',
+        'milligram': 'Milligram',
+        'spectre': 'Spectre',
+        'picnic': 'Picnic',
+        'chota': 'Chota',
+        'mini': 'Mini',
+        'water': 'Water',
+        'mvp': 'MVP',
+        'tacit': 'Tacit',
+        'sakura': 'Sakura',
+        'classless': 'Classless',
+        'bare': 'Bare',
+        'holiday': 'Holiday',
+        'new': 'New',
+        'simple': 'Simple',
+        'minimal': 'Minimal',
+        'modern': 'Modern',
+        'retro': 'Retro',
+        'dark': 'Dark',
+        'light': 'Light',
+        'system': 'System',
+        'auto': 'Auto',
+        'default': 'Default',
+        'custom': 'Custom',
+        'none': 'None',
+        'all': 'All',
+        'any': 'Any',
+        'some': 'Some',
+        'one': 'One',
+        'many': 'Many',
+        'more': 'More',
+        'less': 'Less',
+        'equal': 'Equal',
+        'not': 'Not',
+        'and': 'And',
+        'or': 'Or',
+        'xor': 'Xor',
+        'nand': 'Nand',
+        'nor': 'Nor',
+        'xnor': 'Xnor',
+        'true': 'True',
+        'false': 'False',
+        'null': 'Null',
+        'undefined': 'Undefined',
+        'nan': 'NaN',
+        'infinity': 'Infinity',
+        'zero': 'Zero',
+        'one': 'One',
+        'two': 'Two',
+        'three': 'Three',
+        'four': 'Four',
+        'five': 'Five',
+        'six': 'Six',
+        'seven': 'Seven',
+        'eight': 'Eight',
+        'nine': 'Nine',
+        'ten': 'Ten',
+        'hundred': 'Hundred',
+        'thousand': 'Thousand',
+        'million': 'Million',
+        'billion': 'Billion',
+        'trillion': 'Trillion',
+        'quadrillion': 'Quadrillion',
+        'quintillion': 'Quintillion',
+        'sextillion': 'Sextillion',
+        'septillion': 'Septillion',
+        'octillion': 'Octillion',
+        'nonillion': 'Nonillion',
+        'decillion': 'Decillion',
+        'undecillion': 'Undecillion',
+        'duodecillion': 'Duodecillion',
+        'tredecillion': 'Tredecillion',
+        'quattuordecillion': 'Quattuordecillion',
+        'quindecillion': 'Quindecillion',
+        'sexdecillion': 'Sexdecillion',
+        'septendecillion': 'Septendecillion',
+        'octodecillion': 'Octodecillion',
+        'novemdecillion': 'Novemdecillion',
+        'vigintillion': 'Vigintillion',
+        'centillion': 'Centillion',
+        'googol': 'Googol',
+        'googolplex': 'Googolplex',
+        'pi': 'Pi',
+        'e': 'e',
+        'phi': 'Phi',
+        'tau': 'Tau',
+        'omega': 'Omega',
+        'alpha': 'Alpha',
+        'beta': 'Beta',
+        'gamma': 'Gamma',
+        'delta': 'Delta',
+        'epsilon': 'Epsilon',
+        'zeta': 'Zeta',
+        'eta': 'Eta',
+        'theta': 'Theta',
+        'iota': 'Iota',
+        'kappa': 'Kappa',
+        'lambda': 'Lambda',
+        'mu': 'Mu',
+        'nu': 'Nu',
+        'xi': 'Xi',
+        'omicron': 'Omicron',
+        'rho': 'Rho',
+        'sigma': 'Sigma',
+        'upsilon': 'Upsilon',
+        'chi': 'Chi',
+        'psi': 'Psi'
+    };
+    return map[key] || title || key;
+};
+
+const getToolConfigPlaceholder = (key, prop) => {
+    // If prop.description is set and contains Chinese characters, assume it's already localized or good enough
+    if (prop.description && /[\u4e00-\u9fa5]/.test(prop.description)) return prop.description;
+    
+    const map = {
+        'api_key': '请输入 API 密钥',
+        'timeout': '例如：30',
+        'max_results': '例如：10',
+        'language': '例如：zh-CN',
+        'region': '例如：CN',
+        'base_url': 'https://api.example.com',
+        'model': '例如：gpt-4',
+        'user_id': '请输入用户 ID',
+        'server_url': '请输入服务器地址 (例如：https://jira.example.com)',
+        'username': '请输入用户名',
+        'token': '请输入访问令牌',
+        'auth_token': '请输入认证令牌',
+        'api_token': '请输入 API 令牌',
+        'email': '请输入邮箱地址',
+        'password': '请输入密码',
+        'host': '例如：127.0.0.1',
+        'port': '例如：8080',
+        'database': '请输入数据库名称'
+    };
+    
+    if (map[key]) return map[key];
+    
+    // Fallback: Use description if available (even if English), otherwise generic prompt
+    return prop.description || `请输入${getToolConfigLabel(key)}`;
 };
 
 const toolboxCategories = computed(() => {
@@ -1066,6 +1768,7 @@ watch(() => props.agent, (newAgent) => {
     pendingScripts.value = []; // Reset pending scripts
     if (newAgent) {
         form.value = buildAgentPayload(newAgent);
+        initialIsTemplate.value = !!form.value.is_template;
         if (props.mode === 'preview') {
             currentMode.value = 'preview';
             isEditing.value = false;
@@ -1078,6 +1781,7 @@ watch(() => props.agent, (newAgent) => {
         isEditing.value = false;
         resetForm();
         pendingScripts.value = [];
+        initialIsTemplate.value = false;
     }
 }, { immediate: true });
 
@@ -1093,7 +1797,10 @@ function resetForm() {
         name: '',
         description: '',
         icon: 'globe',
+        category: '其他',
         system_prompt: '',
+        is_template: false,
+        enable_react: true, // Default ReAct
         model_config: { model_id: '', reasoning: false, show_tool_calls: false },
         tools_config: [],
         mcp_config: [],
@@ -1107,7 +1814,9 @@ function buildAgentPayload(agentLike) {
         name: agentLike?.name || '',
         description: agentLike?.description || '',
         icon: agentLike?.icon || 'globe',
+        category: agentLike?.category || '其他',
         system_prompt: agentLike?.system_prompt || '',
+        enable_react: agentLike?.enable_react ?? true, // ReAct support
         model_config: { 
             model_id: agentLike?.model_config?.model_id || '', 
             reasoning: agentLike?.model_config?.reasoning || false,
@@ -1121,6 +1830,9 @@ function buildAgentPayload(agentLike) {
 
     if (agentLike?.id) payload.id = agentLike.id;
     if (typeof agentLike?.is_template === 'boolean') payload.is_template = agentLike.is_template;
+    // Also support form value direct override for creation
+    if (typeof form.value.is_template === 'boolean') payload.is_template = form.value.is_template;
+    
     if (typeof agentLike?.is_active === 'boolean') payload.is_active = agentLike.is_active;
 
     return payload;
@@ -1407,6 +2119,9 @@ const saveAgent = async (shouldClose = true) => {
         });
         if (res.ok) {
             const savedAgent = await res.json();
+            const prevIsTemplate = initialIsTemplate.value;
+            const nextIsTemplate = !!savedAgent.is_template;
+            initialIsTemplate.value = nextIsTemplate;
             
             // Clone scripts if needed (from template)
             if (pendingScripts.value.length > 0 && savedAgent.id) {
@@ -1443,8 +2158,12 @@ const saveAgent = async (shouldClose = true) => {
                 const updatedPayload = buildAgentPayload(savedAgent);
                 form.value = { ...form.value, ...updatedPayload };
             }
-            
-            message.success("保存成功");
+
+            if (prevIsTemplate !== nextIsTemplate) {
+                message.success(nextIsTemplate ? "保存成功，已发布为模版，可在“发现模版”中查看" : "保存成功，已取消模版发布");
+            } else {
+                message.success("保存成功");
+            }
         } else {
             const err = await res.json();
             message.error("保存失败: " + JSON.stringify(err));

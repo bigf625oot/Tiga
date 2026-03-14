@@ -1,3 +1,16 @@
+"""
+Service Categories Endpoint
+前端接口：
+- HTTP GET `/service_categories/` 接口作用：获取所有服务分类
+前端功能：
+- 管理和配置服务分类
+- 支持服务分类的查询和重置
+前端文件：
+- `app/frontend/src/pages/ServiceCategories.vue`
+功能模块：
+- 服务分类管理
+"""
+
 import uuid
 from typing import List
 

@@ -13,9 +13,12 @@ class Agent(Base):
     name = Column(String, index=True, nullable=False)
     description = Column(String, nullable=True)
     icon = Column(String, nullable=True, default="/tiga.svg")  # Icon name or URL
+    category = Column(String, nullable=True)
 
     # Configuration
     system_prompt = Column(Text, nullable=True)
+    enable_react = Column(Boolean, default=True, nullable=True)  # Enable ReACT reasoning and acting (Framework level)
+    enable_cot = Column(Boolean, default=True, nullable=True)  # Enable Chain of Thought prompt injection
     model_config = Column(JSON, nullable=True)  # { "model_id": "...", "parameters": ... }
     tools_config = Column(JSON, nullable=True)  # [ "duckduckgo", "calculator" ]
     mcp_config = Column(JSON, nullable=True)  # List of MCP servers and their config
