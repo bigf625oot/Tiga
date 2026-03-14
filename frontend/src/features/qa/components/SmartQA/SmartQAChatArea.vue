@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 flex flex-col min-h-0 relative min-w-0 overflow-hidden">
+  <div class="h-full flex-1 flex flex-col min-h-0 relative min-w-0 overflow-hidden">
     <!-- Empty State -->
     <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-start pt-[15vh] px-4 overflow-y-auto relative custom-scrollbar">
       <div class="w-full max-w-2xl flex flex-col items-center gap-6">
@@ -13,8 +13,8 @@
         </div>
 
         <!-- Mode Selection -->
-        <div class="w-full px-1 transition-all duration-500 ease-in-out overflow-hidden"
-             :class="inputValue ? 'max-h-0 opacity-0 pb-0 -translate-y-4 scale-95' : 'max-h-[500px] opacity-100 pb-6'">
+        <div class="w-full px-1 transition-all duration-500 ease-in-out"
+             :class="inputValue ? 'max-h-0 opacity-0 pb-0 -translate-y-4 scale-95 overflow-hidden' : 'max-h-[500px] opacity-100 pt-1 pb-6 overflow-visible'">
           <div class="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div v-for="m in modes" :key="m.id"
               class="relative flex flex-col items-start justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer group h-[120px] overflow-hidden"
@@ -64,13 +64,15 @@
           :current-mode-id="currentModeId"
           :embedded="embedded"
           :is-network-search-enabled="isNetworkSearchEnabled"
+          :quoted-message="quotedMessage"
           @update:is-network-search-enabled="$emit('update:isNetworkSearchEnabled', $event)"
           @update:selectedAgentId="$emit('update:selectedAgentId', $event)"
-          @send="$emit('send')"
+          @send="handleSend"
           @stop="$emit('stop')"
           @open-attachment="$emit('open-attachment')"
           @remove-attachment="$emit('remove-attachment', $event)"
           @add-attachment="$emit('add-attachment', $event)"
+          @clear-quote="quotedMessage = null"
         />
 
         <!-- User Scripts -->
@@ -117,6 +119,8 @@
         :is-loading="isLoading"
         @locate-node="$emit('locate-node', $event)"
         @open-doc-space="$emit('open-doc-space', $event)"
+        @quote-message="handleQuoteMessage"
+        @excerpt-message="handleExcerptMessage"
       />
 
       <!-- Sticky Input Area -->
@@ -170,13 +174,15 @@
               :current-mode-id="currentModeId"
               :embedded="embedded"
               :is-network-search-enabled="isNetworkSearchEnabled"
+              :quoted-message="quotedMessage"
               @update:is-network-search-enabled="$emit('update:isNetworkSearchEnabled', $event)"
               @update:selectedAgentId="$emit('update:selectedAgentId', $event)"
-              @send="$emit('send')"
+              @send="handleSend"
               @stop="$emit('stop')"
               @open-attachment="$emit('open-attachment')"
               @remove-attachment="handleRemoveAttachment"
               @add-attachment="$emit('add-attachment', $event)"
+              @clear-quote="quotedMessage = null"
             />
         </div>
       </div>
@@ -224,8 +230,28 @@ const emit = defineEmits([
   'open-doc-space',
   'open-attachment',
   'remove-attachment',
-  'add-attachment'
+  'add-attachment',
+  'excerpt-message'
 ]);
+
+const handleQuoteMessage = (content: string) => {
+    quotedMessage.value = content;
+};
+
+const handleExcerptMessage = (content: string) => {
+    emit('excerpt-message', content);
+};
+
+const handleSend = () => {
+    if (quotedMessage.value) {
+        // Prepend quote to message
+        const formattedQuote = quotedMessage.value.split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
+        emit('update:modelValue', formattedQuote + inputValue.value);
+        // Clear quote after formatting (or wait for send success? Assume immediate send)
+        quotedMessage.value = null;
+    }
+    emit('send');
+};
 
 const handleRemoveAttachment = (attachmentOrIndex: number | Attachment) => {
     emit('remove-attachment', attachmentOrIndex);
@@ -237,6 +263,7 @@ const inputValue = computed({
 });
 
 const isModeBarVisible = ref(false);
+const quotedMessage = ref<string | null>(null);
 
 const themeConfig = {
   blue: {

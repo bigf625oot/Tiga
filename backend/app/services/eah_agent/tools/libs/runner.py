@@ -1,7 +1,7 @@
 import json
 import logging
 import inspect
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, AsyncGenerator
 
 import asyncio
 from openai import AsyncOpenAI, OpenAI
@@ -9,7 +9,7 @@ from openai import AsyncOpenAI, OpenAI
 logger = logging.getLogger(__name__)
 
 
-async def _run_reasoning_tool_loop_async(
+async def _run_reasoning_tool_loop_async_stream(
     *,
     client: Union[OpenAI, AsyncOpenAI],
     model_id: str,
@@ -17,28 +17,26 @@ async def _run_reasoning_tool_loop_async(
     tools: List[Dict[str, Any]],
     tool_call_map: Dict[str, Any],
     enable_thinking: bool = True,
-    messages: List[Dict[str, Any]] = None,  # Add messages parameter for history
-) -> Dict[str, Any]:
+    messages: List[Dict[str, Any]] = None,
+) -> AsyncGenerator[Dict[str, Any], None]:
     if messages is None:
         messages = []
 
-    # Append user prompt if provided and not already in messages (simple check)
     if user_prompt:
-        # Check if last message is user prompt, if not append it
         if not messages or messages[-1].get("content") != user_prompt:
             messages.append({"role": "user", "content": user_prompt})
 
     while True:
         extra_body = {"thinking": {"type": "enabled"}} if enable_thinking else None
+        
+        yield {"type": "loop_start"}
 
         try:
-            # Support both Sync and Async clients
             if isinstance(client, AsyncOpenAI):
                 response = await client.chat.completions.create(
                     model=model_id, messages=messages, tools=tools or None, extra_body=extra_body
                 )
             else:
-                # Fallback for sync client (blocking)
                 response = client.chat.completions.create(
                     model=model_id, messages=messages, tools=tools or None, extra_body=extra_body
                 )
@@ -48,16 +46,23 @@ async def _run_reasoning_tool_loop_async(
 
         msg = response.choices[0].message
 
-        # Convert ChatCompletionMessage to dict to ensure reasoning_content is preserved
         msg_dict = {
             "role": msg.role,
-            "content": msg.content or "",  # Ensure content is not None
+            "content": msg.content or "",
         }
 
         if hasattr(msg, "tool_calls") and msg.tool_calls:
-            msg_dict["tool_calls"] = msg.tool_calls
+            msg_dict["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": tc.type,
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                } for tc in msg.tool_calls
+            ]
 
-        # Explicitly handle reasoning_content
         rc = getattr(msg, "reasoning_content", None)
         if not rc:
             try:
@@ -74,12 +79,17 @@ async def _run_reasoning_tool_loop_async(
 
         if rc:
             msg_dict["reasoning_content"] = rc
+            yield {"type": "reasoning", "content": rc}
 
         messages.append(msg_dict)
+        
+        # Yield the assistant message (partial or final)
+        yield {"type": "message", "message": msg}
 
         tool_calls = getattr(msg, "tool_calls", None) or []
         if not tool_calls:
-            return {"final_message": msg, "messages": messages}
+            yield {"type": "final", "final_message": msg, "messages": messages}
+            return
             
         for call in tool_calls:
             name = call.function.name
@@ -88,6 +98,9 @@ async def _run_reasoning_tool_loop_async(
                 args = json.loads(args_str)
             except Exception:
                 args = {}
+            
+            yield {"type": "tool_start", "tool": name, "args": args}
+            
             fn = tool_call_map.get(name)
             if not fn:
                 logger.warning(f"Tool not found: {name}")
@@ -96,24 +109,48 @@ async def _run_reasoning_tool_loop_async(
                 try:
                     logger.info(f"Executing tool: {name} with args: {args}")
                     
-                    # Execute tool (Async or Sync)
                     if inspect.iscoroutinefunction(fn):
                         if isinstance(args, dict):
                             result = await fn(**args)
                         else:
                             result = await fn(args)
                     else:
-                        # If we are in an async loop but fn is sync, it blocks.
-                        # Ideally we should run sync tools in thread if we want to be non-blocking.
-                        # But here we just call it.
                         result = fn(**args) if isinstance(args, dict) else fn(args)
                         
                     logger.info(f"Tool {name} result: {str(result)[:500]}")
                 except Exception as e:
                     logger.error(f"Tool {name} failed: {e}", exc_info=True)
                     result = {"error": str(e), "args": args}
+            
+            yield {"type": "tool_result", "tool": name, "result": result}
+            
             tool_msg = {"role": "tool", "content": json.dumps(result, ensure_ascii=False), "tool_call_id": call.id}
             messages.append(tool_msg)
+
+
+async def _run_reasoning_tool_loop_async(
+    *,
+    client: Union[OpenAI, AsyncOpenAI],
+    model_id: str,
+    user_prompt: str,
+    tools: List[Dict[str, Any]],
+    tool_call_map: Dict[str, Any],
+    enable_thinking: bool = True,
+    messages: List[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    final_res = {}
+    async for event in _run_reasoning_tool_loop_async_stream(
+        client=client,
+        model_id=model_id,
+        user_prompt=user_prompt,
+        tools=tools,
+        tool_call_map=tool_call_map,
+        enable_thinking=enable_thinking,
+        messages=messages,
+    ):
+        if event["type"] == "final":
+            final_res = event
+    return final_res
 
 
 def run_reasoning_tool_loop(
@@ -149,3 +186,25 @@ def run_reasoning_tool_loop(
                 messages=messages,
             )
         )
+
+# Export the stream version
+async def run_reasoning_tool_loop_stream(
+    *,
+    client: Union[OpenAI, AsyncOpenAI],
+    model_id: str,
+    user_prompt: str,
+    tools: List[Dict[str, Any]],
+    tool_call_map: Dict[str, Any],
+    enable_thinking: bool = True,
+    messages: List[Dict[str, Any]] = None,
+) -> AsyncGenerator[Dict[str, Any], None]:
+    async for item in _run_reasoning_tool_loop_async_stream(
+        client=client,
+        model_id=model_id,
+        user_prompt=user_prompt,
+        tools=tools,
+        tool_call_map=tool_call_map,
+        enable_thinking=enable_thinking,
+        messages=messages,
+    ):
+        yield item

@@ -74,7 +74,7 @@ SAFETY WARNING: Double check all commands before delegation.
             team=team_members,
             instructions=final_instructions,
             tools=builder.tools,
-            show_tool_calls=True,
+            # show_tool_calls=True,
             markdown=True,
             debug_mode=True
         )

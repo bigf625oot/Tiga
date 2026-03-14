@@ -33,6 +33,16 @@ export function useChatSession() {
       }
     } catch (e) {
       console.error("Failed to fetch session details", e);
+      // Reset session if not found or error
+      currentSessionId.value = null;
+      currentSession.value = null;
+      messages.value = [];
+      // Optionally clear URL param
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('session_id')) {
+          url.searchParams.delete('session_id');
+          window.history.replaceState({}, '', url.toString());
+      }
     }
   };
 
@@ -149,6 +159,10 @@ export function useChatSession() {
                                   break;
                               case 'think':
                                   assistantMsg.reasoning = (assistantMsg.reasoning || '') + normalizeThink(parsedData);
+                                  break;
+                              case 'step':
+                                  if (!assistantMsg.steps) assistantMsg.steps = [];
+                                  assistantMsg.steps.push(parsedData);
                                   break;
                               case 'text':
                                   let textChunk = parsedData;

@@ -10,6 +10,14 @@
   "db_schema": null,
   "timeout": 30,
   "charset": "utf8mb4",
+  "ssl": false,
   "ssl_mode": "disable",
-  "pool_size": 5
+  "pool_size": 5,
+  "ssh": false,
+  "ssh_host": null,
+  "ssh_port": 22,
+  "ssh_user": null,
+  "ssh_auth_type": "password",
+  "ssh_password": null,
+  "ssh_key": null
 }

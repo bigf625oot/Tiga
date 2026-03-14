@@ -164,6 +164,7 @@
       <SidebarContent class="px-3 py-2 space-y-1">
          <!-- Task List -->
          <template v-if="sidebarTab === 'task'">
+            <template v-if="!isSidebarCollapsed">
             <div v-if="isSessionsLoading" class="space-y-3 px-1">
                <div v-for="i in 3" :key="i" class="flex items-center gap-3" :class="isSidebarCollapsed ? 'justify-center' : ''">
                   <Skeleton class="h-8 w-8 rounded-full flex-shrink-0" />
@@ -220,7 +221,7 @@
                                >
                                   <div class="flex items-center gap-2.5 w-full" :class="isSidebarCollapsed ? 'justify-center' : ''">
                                       <!-- Simple Avatar -->
-                                      <div class="h-7 w-7 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
+                                      <div class="h-7 w-7 rounded-full overflow-hidden shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
                                           <img 
                                              v-if="getAgentIcon(session.agent_id)" 
                                              :src="getAgentIcon(session.agent_id)" 
@@ -263,6 +264,7 @@
                    </Collapsible>
                </template>
             </div>
+            </template>
          </template>
 
          <!-- Agent/Apps List -->

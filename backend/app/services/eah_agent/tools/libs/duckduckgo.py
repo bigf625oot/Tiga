@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 from agno.tools.websearch import WebSearchTools
@@ -38,6 +39,36 @@ class DuckDuckGoTools(WebSearchTools):
         # Backward compatibility aliases for old method names
         self.duckduckgo_search = self.web_search
         self.duckduckgo_news = self.search_news
+
+    def web_search(self, query: str = "", max_results: int = 5):
+        """
+        Search the web for the given query.
+
+        Args:
+            query (str): The search query.
+            max_results (int): Number of results to return.
+        """
+        if not query:
+            return json.dumps({"error": "No query provided. Please provide a query."})
+        try:
+            return super().web_search(query, max_results=max_results)
+        except Exception as e:
+            return json.dumps({"error": f"Search failed: {str(e)}", "results": []})
+
+    def search_news(self, query: str = "", max_results: int = 5):
+        """
+        Search news for the given query.
+
+        Args:
+            query (str): The search query.
+            max_results (int): Number of results to return.
+        """
+        if not query:
+            return json.dumps({"error": "No query provided. Please provide a query."})
+        try:
+            return super().search_news(query, max_results=max_results)
+        except Exception as e:
+            return json.dumps({"error": f"News search failed: {str(e)}", "results": []})
 
     _category = "search"
 

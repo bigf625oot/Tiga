@@ -484,7 +484,7 @@ const toggleSort = (field: string) => {
   }
 };
 
-const toggleSelection = (id: string) => {
+const toggleSelection = (id: number) => {
   const index = selectedIds.value.indexOf(id);
   if (index > -1) selectedIds.value.splice(index, 1);
   else selectedIds.value.push(id);
@@ -564,7 +564,7 @@ const executeDelete = async () => {
 
 // Helpers
 const formatDate = (iso: string) => iso ? dayjs(iso).format('YYYY-MM-DD HH:mm') : '-';
-const formatTimeAgo = (iso: string) => iso ? dayjs(iso).fromNow() : '从未运行';
+const formatTimeAgo = (iso?: string) => iso ? dayjs(iso).fromNow() : '从未运行';
 
 const getStatusLabel = (status: string) => {
   const map: Record<string, string> = {

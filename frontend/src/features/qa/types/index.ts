@@ -23,6 +23,7 @@ export interface Message {
   type?: string;
   status?: MessageStatus;
   reasoning?: string;
+  steps?: { content: string; step: number }[];
   chart_config?: ChartConfig;
   sources?: MessageSource[];
   isSystem?: boolean;

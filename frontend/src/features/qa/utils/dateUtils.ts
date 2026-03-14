@@ -7,13 +7,5 @@ import dayjs from 'dayjs';
  */
 export const formatGroupTime = (timestamp: string | number | Date | dayjs.Dayjs): string => {
   const dayjsObj = dayjs(timestamp);
-  const now = dayjs();
-  
-  if (dayjsObj.isSame(now, 'day')) {
-    return dayjsObj.format('HH:mm');
-  } else if (dayjsObj.isSame(now.subtract(1, 'day'), 'day')) {
-    return '昨天 ' + dayjsObj.format('HH:mm');
-  } else {
-    return dayjsObj.format('MM-DD HH:mm');
-  }
+  return dayjsObj.format('YYYY-MM-DD HH:mm');
 };

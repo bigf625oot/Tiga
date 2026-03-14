@@ -491,7 +491,7 @@ const processFiles = async (files: File[]) => {
           });
           const extractionPromises: Promise<File | null>[] = [];
 
-          zipContent.forEach((relativePath, zipEntry) => {
+          zipContent.forEach((_: string, zipEntry: JSZip.JSZipObject) => {
             if (!zipEntry.dir) {
               const entryExt = '.' + zipEntry.name.split('.').pop()?.toLowerCase();
               if (SUPPORTED_EXTENSIONS.includes(entryExt) && !zipEntry.name.startsWith('__MACOSX') && !zipEntry.name.startsWith('.')) {

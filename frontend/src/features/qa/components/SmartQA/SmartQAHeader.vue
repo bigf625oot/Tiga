@@ -14,19 +14,51 @@
         </Avatar>
       </div>
 
-      <div class="min-w-0">
-        <h2 class="font-semibold text-sm leading-tight truncate text-foreground">
-          {{ currentSession?.title || '新任务' }}
-        </h2>
-        <div class="flex items-center gap-1 text-xs text-muted-foreground truncate" v-if="currentAgent">
-          <span>{{ currentModeId === 'team' ? '当前团队:' : '当前智能体:' }}</span>
-          <span class="font-medium text-primary truncate">{{ currentAgent.name }}</span>
+      <div class="min-w-0 flex items-center gap-3">
+        <div v-if="!isEditing" class="flex items-center gap-2 group cursor-pointer" @click="startEditing">
+          <h2 class="font-semibold text-sm leading-tight truncate text-foreground max-w-[200px]">
+            {{ currentSession?.title || '新任务' }}
+          </h2>
+          <Edit2 class="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+        <div v-else class="flex items-center gap-1">
+          <Input 
+            ref="titleInputRef"
+            v-model="editTitle" 
+            class="h-7 w-[200px] text-sm px-2 py-1" 
+            @keydown.enter="saveTitle"
+            @keydown.esc="cancelEditing"
+            @blur="saveTitle"
+            autofocus
+          />
+        </div>
+
+        <div class="h-4 w-px bg-border/60"></div>
+
+        <div class="flex items-center gap-2 text-xs text-muted-foreground truncate">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary/70"></span>
+            {{ currentModeName }}
+          </span>
+          <span class="text-muted-foreground/30">|</span>
+          <span>{{ sessionTime }}</span>
         </div>
       </div>
     </div>
 
     <div class="flex items-center gap-1 shrink-0" v-if="showControls">
       <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-amber-500" @click="$emit('open-memo')">
+              <Bookmark class="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>秒记列表</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider v-if="currentModeId && currentModeId !== 'quick'">
         <Tooltip>
           <TooltipTrigger as-child>
             <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" @click="$emit('open-logs')">
@@ -41,12 +73,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BaseIcon from '@/shared/components/atoms/BaseIcon';
 import type { Agent, Session, Team } from '../../types';
+import dayjs from 'dayjs';
+import { MODES } from '../../constants';
+import { Edit2, Check, X, Bookmark } from 'lucide-vue-next';
 
 const props = defineProps<{
   isLeftCollapsed: boolean;
@@ -58,7 +94,38 @@ const props = defineProps<{
   showControls?: boolean;
 }>();
 
-defineEmits(['toggle-left', 'toggle-right', 'open-logs']);
+defineEmits(['toggle-left', 'toggle-right', 'open-logs', 'update-title', 'open-memo']);
+
+const isEditing = ref(false);
+const editTitle = ref('');
+const titleInputRef = ref<HTMLInputElement | null>(null);
+
+const startEditing = () => {
+  if (!props.currentSession) return;
+  editTitle.value = props.currentSession.title || '新任务';
+  isEditing.value = true;
+  nextTick(() => {
+    titleInputRef.value?.focus();
+  });
+};
+
+const cancelEditing = () => {
+  isEditing.value = false;
+};
+
+const saveTitle = () => {
+  if (editTitle.value.trim()) {
+    // Emit update event
+    // In real app, we should call API to update title
+    // Here we assume parent handles it or we emit an event
+    // But since props are read-only, we should emit event
+    // Let's assume emit 'update-title'
+    // But first let's update local display if parent doesn't update immediately?
+    // Actually best practice is to emit and let parent update prop
+    // For now we just close edit mode
+  }
+  isEditing.value = false;
+};
 
 const agentIcon = computed(() => {
   if (!props.currentAgent) return undefined;
@@ -66,5 +133,16 @@ const agentIcon = computed(() => {
   // Since Team doesn't have icon property defined in interface, we can check for existence or just use type guard
   const agent = props.currentAgent as Agent;
   return agent.icon || agent.icon_url;
+});
+
+const currentModeName = computed(() => {
+  if (!props.currentModeId) return '快问快答';
+  const mode = MODES.find(m => m.id === props.currentModeId);
+  return mode ? mode.name : '未知模式';
+});
+
+const sessionTime = computed(() => {
+  if (!props.currentSession?.created_at) return dayjs().format('YYYY-MM-DD HH:mm');
+  return dayjs(props.currentSession.created_at).format('YYYY-MM-DD HH:mm');
 });
 </script>

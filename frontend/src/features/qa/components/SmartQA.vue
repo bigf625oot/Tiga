@@ -16,6 +16,7 @@
         @toggle-left="toggleLeftPane"
         @toggle-right="toggleRightPane"
         @open-logs="openTaskLogs"
+        @open-memo="isMemoDrawerOpen = true"
       />
 
       <div ref="splitContainerRef" class="flex-1 min-h-0 flex flex-col xl:flex-row bg-transparent overflow-hidden">
@@ -48,6 +49,7 @@
             @open-attachment="attachmentModalVisible = true"
             @remove-attachment="removeAttachment"
             @add-attachment="addLocalAttachments"
+            @excerpt-message="handleExcerptMessage"
           />
         </div>
 
@@ -88,7 +90,8 @@
           :current-session="currentSession"
           :current-agent="currentAgent"
           :current-mode-id="currentModeId"
-          :show-controls="false"
+          show-controls
+          @open-memo="isMemoDrawerOpen = true"
       />
 
       <div class="flex-1 flex min-h-0 relative overflow-hidden">
@@ -128,10 +131,19 @@
             @open-attachment="attachmentModalVisible = true"
             @remove-attachment="removeAttachment"
             @add-attachment="addLocalAttachments"
+            @excerpt-message="handleExcerptMessage"
           />
         </div>
       </div>
     </div>
+
+    <MemoDrawer 
+      :is-open="isMemoDrawerOpen" 
+      :memos="memos" 
+      @close="isMemoDrawerOpen = false" 
+      @remove="removeMemo"
+      @update="updateMemo"
+    />
 
     <AttachmentDialog
       v-model:open="attachmentModalVisible"
@@ -164,6 +176,7 @@ import SmartQAChatArea from './SmartQA/SmartQAChatArea.vue';
 import SmartQATaskPanel from './SmartQA/SmartQATaskPanel.vue';
 import AttachmentDialog from './SmartQA/AttachmentDialog.vue';
 import FileSidebar from './SmartQA/FileSidebar.vue';
+import MemoDrawer, { type Memo } from './SmartQA/MemoDrawer.vue';
 
 // Composables
 import { useChatSession } from '../composables/useChatSession';
@@ -197,6 +210,9 @@ const mode = ref<ModeType>('chat');
 const currentModeId = ref<string | null>(null);
 const isFileSidebarOpen = ref(true);
 const isNetworkSearchEnabled = ref(true);
+const isMemoDrawerOpen = ref(false);
+const memos = ref<Memo[]>([]);
+
 const isWorkflowMode = computed(() => mode.value === 'workflow');
 const isAutoTaskMode = computed(() => mode.value === 'auto_task');
 const useTaskUI = computed(() => 
@@ -353,6 +369,22 @@ const onSendMessage = async () => {
   }
 
   // Chat Mode
+  if (!currentSessionId.value) {
+      try {
+          const newSession = await createNewSession('新会话', selectedAgentId.value, mode.value);
+          if (newSession) {
+              // Update URL
+              const url = new URL(window.location.href);
+              url.searchParams.set('session_id', newSession.id);
+              window.history.pushState({}, '', url.toString());
+          }
+      } catch (e) {
+          console.error("Failed to create session", e);
+          messages.value.push({ role: 'assistant', content: "Error: Failed to create session." });
+          return;
+      }
+  }
+
   if (currentSessionId.value) {
       try {
           const res = await chatService.sendChatMessage(currentSessionId.value, {
@@ -410,6 +442,29 @@ const onToggleKnowledgeSelection = (id: string, checked: boolean) => {
     selectedKnowledgeRowKeys.value.push(id);
   } else {
     selectedKnowledgeRowKeys.value = selectedKnowledgeRowKeys.value.filter(k => k !== id);
+  }
+};
+
+const handleExcerptMessage = (content: string) => {
+  const newMemo: Memo = {
+    id: Date.now().toString(),
+    content: content,
+    sender: currentAgent.value?.name || 'Tiga',
+    avatar: (currentAgent.value as Agent)?.icon || (currentAgent.value as Agent)?.icon_url,
+    timestamp: new Date().toISOString()
+  };
+  memos.value.unshift(newMemo);
+  isMemoDrawerOpen.value = true;
+};
+
+const removeMemo = (id: string) => {
+  memos.value = memos.value.filter(m => m.id !== id);
+};
+
+const updateMemo = (id: string, content: string) => {
+  const memo = memos.value.find(m => m.id === id);
+  if (memo) {
+    memo.content = content;
   }
 };
 

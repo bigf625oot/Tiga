@@ -29,18 +29,16 @@ class QAAgentService:
             add_history_to_context=True,
             description="You are a helpful assistant for the Recorder app. Answer questions based on the knowledge base.",
             instructions=[
-                "Always search the knowledge base first."
-                if has_kb
-                else "Use your general knowledge to answer questions.",
+                "Always search the knowledge base first." if has_kb else "Use your general knowledge to answer questions.",
                 "If the answer is found in the knowledge base, cite the source." if has_kb else "",
-                "If not found, use your general knowledge but mention that it's not in the knowledge base."
-                if has_kb
-                else "",
+                "If not found, use your general knowledge but mention that it's not in the knowledge base." if has_kb else "",
                 "If you need to search the web, use the `duckduckgo_search` tool.",
                 "If you need to plan a complex task, think step-by-step.",
             ],
             tools=[DuckDuckGoTools()],
             reasoning=True,
+            # show_reasoning=True,
+            # show_tool_calls=True,
         )
 
     @classmethod
@@ -80,7 +78,7 @@ class QAAgentService:
 
         # Update Agent Reasoning Settings
         self.agent.reasoning = should_use_agno_reasoning
-        self.agent.show_reasoning = is_native_reasoning or should_use_agno_reasoning
+        # self.agent.show_reasoning = is_native_reasoning or should_use_agno_reasoning
 
     def chat_stream(self, message: str, llm_model=None, stream: bool = True, messages: list = None) -> Any:
         if llm_model:

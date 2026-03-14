@@ -101,10 +101,10 @@ class AgentBuilder:
         if not self.llm_model:
             raise ValueError("No active LLM model found")
 
-    async def _load_tools(self, session_id: str = None):
+    async def _load_tools(self, session_id: str = None, enable_search: bool = False):
         """Load tools using the centralized loader."""
         # Load standard and configured tools
-        self.tools = await default_tools.load_tools(self.agent_model, self.db, session_id)
+        self.tools = await default_tools.load_tools(self.agent_model, self.db, session_id, enable_search=enable_search)
         
         # Handle file skills specifically as they might add instructions
         skills_config = getattr(self.agent_model, "skills_config", {}) or {}
@@ -165,7 +165,7 @@ class AgentBuilder:
         await self._fetch_model_config()
         
         # 2. Load Tools
-        await self._load_tools(session_id)
+        await self._load_tools(session_id, enable_search=enable_search)
         
         # 3. Configure Instructions
         self._configure_instructions()
@@ -187,7 +187,7 @@ class AgentBuilder:
             tools=self.tools,
             markdown=True,
             reasoning=is_reasoning,
-            show_tool_calls=show_tool_calls,
+            # show_tool_calls=show_tool_calls,
             debug_mode=True,
         )
         

@@ -13,7 +13,7 @@
            
            <!-- Icon -->
            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" :class="statusBg(task.status)">
-              <component :is="statusIcon(task.status)" class="w-4 h-4 text-white" />
+              <component :is="statusIcon(task.status)" :class="['w-4 h-4', statusIconClass(task.status)]" />
            </div>
            
            <!-- Content -->
@@ -98,6 +98,17 @@ const statusBg = (status) => {
         case 'running': return 'bg-blue-500';
         case 'failed': return 'bg-red-500';
         default: return 'bg-muted';
+    }
+};
+
+const statusIconClass = (status) => {
+    switch(status) {
+        case 'completed':
+        case 'running':
+        case 'failed':
+            return 'text-white';
+        default:
+            return 'text-muted-foreground';
     }
 };
 

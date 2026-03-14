@@ -5,7 +5,7 @@
     
     <div class="flex items-center gap-2 mb-1">
       <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" :class="iconBgClass">
-        <component :is="statusIcon" class="w-3 h-3 text-white" />
+        <component :is="statusIcon" :class="['w-3 h-3', iconColorClass]" />
       </div>
       <div class="flex-1 min-w-0">
         <div class="font-semibold text-xs truncate">{{ data.label }}</div>
@@ -48,6 +48,17 @@ const iconBgClass = computed(() => {
     case 'running': return 'bg-blue-500';
     case 'failed': return 'bg-red-500';
     default: return 'bg-muted';
+  }
+});
+
+const iconColorClass = computed(() => {
+  switch (props.data.status) {
+    case 'completed':
+    case 'running':
+    case 'failed':
+      return 'text-white';
+    default:
+      return 'text-muted-foreground';
   }
 });
 

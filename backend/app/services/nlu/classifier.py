@@ -53,7 +53,8 @@ class IntentClassifier:
 
         # 3. Structured/SQL Indicators (Data Retrieval)
         # "查询" is too generic. We remove it from the strict list.
-        sql_keywords = ["多少", "统计", "总数", "排名", "top", "count", "sum", "average", "avg", "max", "min", "列表", "list"]
+        # Removed "多少", "列表", "list" as they are too generic and cause false positives (e.g. "What is the price?", "List the benefits")
+        sql_keywords = ["统计", "总数", "排名", "top", "count", "sum", "average", "avg", "max", "min"]
         
         if any(w in question.lower() for w in sql_keywords):
             # Check for structured query confidence

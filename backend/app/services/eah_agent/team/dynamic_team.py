@@ -129,7 +129,7 @@ Please coordinate them to answer the user request.
             team=self.members,        # 注入成员
             instructions=builder.instruction_builder.build(),
             tools=builder.tools,
-            show_tool_calls=show_tool_calls,
+            # show_tool_calls=show_tool_calls,
             markdown=True,
             reasoning=is_reasoning,
             debug_mode=True

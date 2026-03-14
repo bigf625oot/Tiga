@@ -44,9 +44,41 @@
         <!-- Agent Mode: Rich Content -->
         <div v-else class="agent-content flex flex-col gap-4">
             
+            <!-- 0. Process Steps (New) -->
+            <div v-if="message.steps && message.steps.length > 0" class="border border-amber-200/40 dark:border-amber-900/40 rounded-xl overflow-hidden mb-2 bg-amber-50/40 dark:bg-amber-950/20 w-full shadow-sm">
+                <button 
+                    @click="isStepsExpanded = !isStepsExpanded"
+                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-amber-100/30 dark:hover:bg-amber-900/30 transition-colors group"
+                >
+                    <div class="flex items-center gap-2 text-xs font-medium text-amber-700/80 dark:text-amber-500/90">
+                        <Brain class="w-3.5 h-3.5" />
+                        <span>思考链 ({{ message.steps.length }} 步)</span>
+                    </div>
+                    <ChevronRight 
+                        class="w-3.5 h-3.5 text-amber-600/50 dark:text-amber-500/50 transition-transform duration-200 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                        :class="isStepsExpanded ? 'rotate-90' : ''"
+                    />
+                </button>
+                <div v-show="isStepsExpanded" class="bg-background/40 px-3 py-2 border-t border-amber-200/30 dark:border-amber-900/30">
+                    <div class="space-y-3 relative">
+                        <div class="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-amber-200/50 dark:bg-amber-800/30"></div>
+                        <div v-for="(step, sIdx) in message.steps" :key="sIdx" class="flex gap-3 relative">
+                            <div class="flex flex-col items-center pt-1.5 shrink-0 z-10">
+                                <div class="w-2.5 h-2.5 rounded-full bg-background border-2 border-amber-400/60 dark:border-amber-600/60 shadow-sm"></div>
+                            </div>
+                            <div class="pb-1 min-w-0 flex-1">
+                                <div class="text-[11px] text-muted-foreground break-words whitespace-pre-wrap font-mono leading-relaxed">
+                                    {{ step.content }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 1. Thinking Process (Collapsed by default) -->
-            <div v-if="parsed.think" class="w-full">
-                <details class="bg-primary/5 rounded-lg border border-primary/10 overflow-hidden group transition-all duration-300" :open="parsed.think.isPartial">
+            <div v-if="thinkingContent" class="w-full">
+                <details class="bg-primary/5 rounded-lg border border-primary/10 overflow-hidden group transition-all duration-300" :open="thinkingContent.isPartial">
                     <summary class="p-4 py-2 text-xs font-medium text-primary cursor-pointer flex items-center gap-2 select-none outline-none hover:bg-primary/10 transition-colors">
                         <div class="flex items-center gap-2 flex-1">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -58,7 +90,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </summary>
-                    <div class="p-4 py-2 text-xs text-muted-foreground border-t border-primary/10 bg-card/50 leading-relaxed font-mono" v-html="parsed.think.html"></div>
+                    <div class="p-4 py-2 text-xs text-muted-foreground border-t border-primary/10 bg-card/50 leading-relaxed font-mono" v-html="thinkingContent.html"></div>
                 </details>
             </div>
 
@@ -156,32 +188,44 @@
             </div>
 
         </div>
+      </div>
 
-        <!-- Actions (Footer) -->
-        <div v-if="!isUser" class="mt-2 pt-2 flex items-center gap-4 text-muted-foreground border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-             <button class="hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
-                <Copy class="w-4 h-4" />
-             </button>
-             <button class="hover:text-green-600 transition-colors" title="赞">
-                <ThumbsUp class="w-4 h-4" />
-             </button>
-             <button class="hover:text-red-600 transition-colors" title="踩">
-                <ThumbsDown class="w-4 h-4" />
-             </button>
-        </div>
+      <!-- Actions (Outside Bubble) -->
+      <div v-if="!isUser" class="flex items-center gap-2 mt-2 ml-1">
+           <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="引用" @click="$emit('quote-message', message.content)">
+              <Quote class="w-3.5 h-3.5" />
+           </button>
+           <button 
+                class="p-1 text-muted-foreground/60 hover:text-amber-500 transition-colors relative" 
+                title="摘录到秒记" 
+                @click="handleExcerpt"
+            >
+              <Bookmark class="w-3.5 h-3.5" :class="{'fill-current text-amber-500 animate-pulse': isExcerptionAnimating}" />
+              <span v-if="isExcerptionAnimating" class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-amber-600 font-bold animate-out fade-out slide-out-to-top-2 duration-500">+1</span>
+           </button>
+           <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
+              <Copy class="w-3.5 h-3.5" />
+           </button>
+           <button class="p-1 text-muted-foreground/60 hover:text-green-600 transition-colors" title="赞">
+              <ThumbsUp class="w-3.5 h-3.5" />
+           </button>
+           <button class="p-1 text-muted-foreground/60 hover:text-red-600 transition-colors" title="踩">
+              <ThumbsDown class="w-3.5 h-3.5" />
+           </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, toRef } from 'vue';
+import { computed, toRef, ref, watch } from 'vue';
 import dayjs from 'dayjs';
-import { Copy, ThumbsUp, ThumbsDown } from 'lucide-vue-next';
+import { Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight } from 'lucide-vue-next';
 import ChartFrame from '../../analytics/components/ChartFrame.vue';
 import GenericResourceCard from './GenericResourceCard.vue';
 import { useMessageParser } from '../composables/useMessageParser';
 import { useChartOptions } from '../composables/useChart';
+import { useMarkdown } from '../composables/useMarkdown';
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -192,13 +236,56 @@ const props = defineProps({
   agent: { type: Object, default: null }
 });
 
-const emit = defineEmits(['locate-node', 'open-doc-space']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message']);
+
+const isExcerptionAnimating = ref(false);
+const isStepsExpanded = ref(true);
+
+const handleExcerpt = () => {
+    isExcerptionAnimating.value = true;
+    emit('excerpt-message', props.message.content);
+    setTimeout(() => {
+        isExcerptionAnimating.value = false;
+    }, 600);
+};
 
 // Composables
 const { parsed } = useMessageParser(toRef(props.message, 'content'));
 const { processOption } = useChartOptions();
+const { render } = useMarkdown();
+
+watch(() => props.message.steps, (newVal, oldVal) => {
+    if (newVal && newVal.length > 0 && (!oldVal || oldVal.length === 0)) {
+        isStepsExpanded.value = true;
+    }
+}, { deep: true });
 
 // Computed
+const thinkingContent = computed(() => {
+    // 1. Parsed from content <think> tags (highest priority)
+    if (parsed.value.think) {
+        return parsed.value.think;
+    }
+    
+    // 2. Explicit reasoning field (from stream)
+    if (props.message.reasoning) {
+        return {
+            html: render(props.message.reasoning),
+            isPartial: true // Assume active thinking if in this field during stream
+        };
+    }
+    
+    // 3. Metadata reasoning (from history)
+    if (props.message.meta_data && props.message.meta_data.reasoning) {
+        return {
+            html: render(props.message.meta_data.reasoning),
+            isPartial: false // History defaults to collapsed
+        };
+    }
+    
+    return null;
+});
+
 const bubbleClasses = computed(() => {
   if (props.isUser) {
     return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm';
@@ -221,7 +308,7 @@ const hasReferences = computed(() => props.message.sources && props.message.sour
 const combinedSources = computed(() => props.message.sources || []);
 
 // Methods
-const formatTime = (ts: any) => dayjs(ts).format('HH:mm');
+const formatTime = (ts: any) => dayjs(ts).format('YYYY-MM-DD HH:mm');
 const copyText = (text: string) => navigator.clipboard.writeText(text || '');
 
 const handleResourceClick = (id: string) => {

@@ -2,7 +2,7 @@
   <div class="flex-1 relative min-h-0 flex flex-col group/scrollbar">
     <!-- Original Scroll Container -->
     <div 
-      class="flex-1 overflow-y-auto px-10 pt-8 pb-12 custom-scrollbar scroll-smooth no-scrollbar" 
+      class="flex-1 overflow-y-auto px-10 pt-8 pb-32 custom-scrollbar scroll-smooth" 
       v-bind="containerProps"
       @scroll="handleScroll"
     >
@@ -33,6 +33,8 @@
               :agent="currentAgent"
               @locate-node="$emit('locate-node', $event)"
               @open-doc-space="$emit('open-doc-space', $event)"
+              @quote-message="$emit('quote-message', $event)"
+              @excerpt-message="$emit('excerpt-message', $event)"
             />
           </div>
         </div>
@@ -65,44 +67,41 @@
     </div>
 
     <!-- Custom Scrollbar/Anchor Navigation -->
-    <div 
-       class="absolute right-4 top-4 bottom-4 w-1 z-50 opacity-100 flex flex-col justify-center pointer-events-none"
+    <MessageAnchor
+        :markers="markers"
+        :total-height="totalHeight"
+        :viewport-height="viewportHeight"
+        :scroll-top="scrollTop"
+        @update:scroll-top="handleScrollUpdate"
+        @scroll-to-index="scrollToGroup"
+    />
+
+    <!-- New Message Notification / Scroll to Bottom Button -->
+    <transition
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-4"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-4"
     >
-        <!-- Track (Visible always or only when needed? User said 'like anchors', so maybe always visible structure) -->
-        <div class="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[1px] bg-[var(--scrollbar-track)] rounded-full opacity-30 pointer-events-auto hover:opacity-50 transition-opacity"></div>
-
-        <!-- Markers Container (Relative to track) -->
-        <div class="absolute inset-0 pointer-events-none">
-            <div 
-                v-for="(marker, idx) in markers"
-                :key="idx"
-                class="absolute left-1/2 -translate-x-1/2 w-[3px] h-[12px] rounded-full bg-[var(--scrollbar-marker)] shadow-sm cursor-pointer pointer-events-auto transition-all duration-200 hover:scale-x-125 hover:bg-primary z-20 group/marker opacity-60 hover:opacity-100"
-                :style="{ top: marker.topPercent + '%' }"
-                @click.stop="scrollToGroup(marker.index)"
-            >
-            <!-- Tooltip -->
-            <div class="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-md shadow-md border border-border opacity-0 group-hover/marker:opacity-100 whitespace-nowrap pointer-events-none transition-all duration-200 translate-x-2 group-hover/marker:translate-x-0 z-30 max-w-[200px] truncate">
-                {{ marker.label }}
-            </div>
-            </div>
-        </div>
-
-        <!-- Thumb (Only visible when scrollable) -->
-        <div
-           v-if="canScroll"
-           class="absolute left-0 w-full bg-[var(--scrollbar-thumb)] opacity-80 rounded-[2px] cursor-pointer select-none touch-none pointer-events-auto"
-           :style="{ height: thumbHeight + 'px', top: thumbTop + 'px' }"
-           @mousedown="onThumbMouseDown"
-           tabindex="0"
-           @keydown="onThumbKeyDown"
-        ></div>
-    </div>
+      <button
+        v-if="showScrollToBottomTip"
+        @click="handleScrollToBottomClick"
+        class="absolute bottom-6 right-8 z-50 flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-full shadow-lg hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+      >
+        <ArrowDown class="w-4 h-4 animate-bounce" />
+        <span>下方有新消息</span>
+      </button>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useVirtualList, useResizeObserver, useDebounceFn } from '@vueuse/core';
+import { ArrowDown } from 'lucide-vue-next';
+import MessageAnchor from './MessageAnchor.vue';
 import ChatCard from './ChatCard.vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import dayjs from 'dayjs';
@@ -115,7 +114,7 @@ const props = defineProps<{
   isLoading: boolean;
 }>();
 
-defineEmits(['locate-node', 'open-doc-space']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message']);
 
 // Grouping Logic
 const messageGroups = computed(() => {
@@ -176,15 +175,11 @@ watch(messageGroups, () => {
 const containerRef = containerProps.ref;
 
 // --- Custom Scrollbar Logic ---
-const canScroll = ref(false);
-const thumbHeight = ref(20);
-const thumbTop = ref(0);
-const isScrolling = ref(false);
-const isHoveringScrollbar = ref(false);
-const isDragging = ref(false);
-let startY = 0;
-let startScrollTop = 0;
-let scrollTimeout: number | null = null;
+const scrollTop = ref(0);
+const totalHeight = ref(0);
+const viewportHeight = ref(0);
+const isUserAtBottom = ref(true);
+const showScrollToBottomTip = ref(false);
 
 const markers = computed(() => {
     if (!messageGroups.value.length) return [];
@@ -210,38 +205,29 @@ const markers = computed(() => {
 
 const updateScrollMetrics = () => {
     if (!containerRef.value) return;
-    const { clientHeight, scrollHeight, scrollTop } = containerRef.value;
+    const { clientHeight, scrollHeight, scrollTop: st } = containerRef.value;
     
-    canScroll.value = scrollHeight > clientHeight;
-    // We update metrics even if not scrollable, to be safe, but thumb is hidden via v-if
-    // If not scrollable, thumbTop is 0, thumbHeight is clientHeight (or close to it)
+    scrollTop.value = st;
+    totalHeight.value = scrollHeight;
+    viewportHeight.value = clientHeight;
 
-    // Calculate Thumb Height
-    // Proportion: thumbHeight / clientHeight = clientHeight / scrollHeight
-    const calculatedHeight = (clientHeight / scrollHeight) * clientHeight;
-    thumbHeight.value = Math.max(20, calculatedHeight);
+    // Check if user is at bottom (with 100px threshold)
+    const isBottom = scrollHeight - st - clientHeight <= 100;
+    isUserAtBottom.value = isBottom;
 
-    // Calculate Thumb Top
-    // Proportion: thumbTop / (clientHeight - thumbHeight) = scrollTop / (scrollHeight - clientHeight)
-    const maxScrollTop = scrollHeight - clientHeight;
-    const maxThumbTop = clientHeight - thumbHeight.value;
-    
-    if (maxScrollTop > 0) {
-        thumbTop.value = (scrollTop / maxScrollTop) * maxThumbTop;
-    } else {
-        thumbTop.value = 0;
+    if (isBottom) {
+        showScrollToBottomTip.value = false;
     }
 };
 
 const handleScroll = () => {
-    if (isDragging.value) return; // Skip update if dragging to avoid jitter
-    isScrolling.value = true;
     updateScrollMetrics();
-    
-    if (scrollTimeout) window.clearTimeout(scrollTimeout);
-    scrollTimeout = window.setTimeout(() => {
-        isScrolling.value = false;
-    }, 1000);
+};
+
+const handleScrollUpdate = (val: number) => {
+    if (containerRef.value) {
+        containerRef.value.scrollTop = val;
+    }
 };
 
 // Debounced resize observer
@@ -257,79 +243,18 @@ const scrollToGroup = (index: number) => {
     setTimeout(updateScrollMetrics, 50);
 };
 
-const onThumbMouseDown = (e: MouseEvent) => {
-    e.preventDefault(); // Prevent text selection
-    e.stopPropagation();
-    if (!containerRef.value) return;
-    
-    isDragging.value = true;
-    isScrolling.value = true; // Keep scrollbar visible
-    startY = e.clientY;
-    startScrollTop = containerRef.value.scrollTop;
-    
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-};
-
-const onMouseMove = (e: MouseEvent) => {
-    if (!isDragging.value || !containerRef.value) return;
-    
-    const deltaY = e.clientY - startY;
-    const { scrollHeight, clientHeight } = containerRef.value;
-    
-    // Calculate new ScrollTop
-    // deltaY corresponds to scroll delta: deltaScroll = deltaY * (scrollHeight / clientHeight)
-    // Or more precisely based on available track space
-    const maxThumbTop = clientHeight - thumbHeight.value;
-    const maxScrollTop = scrollHeight - clientHeight;
-    
-    // Ratio of track movement to scroll movement
-    // thumb moves 1px -> scroll moves (maxScrollTop / maxThumbTop) px
-    const scrollRatio = maxScrollTop / maxThumbTop;
-    
-    containerRef.value.scrollTop = startScrollTop + deltaY * scrollRatio;
-    
-    // Manually update thumbTop for smoothness during drag (though scroll event will also trigger)
-    // We rely on scroll event for final position but can pre-calculate for UI responsiveness if needed
-    // updateScrollMetrics() is called by scroll event listener
-};
-
-const onMouseUp = () => {
-    isDragging.value = false;
-    isScrolling.value = false;
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-};
-
-const onThumbKeyDown = (e: KeyboardEvent) => {
-    if (!containerRef.value) return;
-    const { clientHeight } = containerRef.value;
-    
-    if (e.key === 'ArrowUp') {
-        containerRef.value.scrollBy({ top: -100, behavior: 'smooth' });
-        e.preventDefault();
-    } else if (e.key === 'ArrowDown') {
-        containerRef.value.scrollBy({ top: 100, behavior: 'smooth' });
-        e.preventDefault();
-    } else if (e.key === 'PageUp') {
-        containerRef.value.scrollBy({ top: -clientHeight / 2, behavior: 'smooth' });
-        e.preventDefault();
-    } else if (e.key === 'PageDown') {
-        containerRef.value.scrollBy({ top: clientHeight / 2, behavior: 'smooth' });
-        e.preventDefault();
-    }
-};
-
 onMounted(() => {
     // Initial check
     nextTick(() => updateScrollMetrics());
 });
 // --- End Custom Scrollbar Logic ---
 
-const scrollToBottom = () => {
+const scrollToBottom = (force = false) => {
     nextTick(() => {
         // Scroll to the last item index
-        scrollTo(messageGroups.value.length - 1);
+        if (messageGroups.value.length > 0) {
+            scrollTo(messageGroups.value.length - 1);
+        }
         
         // Also ensure container is scrolled to bottom (for loading indicator visibility)
         if (containerRef.value) {
@@ -338,13 +263,42 @@ const scrollToBottom = () => {
     });
 };
 
-watch(() => props.messages.length, () => {
+const handleScrollToBottomClick = () => {
     scrollToBottom();
+    showScrollToBottomTip.value = false;
+    // We assume the user wants to be at the bottom now
+    isUserAtBottom.value = true;
+};
+
+watch(() => props.messages.length, () => {
+    // Always scroll to bottom if the last message is from user (they just sent it)
+    const lastMsg = props.messages[props.messages.length - 1];
+    if (lastMsg && lastMsg.role === 'user') {
+         scrollToBottom(true);
+         return;
+    }
+
+    if (isUserAtBottom.value) {
+        scrollToBottom();
+    } else {
+        showScrollToBottomTip.value = true;
+    }
 });
 
 watch(() => props.messages[props.messages.length - 1], (newVal) => {
     if (newVal && newVal.content) {
-        scrollToBottom();
+        if (isUserAtBottom.value) {
+            scrollToBottom();
+        } 
+        // Note: For streaming updates, we might not want to show the tip repeatedly 
+        // if the user is scrolling up. The tip should already be shown if they are not at bottom 
+        // and a new message (length change) happened. 
+        // But if the message is just growing, and the user hasn't seen the tip yet (maybe they just scrolled up),
+        // we might want to show it?
+        // Let's stick to showing it if content updates and we are not at bottom.
+        else {
+             showScrollToBottomTip.value = true;
+        }
     }
 }, { deep: true });
 

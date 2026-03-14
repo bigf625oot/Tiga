@@ -85,7 +85,7 @@ Always synthesize the final output clearly.
             team=team_members, # <--- This enables Team Mode
             instructions=final_instructions,
             tools=builder.tools,
-            show_tool_calls=True,
+            # show_tool_calls=True,
             markdown=True,
             debug_mode=True
         )

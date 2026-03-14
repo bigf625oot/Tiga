@@ -43,7 +43,7 @@ class ToolsManager:
         """
         self._custom_tools.append(tool)
         
-    async def load_tools(self, agent_model: Any, db: AsyncSession = None, session_id: str = None) -> List[Any]:
+    async def load_tools(self, agent_model: Any, db: AsyncSession = None, session_id: str = None, enable_search: bool = False) -> List[Any]:
         """
         Load all tools based on agent configuration and defaults.
         This replaces the hardcoded logic in AgentManager.
@@ -94,7 +94,10 @@ class ToolsManager:
                     logger.error(f"Failed to load OpenClawTools: {e}")
 
         # DuckDuckGo (Fallback if not explicitly configured but search enabled)
-        if "duckduckgo" in tools_config and "duckduckgo" not in loaded_names:
+        # Check if enabled by argument OR config
+        should_enable_search = enable_search or ("duckduckgo" in tools_config and "duckduckgo" not in loaded_names)
+        
+        if should_enable_search:
             tools.append(DuckDuckGoTools())
 
         # Sandbox

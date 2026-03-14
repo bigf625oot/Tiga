@@ -837,16 +837,20 @@ const renderMarkdown = (content: string, hasStructuredSources = false) => {
                 const parsedThinkStr = typeof parsedThink === 'string' ? parsedThink : '';
                 const sanitizedThink = (parsedThinkStr || '').replace(/\[object\s+Object\]/gi, '').trim();
                 thinkHtml = `
-                <details class="mb-4 rounded-xl border border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-r from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/10 overflow-hidden group shadow-sm" ${isPartial ? 'open' : ''}>
-                    <summary class="px-4 py-2 text-xs font-medium text-amber-700/80 dark:text-amber-400/90 cursor-pointer hover:bg-amber-100/30 dark:hover:bg-amber-900/30 flex items-center gap-2.5 select-none transition-all duration-300">
-                        <div class="relative flex items-center justify-center w-4 h-4">
-                             <svg class="w-4 h-4 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.907-3.25"/><path d="M18 18a4 4 0 0 0 1.907-3.25"/></svg>
+                <details class="mb-4 bg-primary/5 rounded-lg border border-primary/10 overflow-hidden group transition-all duration-300" ${isPartial ? 'open' : ''}>
+                    <summary class="p-4 py-2 text-xs font-medium text-primary cursor-pointer flex items-center gap-2 select-none outline-none hover:bg-primary/10 transition-colors">
+                        <div class="flex items-center gap-2 flex-1">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                            <span>思考过程</span>
                         </div>
-                        <span class="tracking-wide">深度思考中...</span>
-                        <svg class="w-3.5 h-3.5 ml-auto opacity-50 group-open:rotate-180 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        <svg class="w-3 h-3 text-primary/50 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
                     </summary>
-                    <div class="px-4 py-3 text-xs text-muted-foreground/90 border-t border-amber-200/30 dark:border-amber-900/30 bg-background/40 leading-relaxed animate-in slide-in-from-top-1 duration-300">
-                        ${sanitizedThink || '正在构建思维链...'}
+                    <div class="p-4 py-2 text-xs text-muted-foreground border-t border-primary/10 bg-card/50 leading-relaxed font-mono">
+                        ${sanitizedThink || '正在思考中...'}
                     </div>
                 </details>`;
             }
