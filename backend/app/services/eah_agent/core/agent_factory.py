@@ -13,12 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.eah_agent.domain.config import AgentConfig, TeamConfig
 from app.services.llm.factory import ModelFactory
+from app.services.llm.resolver import resolve_chat_llm_model
 from app.models.llm_model import LLMModel
 from app.services.eah_agent.tools.tool_factory import ToolFactory
 from app.services.eah_agent.skills.loaders.local import LocalSkills
 from app.services.eah_agent.skills.manager import Skills
 
 logger = logging.getLogger(__name__)
+
+from app.core.config import settings
 
 class AgentFactory:
     """
@@ -33,6 +36,9 @@ class AgentFactory:
         try:
             # 1. Resolve Model
             model = None
+            if not llm_model and db:
+                llm_model = await resolve_chat_llm_model(db, model_id=config.model_id)
+
             if llm_model:
                 model = ModelFactory.create_model(llm_model)
                 # Apply model parameters if provided
@@ -41,9 +47,58 @@ class AgentFactory:
                         if hasattr(model, key):
                             setattr(model, key, value)
             else:
-                # Fallback to default or load by config.model_id
-                # This part depends on how we want to handle model resolution
-                pass
+                # Fallback to default model if not provided
+                # We construct a default LLMModel to use ModelFactory's logic (which includes role_map)
+                
+                # Determine provider and key from settings
+                provider = "openai"
+                api_key = settings.OPENAI_API_KEY
+                model_id = "gpt-3.5-turbo"
+                
+                # Check for DeepSeek config
+                if settings.DEEPSEEK_API_KEY:
+                    provider = "deepseek"
+                    api_key = settings.DEEPSEEK_API_KEY
+                    model_id = "deepseek-chat"
+                elif not api_key:
+                    # If no keys, use dummy
+                    api_key = "dummy"
+
+                # Check if specific model config exists in kwargs or other sources?
+                # Actually, if the user selected a model in the UI, 'llm_model' argument should NOT be None.
+                # If 'llm_model' is None, it means the caller didn't pass a model.
+                # For QuickHandler (Miaodong), it might be using default.
+                
+                # If config object has model_id but we are here (llm_model is None), 
+                # we should try to use config.model_id if available.
+                if config.model_id:
+                    model_id = config.model_id
+                    # If model_id implies a provider, we might need to guess it or fetch it from DB.
+                    # But here we don't have DB access easily to lookup model_id -> provider.
+                    # So we rely on defaults or what's in settings.
+                    
+                    # Simple heuristic for provider based on model_id
+                    if "deepseek" in model_id.lower():
+                        provider = "deepseek"
+                        api_key = settings.DEEPSEEK_API_KEY or api_key
+                    elif "gpt" in model_id.lower():
+                        provider = "openai"
+                        api_key = settings.OPENAI_API_KEY or api_key
+                    elif "claude" in model_id.lower():
+                        provider = "anthropic"
+                        # api_key = settings.ANTHROPIC_API_KEY # if we had it
+
+                default_llm = LLMModel(
+                    model_id=model_id,
+                    provider=provider,
+                    api_key=api_key,
+                )
+                # If config has model_id, use it
+                model = ModelFactory.create_model(default_llm)
+                if config.model_params:
+                     for key, value in config.model_params.items():
+                        if hasattr(model, key):
+                            setattr(model, key, value)
 
             # 2. Load Tools
             tools = []
@@ -88,7 +143,7 @@ class AgentFactory:
                 description=config.role,
                 instructions=config.instructions,
                 tools=tools,
-                show_tool_calls=True,
+                # show_tool_calls=True,  # Deprecated or not supported in this version
                 markdown=True,
                 reasoning=config.reasoning
             )

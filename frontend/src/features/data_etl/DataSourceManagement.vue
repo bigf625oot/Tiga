@@ -15,31 +15,38 @@
     </div>
 
     <!-- Toolbar -->
-    <div class="px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-4 w-full md:w-auto">
-        <div class="relative flex-1 md:w-96">
-          <div class="absolute inset-y-0 left-0 p-4 flex items-center pointer-events-none">
-            <Search class="w-4 h-4 text-muted-foreground" />
-          </div>
-          <Input 
-            v-model="searchQuery"
-            placeholder="搜索数据源名称或类型..." 
-            class="pl-10"
-          />
-        </div>
-        <span class="text-sm text-muted-foreground">
-          共 <span class="font-semibold text-foreground">{{ dataSourceList.length }}</span> 个数据源
-        </span>
+    <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+      <!-- Left: Empty placeholder to balance flex layout -->
+      <div class="hidden md:block w-full md:w-64"></div>
+      
+      <!-- Center: Placeholder for Tabs if needed in future -->
+      <div class="flex items-center justify-center flex-1">
       </div>
 
-      <div class="flex items-center gap-4 w-full md:w-auto justify-end">
+      <!-- Right: Actions -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+        <div class="relative w-full md:w-64 group">
+          <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          <Input 
+            v-model="searchQuery"
+            placeholder="搜索数据源..." 
+            class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50"
+          />
+          <button v-if="searchQuery" @click="searchQuery = ''"
+              class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors">
+              <X class="h-4 w-4" />
+          </button>
+        </div>
+
+        <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
+
         <!-- Filter -->
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
-            <Button variant="outline" class="gap-2">
-              <Filter class="w-4 h-4" />
+            <Button variant="outline" class="gap-2 h-9 shadow-sm">
+              <Filter class="w-3.5 h-3.5" />
               {{ filterOptions.find(o => o.value === selectedType)?.label || '筛选' }}
-              <ChevronDown class="w-4 h-4 opacity-50" />
+              <ChevronDown class="w-3.5 h-3.5 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -61,9 +68,9 @@
         <!-- Group -->
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
-            <Button variant="outline" class="gap-2">
+            <Button variant="outline" class="gap-2 h-9 shadow-sm">
               {{ groupOptions.find(o => o.value === selectedGroup)?.label || '不分组' }}
-              <ChevronDown class="w-4 h-4 opacity-50" />
+              <ChevronDown class="w-3.5 h-3.5 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -83,8 +90,8 @@
         </DropdownMenu>
 
         <!-- Add Button -->
-        <Button @click="openAddModal" class="gap-2">
-          <Plus class="w-4 h-4" />
+        <Button @click="openAddModal" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
+          <Plus class="w-3.5 h-3.5" />
           添加数据源
         </Button>
       </div>

@@ -71,55 +71,65 @@
       </div>
 
       <!-- Search & Filter Bar -->
-      <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b bg-background/50">
-        <!-- Search -->
-        <div class="relative w-full md:w-72">
-           <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-           <Input 
-             v-model="searchQuery"
-             type="text" 
-             placeholder="搜索工具、插件或技能..." 
-             class="pl-9 h-9 bg-background"
-           />
-        </div>
+      <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <!-- Left: Empty placeholder to balance flex layout -->
+        <div class="hidden md:block w-full md:w-64"></div>
         
-        <!-- Filters & Actions -->
-        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-            <!-- Install Status Filter -->
-            <Tabs v-model="installStatus" class="mr-2">
-              <TabsList class="h-9">
-                <TabsTrigger value="all" class="text-xs h-7 px-3">全部</TabsTrigger>
-                <TabsTrigger value="installed" class="text-xs h-7 px-3">已获取</TabsTrigger>
-                <TabsTrigger value="uninstalled" class="text-xs h-7 px-3">未获取</TabsTrigger>
+        <!-- Center: View Tabs -->
+        <div class="flex items-center justify-center flex-1">
+            <Tabs v-model="installStatus" class="w-[260px]">
+              <TabsList class="grid w-full grid-cols-3 h-9 bg-muted/80 p-1 rounded-lg border border-border/50 items-center">
+                <TabsTrigger value="all" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">全部</TabsTrigger>
+                <TabsTrigger value="installed" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">已获取</TabsTrigger>
+                <TabsTrigger value="uninstalled" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">未获取</TabsTrigger>
               </TabsList>
             </Tabs>
+        </div>
 
-             <div class="flex items-center gap-1 hidden md:flex border-r pr-4 mr-2 h-6">
+        <!-- Right: Actions -->
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+             <div class="flex items-center gap-1 hidden md:flex mr-2">
               <Button 
                 v-for="tag in [{id: 'all', label: '全部'}, {id: 'hot', label: '热门'}, {id: 'new', label: '最新'}, {id: 'official', label: '官方'}]" 
                 :key="tag.id"
                 :variant="activeFilter === tag.id ? 'secondary' : 'ghost'"
                 size="sm"
-                class="h-7 text-xs px-2.5"
+                class="h-7 text-xs px-2.5 rounded-full"
                 @click="activeFilter = tag.id"
               >
                 {{ tag.label }}
               </Button>
             </div>
 
-            <Button variant="ghost" size="icon" @click="refreshData" :disabled="isLoading" class="h-9 w-9">
-              <RefreshCw class="w-4 h-4" :class="{'animate-spin': isLoading}" />
+            <div class="relative w-full md:w-64 group">
+               <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+               <Input 
+                 v-model="searchQuery"
+                 type="text" 
+                 placeholder="搜索工具、插件或技能..." 
+                 class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50"
+               />
+               <button v-if="searchQuery" @click="searchQuery = ''"
+                   class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors">
+                   <X class="h-4 w-4" />
+               </button>
+            </div>
+
+            <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
+
+            <Button @click="refreshData" variant="outline" size="icon" :disabled="isLoading" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+              <RefreshCw class="w-4 h-4 text-muted-foreground" :class="{'animate-spin': isLoading}" />
             </Button>
 
-            <Button @click="showCreateToolModal = true" class="shadow-sm gap-2 h-9" size="sm">
+            <Button @click="showCreateToolModal = true" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
               <Plus class="w-3.5 h-3.5" />
-              <span>添加工具</span>
+              添加工具
             </Button>
         </div>
       </div>
 
       <!-- Content Grid -->
-      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar flex flex-col">
         <!-- Skeleton Loader -->
         <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div v-for="n in 8" :key="n" class="border rounded-xl p-4 bg-card h-[180px] flex flex-col space-y-3 shadow-sm">
@@ -142,8 +152,8 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center h-[50vh] text-muted-foreground animate-in fade-in duration-500">
-          <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6">
+        <div v-else-if="filteredItems.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto text-muted-foreground animate-in fade-in duration-500">
+          <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
             <Search class="w-10 h-10 opacity-40" />
           </div>
           <h3 class="text-xl font-semibold text-foreground mb-2">未找到相关服务</h3>
@@ -350,7 +360,6 @@ import {
   LayoutGrid, 
   RefreshCw, 
   Plus, 
-  X, 
   ChevronLeft, 
   ChevronRight, 
   Filter, 
@@ -360,7 +369,8 @@ import {
   Loader2,
   FileText,
   Upload,
-  Check
+  Check,
+  X
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

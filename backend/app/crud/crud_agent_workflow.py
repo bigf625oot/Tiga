@@ -14,7 +14,8 @@ class CRUDAgentWorkflow:
         db: AsyncSession,
         skip: int = 0,
         limit: int = 100,
-        query: Optional[str] = None
+        query: Optional[str] = None,
+        is_template: Optional[bool] = None
     ) -> List[AgentWorkflow]:
         stmt = select(AgentWorkflow)
         
@@ -26,6 +27,9 @@ class CRUDAgentWorkflow:
                     AgentWorkflow.description.ilike(search)
                 )
             )
+            
+        if is_template is not None:
+            stmt = stmt.filter(AgentWorkflow.is_template == is_template)
             
         stmt = stmt.offset(skip).limit(limit).order_by(AgentWorkflow.updated_at.desc())
         result = await db.execute(stmt)

@@ -56,15 +56,20 @@ async def read_teams(
     db: AsyncSession = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
+    is_template: bool = None,
 ) -> Any:
     """
     Retrieve teams (both default and user-created).
     """
-    db_teams = await crud_team.get_multi(db, skip=skip, limit=limit)
+    db_teams = await crud_team.get_multi(db, skip=skip, limit=limit, is_template=is_template)
     
     # Combine default teams and DB teams
-    # Note: Default teams are always returned first
-    all_teams = [TeamResponse(**t) for t in DEFAULT_TEAMS] + db_teams
+    # Note: Default teams are always returned first if not filtering for templates
+    if is_template is True:
+        all_teams = db_teams
+    else:
+        all_teams = [TeamResponse(**t) for t in DEFAULT_TEAMS] + db_teams
+        
     return all_teams
 
 @router.post("/", response_model=TeamResponse)

@@ -99,10 +99,10 @@
         <FileSidebar 
           v-if="(!currentModeId || currentModeId === 'quick') && messages.length > 0"
           :is-open="isFileSidebarOpen"
-          :attachments="selectedAttachments"
+          :attachments="sidebarAttachments"
           @toggle="isFileSidebarOpen = !isFileSidebarOpen"
           @add-files="attachmentModalVisible = true"
-          @remove-file="removeAttachment"
+          @remove-file="removeSidebarAttachment"
         />
 
         <div class="flex-1 flex flex-col h-full relative min-w-0">
@@ -188,14 +188,14 @@ import { useSmartQALayout } from '../composables/useSmartQALayout';
 import { chatService } from '../services/chatService';
 import { knowledgeService } from '../services/knowledgeService';
 import { MODES, STORAGE_KEYS } from '../constants';
-import type { ModeConfig, ModeType, Agent } from '../types';
+import type { ModeConfig, ModeType, Agent, Attachment } from '../types';
 
 const props = defineProps<{
   sessionId: string | null;
   embedded: boolean;
 }>();
 
-const emit = defineEmits(['refresh-sessions']);
+const emit = defineEmits(['refresh-sessions', 'update:sessionId']);
 
 const workflowStore = useWorkflowStore();
 const { isLightMode } = useTheme();
@@ -206,7 +206,7 @@ const blobColors = computed(() => isDark.value
 
 // UI State
 const input = ref('');
-const mode = ref<ModeType>('chat');
+const mode = ref<ModeType>('auto');
 const currentModeId = ref<string | null>(null);
 const isFileSidebarOpen = ref(true);
 const isNetworkSearchEnabled = ref(true);
@@ -240,6 +240,36 @@ const {
   fetchKnowledgeDocs, handleLocalUpload, removeLocalFile, handleAttachmentOk, removeAttachment, filteredKnowledgeDocs, addLocalAttachments,
   searchSuggestions
 } = useAttachments();
+
+const sessionAttachments = ref<Attachment[]>([]);
+
+const sidebarAttachments = computed(() => {
+  const combined = [...sessionAttachments.value, ...selectedAttachments.value];
+  const out: Attachment[] = [];
+  const seen = new Set<string>();
+  for (const a of combined) {
+    const key = a.type === 'knowledge'
+      ? `knowledge:${String(a.id ?? '')}`
+      : `local:${a.name}:${a.size ?? 0}`;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(a);
+  }
+  return out;
+});
+
+const isSameAttachment = (a: Attachment, b: Attachment) => {
+  if (a.type !== b.type) return false;
+  if (a.type === 'knowledge') return String(a.id ?? '') === String(b.id ?? '');
+  return a.name === b.name && (a.size ?? 0) === (b.size ?? 0);
+};
+
+const removeSidebarAttachment = (index: number) => {
+  const target = sidebarAttachments.value[index];
+  if (!target) return;
+  selectedAttachments.value = selectedAttachments.value.filter(a => !isSameAttachment(a, target));
+  sessionAttachments.value = sessionAttachments.value.filter(a => !isSameAttachment(a, target));
+};
 
 const {
   currentSessionId, currentSession, messages, isLoading, isStreaming, isStopping,
@@ -306,19 +336,59 @@ const hasKnowledgeBase = computed(() => {
 const onSendMessage = async () => {
   if (!input.value.trim() && !isTaskRunning.value) return;
   
+  const pendingSelected = [...selectedAttachments.value];
+
+  for (const a of pendingSelected) {
+    if (a.type === 'knowledge') {
+      sessionAttachments.value.push({ ...a, status: a.status || 'success' });
+    } else {
+      sessionAttachments.value.push({ ...a, status: a.status || 'uploading', progress: a.progress ?? 0, file: null });
+    }
+  }
+
   // Upload attachments first
   const attachmentIds: string[] = [];
+  const mediaFiles: File[] = [];
+
   const knowledgeFiles = selectedAttachments.value.filter(a => a.type === 'knowledge');
-  knowledgeFiles.forEach(att => { if (att.id) attachmentIds.push(att.id); });
+  knowledgeFiles.forEach(att => { if (att.id) attachmentIds.push(String(att.id)); });
 
   const localFiles = selectedAttachments.value.filter(a => a.type === 'local' && a.file);
   for (const att of localFiles) {
-    if (att.file) {
-      try {
-        const doc = await knowledgeService.uploadFile(att.file);
-        attachmentIds.push(doc.id);
-      } catch (e) {
-        console.error('Failed to upload', att.name);
+    if (!att.file) continue;
+    const f = att.file;
+    const mime = (f.type || '').toLowerCase();
+    const name = (f.name || '').toLowerCase();
+    const isMedia =
+      mime.startsWith('image/') ||
+      mime.startsWith('video/') ||
+      mime.startsWith('audio/') ||
+      /\.(png|jpe?g|gif|webp|bmp|mp4|mov|m4v|webm|mp3|wav|m4a|aac|flac|ogg)$/.test(name);
+
+    if (isMedia) {
+      mediaFiles.push(f);
+      continue;
+    }
+
+    try {
+      const doc = await knowledgeService.uploadFile(f);
+      const newId = String((doc as any).id);
+      attachmentIds.push(newId);
+      const idx = sessionAttachments.value.findIndex(a => a.type === 'local' && a.name === att.name);
+      if (idx >= 0) {
+        sessionAttachments.value.splice(idx, 1, {
+          type: 'knowledge',
+          name: att.name,
+          size: att.size,
+          id: newId,
+          status: 'parsing'
+        } as any);
+      }
+    } catch (e) {
+      console.error('Failed to upload', att.name);
+      const idx = sessionAttachments.value.findIndex(a => a.type === 'local' && a.name === att.name);
+      if (idx >= 0) {
+        sessionAttachments.value[idx] = { ...sessionAttachments.value[idx], status: 'error', errorMessage: '上传失败' } as any;
       }
     }
   }
@@ -326,7 +396,7 @@ const onSendMessage = async () => {
   const userMsg = input.value;
   input.value = '';
   selectedAttachments.value = [];
-  
+
   messages.value.push({ role: 'user', content: userMsg, timestamp: new Date().toISOString(), status: 'sending' });
 
   // Create session if needed
@@ -337,6 +407,7 @@ const onSendMessage = async () => {
         selectedAgentId.value || null,
         mode.value
       );
+      emit('update:sessionId', sess.id);
       emit('refresh-sessions');
     } catch (e) {
       messages.value[messages.value.length - 1].status = 'error';
@@ -373,6 +444,7 @@ const onSendMessage = async () => {
       try {
           const newSession = await createNewSession('新会话', selectedAgentId.value, mode.value);
           if (newSession) {
+              emit('update:sessionId', newSession.id);
               // Update URL
               const url = new URL(window.location.href);
               url.searchParams.set('session_id', newSession.id);
@@ -387,12 +459,47 @@ const onSendMessage = async () => {
 
   if (currentSessionId.value) {
       try {
-          const res = await chatService.sendChatMessage(currentSessionId.value, {
-              message: userMsg,
-              attachments: attachmentIds,
-              enable_search: isNetworkSearchEnabled.value
+          let res: Response;
+          if (mediaFiles.length > 0) {
+              const formData = new FormData();
+              formData.append('message', userMsg);
+              formData.append('stream', 'true');
+              formData.append('enable_search', String(isNetworkSearchEnabled.value));
+              formData.append('mode', mode.value);
+              for (const id of attachmentIds) formData.append('attachments', id);
+              for (const f of mediaFiles) formData.append('files', f, f.name);
+              res = await chatService.sendChatMessageMultipart(currentSessionId.value, formData);
+          } else {
+              res = await chatService.sendChatMessage(currentSessionId.value, {
+                  message: userMsg,
+                  attachments: attachmentIds,
+                  enable_search: isNetworkSearchEnabled.value,
+                  mode: mode.value
+              });
+          }
+          await handleStreamResponse(res, undefined, (eventType, data) => {
+              if (eventType !== 'file') return;
+              const id = String((data as any)?.id ?? '');
+              const name = String((data as any)?.name ?? (data as any)?.title ?? '附件');
+              const size = (data as any)?.size;
+              const status = (data as any)?.status;
+              const errorMessage = (data as any)?.errorMessage;
+
+              const idx = sessionAttachments.value.findIndex(a => a.type === 'local' && a.name === name && a.status !== 'success');
+              const next: Attachment = {
+                type: 'knowledge',
+                name,
+                size: typeof size === 'number' ? size : undefined,
+                id,
+                status: status || 'success',
+                errorMessage
+              } as any;
+              if (idx >= 0) {
+                sessionAttachments.value.splice(idx, 1, next);
+              } else {
+                sessionAttachments.value.push(next);
+              }
           });
-          await handleStreamResponse(res);
       } catch (e) {
           console.error(e);
           messages.value.push({ role: 'assistant', content: "Error: " + (e as Error).message });
@@ -478,12 +585,23 @@ onMounted(() => {
     if (props.sessionId) {
         currentSessionId.value = props.sessionId;
         fetchSessionDetails(props.sessionId);
+    } else {
+        // Default to Quick mode on new session
+        currentModeId.value = 'quick';
+        mode.value = 'quick';
+        // Wait for agents to load then select default
+        if (agents.value.length === 0) {
+            fetchAgents();
+        }
+        const defaultAgent = agents.value.find(a => a.name === '通用' || a.name === '快问快答') || agents.value[0];
+        if (defaultAgent) selectedAgentId.value = defaultAgent.id;
     }
 });
 
 watch(() => props.sessionId, (newId) => {
+    stopGeneration();
     currentSessionId.value = newId;
-    mode.value = 'chat';
+    mode.value = 'auto';
     currentModeId.value = null;
     isRightCollapsed.value = true;
     workflowStore.resetWorkflow();

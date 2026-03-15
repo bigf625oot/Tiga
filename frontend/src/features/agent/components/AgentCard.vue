@@ -17,10 +17,10 @@
            <!-- Icon -->
            <div 
              class="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden  transition-all"
-             :class="isTemplate ? 'bg-gradient-to-br from-muted/50 to-muted' : 'bg-white dark:bg-transparent'"
+             :class="isTemplate ? 'bg-transparent' : 'bg-white dark:bg-transparent'"
            >
                <img v-if="isImage" :src="agent.icon" class="h-full w-full object-cover" />
-               <component v-else :is="agent.iconComponent" class="h-6 w-6 text-foreground/80" />
+               <img v-else :src="fallbackIconUrl" class="h-9 w-9 object-contain opacity-80" alt="agent icon" />
            </div>
            
            <div class="space-y-1.5 flex-1 min-w-0 relative">
@@ -99,6 +99,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Edit, Trash2 } from 'lucide-vue-next';
+import agentPublicSvgIcons from '@/generated/agentPublicIcons';
 
 const props = defineProps({
   agent: {
@@ -114,6 +115,15 @@ const props = defineProps({
 const emit = defineEmits(['click', 'edit', 'delete']);
 
 const isTemplate = computed(() => props.agent.is_template);
+
+const fallbackIconUrl = computed(() => {
+    if (!agentPublicSvgIcons?.length) return '/tiga.svg';
+    const key = String(props.agent?.id ?? props.agent?.name ?? '');
+    if (!key) return agentPublicSvgIcons[Math.floor(Math.random() * agentPublicSvgIcons.length)];
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    return agentPublicSvgIcons[hash % agentPublicSvgIcons.length];
+});
 
 const isImage = computed(() => {
     const icon = props.agent.icon;

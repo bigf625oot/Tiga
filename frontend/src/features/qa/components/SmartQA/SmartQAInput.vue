@@ -145,55 +145,58 @@
           </TooltipProvider>
         </template>
 
-        <div
-          v-if="!currentModeId || currentModeId === 'quick'"
-          class="inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-full border text-xs font-medium select-none transition-colors"
-          :class="(isLoading || isTaskRunning) ? 'border-blue-200 bg-blue-50 text-blue-700 shadow-[0_0_0_1px_rgba(59,130,246,0.12)] dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200' : 'border-border/60 bg-muted/30 text-foreground/80'"
-        >
-          <Avatar class="w-4 h-4">
-            <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover bg-white" />
-            <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
-              <Zap class="w-3 h-3 text-blue-600" />
-            </AvatarFallback>
-          </Avatar>
-          <span class="hidden sm:inline">快问快答</span>
-          <span v-if="isLoading || isTaskRunning" class="ml-0.5 inline-flex items-center gap-1.5">
-            <Loader2 class="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-300" />
-            <span class="relative flex h-2 w-2">
-              <span class="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-50 animate-ping"></span>
-              <span class="relative inline-flex h-2 w-2 rounded-full bg-blue-600"></span>
-            </span>
-          </span>
-        </div>
-        <div v-else class="flex items-center gap-2 h-8 px-2 rounded-lg border border-border/50 bg-background/40 hover:bg-muted/40 transition-colors min-w-0">
-          <Avatar class="w-5 h-5">
-            <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover bg-white" />
-            <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
-              <Zap class="w-3.5 h-3.5 text-blue-500" />
-            </AvatarFallback>
-          </Avatar>
-          <Select
-            :model-value="selectedAgentId" 
-            @update:model-value="$emit('update:selectedAgentId', $event)"
+        <!-- Agent Selection (Hidden in 'auto' mode when currentModeId is null) -->
+        <template v-if="currentModeId">
+          <div
+            v-if="currentModeId === 'quick'"
+            class="inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-full border text-xs font-medium select-none transition-colors"
+            :class="(isLoading || isTaskRunning) ? 'border-blue-200 bg-blue-50 text-blue-700 shadow-[0_0_0_1px_rgba(59,130,246,0.12)] dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200' : 'border-border/60 bg-muted/30 text-foreground/80'"
           >
-            <SelectTrigger class="w-auto h-6 !border-0 !bg-transparent !p-0 text-xs focus:ring-0 shadow-none gap-1">
-              <span class="truncate max-w-[160px]">
-                {{ currentAgent?.name || (currentModeId === 'team' ? '选择团队' : '选择智能体') }}
+            <Avatar class="w-4 h-4">
+              <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover bg-white" />
+              <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
+                <Zap class="w-3 h-3 text-blue-600" />
+              </AvatarFallback>
+            </Avatar>
+            <span class="hidden sm:inline">快问快答</span>
+            <span v-if="isLoading || isTaskRunning" class="ml-0.5 inline-flex items-center gap-1.5">
+              <Loader2 class="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-300" />
+              <span class="relative flex h-2 w-2">
+                <span class="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-50 animate-ping"></span>
+                <span class="relative inline-flex h-2 w-2 rounded-full bg-blue-600"></span>
               </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="item in agentList" :key="item.id" :value="item.id">
-                <div v-if="currentModeId === 'team'" class="flex flex-col items-start gap-1 py-1 w-[240px]">
-                  <div class="font-medium">{{ item.name }}</div>
-                  <div class="text-xs text-muted-foreground line-clamp-2 text-left whitespace-normal opacity-80">
-                    {{ item.description || '暂无描述' }}
+            </span>
+          </div>
+          <div v-else class="flex items-center gap-2 h-8 px-2 rounded-lg border border-border/50 bg-background/40 hover:bg-muted/40 transition-colors min-w-0">
+            <Avatar class="w-5 h-5">
+              <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover bg-white" />
+              <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
+                <Zap class="w-3.5 h-3.5 text-blue-500" />
+              </AvatarFallback>
+            </Avatar>
+            <Select
+              :model-value="selectedAgentId" 
+              @update:model-value="$emit('update:selectedAgentId', $event)"
+            >
+              <SelectTrigger class="w-auto h-6 !border-0 !bg-transparent !p-0 text-xs focus:ring-0 shadow-none gap-1">
+                <span class="truncate max-w-[160px]">
+                  {{ currentAgent?.name || (currentModeId === 'team' ? '选择团队' : '选择智能体') }}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="item in agentList" :key="item.id" :value="item.id">
+                  <div v-if="currentModeId === 'team'" class="flex flex-col items-start gap-1 py-1 w-[240px]">
+                    <div class="font-medium">{{ item.name }}</div>
+                    <div class="text-xs text-muted-foreground line-clamp-2 text-left whitespace-normal opacity-80">
+                      {{ item.description || '暂无描述' }}
+                    </div>
                   </div>
-                </div>
-                <span v-else>{{ item.name }}</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+                  <span v-else>{{ item.name }}</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </template>
 
         <div class="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground ml-1 select-none">
           <span class="flex items-center gap-1">

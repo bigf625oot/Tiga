@@ -9,12 +9,15 @@ class CRUDTeam:
         result = await db.execute(select(Team).where(Team.id == id))
         return result.scalars().first()
 
-    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100, query: str = None) -> List[Team]:
+    async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 100, query: str = None, is_template: Optional[bool] = None) -> List[Team]:
         stmt = select(Team)
         if query:
             search = f"%{query}%"
             stmt = stmt.where(or_(Team.name.ilike(search), Team.description.ilike(search)))
         
+        if is_template is not None:
+            stmt = stmt.where(Team.is_template == is_template)
+            
         stmt = stmt.offset(skip).limit(limit).order_by(Team.created_at.desc())
         result = await db.execute(stmt)
         return result.scalars().all()

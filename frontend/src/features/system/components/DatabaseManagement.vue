@@ -1,126 +1,122 @@
 <template>
-  <div class="h-full flex flex-col bg-background text-foreground transition-colors duration-300">
-    <!-- Header Banner -->
-    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-3">
-          <h2 class="text-lg font-semibold tracking-tight">数据源管理</h2>
-          <div class="h-4 w-px bg-border"></div>
-          <p class="text-muted-foreground text-xs truncate max-w-xl">
-            管理外部数据源连接配置
-          </p>
-        </div>
-        <div class="flex items-center gap-3">
-          <div class="relative w-64">
-            <Search class="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input v-model="searchQuery" placeholder="搜索数据源名称或类型..." class="pl-8 h-9" />
-          </div>
-          <div class="text-xs text-muted-foreground whitespace-nowrap">共 {{ displayConfigs.length }} 个数据源</div>
-          <Button 
-            @click="openCreateModal" 
-            size="sm"
-            class="h-9"
-          >
-            <Plus class="w-4 h-4 mr-2" />
-            新建连接
-          </Button>
-        </div>
+  <div class="h-full flex flex-col bg-background overflow-hidden">
+    <div class="px-6 py-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold tracking-tight">数据源管理</h2>
+        <div class="h-4 w-px bg-border"></div>
+        <p class="text-xs text-muted-foreground m-0 truncate max-w-xl">管理外部数据源连接配置。</p>
       </div>
     </div>
 
-    <!-- Content -->
-    <div class="flex-1 overflow-hidden p-6 bg-background">
-      <ScrollArea class="h-full">
-        <div class="h-full">
-            <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <div v-for="i in 4" :key="i" class="h-[200px] rounded-xl border bg-card/50 animate-pulse"></div>
-            </div>
-            
-            <div v-else-if="displayConfigs.length === 0" class="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground">
-                <div class="w-16 h-16 bg-muted/50 rounded-xl flex items-center justify-center mb-4">
-                    <Database class="w-8 h-8 opacity-50" />
-                </div>
-                <span class="text-sm font-medium">{{ searchQuery ? '未找到匹配的连接' : '暂无连接配置' }}</span>
-                <Button v-if="!searchQuery" variant="link" @click="openCreateModal" class="mt-2">立即创建</Button>
-            </div>
-            
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start">
-                <!-- Database Card Style from DataSourceManagement -->
-                <Card 
-                  v-for="(config, idx) in displayConfigs"
-                  :key="idx"
-                  class="group cursor-pointer hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col justify-between h-[280px]"
-                  @click="viewTables(config)"
-                >
-                    <CardContent class="p-6">
-                        <!-- Header -->
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-purple-500 shadow-sm">
-                                    <Database class="w-6 h-6 text-white" />
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-base text-foreground line-clamp-1" :title="config.name || config.host">
-                                        {{ config.name || config.host || '未命名连接' }}
-                                    </h3>
-                                    <div class="flex items-center gap-1.5 mt-1">
-                                        <div class="w-2 h-2 rounded-full" :class="config.host || config.path ? 'bg-green-500' : 'bg-gray-500'"></div>
-                                        <span class="text-xs text-muted-foreground font-medium">{{ config.host || config.path ? '运行中' : '未连接' }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-muted/10 flex flex-col">
+      <div class="w-full flex flex-col gap-8 flex-1">
+        <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div class="hidden md:block w-full md:w-64"></div>
 
-                        <!-- Database Metrics -->
-                        <div class="grid grid-cols-2 gap-4 m-1 mt-6">
-                            <div>
-                                <div class="text-xs text-muted-foreground mb-1">数据表</div>
-                                <div class="flex items-baseline gap-1">
-                                    <span class="text-2xl font-bold text-purple-600 leading-none">{{ tables.length }}</span>
-                                    <span class="text-xs text-muted-foreground">张</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="text-xs text-muted-foreground mb-1">总记录数</div>
-                                <div class="flex items-baseline gap-1">
-                                    <span class="text-2xl font-bold text-foreground leading-none">{{ totalRecords }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Type Badge -->
-                        <div class="mt-4">
-                            <Badge variant="outline" class="gap-1.5 text-xs font-normal text-muted-foreground px-2.5 py-0.5 h-6 rounded-full bg-muted/30 uppercase">
-                                <Database class="w-3 h-3" />
-                                {{ config.type || '未知类型' }}
-                            </Badge>
-                        </div>
-                    </CardContent>
-
-                    <!-- Action Footer -->
-                    <CardFooter class="p-0 border-t bg-muted/5 h-10 min-h-[40px]">
-                        <Button 
-                            variant="ghost" 
-                            class="flex-1 h-full rounded-none text-xs text-muted-foreground hover:text-primary hover:bg-transparent"
-                            @click.stop="editConfig(config)"
-                        >
-                            <Pencil class="w-3.5 h-3.5 mr-2" />
-                            编辑
-                        </Button>
-                        <div class="w-px h-4 bg-border my-auto"></div>
-                        <Button 
-                            variant="ghost" 
-                            class="flex-1 h-full rounded-none text-xs text-muted-foreground hover:text-destructive hover:bg-transparent"
-                            disabled
-                        >
-                            <Trash2 class="w-3.5 h-3.5 mr-2" />
-                            删除
-                        </Button>
-                    </CardFooter>
-                </Card>
+          <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div class="relative w-full md:w-64 group">
+              <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              <Input v-model="searchQuery" placeholder="搜索数据源..." class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
+              <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors" aria-label="清空搜索">
+                <X class="h-4 w-4" />
+              </button>
             </div>
+
+            <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
+
+            <Button @click="fetchConfig" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+              <RefreshCw class="h-4 w-4 text-muted-foreground" :class="{ 'animate-spin': loading }" />
+            </Button>
+
+            <Button @click="openCreateModal" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
+              <Plus class="w-3.5 h-3.5" />
+              新建连接
+            </Button>
+          </div>
         </div>
-      </ScrollArea>
+
+        <div class="flex flex-col gap-8 px-6 pb-6 flex-1">
+          <div v-if="searchQuery" class="flex items-center gap-2">
+            <h3 class="text-lg font-semibold tracking-tight text-foreground">搜索结果</h3>
+            <span class="text-sm text-muted-foreground">({{ displayConfigs.length }})</span>
+          </div>
+
+          <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div v-for="i in 4" :key="i" class="h-[200px] rounded-xl border bg-card/50 animate-pulse"></div>
+          </div>
+
+          <div v-else-if="displayConfigs.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
+            <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+              <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
+              <Database v-else class="w-10 h-10 text-muted-foreground/50" />
+            </div>
+            <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ searchQuery ? '未找到相关数据源' : '暂无数据源连接' }}</h3>
+            <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ searchQuery ? '请尝试更换关键词搜索，或清空筛选条件。' : '当前暂无连接配置，您可以点击下方按钮创建一个新的数据源连接。' }}</p>
+            <Button v-if="!searchQuery" @click="openCreateModal" class="px-8 shadow-sm hover:scale-105 transition-transform">
+              <Plus class="w-4 h-4 mr-2" />
+              立即创建
+            </Button>
+          </div>
+
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start">
+            <Card v-for="(config, idx) in displayConfigs" :key="idx" class="group cursor-pointer hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col justify-between h-[280px]" @click="viewTables(config)">
+              <CardContent class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-purple-500 shadow-sm">
+                      <Database class="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 class="font-bold text-base text-foreground line-clamp-1" :title="config.name || config.host">
+                        {{ config.name || config.host || '未命名连接' }}
+                      </h3>
+                      <div class="flex items-center gap-1.5 mt-1">
+                        <div class="w-2 h-2 rounded-full" :class="config.host || config.path ? 'bg-green-500' : 'bg-gray-500'"></div>
+                        <span class="text-xs text-muted-foreground font-medium">{{ config.host || config.path ? '运行中' : '未连接' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 m-1 mt-6">
+                  <div>
+                    <div class="text-xs text-muted-foreground mb-1">数据表</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold text-purple-600 leading-none">{{ tables.length }}</span>
+                      <span class="text-xs text-muted-foreground">张</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-muted-foreground mb-1">总记录数</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold text-foreground leading-none">{{ totalRecords }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4">
+                  <Badge variant="outline" class="gap-1.5 text-xs font-normal text-muted-foreground px-2.5 py-0.5 h-6 rounded-full bg-muted/30 uppercase">
+                    <Database class="w-3 h-3" />
+                    {{ config.type || '未知类型' }}
+                  </Badge>
+                </div>
+              </CardContent>
+
+              <CardFooter class="p-0 border-t bg-muted/5 h-10 min-h-[40px]">
+                <Button variant="ghost" class="flex-1 h-full rounded-none text-xs text-muted-foreground hover:text-primary hover:bg-transparent" @click.stop="editConfig(config)">
+                  <Pencil class="w-3.5 h-3.5 mr-2" />
+                  编辑
+                </Button>
+                <div class="w-px h-4 bg-border my-auto"></div>
+                <Button variant="ghost" class="flex-1 h-full rounded-none text-xs text-muted-foreground hover:text-destructive hover:bg-transparent" disabled>
+                  <Trash2 class="w-3.5 h-3.5 mr-2" />
+                  删除
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Tables Preview Modal -->
@@ -147,8 +143,12 @@
                         <div v-if="loadingTables" class="flex justify-center py-10">
                             <Loader2 class="w-5 h-5 animate-spin text-muted-foreground" />
                         </div>
-                        <div v-else-if="tables.length === 0" class="text-center py-10 text-muted-foreground text-xs">
-                            暂无数据表
+                        <div v-else-if="tables.length === 0" class="flex flex-col items-center justify-center py-10 text-center">
+                            <div class="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4 ring-8 ring-muted/20">
+                                <TableIcon class="w-7 h-7 text-muted-foreground/50" />
+                            </div>
+                            <div class="text-xs font-medium text-foreground">暂无数据表</div>
+                            <div class="text-[11px] text-muted-foreground mt-1">请确认连接已可用，或稍后重试。</div>
                         </div>
                         <div v-else class="p-2 space-y-0.5">
                             <button 
@@ -166,9 +166,12 @@
 
                 <!-- Content -->
                 <div class="flex-1 flex flex-col overflow-hidden bg-background">
-                    <div v-if="!selectedTable" class="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-                        <TableIcon class="w-12 h-12 mb-4 opacity-20" />
-                        <span class="text-sm">请选择左侧数据表查看详情</span>
+                    <div v-if="!selectedTable" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
+                        <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+                            <TableIcon class="w-10 h-10 text-muted-foreground/50" />
+                        </div>
+                        <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">请选择数据表</h3>
+                        <p class="text-muted-foreground text-sm max-w-sm mx-auto">从左侧列表选择一张表查看详情与转换状态。</p>
                     </div>
                     <div v-else class="flex-1 flex flex-col overflow-hidden">
                         <div class="px-4 py-3 border-b border-border flex justify-between items-center bg-card/50">
@@ -483,6 +486,8 @@ import {
     Trash2, 
     Loader2, 
     Search, 
+    RefreshCw,
+    X,
     ChevronDown, 
     Check, 
     XCircle,

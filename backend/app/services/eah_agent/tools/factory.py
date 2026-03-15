@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, Any, Union
 
 from agno.tools import Toolkit
-from app.services.mcp.client import mcp_pool
+from app.services.mcp.ws_client import mcp_pool
 from app.services.eah_agent.tools.libs.mcp_tool import MCPToolkit as LegacyWSToolkit
 # Import the Agno implementation from local path
 from app.services.eah_agent.tools.mcp.mcp import MCPTools as AgnoMCPTools

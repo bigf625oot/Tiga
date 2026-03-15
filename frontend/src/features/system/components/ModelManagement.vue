@@ -94,43 +94,53 @@
       </div>
 
       <!-- Search & Filter Bar -->
-      <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b bg-background/50">
-        <!-- Search -->
-        <div class="relative w-full md:w-72">
-           <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-           <Input 
-             v-model="searchQuery"
-             type="text" 
-             placeholder="搜索模型名称或ID..." 
-             class="pl-9 h-9 bg-background"
-           />
-        </div>
+      <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <!-- Left: Empty placeholder to balance flex layout -->
+        <div class="hidden md:block w-full md:w-64"></div>
         
-        <!-- Filters & Actions -->
-        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-            <!-- Type Filter -->
-            <Tabs v-model="activeType" class="mr-2">
-              <TabsList class="h-9">
-                <TabsTrigger value="all" class="text-xs h-7 px-3">全部</TabsTrigger>
-                <TabsTrigger value="text" class="text-xs h-7 px-3">文本</TabsTrigger>
-                <TabsTrigger value="embedding" class="text-xs h-7 px-3">嵌入</TabsTrigger>
-                <TabsTrigger value="image" class="text-xs h-7 px-3">图像</TabsTrigger>
+        <!-- Center: View Tabs -->
+        <div class="flex items-center justify-center flex-1">
+            <Tabs v-model="activeType" class="w-[300px]">
+              <TabsList class="grid w-full grid-cols-4 h-9 bg-muted/80 p-1 rounded-lg border border-border/50 items-center">
+                <TabsTrigger value="all" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">全部</TabsTrigger>
+                <TabsTrigger value="text" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">文本</TabsTrigger>
+                <TabsTrigger value="embedding" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">嵌入</TabsTrigger>
+                <TabsTrigger value="image" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">图像</TabsTrigger>
               </TabsList>
             </Tabs>
+        </div>
 
-            <Button variant="ghost" size="icon" @click="fetchModels" :disabled="loading" class="h-9 w-9">
-              <RefreshCw class="w-4 h-4" :class="{'animate-spin': loading}" />
+        <!-- Right: Actions -->
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div class="relative w-full md:w-64 group">
+               <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+               <Input 
+                 v-model="searchQuery"
+                 type="text" 
+                 placeholder="搜索模型名称或ID..." 
+                 class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50"
+               />
+               <button v-if="searchQuery" @click="searchQuery = ''"
+                   class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors">
+                   <X class="h-4 w-4" />
+               </button>
+            </div>
+
+            <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
+
+            <Button @click="fetchModels" variant="outline" size="icon" :disabled="loading" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+              <RefreshCw class="w-4 h-4 text-muted-foreground" :class="{'animate-spin': loading}" />
             </Button>
 
-            <Button @click="openCreateModal" class="shadow-sm gap-2 h-9" size="sm">
+            <Button @click="openCreateModal" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
               <Plus class="w-3.5 h-3.5" />
-              <span>添加模型</span>
+              添加模型
             </Button>
         </div>
       </div>
 
       <!-- Content Grid -->
-      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+      <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar flex flex-col">
         <!-- Skeleton Loader -->
         <div v-if="loading && models.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div v-for="n in 8" :key="n" class="border rounded-xl p-4 bg-card h-[180px] flex flex-col space-y-3 shadow-sm">
@@ -149,8 +159,8 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="filteredModels.length === 0" class="flex flex-col items-center justify-center h-[50vh] text-muted-foreground animate-in fade-in duration-500">
-          <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6">
+        <div v-else-if="filteredModels.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto text-muted-foreground animate-in fade-in duration-500">
+          <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
             <Bot class="w-10 h-10 opacity-40" />
           </div>
           <h3 class="text-xl font-semibold text-foreground mb-2">未找到相关模型</h3>
@@ -209,14 +219,9 @@
                   <SelectValue placeholder="选择提供商" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="aliyun">Aliyun (通义千问)</SelectItem>
-                  <SelectItem value="deepseek">DeepSeek</SelectItem>
-                  <SelectItem value="minimax">MiniMax (海螺)</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                  <SelectItem value="google">Google</SelectItem>
-                  <SelectItem value="local">Local (Ollama/vLLM)</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem v-for="(config, key) in providerConfig" :key="key" :value="key">
+                    {{ config.label || key }}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -361,7 +366,7 @@ import dayjs from 'dayjs';
 import ModelCard from './ModelCard.vue';
 import { 
   Loader2, Plus, Bot, MoreHorizontal, Edit2, Trash2, 
-  Eye, EyeOff, Network, CheckCircle2, XCircle,
+  Eye, EyeOff, Network, CheckCircle2, XCircle, X,
   LayoutGrid, ChevronLeft, ChevronRight, RefreshCw, Search,
   Zap, Box, Brain, Globe, Cpu
 } from 'lucide-vue-next';
@@ -425,40 +430,7 @@ const formState = reactive({
     is_active: true
 });
 
-const providerConfig = {
-    openai: {
-        baseUrl: 'https://api.openai.com/v1',
-        models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo', 'dall-e-3', 'text-embedding-3-small', 'text-embedding-3-large']
-    },
-    aliyun: {
-        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        models: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen-vl-max', 'qwen-vl-plus', 'wanx-v1']
-    },
-    minimax: {
-        baseUrl: 'https://api.minimax.chat/v1',
-        models: ['abab6.5-chat', 'abab6.5s-chat', 'abab5.5-chat']
-    },
-    deepseek: {
-        baseUrl: 'https://api.deepseek.com',
-        models: ['deepseek-chat', 'deepseek-reasoner', 'deepseek-embed']
-    },
-    anthropic: {
-        baseUrl: 'https://api.anthropic.com/v1',
-        models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307']
-    },
-    google: {
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-        models: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro-vision']
-    },
-    local: {
-        baseUrl: 'http://localhost:11434/v1',
-        models: ['llama3', 'mistral', 'qwen2']
-    },
-    other: {
-        baseUrl: '',
-        models: []
-    }
-};
+const providerConfig = ref({});
 
 const currentModelOptions = ref([]);
 
@@ -471,15 +443,33 @@ const providerCategories = computed(() => {
 
     const categories = [
         { id: 'all', label: '全部模型', icon: LayoutGrid, count: models.value.length },
-        { id: 'openai', label: 'OpenAI', initials: 'O', country: 'us', count: counts['openai'] || 0 },
-        { id: 'aliyun', label: 'Aliyun', initials: 'A', country: 'cn', count: counts['aliyun'] || 0 },
-        { id: 'deepseek', label: 'DeepSeek', initials: 'D', country: 'cn', count: counts['deepseek'] || 0 },
-        { id: 'minimax', label: 'MiniMax', initials: 'M', country: 'cn', count: counts['minimax'] || 0 },
-        { id: 'anthropic', label: 'Anthropic', initials: 'A', country: 'us', count: counts['anthropic'] || 0 },
-        { id: 'google', label: 'Google', initials: 'G', country: 'us', count: counts['google'] || 0 },
-        { id: 'local', label: 'Local', initials: 'L', count: counts['local'] || 0 },
-        { id: 'other', label: '其他', initials: 'O', count: counts['other'] || 0 },
     ];
+    
+    // Add dynamic categories from providerConfig
+    Object.keys(providerConfig.value).forEach(key => {
+        const config = providerConfig.value[key];
+  
+        const isMajor = ['openai', 'aliyun', 'deepseek', 'anthropic', 'google', 'ollama', 'local'].includes(key);
+        
+        if (isMajor || counts[key] > 0) {
+             categories.push({
+                id: key,
+                label: config.label || key,
+                initials: (config.label || key).substring(0, 1).toUpperCase(),
+                // country: config.country, // Backend doesn't provide country yet, maybe map it locally or skip
+                count: counts[key] || 0
+            });
+        }
+    });
+    
+    // Always add "Other" if there are models with unknown providers
+    const knownProviders = Object.keys(providerConfig.value);
+    const otherCount = models.value.filter(m => !knownProviders.includes(m.provider)).length;
+    
+    if (otherCount > 0) {
+        categories.push({ id: 'other', label: '其他', initials: 'O', count: otherCount });
+    }
+
     return categories;
 });
 
@@ -508,6 +498,33 @@ const filteredModels = computed(() => {
 });
 
 // Methods
+const fetchProviders = async () => {
+    try {
+        const res = await api.get('/llm/providers');
+        providerConfig.value = res.data;
+        
+        // Ensure 'local' and 'other' exist if not returned by backend
+        if (!providerConfig.value['local']) {
+             providerConfig.value['local'] = {
+                label: 'Local',
+                value: 'local',
+                baseUrl: 'http://localhost:11434/v1',
+                models: ['llama3', 'mistral', 'qwen2']
+             };
+        }
+        if (!providerConfig.value['other']) {
+             providerConfig.value['other'] = {
+                label: 'Other',
+                value: 'other',
+                baseUrl: '',
+                models: []
+             };
+        }
+    } catch (e) {
+        console.error("Failed to fetch providers", e);
+    }
+};
+
 const fetchModels = async () => {
     loading.value = true;
     try {
@@ -525,12 +542,12 @@ const fetchModels = async () => {
 };
 
 const handleProviderChange = (val) => {
-    const config = providerConfig[val];
+    const config = providerConfig.value[val];
     if (config) {
-        formState.base_url = config.baseUrl;
-        currentModelOptions.value = config.models.map(m => ({ value: m, label: m }));
+        formState.base_url = config.baseUrl || '';
+        currentModelOptions.value = (config.models || []).map(m => ({ value: m, label: m }));
         
-        if (config.models.length > 0) {
+        if (config.models && config.models.length > 0) {
             if (!config.models.includes(formState.model_id)) {
                 formState.model_id = config.models[0];
             }
@@ -579,10 +596,10 @@ const openEditModal = (record) => {
     isEdit.value = true;
     testResult.value = null;
     
-    const config = providerConfig[record.provider];
+    const config = providerConfig.value[record.provider];
     if (config) {
-        currentModelOptions.value = config.models.map(m => ({ value: m, label: m }));
-        const isInList = config.models.includes(record.model_id);
+        currentModelOptions.value = (config.models || []).map(m => ({ value: m, label: m }));
+        const isInList = config.models && config.models.includes(record.model_id);
         isCustomModel.value = !isInList;
         if (record.provider === 'local' || record.provider === 'other') isCustomModel.value = true;
     } else {
@@ -741,6 +758,7 @@ const handleToggleStatus = async (model) => {
 };
 
 onMounted(() => {
+    fetchProviders();
     fetchModels();
 });
 </script>

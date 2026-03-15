@@ -1,3 +1,13 @@
+"""
+Agno Control Plane
+智能体控制平面
+功能：
+- 接收前端消息
+- 解析意图
+- 路由到对应的处理模块
+- 整合处理结果
+- 发送回前端
+"""
 import asyncio
 import logging
 from typing import Dict, Any, Optional, AsyncGenerator
@@ -5,9 +15,11 @@ from typing import Dict, Any, Optional, AsyncGenerator
 from app.core.config import settings
 from app.core.i18n import _
 from app.services.eah_agent.core.nlu import NluService, IntentResult
+from app.services.eah_agent.core.stream_normalizer import normalize_event_stream
 from app.services.openclaw.clients.agno import AgnoGatewayClient
 from app.models.llm_model import LLMModel
 from app.services.eah_agent.storage.session_history import SessionHistory
+from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Handlers
@@ -59,19 +71,64 @@ class AgnoControlPlane:
         """Stops the control plane."""
         await self.client.close()
 
-    async def process_stream(self, user_input: str, db: Optional[AsyncSession] = None, session_id: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
+    async def process_stream(self, user_input: str, db: Optional[AsyncSession] = None, session_id: Optional[str] = None, **kwargs) -> AsyncGenerator[Dict[str, Any], None]:
         """
         New main entry point supporting streaming.
         Dispatches to handlers based on NLU intent.
         """
-        # 1. Intent Understanding
+        if not self.llm_model and db:
+            from app.services.llm.resolver import resolve_chat_llm_model
+
+            self.llm_model = await resolve_chat_llm_model(db)
+            self.nlu = NluService(self.llm_model)
+            for h in (
+                self.quick_handler,
+                self.plan_handler,
+                self.team_handler,
+                self.flow_handler,
+                self.data_handler,
+            ):
+                if getattr(h, "llm_model", None) != self.llm_model:
+                    setattr(h, "llm_model", self.llm_model)
+                    if hasattr(h, "agent"):
+                        setattr(h, "agent", None)
+
+        requested_mode = kwargs.get("mode")
+        requested_intent = kwargs.get("intent_override") or kwargs.get("intent")
+
+        threshold = kwargs.get("threshold", 0.85)
         try:
-            result: IntentResult = await self.nlu.analyze(user_input)
-            logger.info(f"Intent Analysis: {result}")
-        except Exception as e:
-            logger.error(f"NLU Analysis failed: {e}")
-            yield {"type": "error", "content": _("I couldn't understand that.")}
-            return
+            threshold = float(threshold)
+        except Exception:
+            threshold = 0.85
+
+        forced_intent = None
+        if isinstance(requested_intent, str) and requested_intent.strip():
+            forced_intent = requested_intent.strip().lower()
+        elif isinstance(requested_mode, str) and requested_mode.strip():
+            mode = requested_mode.strip().lower()
+            if mode in {"quick", "chat"}:
+                forced_intent = "chat"
+            elif mode in {"team"}:
+                forced_intent = "team"
+            elif mode in {"workflow", "flow"}:
+                forced_intent = "workflow"
+            elif mode in {"data_query", "data"}:
+                forced_intent = "data_query"
+            elif mode in {"kg_qa", "kgqa", "kg"}:
+                forced_intent = "kg_qa"
+
+        result: Optional[IntentResult] = None
+        if forced_intent in {"chat", "team", "workflow", "data_query", "kg_qa"}:
+            result = IntentResult(intent=forced_intent, confidence=1.0, task_params=None)
+        else:
+            try:
+                result = await self.nlu.analyze(user_input)
+                logger.info(f"Intent Analysis: {result}")
+            except Exception as e:
+                logger.error(f"NLU Analysis failed: {e}")
+                yield {"type": "error", "content": _("I couldn't understand that.")}
+                return
 
         # 2. Session Persistence (Save User Message)
         history = None
@@ -88,30 +145,78 @@ class AgnoControlPlane:
             except Exception as e:
                 logger.error(f"Failed to save user message: {e}")
 
+        enable_search = bool(kwargs.get("enable_search", True))
+        raw_doc_ids = kwargs.get("doc_ids") or []
+        doc_ids = []
+        if isinstance(raw_doc_ids, (list, tuple)):
+            for x in raw_doc_ids:
+                try:
+                    if x is None:
+                        continue
+                    if isinstance(x, int):
+                        doc_ids.append(x)
+                        continue
+                    s = str(x).strip()
+                    if s.isdigit():
+                        doc_ids.append(int(s))
+                except Exception:
+                    continue
+        attachment_context = kwargs.get("attachment_context")
+        augmented_input = user_input
+        if attachment_context or (enable_search and doc_ids):
+            parts = []
+            if attachment_context:
+                parts.append("【用户上传/选择的附件内容（提取结果）】\n" + str(attachment_context))
+            if enable_search and doc_ids:
+                try:
+                    results = await asyncio.to_thread(lightrag_engine.search_chunks, query=user_input, top_k=6, doc_ids=doc_ids)
+                except Exception:
+                    results = []
+                if results:
+                    lines = []
+                    for r in results:
+                        title = r.get("title") or ""
+                        did = r.get("doc_id")
+                        preview = (r.get("content") or r.get("preview") or "").strip()
+                        if len(preview) > 600:
+                            preview = preview[:600]
+                        head = f"- doc#{did}:{title}" if did is not None else f"- {title}"
+                        lines.append(head + ("\n" + preview if preview else ""))
+                    parts.append("【仅在附件范围内的相关检索摘录】\n" + "\n\n".join(lines))
+            prefix = "\n\n".join([p for p in parts if p]).strip()
+            if prefix:
+                if len(prefix) > 8000:
+                    prefix = prefix[:8000]
+                augmented_input = prefix + "\n\n【用户问题】\n" + user_input
+
         # 3. Dispatch & Stream
         full_response = ""
         
         try:
             handler_stream = None
-            if result.intent == "chat" or result.confidence < 0.85:
-                handler_stream = self.quick_handler.process(user_input, result, db=db, session_id=session_id)
+            mode = requested_mode.strip().lower() if isinstance(requested_mode, str) and requested_mode.strip() else None
+            if mode in {"solo", "plan"}:
+                solo_intent = IntentResult(intent="task", confidence=1.0, task_params=None)
+                handler_stream = self.plan_handler.process(augmented_input, solo_intent, db=db, session_id=session_id, **kwargs)
+            elif result.intent == "chat" or result.confidence < threshold:
+                handler_stream = self.quick_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             elif result.intent == "task":
                 # Special case for now: _handle_task is blocking
-                task_response = await self._handle_task(result.task_params)
+                task_response = await self._handle_task(result.task_params or {})
                 full_response = task_response
                 yield {"type": "content", "content": task_response}
                 # No stream to iterate
             elif result.intent == "team":
-                 handler_stream = self.team_handler.process(user_input, result, db=db, session_id=session_id)
+                 handler_stream = self.team_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             elif result.intent == "workflow":
-                 handler_stream = self.flow_handler.process(user_input, result, db=db, session_id=session_id)
+                 handler_stream = self.flow_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             elif result.intent == "data_query" or result.intent == "kg_qa":
-                 handler_stream = self.data_handler.process(user_input, result, db=db, session_id=session_id)
+                 handler_stream = self.data_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             else:
-                handler_stream = self.quick_handler.process(user_input, result, db=db, session_id=session_id)
+                handler_stream = self.quick_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             
             if handler_stream:
-                async for chunk in handler_stream:
+                async for chunk in normalize_event_stream(handler_stream):
                     if chunk.get("type") == "content":
                         content = chunk.get("content")
                         if isinstance(content, str):

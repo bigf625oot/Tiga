@@ -1,7 +1,7 @@
 <template>
   <div class="task-tree font-sans h-full">
     <div v-if="tasks.length === 0" class="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-4">
-      <img src="/bot.svg" alt="Waiting" class="w-16 h-16 opacity-50 grayscale" />
+      <img src="/file.svg" alt="Waiting" class="w-16 h-16 opacity-50 grayscale" />
       <span>等待任务规划...</span>
     </div>
     <div v-else class="space-y-2">

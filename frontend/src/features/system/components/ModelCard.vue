@@ -1,12 +1,13 @@
 <template>
-  <div class="group relative flex flex-col h-full overflow-hidden border rounded-xl bg-card text-card-foreground shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1">
-    <!-- Top Status Accent -->
-    <div class="absolute top-0 left-0 w-full h-1" :class="item.is_active ? 'bg-gradient-to-r from-green-500/50 to-green-500/10' : 'bg-gradient-to-r from-muted-foreground/30 to-muted/10'"></div>
-
-    <div class="p-5 flex gap-4">
+  <Card 
+    class="group relative overflow-hidden transition-all duration-300 cursor-pointer flex flex-col h-full min-h-[180px] border-muted hover:shadow-lg hover:border-primary/40 bg-gradient-to-br from-card to-muted/10 hover:-translate-y-1"
+    @click="$emit('edit', item)"
+  >
+    
+    <div class="p-5 pb-3 flex gap-4">
       <!-- Icon Box -->
       <div 
-        class="relative flex-shrink-0 w-12 h-12 rounded-xl border flex items-center justify-center transition-all shadow-sm group-hover:shadow-md group-hover:scale-105"
+        class="relative flex-shrink-0 w-12 h-12 rounded-xl border flex items-center justify-center transition-all shadow-sm group-hover:scale-105"
         :class="item.is_active ? 'bg-primary/5 border-primary/10 text-primary' : 'bg-muted/30 border-muted text-muted-foreground'"
       >
         <div v-if="getProviderCountry(item.provider)" class="w-full h-full rounded-xl overflow-hidden">
@@ -17,12 +18,6 @@
             />
         </div>
         <Bot v-else class="w-6 h-6" />
-        
-        <!-- Status Indicator -->
-        <span v-if="item.is_active" class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500 border-2 border-background"></span>
-        </span>
       </div>
 
       <!-- Title & Info -->
@@ -33,7 +28,7 @@
             <!-- Menu -->
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
-                <Button variant="ghost" size="icon" class="h-7 w-7 -mr-2 -mt-1.5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" class="h-8 w-8 -mr-2 -mt-1.5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
                   <MoreVertical class="h-4 w-4" />
                   <span class="sr-only">Open menu</span>
                 </Button>
@@ -80,11 +75,14 @@
     </div>
 
     <!-- Footer Actions -->
-    <div class="px-5 py-3 bg-muted/30 border-t border-border/50 flex items-center justify-between gap-3 mt-auto">
-        <!-- Date -->
-        <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground opacity-70">
-           <Clock class="w-3 h-3" />
-           <span>{{ formatDate(item.created_at) }}</span>
+    <div class="px-5 pt-0 flex items-center justify-between mt-auto border-t border-border/30 pt-3 pb-5">
+        <!-- Status Indicator -->
+        <div class="flex items-center gap-2">
+            <div class="relative flex h-2 w-2">
+              <span v-if="item.is_active" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2" :class="item.is_active ? 'bg-green-500' : 'bg-slate-300'"></span>
+            </div>
+            <span class="text-[10px] text-muted-foreground font-medium">{{ item.is_active ? '运行中' : '未启用' }}</span>
         </div>
 
         <!-- Action Button -->
@@ -97,10 +95,10 @@
         >
           <Loader2 v-if="testingId === item.id" class="h-3 w-3 animate-spin" />
           <Network v-else class="h-3 w-3" />
-          <span>测试连接</span>
+          <span>测试</span>
         </Button>
     </div>
-  </div>
+  </Card>
 </template>
 
 <script setup lang="ts">
@@ -119,6 +117,7 @@ import {
   Box,
   Brain
 } from 'lucide-vue-next';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {

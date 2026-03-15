@@ -159,7 +159,6 @@ MIT License
 
 - agent/ : 智能体相关服务
   - manager.py : 统一的 AgentManager 。
-  - qa.py : 问答智能体服务 ( QAAgentService )。
   - search/ : 搜索与新闻服务 ( NewsQueryExecutor )。
   - tools/ : 工具运行器 ( run_reasoning_tool_loop ) 和具体工具 ( duckduckgo )。
 - rag/ : RAG（检索增强生成）核心模块

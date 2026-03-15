@@ -796,6 +796,7 @@
 import { ref, computed, watch, h, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import UserScriptsEditor from './UserScriptsEditor.vue';
+import agentPublicSvgIcons from '@/generated/agentPublicIcons';
 import { 
     X, Save, Upload, Download, Plus, Trash2, Settings2, Database, Wrench, 
     FileText, Bot, ChevronRight, Search, Check, AlertCircle, Loader2,
@@ -864,6 +865,11 @@ const createIcon = (d) => ({
 });
 const GlobeAltIcon = createIcon('M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S12 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S12 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418');
 const availableIcons = { 'globe': GlobeAltIcon };
+
+const pickRandomAgentIcon = () => {
+    if (!agentPublicSvgIcons?.length) return '/tiga.svg';
+    return agentPublicSvgIcons[Math.floor(Math.random() * agentPublicSvgIcons.length)];
+};
 
 // --- State ---
 const isEditing = ref(false);
@@ -1005,7 +1011,7 @@ const form = ref({
     id: null,
     name: '',
     description: '',
-    icon: '/tiga.svg',
+    icon: pickRandomAgentIcon(),
     category: '其他',
     system_prompt: '',
     is_template: false, // Default not a template
@@ -1796,7 +1802,7 @@ function resetForm() {
         id: null,
         name: '',
         description: '',
-        icon: 'globe',
+        icon: pickRandomAgentIcon(),
         category: '其他',
         system_prompt: '',
         is_template: false,
@@ -1813,7 +1819,7 @@ function buildAgentPayload(agentLike) {
     const payload = {
         name: agentLike?.name || '',
         description: agentLike?.description || '',
-        icon: agentLike?.icon || 'globe',
+        icon: agentLike?.icon || form.value?.icon || 'globe',
         category: agentLike?.category || '其他',
         system_prompt: agentLike?.system_prompt || '',
         enable_react: agentLike?.enable_react ?? true, // ReAct support

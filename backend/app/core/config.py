@@ -142,6 +142,7 @@ class Settings(BaseSettings):
     CHUNK_EXTRACT_MAX: int = 100
     KG_MAX_ITEMS: int = 200
     OCR_ENABLED: bool = False
+    DOC_PARSE_PDF_BACKENDS: str = "docling,pymupdf,pdfplumber,pypdf,ocr"
     QA_SYSTEM_PROMPT: str = ""
     QA_SYSTEM_PROMPT_FILE: str = "backend/prompts/qa_system.md"
     # Qdrant / 向量数据库

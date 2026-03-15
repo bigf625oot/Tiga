@@ -14,87 +14,35 @@
 
       <!-- Main Content Area -->
       <div class="flex-1 overflow-hidden relative bg-card/50">
-        
-        <!-- Loading State -->
-        <div v-if="loading" class="absolute inset-0 flex flex-col justify-center items-center bg-background/80 z-20 backdrop-blur-sm">
-          <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-          <span class="text-sm text-muted-foreground mt-3 font-medium">正在同步数据...</span>
-        </div>
 
         <!-- List View (Always rendered) -->
         <div class="h-full flex flex-col">
           <!-- Search & Filter Bar -->
-          <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b bg-background/50">
-             <div class="relative w-full md:w-72">
-                <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input v-model="teamSearchQuery" placeholder="搜索团队名称或描述..." class="pl-9 h-9" />
-             </div>
+          <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+             <!-- Left: Empty placeholder to balance flex layout -->
+             <div class="hidden md:block w-full md:w-64"></div>
              
+             <!-- Center: View Tabs -->
+             <div class="flex items-center justify-center flex-1">
+               <Tabs v-model="currentTab" class="w-[200px]" @update:modelValue="fetchTeams">
+                 <TabsList class="grid w-full grid-cols-2 h-9 bg-muted/80 p-1 rounded-lg border border-border/50 items-center">
+                   <TabsTrigger value="instances" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">自定义</TabsTrigger>
+                   <TabsTrigger value="templates" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">模板</TabsTrigger>
+                 </TabsList>
+               </Tabs>
+             </div>
+
+             <!-- Right: Actions -->
              <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-                <!-- Team Filter -->
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="outline" class="gap-2 h-9" size="sm">
-                      <Users class="w-3.5 h-3.5" />
-                      {{ selectedTeamFilter === 'all' ? '所有团队' : (teams.find(t => t.id === selectedTeamFilter)?.name || '团队') }}
-                      <ChevronDown class="w-3.5 h-3.5 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" class="w-48 max-h-[300px] overflow-y-auto">
-                    <DropdownMenuLabel>按团队筛选</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem @click="selectedTeamFilter = 'all'">
-                      <div class="flex items-center justify-between w-full">
-                        全部
-                        <CheckIcon v-if="selectedTeamFilter === 'all'" class="w-4 h-4" />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      v-for="team in teams" 
-                      :key="team.id"
-                      @click="selectedTeamFilter = team.id"
-                    >
-                      <div class="flex items-center justify-between w-full">
-                        <span class="truncate">{{ team.name }}</span>
-                        <CheckIcon v-if="selectedTeamFilter === team.id" class="w-4 h-4" />
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                 <div class="relative w-full md:w-64 group">
+                    <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <Input v-model="teamSearchQuery" placeholder="搜索团队名称或描述..." class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
+                 </div>
 
-                <!-- Agent Filter -->
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="outline" class="gap-2 h-9" size="sm">
-                      <Users class="w-3.5 h-3.5" />
-                      {{ selectedAgentFilter === 'all' ? '所有成员' : (getAgentName(selectedAgentFilter) || '成员') }}
-                      <ChevronDown class="w-3.5 h-3.5 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" class="w-48 max-h-[300px] overflow-y-auto">
-                    <DropdownMenuLabel>按成员筛选</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem @click="selectedAgentFilter = 'all'">
-                      <div class="flex items-center justify-between w-full">
-                        全部
-                        <CheckIcon v-if="selectedAgentFilter === 'all'" class="w-4 h-4" />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      v-for="agent in agents" 
-                      :key="agent.id"
-                      @click="selectedAgentFilter = agent.id"
-                    >
-                      <div class="flex items-center justify-between w-full">
-                        <span class="truncate">{{ agent.name }}</span>
-                        <CheckIcon v-if="selectedAgentFilter === agent.id" class="w-4 h-4" />
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                 <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
 
-                <!-- Mode Filter -->
-                <DropdownMenu>
+                 <!-- Mode Filter -->
+                 <DropdownMenu>
                   <DropdownMenuTrigger as-child>
                     <Button variant="outline" class="gap-2 h-9" size="sm">
                       <Filter class="w-3.5 h-3.5" />
@@ -124,111 +72,76 @@
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button size="sm" @click="startCreate" class="shadow-sm gap-2">
+                <Button @click="fetchTeams" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+                  <RefreshCw class="h-4 w-4 text-muted-foreground" :class="{ 'animate-spin': loading }" />
+                </Button>
+
+                <Button size="sm" @click="startCreate" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
                   <Plus class="h-3.5 w-3.5" /> 创建团队
                 </Button>
              </div>
           </div>
 
-          <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-            <div v-if="filteredTeams.length === 0 && !loading" class="flex flex-col items-center justify-center h-64 text-muted-foreground animate-in fade-in zoom-in-95 duration-300">
-              <div class="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                 <Users class="h-8 w-8 opacity-50" />
+          <div class="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col">
+            <div v-if="loading && filteredTeams.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div v-for="n in 8" :key="n" class="border rounded-xl p-4 bg-card h-[180px] flex flex-col space-y-3 shadow-sm">
+                <div class="flex gap-3">
+                  <Skeleton class="h-10 w-10 rounded-lg" />
+                  <div class="space-y-2 flex-1 pt-1">
+                    <Skeleton class="h-4 w-1/2" />
+                    <Skeleton class="h-3 w-1/4" />
+                  </div>
+                </div>
+                <div class="space-y-2 flex-1 pt-2">
+                  <Skeleton class="h-3 w-full" />
+                  <Skeleton class="h-3 w-5/6" />
+                </div>
+                <div class="pt-3 border-t flex justify-between items-center mt-auto">
+                  <Skeleton class="h-3 w-20" />
+                  <Skeleton class="h-7 w-16 rounded-md" />
+                </div>
               </div>
-              <p class="font-medium">未找到相关团队</p>
-              <p class="text-xs mt-1 opacity-70">请尝试调整搜索关键词或筛选条件</p>
+            </div>
+
+            <div v-else-if="filteredTeams.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto text-muted-foreground animate-in fade-in duration-300">
+              <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+                 <Search v-if="teamSearchQuery" class="w-10 h-10 text-muted-foreground/50" />
+                 <Users v-else class="w-10 h-10 text-muted-foreground/50" />
+              </div>
+              <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ teamSearchQuery ? '未找到相关团队' : '暂无团队' }}</h3>
+              <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ teamSearchQuery ? '请尝试调整搜索关键词或筛选条件。' : '当前暂无智能团队，您可以点击下方按钮创建一个新的智能团队。' }}</p>
+              <Button v-if="!teamSearchQuery && currentTab !== 'templates'" 
+                  @click="startCreate"
+                  class="px-8 shadow-sm hover:scale-105 transition-transform"
+              >
+                  <Plus class="w-4 h-4 mr-2" />
+                  立即创建
+              </Button>
             </div>
 
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <Card 
+              <TeamCard 
                 v-for="team in filteredTeams" 
                 :key="team.id" 
-                class="group relative overflow-hidden transition-all duration-300 hover:shadow-lg border-muted hover:border-primary/40 flex flex-col h-full min-h-[180px] bg-gradient-to-br from-card to-muted/10"
+                :team="team"
+                :agents="agents"
+                @click="editTeam(team)"
+                @edit="editTeam(team)"
+                @delete="confirmDelete(team)"
               >
-                <!-- Card Header -->
-                <div class="p-4 pb-2 space-y-2 flex-1">
-                  <div class="flex justify-between items-start">
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                        <component :is="getTeamIcon(team)" class="h-5 w-5" />
-                      </div>
-                      <div class="min-w-0">
-                         <h3 class="font-semibold truncate text-base leading-tight">{{ team.name }}</h3>
-                         <div class="flex items-center gap-1 flex-shrink-0 mt-1.5">
-                            <Badge variant="secondary" class="text-xs px-2 h-5 font-normal bg-secondary/50 text-secondary-foreground/80 border-0">
-                              {{ getModeLabel(team.mode) }}
-                            </Badge>
-                            <Badge v-if="team.is_readonly" variant="outline" class="text-xs px-2 h-5 font-normal text-muted-foreground bg-muted/50 border-0 flex items-center gap-1">
-                              <Shield class="h-3 w-3" /> 系统预设
-                            </Badge>
-                         </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <p class="text-sm text-muted-foreground line-clamp-2 leading-relaxed mt-3 pl-1">
-                    {{ team.description || '暂无描述' }}
-                  </p>
-                </div>
-
-                <!-- Members Preview Footer -->
-                <div class="px-4 py-2.5 bg-muted/30 mt-auto border-t border-border/40 backdrop-blur-[2px]">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span class="font-medium opacity-70">成员配置</span>
-                      <div class="flex -space-x-2 overflow-hidden py-0.5 pl-1">
-                        <div 
-                          v-for="(memberId, idx) in team.members.slice(0, 5)" 
-                          :key="idx"
-                          class="h-6 w-6 rounded-full ring-2 flex items-center justify-center overflow-hidden transition-transform hover:scale-110 hover:z-10 relative"
-                          :class="memberId === team.leader_id ? 'ring-amber-400 z-10' : 'ring-background'"
-                          :title="getAgentName(memberId) + (memberId === team.leader_id ? ' (Leader)' : '')"
-                        >
-                          <img :src="getAgentIcon(memberId)" class="h-full w-full object-cover" />
-                          <div v-if="memberId === team.leader_id" class="absolute inset-0 bg-black/20 flex items-center justify-center">
-                             <Crown class="h-3.5 w-3.5 text-amber-400 fill-amber-400 drop-shadow-md" />
-                          </div>
-                        </div>
-                        <div v-if="team.members.length > 5" class="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
-                          +{{ team.members.length - 5 }}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Quick Actions for Readonly -->
-                    <div v-if="team.is_readonly" class="text-[10px] text-muted-foreground/50 font-medium px-2">
-                       不可编辑
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Actions Overlay (Hover) -->
-                <div v-if="!team.is_readonly" class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 flex gap-1 bg-background/90 backdrop-blur-md rounded-lg p-1 shadow-sm border scale-90 group-hover:scale-100">
-                  <TooltipProvider :delay-duration="200">
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-primary/10 hover:text-primary rounded-md" @click="editTeam(team)">
-                          <Edit2 class="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>编辑配置</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <div class="w-px h-4 bg-border/50 my-auto mx-0.5"></div>
-
-                  <TooltipProvider :delay-duration="200">
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-destructive/10 hover:text-destructive rounded-md" @click="confirmDelete(team)">
-                          <Trash2 class="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>删除团队</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </Card>
+                <template #actions>
+                    <DropdownMenuItem v-if="!team.is_template" @click.stop="saveAsTemplate(team)">
+                        <span class="flex items-center gap-2 w-full">
+                            <Copy class="w-4 h-4" /> 保存为模板
+                        </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem v-if="team.is_template" @click.stop="createFromTemplate(team)">
+                        <span class="flex items-center gap-2 w-full">
+                            <Plus class="w-4 h-4" /> 从模板创建
+                        </span>
+                    </DropdownMenuItem>
+                </template>
+              </TeamCard>
             </div>
           </div>
         </div>
@@ -645,6 +558,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import Command from '@/components/ui/command/Command.vue'
@@ -675,11 +589,15 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { 
   Edit2, Trash2, Plus, Users, Settings, Workflow, 
   Shield, Search, Network, GitFork, Radio, ListTodo, Filter, Check as CheckIcon, ChevronDown, Crown, Database, X, GripVertical,
-  Briefcase, Building, Globe, Star, Activity, Code, Server, Cpu, MessageSquare, Zap, Target, Rocket
+  Briefcase, Building, Globe, Star, Activity, Code, Server, Cpu, MessageSquare, Zap, Target, Rocket, Copy, RefreshCw
 } from 'lucide-vue-next';
 import draggable from 'vuedraggable/src/vuedraggable';
 
 import { useToast } from '@/components/ui/toast/use-toast';
+import TeamCard from './TeamCard.vue';
+import agentPublicSvgIcons from '@/generated/agentPublicIcons';
+
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const { toast } = useToast();
 
@@ -737,7 +655,7 @@ const selectedModeFilter = ref('all');
 const selectedAgentFilter = ref('all');
 const selectedCategory = ref('all');
 
-const selectedTeamFilter = ref('all');
+const currentTab = ref('instances'); // instances | templates
 
 const formData = ref({
   id: null as number | null,
@@ -746,7 +664,8 @@ const formData = ref({
   icon: '',
   mode: 'coordinate',
   leader_id: null as string | null,
-  members: [] as string[]
+  members: [] as string[],
+  is_template: false
 });
 
 const errors = ref({
@@ -773,11 +692,6 @@ const filteredTeams = computed(() => {
    // Agent Filter
    if (selectedAgentFilter.value !== 'all') {
       result = result.filter(t => t.members.includes(selectedAgentFilter.value));
-   }
-
-   // Team Filter
-   if (selectedTeamFilter.value !== 'all') {
-      result = result.filter(t => t.id === selectedTeamFilter.value);
    }
 
    // Search
@@ -877,7 +791,8 @@ const hasUnsavedChanges = computed(() => {
 const fetchTeams = async () => {
   loading.value = true;
   try {
-    const res = await api.get('/teams/');
+    const isTemplate = currentTab.value === 'templates';
+    const res = await api.get('/teams/', { params: { is_template: isTemplate } });
     teams.value = res.data;
   } catch (e) {
     toast({ variant: 'destructive', title: '获取团队列表失败', description: '无法连接到服务器，请稍后重试。' });
@@ -916,9 +831,31 @@ const getAgentName = (agentId: string) => {
   return agent ? agent.name : agentId;
 };
 
+const isImageSrc = (icon: unknown) => {
+  if (!icon || typeof icon !== 'string') return false;
+  const value = icon.trim();
+  if (!value) return false;
+  if (value.startsWith('data:image')) return true;
+  if (value.startsWith('blob:')) return true;
+  if (/^https?:\/\//i.test(value)) return true;
+  if (value.startsWith('/') || value.startsWith('./') || value.startsWith('../')) return true;
+  return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(value);
+};
+
+const getFallbackAgentIcon = (agentLike?: { id?: any; name?: any }) => {
+  if (!agentPublicSvgIcons?.length) return '/tiga.svg';
+  const key = String(agentLike?.id ?? agentLike?.name ?? '');
+  if (!key) return agentPublicSvgIcons[Math.floor(Math.random() * agentPublicSvgIcons.length)];
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return agentPublicSvgIcons[hash % agentPublicSvgIcons.length];
+};
+
 const getAgentIcon = (agentId: string) => {
   const agent = agents.value.find(a => a.id === agentId);
-  return agent && (agent.icon || agent.icon_url) ? (agent.icon || agent.icon_url) : '/tiga.svg'; 
+  const icon = agent?.icon || agent?.icon_url;
+  if (isImageSrc(icon)) return icon;
+  return getFallbackAgentIcon(agent ?? { id: agentId });
 };
 
 const startCreate = () => {
@@ -929,7 +866,8 @@ const startCreate = () => {
     icon: '',
     mode: 'coordinate',
     leader_id: null,
-    members: []
+    members: [],
+    is_template: currentTab.value === 'templates'
   };
   errors.value = { name: '', leader: '', members: '' };
   // Wait for DOM update before capturing original state
@@ -947,7 +885,8 @@ const editTeam = (team: any) => {
     icon: team.icon || '',
     mode: team.mode,
     leader_id: team.leader_id,
-    members: [...team.members]
+    members: [...team.members],
+    is_template: team.is_template || false
   };
   errors.value = { name: '', leader: '', members: '' };
   originalFormData.value = JSON.stringify(formData.value);
@@ -1046,6 +985,41 @@ const confirmDelete = async (team: any) => {
       toast({ variant: 'destructive', title: '删除失败' });
     }
   }
+};
+
+const saveAsTemplate = async (team: any) => {
+  const newTeam = {
+    ...team,
+    id: undefined,
+    name: `${team.name} (模板)`,
+    is_template: true,
+    is_readonly: false
+  };
+  try {
+    await api.post('/teams/', newTeam);
+    toast({ title: '保存成功', description: `已将 "${team.name}" 保存为模板。` });
+    if (currentTab.value === 'templates') {
+        fetchTeams();
+    }
+  } catch (e) {
+    toast({ variant: 'destructive', title: '保存失败', description: '无法保存为模板。' });
+  }
+};
+
+const createFromTemplate = (team: any) => {
+  formData.value = {
+    id: null,
+    name: `${team.name} (副本)`,
+    description: team.description,
+    icon: team.icon || '',
+    mode: team.mode,
+    leader_id: team.leader_id,
+    members: [...team.members],
+    is_template: false
+  };
+  errors.value = { name: '', leader: '', members: '' };
+  originalFormData.value = JSON.stringify(formData.value);
+  view.value = 'create';
 };
 
 const handleSheetOpenUpdate = (val: boolean) => {

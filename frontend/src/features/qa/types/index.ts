@@ -54,7 +54,7 @@ export interface Team {
   members?: Agent[];
 }
 
-export type ModeType = 'chat' | 'workflow' | 'auto_task';
+export type ModeType = 'auto' | 'chat' | 'quick' | 'solo' | 'team' | 'workflow' | 'auto_task';
 
 export interface Session {
   id: string;

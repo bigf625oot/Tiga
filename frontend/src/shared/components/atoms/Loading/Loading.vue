@@ -10,19 +10,36 @@
     </div>
 
     <!-- Skeleton List -->
-    <div v-else-if="type === 'skeleton-list'" class="w-full space-y-3 animate-pulse">
-        <div v-for="i in rows" :key="i" class="h-14 bg-muted rounded-lg w-full border border-slate-200"></div>
+    <div v-else-if="type === 'skeleton-list'" class="w-full space-y-3">
+        <Skeleton v-for="i in rows" :key="i" class="h-14 w-full rounded-lg border border-slate-200" />
     </div>
 
     <!-- Skeleton Card -->
-    <div v-else-if="type === 'skeleton-card'" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
-        <div v-for="i in rows" :key="i" class="h-40 bg-muted rounded-lg w-full border border-slate-200"></div>
+    <div v-else-if="type === 'skeleton-card'" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div v-for="i in rows" :key="i" class="rounded-xl border border-slate-200 bg-card p-4 space-y-3 shadow-sm">
+          <div class="flex gap-3">
+            <Skeleton class="h-10 w-10 rounded-lg" />
+            <div class="space-y-2 flex-1 pt-1">
+              <Skeleton class="h-4 w-1/2" />
+              <Skeleton class="h-3 w-1/4" />
+            </div>
+          </div>
+          <div class="space-y-2 pt-2">
+            <Skeleton class="h-3 w-full" />
+            <Skeleton class="h-3 w-5/6" />
+          </div>
+          <div class="pt-3 border-t flex justify-between items-center">
+            <Skeleton class="h-3 w-20" />
+            <Skeleton class="h-7 w-16 rounded-md" />
+          </div>
+        </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { ILoadingProps } from './types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 withDefaults(defineProps<ILoadingProps>(), {
   loading: true,

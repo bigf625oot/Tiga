@@ -115,7 +115,11 @@ export function useChatSession() {
     // Let's assume the caller handles upload and passes `attachmentIds`.
   };
 
-  const handleStreamResponse = async (response: Response, onUpdate?: () => void) => {
+  const handleStreamResponse = async (
+    response: Response,
+    onUpdate?: () => void,
+    onEvent?: (eventType: string, data: any) => void
+  ) => {
       if (!response.body) return;
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -156,30 +160,38 @@ export function useChatSession() {
                           switch (eventType) {
                               case 'meta':
                                   if (parsedData?.msg_type) assistantMsg.type = parsedData.msg_type;
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'think':
                                   assistantMsg.reasoning = (assistantMsg.reasoning || '') + normalizeThink(parsedData);
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'step':
                                   if (!assistantMsg.steps) assistantMsg.steps = [];
                                   assistantMsg.steps.push(parsedData);
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'text':
                                   let textChunk = parsedData;
                                   if (typeof textChunk !== 'string') textChunk = normalizeThink(textChunk);
                                   assistantMsg.content = (assistantMsg.content || '') + textChunk;
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'chart':
                                   assistantMsg.content = (assistantMsg.content || '') + `\n::: echarts\n${JSON.stringify(parsedData, null, 2)}\n:::\n`;
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'sources':
                                   assistantMsg.sources = parsedData;
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'file':
                                   assistantMsg.content = (assistantMsg.content || '') + `\n::: file\n${JSON.stringify(parsedData)}\n:::\n`;
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'error':
                                   assistantMsg.content += `\n**System Error**: ${parsedData}`;
+                                  if (onEvent) onEvent(eventType, parsedData);
                                   break;
                           }
                       } catch (e) {

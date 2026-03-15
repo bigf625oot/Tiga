@@ -1,68 +1,69 @@
 
 <template>
-  <div class="h-full flex flex-col bg-background transition-colors duration-300">
-    <!-- Header Banner -->
-    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 flex-shrink-0">
-      <div class="flex justify-between items-center min-h-[36px]">
-        <div class="flex items-center gap-3">
-          <h2 class="text-lg font-semibold tracking-tight text-foreground">知识库</h2>
-          <div class="h-4 w-px bg-border"></div>
-          <p class="text-muted-foreground text-xs truncate max-w-xl">
-              管理和组织您的知识文档
-          </p>
-        </div>
-        <div class="flex items-center gap-2">
-          <Button 
-            v-if="activeTab === 'personal'"
-            size="sm"
-            class="h-9 shadow-sm"
-            @click="$refs.fileInput.click()" 
-            :disabled="uploading"
-          >
-            <UploadCloud class="w-4 h-4 mr-2" />
-            <span v-if="uploading">上传中...</span>
-            <span v-else>上传文件</span>
-          </Button>
-          <!-- Placeholder to maintain height when button is hidden -->
-          <div v-else class="h-9 w-px"></div>
-        </div>
+  <div class="h-full flex flex-col bg-background overflow-hidden transition-colors duration-300">
+    <div class="px-6 py-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold tracking-tight text-foreground">知识库</h2>
+        <div class="h-4 w-px bg-border"></div>
+        <p class="text-xs text-muted-foreground m-0 truncate max-w-xl">管理和组织您的知识文档。</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <Button v-if="activeTab === 'personal'" size="sm" class="h-9 shadow-sm" @click="$refs.fileInput.click()" :disabled="uploading">
+          <UploadCloud class="w-4 h-4 mr-2" />
+          <span v-if="uploading">上传中...</span>
+          <span v-else>上传文件</span>
+        </Button>
+        <div v-else class="h-9 w-9"></div>
       </div>
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col overflow-hidden bg-background">
+    <div class="flex-1 flex flex-col overflow-hidden bg-muted/10">
         <!-- Filter & Search Bar -->
-        <div class="px-6 py-4 flex items-center justify-between flex-shrink-0">
-            <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-auto">
-                <TabsList class="grid w-full grid-cols-2 h-9 bg-muted/50 p-1">
-                    <TabsTrigger value="shared" class="text-xs px-4">共享空间</TabsTrigger>
-                    <TabsTrigger value="personal" class="text-xs px-4">个人空间</TabsTrigger>
-                </TabsList>
-            </Tabs>
+        <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b flex-shrink-0">
+            <!-- Left: Empty placeholder to balance flex layout -->
+            <div class="hidden md:block w-full md:w-64"></div>
 
-            <div class="flex items-center gap-3">
-                <div class="relative w-64">
-                    <Search class="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <!-- Center: View Tabs -->
+            <div class="flex items-center justify-center flex-1">
+                <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-[200px]">
+                    <TabsList class="grid w-full grid-cols-2 h-9 bg-muted/80 p-1 rounded-lg border border-border/50 items-center">
+                        <TabsTrigger value="shared" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">共享空间</TabsTrigger>
+                        <TabsTrigger value="personal" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">个人空间</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <div class="relative w-full md:w-64 group">
+                    <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     <Input 
+                        v-model="searchQuery"
                         placeholder="搜索文件..." 
-                        class="pl-8 h-9 bg-muted/50 border-input focus-visible:ring-1" 
+                        class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" 
                     />
+                    <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors" aria-label="清空搜索">
+                      <X class="h-4 w-4" />
+                    </button>
                 </div>
                 
+                <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
+
                 <!-- Secondary Actions -->
                 <div class="flex items-center gap-2">
-                    <Button v-if="activeTab === 'personal'" variant="outline" size="sm" @click="openNewFolder" class="h-9 text-xs">
-                        <FolderPlus class="w-3.5 h-3.5 mr-2" />
+                    <Button v-if="activeTab === 'personal'" variant="outline" size="sm" @click="openNewFolder" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
+                        <FolderPlus class="w-3.5 h-3.5" />
                         新建文件夹
                     </Button>
-                    <Button variant="outline" size="sm" @click="viewGlobalGraph" title="查看全局知识图谱" class="h-9 text-xs">
-                        <Share2 class="w-3.5 h-3.5 mr-2" />
+                    <Button variant="outline" size="sm" @click="viewGlobalGraph" title="查看全局知识图谱" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
+                        <Share2 class="w-3.5 h-3.5" />
                         全局图谱
                     </Button>
                     <TooltipProvider v-if="activeTab === 'personal'">
                         <Tooltip>
                             <TooltipTrigger as-child>
-                                <Button variant="ghost" size="icon" class="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10" @click="confirmCleanVector" :disabled="cleaningVector">
+                                <Button variant="ghost" size="icon" class="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" @click="confirmCleanVector" :disabled="cleaningVector">
                                     <Trash2 class="w-4 h-4" />
                                 </Button>
                             </TooltipTrigger>
@@ -114,135 +115,76 @@
            </div>
         </div>
 
-        <!-- Content Area (Table) -->
-        <div class="flex-1 overflow-hidden p-6 bg-background">
-          <div 
-              class="h-full flex flex-col border border-border rounded-xl overflow-hidden shadow-sm bg-card"
-          >
-            <!-- Table Header -->
-            <div class="flex items-center bg-muted/50 border-b border-border h-10 px-4 text-xs font-medium text-muted-foreground">
-                <div class="w-[40px] flex justify-center">
-                    <Checkbox :checked="allSelected" :indeterminate="indeterminate" @update:checked="toggleSelectAll" :disabled="activeTab === 'shared'" />
-                </div>
-                <div class="flex-1 pl-2">文件名称</div>
-                <div class="w-[100px]">大小</div>
-                <div class="w-[180px]">上传/创建时间</div>
-                <div class="w-[140px]">状态</div>
-                <div class="w-[100px] text-right pr-4">操作</div>
+        <div class="flex-1 overflow-hidden p-6 bg-transparent">
+          <div class="h-full flex flex-col gap-4">
+            <div v-if="searchQuery" class="flex items-center gap-2">
+              <h3 class="text-lg font-semibold tracking-tight text-foreground">搜索结果</h3>
+              <span class="text-sm text-muted-foreground">({{ files.length }})</span>
             </div>
 
-            <!-- File List -->
-            <div class="flex-1 overflow-y-auto scroll-container" ref="scrollContainer" @scroll="onScroll">
-                <div class="flex flex-col min-w-full">
-                    <div v-if="loading && files.length === 0" class="p-8 space-y-4">
-                        <Skeleton class="h-12 w-full" v-for="i in 5" :key="i" />
-                    </div>
-                    
-                    <div v-else-if="files.length === 0 && !uploading" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                        <FolderOpen class="w-12 h-12 mb-3 opacity-20" />
-                        <p class="text-sm">暂无文件</p>
-                    </div>
-                    
-                    <div 
-                        v-for="file in files" 
-                        :key="file.id" 
-                        class="group flex items-center border-b border-border hover:bg-muted/50 transition-colors py-3 px-4 text-sm text-card-foreground"
-                    >
-                        <!-- Checkbox -->
-                        <div class="w-[40px] flex justify-center" @click.stop>
-                            <Checkbox :checked="selectedFiles.includes(file.id)" @update:checked="() => toggleSelect(file.id)" :disabled="activeTab === 'shared'" />
-                        </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2" @click.stop>
+                <Checkbox :checked="allSelected" :indeterminate="indeterminate" @update:checked="toggleSelectAll" :disabled="activeTab === 'shared'" aria-label="全选" />
+                <span class="text-xs text-muted-foreground">全选</span>
+              </div>
+            </div>
 
-                        <!-- Name -->
-                        <div 
-                            class="flex-1 flex items-center gap-3 overflow-hidden cursor-pointer pl-2"
-                            @click="file.is_folder ? openFolder(file) : null"
-                        >
-                             <!-- File Icon -->
-                             <div class="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                                 <Folder v-if="file.is_folder" class="w-full h-full text-blue-500" fill="currentColor" />
-                                 <img v-else :src="getFileIcon(file.filename)" class="w-full h-full object-contain opacity-80" alt="icon" />
-                             </div>
-                             <div class="flex flex-col overflow-hidden">
-                                <span class="truncate font-medium group-hover:text-primary transition-colors">{{ file.filename }}</span>
-                                <span v-if="!file.is_folder" class="text-[10px] text-muted-foreground truncate">{{ file.id }}</span>
-                             </div>
-                        </div>
-                        
-                        <!-- Size -->
-                        <div class="w-[100px] text-muted-foreground text-xs font-mono">
-                            {{ file.is_folder ? '-' : formatSize(file.file_size) }}
-                        </div>
-                        
-                        <!-- Time -->
-                        <div class="w-[180px] text-muted-foreground text-xs">
-                            {{ file.is_folder ? '-' : formatDate(file.created_at) }}
-                        </div>
-                        
-                        <!-- Status -->
-                        <div class="w-[140px]">
-                            <template v-if="!file.is_folder">
-                                <!-- Progress Bar for active states -->
-                                <div v-if="['上传中', '解析中'].includes(file.status_text)" class="w-full pr-4">
-                                    <div class="flex justify-between items-center mb-1.5">
-                                        <span class="text-[10px] text-primary font-medium">
-                                            {{ file.status_text }}
-                                        </span>
-                                        <span class="text-[10px] text-muted-foreground">
-                                            {{ file.progress || 0 }}%
-                                        </span>
-                                    </div>
-                                    <Progress :model-value="file.progress || 0" class="h-1.5" />
-                                </div>
-                                
-                                <!-- Standard Badge for other states -->
-                                <Badge 
-                                    v-else 
-                                    variant="outline" 
-                                    class="font-normal text-xs"
-                                    :class="{
-                                        'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900': file.status_text === '已完成',
-                                        'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900': file.status_text === '失败',
-                                        'bg-muted text-muted-foreground border-border': !['已完成', '失败'].includes(file.status_text)
-                                    }"
-                                >
-                                    {{ file.status_text || '未知' }}
-                                </Badge>
-                            </template>
-                            <span v-else class="text-muted-foreground">-</span>
-                        </div>
-                        
-                        <!-- Actions -->
-                        <div class="w-[100px] flex items-center justify-end gap-2 pr-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                                v-if="!file.is_folder && file.status_text === '已完成'"
-                                variant="ghost" 
-                                size="icon" 
-                                class="h-8 w-8 text-muted-foreground hover:text-primary" 
-                                @click="viewGraph(file)" 
-                                title="查看知识图谱"
-                            >
-                                <Share2 class="w-4 h-4" />
-                            </Button>
-                            <Button 
-                                v-if="activeTab === 'personal'"
-                                variant="ghost" 
-                                size="icon" 
-                                class="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
-                                @click="confirmDelete(file.id)" 
-                                title="删除文件"
-                            >
-                                <Trash2 class="w-4 h-4" />
-                            </Button>
-                        </div>
+            <div class="flex-1 overflow-y-auto scroll-container" ref="scrollContainer" @scroll="onScroll">
+              <div v-if="loading && files.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start p-1">
+                <div v-for="i in 8" :key="i" class="bg-card rounded-xl border border-border/60 overflow-hidden h-[190px] p-5 space-y-3">
+                  <div class="flex items-center gap-4">
+                    <Skeleton class="h-12 w-12 rounded-xl" />
+                    <div class="flex-1 space-y-2">
+                      <Skeleton class="h-4 w-3/4" />
+                      <Skeleton class="h-3 w-1/2" />
                     </div>
-                    
-                    <!-- Load More Spinner -->
-                    <div v-if="loadingMore" class="py-4 flex justify-center text-muted-foreground text-xs">
-                        <Loader2 class="w-4 h-4 animate-spin mr-2" />
-                        加载中...
-                    </div>
+                  </div>
+                  <Skeleton class="h-3 w-full" />
+                  <Skeleton class="h-3 w-5/6" />
                 </div>
+              </div>
+
+              <div v-else-if="files.length === 0 && !uploading" class="flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
+                <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+                  <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
+                  <FolderOpen v-else class="w-10 h-10 text-muted-foreground/50" />
+                </div>
+                <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ searchQuery ? '未找到相关文件' : '暂无文件' }}</h3>
+                <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ searchQuery ? '请尝试更换关键词搜索，或清空筛选条件。' : (activeTab === 'personal' ? '当前目录暂无文件，您可以上传文件或新建文件夹开始整理。' : '共享空间暂无可用文件。') }}</p>
+                <div v-if="!searchQuery && activeTab === 'personal'" class="flex items-center gap-3">
+                  <Button @click="$refs.fileInput.click()" class="px-8 shadow-sm hover:scale-105 transition-transform" :disabled="uploading">
+                    <UploadCloud class="w-4 h-4 mr-2" />
+                    上传文件
+                  </Button>
+                  <Button variant="outline" @click="openNewFolder" class="px-8 shadow-sm hover:scale-105 transition-transform">
+                    <FolderPlus class="w-4 h-4 mr-2" />
+                    新建文件夹
+                  </Button>
+                </div>
+              </div>
+
+              <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start p-1">
+                <KnowledgeItemCard
+                  v-for="file in files"
+                  :key="file.id"
+                  :item="file"
+                  :selected="selectedFiles.includes(file.id)"
+                  :readonly="activeTab === 'shared'"
+                  :icon-src="file.is_folder ? '' : getFileIcon(file.filename)"
+                  :size-text="file.is_folder ? '-' : formatSize(file.file_size)"
+                  :created-at-text="file.is_folder ? '-' : formatDate(file.created_at)"
+                  @toggleSelect="toggleSelect(file.id)"
+                  @openFolder="openFolder(file)"
+                  @viewGraph="viewGraph(file)"
+                  @move="openMoveForItem(file)"
+                  @delete="confirmDelete(file.id)"
+                />
+              </div>
+
+              <div v-if="loadingMore" class="py-4 flex justify-center text-muted-foreground text-xs">
+                <Loader2 class="w-4 h-4 animate-spin mr-2" />
+                加载中...
+              </div>
             </div>
           </div>
         </div>
@@ -379,6 +321,7 @@ import {
     UploadCloud, 
     FolderPlus, 
     Trash2, 
+    X,
     Folder, 
     FolderOpen, 
     Loader2 
@@ -390,9 +333,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -420,6 +361,7 @@ import {
 } from '@/components/ui/tooltip'
 
 import KnowledgeGraphView from './KnowledgeGraphView.vue';
+import KnowledgeItemCard from './KnowledgeItemCard.vue';
 
 const files = ref([]);
 const uploading = ref(false);
@@ -431,6 +373,7 @@ const hasMore = ref(true);
 const scrollContainer = ref(null);
 
 const activeTab = ref('personal'); // shared | personal
+const searchQuery = ref('');
 const api = axios.create({ baseURL: '/api/v1' }); // Use relative path
 api.interceptors.request.use((config) => {
   const id = Math.random().toString(36).slice(2, 10);
@@ -461,6 +404,7 @@ api.interceptors.response.use((res) => {
   return Promise.reject(err);
 });
 let pollTimer = null;
+let searchTimer = null;
 const cleaningVector = ref(false);
 
 // Folder State
@@ -521,6 +465,9 @@ const fetchFiles = async (reset = false) => {
             page: page.value,
             page_size: pageSize
         };
+        if (searchQuery.value && searchQuery.value.trim()) {
+            params.keyword = searchQuery.value.trim();
+        }
         if (currentFolderId.value) {
             params.parent_id = currentFolderId.value;
         }
@@ -555,6 +502,14 @@ const fetchFiles = async (reset = false) => {
         loadingMore.value = false;
     }
 };
+
+watch(searchQuery, () => {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        if (scrollContainer.value) scrollContainer.value.scrollTop = 0;
+        fetchFiles(true);
+    }, 300);
+});
 
 const onScroll = () => {
     if (!scrollContainer.value) return;
@@ -597,6 +552,12 @@ const toggleSelect = (id) => {
 const confirmBatchDelete = () => {
     if (selectedFiles.value.length === 0) return;
     batchDeleteConfirmOpen.value = true;
+};
+
+const openMoveForItem = (file) => {
+    if (activeTab.value !== 'personal') return;
+    selectedFiles.value = [file.id];
+    openMoveModal();
 };
 
 const executeBatchDelete = async () => {
@@ -778,7 +739,10 @@ const getFileIcon = (filename) => {
 };
 
 onMounted(fetchFiles);
-onUnmounted(stopPolling);
+onUnmounted(() => {
+    stopPolling();
+    if (searchTimer) clearTimeout(searchTimer);
+});
 </script>
 
 <style scoped>

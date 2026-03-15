@@ -222,13 +222,7 @@
                                   <div class="flex items-center gap-2.5 w-full" :class="isSidebarCollapsed ? 'justify-center' : ''">
                                       <!-- Simple Avatar -->
                                       <div class="h-7 w-7 rounded-full overflow-hidden shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
-                                          <img 
-                                             v-if="getAgentIcon(session.agent_id)" 
-                                             :src="getAgentIcon(session.agent_id)" 
-                                             :alt="session.title" 
-                                             class="h-full w-full object-cover"
-                                          />
-                                          <img v-else src="/tiga.svg" class="h-full w-full object-cover opacity-80" />
+                                          <img src="/message/message.svg" :alt="session.title" class="h-7 w-7" />
                                       </div>
 
                                       <!-- Content -->
@@ -309,8 +303,12 @@
       <!-- User Profile -->
       <SidebarFooter class="border-t border-border dark:border-none dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.05)]">
          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group" :class="isSidebarCollapsed ? 'justify-center p-0 flex-col' : ''">
-            <div class="h-9 w-9 rounded-full bg-muted overflow-hidden border border-border dark:border-none shadow-sm dark:avatar-breathing">
-               <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="Avatar" class="h-full w-full object-cover" />
+            <div class="h-9 w-9 rounded-full bg-muted overflow-hidden border border-border dark:border-none shadow-sm dark:avatar-breathing relative group/avatar" @click="triggerFileInput">
+               <img :src="avatarSrc" alt="Avatar" class="h-full w-full object-cover transition-opacity duration-200 group-hover/avatar:opacity-80" />
+               <div class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+               </div>
+               <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileChange" />
             </div>
             <div v-if="!isSidebarCollapsed" class="flex-1 min-w-0">
                <p class="text-sm font-medium truncate">管理员</p>
@@ -377,6 +375,7 @@
             :session-id="currentSessionId ?? null" 
             :embedded="false"
             @refresh-sessions="fetchSessions" 
+            @update:sessionId="currentSessionId = $event"
             class="w-full h-full"
           />
 
@@ -423,7 +422,7 @@
             >
                <div class="flex items-center gap-3 overflow-hidden">
                   <div class="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                     <MessageSquare class="h-4 w-4" />
+                     <img src="/message/message.svg" :alt="session.title" class="h-4 w-4" />
                   </div>
                   <div class="min-w-0">
                      <p class="text-sm font-medium truncate">{{ session.title || '新对话' }}</p>
@@ -829,6 +828,32 @@ const handleBack = () => {
 };
 
 const groupsState = reactive<Record<string, boolean>>({});
+
+// Avatar Upload
+const fileInput = ref<HTMLInputElement | null>(null);
+const avatarSrc = ref('/user/hair.svg');
+
+const triggerFileInput = () => {
+    fileInput.value?.click();
+};
+
+const handleFileChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        const file = target.files[0];
+        // Create local preview URL
+        const previewUrl = URL.createObjectURL(file);
+        avatarSrc.value = previewUrl;
+        
+        // TODO: Implement actual file upload when backend API is ready
+        // Example:
+        // const formData = new FormData();
+        // formData.append('file', file);
+        // await api.post('/user/avatar', formData);
+        
+        toast({ title: "头像已更新 (仅前端预览)" });
+    }
+};
 
 watch(() => groupedSessions.value, (newVal) => {
     newVal.forEach(group => {

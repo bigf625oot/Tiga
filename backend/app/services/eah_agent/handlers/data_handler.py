@@ -47,6 +47,7 @@ class DataHandler(BaseHandler):
                     
             elif intent.intent == "data_query":
                 yield {"type": "status", "content": _("Querying Database (Text-to-SQL)...")}
+                yield {"type": "meta", "content": {"msg_type": "intelligent_query"}}
                 
                 # Use Vanna Service (Streaming)
                 # Pass session_id=None to avoid legacy logging if needed, or handle it

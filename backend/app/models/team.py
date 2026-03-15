@@ -14,6 +14,7 @@ class Team(Base):
     icon = Column(String, nullable=True)
     members = Column(JSON, nullable=False, default=[])  # List of member agent IDs
     is_readonly = Column(Boolean, default=False)
+    is_template = Column(Boolean, default=False)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

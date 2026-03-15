@@ -12,7 +12,7 @@
       class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden mt-0 transition-all duration-300 hover:scale-105"
       :class="[isUser ? 'bg-indigo-600 ml-4' : 'bg-muted mr-4']"
     >
-      <img v-if="isUser" src="https://api.dicebear.com/7.x/notionists/svg?seed=Admin" alt="user" class="w-full h-full object-cover" />
+      <img v-if="isUser" src="/user/hair.svg" alt="user" class="w-full h-full object-cover" />
       <img v-else-if="agent?.icon || agent?.icon_url" :src="agent?.icon || agent?.icon_url" alt="agent" class="w-full h-full object-cover" />
       <img v-else src="/tiga.svg" alt="agent" class="w-full h-full object-cover" />
     </div>

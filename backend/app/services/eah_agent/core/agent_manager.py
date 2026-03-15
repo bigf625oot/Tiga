@@ -28,7 +28,7 @@ from app.services.llm.factory import ModelFactory
 # from app.services.eah_agent.tools.registry import discover_tools # Removed: Handled by loader
 
 try:
-    from app.services.mcp.client import mcp_pool
+    from app.services.mcp.ws_client import mcp_pool
 except Exception:
     mcp_pool = None
 

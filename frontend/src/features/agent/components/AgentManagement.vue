@@ -11,50 +11,58 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar bg-muted/10">
-            <div class="max-w-[1800px] mx-auto w-full flex flex-col gap-8">
+        <div class="flex-1 overflow-y-auto custom-scrollbar bg-muted/10 flex flex-col">
+            <div class="w-full flex flex-col gap-8 flex-1">
 
                 <Loading v-if="isLoading" type="skeleton-card" />
 
                 <template v-else>
                     <!-- Filter Tabs & Search -->
-                    <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/50 border-b">
-                        <div class="relative w-full md:w-72 group">
-                            <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                            <Input v-model="searchQuery" @focus="handleSearchFocus" @blur="handleSearchBlur"
-                                @input="handleSearchInput" placeholder="搜索智能体..."
-                                class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
-                            <button v-if="searchQuery" @click="searchQuery = ''; showSuggestions = false"
-                                class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors">
-                                <X class="h-4 w-4" />
-                            </button>
+                    <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+                        <!-- Left: Empty placeholder to balance flex layout -->
+                        <div class="hidden md:block w-full md:w-64"></div>
 
-                            <!-- Suggestions Dropdown -->
-                            <div v-if="showSuggestions && searchSuggestions.length > 0"
-                                class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                                <div v-for="(suggestion, index) in searchSuggestions" :key="index"
-                                    @click="selectSuggestion(suggestion)"
-                                    class="px-4 py-2 text-sm text-slate-700 hover:bg-muted cursor-pointer flex items-center gap-2">
-                                    <Search class="w-3 h-3 text-muted-foreground" />
-                                    <span v-html="highlightMatch(suggestion)"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-                            <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-full md:w-auto">
-                                <TabsList class="grid w-full grid-cols-3 h-9 bg-muted/80 p-1 rounded-lg border border-border/50">
-                                    <TabsTrigger value="all" class="text-xs font-medium px-4 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">全部</TabsTrigger>
-                                    <TabsTrigger value="my-agents" class="text-xs font-medium px-4 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">自定义</TabsTrigger>
-                                    <TabsTrigger value="discover" class="text-xs font-medium px-4 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">模版</TabsTrigger>
+                        <!-- Center: View Tabs -->
+                        <div class="flex items-center justify-center flex-1">
+                            <Tabs :model-value="activeTab" @update:model-value="(val) => activeTab = val" class="w-[200px]">
+                                <TabsList class="grid w-full grid-cols-2 h-9 bg-muted/80 p-1 rounded-lg border border-border/50 items-center">
+                                    <TabsTrigger value="my-agents" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">自定义</TabsTrigger>
+                                    <TabsTrigger value="discover" class="text-xs font-medium px-4 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">模板</TabsTrigger>
                                 </TabsList>
                             </Tabs>
+                        </div>
 
-                            <Button @click="fetchAgents" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95" title="刷新列表">
+                        <!-- Right: Actions -->
+                        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                            <div class="relative w-full md:w-64 group">
+                                <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                <Input v-model="searchQuery" @focus="handleSearchFocus" @blur="handleSearchBlur"
+                                    @input="handleSearchInput" placeholder="搜索智能体..."
+                                    class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
+                                <button v-if="searchQuery" @click="searchQuery = ''; showSuggestions = false"
+                                    class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors">
+                                    <X class="h-4 w-4" />
+                                </button>
+
+                                <!-- Suggestions Dropdown -->
+                                <div v-if="showSuggestions && searchSuggestions.length > 0"
+                                    class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                                    <div v-for="(suggestion, index) in searchSuggestions" :key="index"
+                                        @click="selectSuggestion(suggestion)"
+                                        class="px-4 py-2 text-sm text-slate-700 hover:bg-muted cursor-pointer flex items-center gap-2">
+                                        <Search class="w-3 h-3 text-muted-foreground" />
+                                        <span v-html="highlightMatch(suggestion)"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
+
+                            <Button @click="fetchAgents" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
                                 <RefreshCw class="h-4 w-4 text-muted-foreground" :class="{ 'animate-spin': isLoading }" />
                             </Button>
 
-                            <Button @click="openCreateModal" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2">
+                            <Button @click="openCreateModal" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
                                 <Plus class="h-3.5 w-3.5" />
                                 创建智能体
                             </Button>
@@ -62,7 +70,7 @@
                     </div>
 
                     <!-- Agent List -->
-                    <div class="flex flex-col gap-8">
+                    <div class="flex flex-col gap-8 px-6 pb-6 flex-1">
                         <!-- Search Header -->
                         <div v-if="searchQuery" class="flex items-center gap-2">
                             <h3 class="text-lg font-semibold tracking-tight text-foreground">搜索结果</h3>
@@ -70,48 +78,8 @@
                         </div>
 
                         <div v-if="displayedAgents.length > 0">
-                            <!-- Grouped View for 'all' tab -->
-                            <template v-if="activeTab === 'all'">
-                                <div class="flex flex-col gap-12">
-                                    <div v-if="filteredMyAgents.length > 0" class="flex flex-col gap-5">
-                                        <h3
-                                            class="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 pl-1">
-                                            <div class="w-1.5 h-4 bg-primary rounded-full"></div>
-                                            自定义智能体
-                                            <span class="text-xs font-normal text-muted-foreground/70 ml-1">({{
-                                                filteredMyAgents.length }})</span>
-                                        </h3>
-                                        <div
-                                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 animate-fade-in">
-                                            <AgentCard v-for="agent in filteredMyAgents" :key="agent.id" 
-                                                :agent="agent"
-                                                :selected="currentAgent?.id === agent.id"
-                                                @click="handleAgentClick" @edit="editAgent" @delete="deleteAgent" />
-                                        </div>
-                                    </div>
-
-                                    <div v-if="filteredDiscoverAgents.length > 0" class="flex flex-col gap-5">
-                                        <h3
-                                            class="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 pl-1">
-                                            <div class="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-                                            发现模版
-                                            <span class="text-xs font-normal text-muted-foreground/70 ml-1">({{
-                                                filteredDiscoverAgents.length }})</span>
-                                        </h3>
-                                        <div
-                                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 animate-fade-in">
-                                            <AgentCard v-for="agent in filteredDiscoverAgents" :key="agent.id"
-                                                :agent="agent" 
-                                                :selected="currentAgent?.id === agent.id"
-                                                @click="handleAgentClick" @edit="editAgent"
-                                                @delete="deleteAgent" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <!-- Standard View for other tabs -->
-                            <div v-else>
+                            <!-- Standard View for tabs -->
+                            <div>
                                 <!-- Discover Tab Banner -->
                                 <div v-if="activeTab === 'discover' && discoverAgents.length > 0"
                                     class="relative w-full h-48 rounded-xl overflow-hidden mb-8 group">
@@ -204,7 +172,7 @@
                                             {{ category }}
                                             <span class="text-xs font-normal text-muted-foreground ml-1">({{ group.length }})</span>
                                         </h3>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                             <AgentCard v-for="agent in group" :key="agent.id" 
                                                 :agent="agent"
                                                 :selected="currentAgent?.id === agent.id"
@@ -221,7 +189,7 @@
 
                         <!-- Empty State -->
                         <div v-else
-                            class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px]">
+                            class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
                             <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
                                 <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
                                 <Box v-else class="w-10 h-10 text-muted-foreground/50" />
@@ -301,7 +269,7 @@ import {
 const { toast } = useToast();
 
 // Icons
-const activeTab = ref('all');
+const activeTab = ref('my-agents');
 const myAgents = ref([]);
 const discoverAgents = ref([]);
 const availableModels = ref([]);
@@ -389,9 +357,7 @@ const getIconComponent = (iconName) => {
 
 const currentTabAgents = computed(() => {
     let source = [];
-    if (activeTab.value === 'all') {
-        source = [...myAgents.value, ...discoverAgents.value];
-    } else if (activeTab.value === 'my-agents') {
+    if (activeTab.value === 'my-agents') {
         source = myAgents.value;
     } else if (activeTab.value === 'discover') {
         source = discoverAgents.value;
@@ -406,9 +372,7 @@ const filterAgents = (agents, query) => {
 
 const displayedAgents = computed(() => {
     let agents = [];
-    if (activeTab.value === 'all') {
-        agents = [...myAgents.value, ...discoverAgents.value];
-    } else if (activeTab.value === 'my-agents') {
+    if (activeTab.value === 'my-agents') {
         agents = myAgents.value;
     } else if (activeTab.value === 'discover') {
         agents = discoverAgents.value;
@@ -599,11 +563,6 @@ const fetchAgents = async () => {
             } else if (activeTab.value === 'discover') {
                  // myAgents.value = [];
                  discoverAgents.value = processedAgents;
-            } else {
-                 // 'all' tab: we might need to separate them if backend returns mixed list
-                 // But backend currently returns all if no filter is applied
-                 myAgents.value = processedAgents.filter(a => !a.is_template);
-                 discoverAgents.value = processedAgents.filter(a => a.is_template);
             }
         } else {
             throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);

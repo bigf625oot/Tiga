@@ -32,12 +32,13 @@ async def read_workflows(
     skip: int = 0,
     limit: int = 100,
     q: Optional[str] = None,
+    is_template: Optional[bool] = None,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Retrieve agent workflows with optional search query.
     """
-    workflows = await crud_agent_workflow.get_multi(db, skip=skip, limit=limit, query=q)
+    workflows = await crud_agent_workflow.get_multi(db, skip=skip, limit=limit, query=q, is_template=is_template)
     return workflows
 
 @router.post("/", response_model=AgentWorkflowResponse)

@@ -15,9 +15,11 @@
         <!-- Mode Selection -->
         <div class="w-full px-1 transition-all duration-500 ease-in-out"
              :class="inputValue ? 'max-h-0 opacity-0 pb-0 -translate-y-4 scale-95 overflow-hidden' : 'max-h-[500px] opacity-100 pt-1 pb-6 overflow-visible'">
-          <div class="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <SmartQAIntroFlipCards :mode-entrance="modeEntrance" @select="handleSelectEntrance" />
+
+          <div v-if="modeEntrance === 'manual'" class="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <div v-for="m in modes" :key="m.id"
-              class="relative flex flex-col items-start justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer group h-[120px] overflow-hidden"
+              class="relative flex flex-col items-start justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer group h-[90px] overflow-hidden"
               :class="[
                 (currentModeId || 'quick') === m.id
                   ? `${getTheme(m.themeColor).activeBorder} ${getTheme(m.themeColor).activeBg} shadow-md ring-1 ${getTheme(m.themeColor).activeRing}`
@@ -25,18 +27,15 @@
               ]"
               @click="$emit('select-mode', m)"
             >
-              <!-- Background Decoration -->
               <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl opacity-20 pointer-events-none transition-colors duration-500"
                    :class="(currentModeId || 'quick') === m.id ? `bg-${m.themeColor || 'blue'}-500 dark:bg-${m.themeColor || 'blue'}-400` : 'bg-gray-300 dark:bg-gray-700'"></div>
 
-              <!-- Active State Check Icon -->
               <div v-if="(currentModeId || 'quick') === m.id" 
                 class="absolute top-3 right-3 rounded-full p-0.5 animate-in fade-in zoom-in duration-200"
                 :class="getTheme(m.themeColor).checkBg">
                 <Check class="w-3 h-3 text-white dark:text-slate-950" stroke-width="3" />
               </div>
 
-              <!-- Content -->
               <div class="flex flex-col w-full z-10 gap-1 mt-auto">
                 <span class="text-sm font-bold tracking-wide transition-colors duration-300"
                   :class="(currentModeId || 'quick') === m.id ? getTheme(m.themeColor).titleText : 'text-gray-900 dark:text-gray-100'">
@@ -191,13 +190,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Check, X, Zap, ArrowRight } from 'lucide-vue-next';
 import TechAnimation from '../TechAnimation.vue';
 import MessageList from '../MessageList.vue';
 import SmartQAInput from './SmartQAInput.vue';
+import SmartQAIntroFlipCards from './SmartQAIntroFlipCards.vue';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Agent, Message, Attachment, UserScript, ModeConfig, Team } from '../../types';
 
@@ -264,6 +263,25 @@ const inputValue = computed({
 
 const isModeBarVisible = ref(false);
 const quotedMessage = ref<string | null>(null);
+const modeEntrance = ref<'auto' | 'manual'>(props.currentModeId ? 'manual' : 'auto');
+
+// 监听 currentModeId 变化，同步 modeEntrance 状态
+// 当有具体模式 ID 时，自动切换到 manual 模式展示列表
+// 当 ID 为空时，切换到 auto 模式
+const unwatchMode = watch(() => props.currentModeId, (newVal) => {
+  modeEntrance.value = newVal ? 'manual' : 'auto';
+});
+
+const handleSelectEntrance = (next: 'auto' | 'manual') => {
+  if (next === 'auto') {
+    // 秒懂模式：不预设具体模式，由意图识别决定
+    modeEntrance.value = 'auto'; // 保持为 auto，隐藏下方模式列表
+    emit('select-mode', { id: null, value: 'auto' } as any); // 清空当前模式
+    emit('update:selectedAgentId', ''); // 清空选中的智能体，交由大模型意图识别
+  } else {
+    modeEntrance.value = next;
+  }
+};
 
 const themeConfig = {
   blue: {

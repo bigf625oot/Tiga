@@ -19,86 +19,89 @@
 
     <!-- Main Canvas Area -->
     <div class="flex-1 relative flex flex-col min-w-0">
-      <!-- Top Toolbar -->
-      <div class="h-14 border-b bg-background/95 backdrop-blur flex items-center justify-between px-4 shrink-0 z-20">
-        <div class="flex items-center gap-4">
-          <Button variant="ghost" size="icon" class="h-8 w-8" @click="handleBack" title="返回智能体流">
-            <ArrowLeft class="w-4 h-4" />
-          </Button>
-          <div class="h-4 w-px bg-border mx-1"></div>
+      
+      <!-- Canvas -->
+      <div class="flex-1 relative group/canvas">
+        <AgentFlowCanvas />
+
+        <!-- Floating Top Bar -->
+        <div class="absolute top-4 left-4 right-4 flex justify-between items-start z-20 pointer-events-none">
           
-          <div class="flex items-center gap-2 group min-w-[200px]">
-            <div class="p-1.5 bg-primary/10 rounded-md mr-1">
-              <GitBranch class="w-5 h-5 text-primary" />
-            </div>
+          <!-- Left: Navigation & Info -->
+          <div class="flex items-center gap-2 pointer-events-auto bg-background/80 backdrop-blur border border-border/50 p-1.5 rounded-lg shadow-sm transition-all hover:bg-background hover:shadow-md hover:border-border">
+            <Button variant="ghost" size="sm" class="h-8 w-8 p-0" @click="handleBack" title="返回智能体流">
+              <ArrowLeft class="w-4 h-4" />
+            </Button>
             
-            <div class="flex items-center gap-2">
-              <div v-if="isEditingName" class="flex-1">
-                <Input 
-                  id="agent-flow-name-input"
-                  v-model="store.flowName" 
-                  class="h-8 text-sm" 
-                  autoFocus
-                  @blur="isEditingName = false"
-                  @keyup.enter="isEditingName = false"
-                />
-              </div>
-              <div 
-                v-else 
-                class="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-0.5 rounded-md transition-colors"
-                @click="startEditingName"
-              >
-                <div class="font-medium text-sm truncate max-w-[300px]" :title="store.flowName">
-                  {{ store.flowName || '未命名智能体流' }}
-                </div>
-                <Edit2 class="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div class="h-4 w-px bg-border mx-1"></div>
+            
+            <div class="flex items-center gap-2 group/title">
+              <div class="p-1 bg-primary/10 rounded-md">
+                <GitBranch class="w-4 h-4 text-primary" />
               </div>
               
-              <!-- Flow Version -->
-              <div class="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full cursor-pointer hover:bg-muted transition-colors">
-                <History class="w-3 h-3" />
-                <span>v1.0.0</span>
+              <div class="flex items-center gap-2">
+                <div v-if="isEditingName" class="flex-1 min-w-[120px]">
+                  <Input 
+                    id="agent-flow-name-input"
+                    v-model="store.flowName" 
+                    class="h-7 text-sm px-2" 
+                    autoFocus
+                    @blur="isEditingName = false"
+                    @keyup.enter="isEditingName = false"
+                  />
+                </div>
+                <div 
+                  v-else 
+                  class="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-0.5 rounded-md transition-colors"
+                  @click="startEditingName"
+                >
+                  <div class="font-medium text-sm truncate max-w-[200px]" :title="store.flowName">
+                    {{ store.flowName || '未命名智能体流' }}
+                  </div>
+                  <Edit2 class="w-3 h-3 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity" />
+                </div>
+                
+                <div class="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">
+                  <History class="w-3 h-3" />
+                  <span>v1.0.0</span>
+                </div>
               </div>
             </div>
           </div>
+
+          <!-- Right: Actions -->
+          <div class="flex items-center gap-2 pointer-events-auto bg-background/80 backdrop-blur border border-border/50 p-1.5 rounded-lg shadow-sm transition-all hover:bg-background hover:shadow-md hover:border-border">
+            <Button variant="ghost" size="sm" class="gap-2 h-8 text-muted-foreground hover:text-foreground">
+              <ScrollText class="w-4 h-4" />
+              <span class="hidden sm:inline">运行日志</span>
+            </Button>
+
+            <div class="h-4 w-px bg-border mx-1"></div>
+
+            <Button variant="outline" size="sm" class="gap-2 h-8" @click="store.saveFlow" :disabled="store.loading">
+              <Save class="w-4 h-4" />
+              <span class="hidden sm:inline">保存</span>
+            </Button>
+            
+            <Button 
+              size="sm" 
+              class="gap-2 h-8" 
+              :variant="store.isRunning ? 'destructive' : 'default'"
+              @click="handleRunClick" 
+              :disabled="store.loading"
+            >
+              <template v-if="store.isRunning">
+                <Square class="w-4 h-4 fill-current" />
+                <span class="hidden sm:inline">停止</span>
+              </template>
+              <template v-else>
+                <Play class="w-4 h-4 fill-current" />
+                <span class="hidden sm:inline">试运行</span>
+              </template>
+            </Button>
+          </div>
         </div>
-        
-        <div class="flex items-center gap-2">
-          <!-- Run Logs -->
-          <Button variant="ghost" size="sm" class="gap-2 h-8 text-muted-foreground hover:text-foreground">
-            <ScrollText class="w-4 h-4" />
-            <span class="hidden sm:inline">运行日志</span>
-          </Button>
-
-          <div class="h-4 w-px bg-border mx-1"></div>
-
-          <Button variant="outline" size="sm" class="gap-2 h-8" @click="store.saveFlow" :disabled="store.loading">
-            <Save class="w-4 h-4" />
-            <span class="hidden sm:inline">保存</span>
-          </Button>
-          
-          <Button 
-            size="sm" 
-            class="gap-2 h-8" 
-            :variant="store.isRunning ? 'destructive' : 'default'"
-            @click="handleRunClick" 
-            :disabled="store.loading"
-          >
-            <template v-if="store.isRunning">
-              <Square class="w-4 h-4 fill-current" />
-              <span class="hidden sm:inline">停止</span>
-            </template>
-            <template v-else>
-              <Play class="w-4 h-4 fill-current" />
-              <span class="hidden sm:inline">试运行</span>
-            </template>
-          </Button>
-        </div>
-      </div>
-
-      <!-- Canvas -->
-      <div class="flex-1 relative">
-        <AgentFlowCanvas />
       </div>
     </div>
 
@@ -225,11 +228,11 @@ import AgentFlowCanvas from './flow/AgentFlowCanvas.vue';
 import AgentFlowPropertyPanel from './flow/AgentFlowPropertyPanel.vue';
 import dayjs from 'dayjs';
 
-const emit = defineEmits(['back']);
+const emit = defineEmits(['close']);
 const store = useAgentFlowStore();
 
 const handleBack = () => {
-  emit('back');
+  emit('close');
 };
 
 const isEditingName = ref(false);

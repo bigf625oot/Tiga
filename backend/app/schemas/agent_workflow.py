@@ -8,6 +8,7 @@ class AgentWorkflowBase(BaseModel):
     definition: Optional[Any] = None
     tags: Optional[List[str]] = None
     is_active: bool = True
+    is_template: bool = False
 
 class AgentWorkflowCreate(AgentWorkflowBase):
     pass
@@ -18,6 +19,7 @@ class AgentWorkflowUpdate(BaseModel):
     definition: Optional[Any] = None
     tags: Optional[List[str]] = None
     is_active: Optional[bool] = None
+    is_template: Optional[bool] = None
 
 class AgentWorkflowResponse(AgentWorkflowBase):
     id: str

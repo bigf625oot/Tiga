@@ -1,14 +1,4 @@
 ## QuickModel的设计概要：
-
-
-
-1. 意图识别 (Intent Recognition)：
-在 QuickModel 中，意图识别不只是一个“可选”功能，它是降低延迟（Quick）和节省 Token 成本的关键。
-路由决策： 并不是所有问题都需要联网或检索知识库。如果用户只是说“你好”，直接回复即可；如果是问“我昨天的会议记录”，则跳过联网，直奔知识库。
-防止工具滥用： 避免模型在不需要的时候调用昂贵的 Graph 检索，减少“幻觉”触发。
-推荐实现逻辑：
-轻量化预处理： 使用 `IntentClassifier` (基于 Agno Agent) 将用户输入分类为：SQL_QUERY, KG_QUERY, RAG_QUERY, STRUCTURED_QUERY。
-参数提取： 自动提取时间范围、地点、实体等参数，用于后续精确检索。
 1. ChatModel(快问快答模式)：
    - 基于Agno的base Agent，用于生成对话回复。
    - 输入：用户消息、系统指令、历史对话上下文。

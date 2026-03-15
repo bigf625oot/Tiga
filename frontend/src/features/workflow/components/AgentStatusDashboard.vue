@@ -7,7 +7,7 @@
         <div class="relative w-14 h-14 shrink-0">
           <div v-if="status === 'running'" class="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping"></div>
           <div class="relative w-full h-full rounded-full bg-muted border-2 border-background shadow-md overflow-hidden flex items-center justify-center">
-             <img src="/bot.svg" class="w-full h-full object-cover" alt="Agent" />
+             <img src="/file.svg" class="w-full h-full object-cover" alt="Agent" />
           </div>
           <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-background rounded-full flex items-center justify-center shadow-sm">
             <div 

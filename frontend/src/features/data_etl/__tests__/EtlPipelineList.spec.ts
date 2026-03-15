@@ -76,10 +76,11 @@ describe('EtlPipelineList.vue', () => {
           DialogHeader: true,
           DialogTitle: true,
           DialogDescription: true,
-          Card: true,
-          CardHeader: true,
-          CardTitle: true,
-          CardContent: true,
+          Card: { template: '<div><slot /></div>' },
+          CardHeader: { template: '<div><slot /></div>' },
+          CardTitle: { template: '<div><slot /></div>' },
+          CardContent: { template: '<div><slot /></div>' },
+          CardFooter: { template: '<div><slot /></div>' },
           AlertDialog: true,
           AlertDialogContent: true,
           AlertDialogHeader: true,
@@ -92,7 +93,7 @@ describe('EtlPipelineList.vue', () => {
       }
     })
     
-    expect(wrapper.find('.skeleton-etl').exists()).toBe(true)
+    expect(wrapper.find('.etl-skeleton-card').exists()).toBe(true)
   })
 
   it('renders pipelines when loaded', async () => {
@@ -127,10 +128,11 @@ describe('EtlPipelineList.vue', () => {
             DialogHeader: true,
             DialogTitle: true,
             DialogDescription: true,
-            Card: true,
-            CardHeader: true,
-            CardTitle: true,
-            CardContent: true,
+            Card: { template: '<div><slot /></div>' },
+            CardHeader: { template: '<div><slot /></div>' },
+            CardTitle: { template: '<div><slot /></div>' },
+            CardContent: { template: '<div><slot /></div>' },
+            CardFooter: { template: '<div><slot /></div>' },
             AlertDialog: true,
             AlertDialogContent: true,
             AlertDialogHeader: true,
@@ -143,7 +145,7 @@ describe('EtlPipelineList.vue', () => {
       }
     })
     
-    expect(wrapper.find('.skeleton-etl').exists()).toBe(false)
+    expect(wrapper.find('.etl-skeleton-card').exists()).toBe(false)
     expect(wrapper.text()).toContain('Test Pipeline')
   })
 })

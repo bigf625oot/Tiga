@@ -1,23 +1,18 @@
 <template>
-  <Card class="group relative hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden border-border/50 bg-card/50 hover:bg-card hover:-translate-y-1">
-    <!-- Top Gradient Accent -->
-    <div class="absolute top-0 left-0 w-full h-1" :class="item.type === 'mcp' ? 'bg-gradient-to-r from-purple-500/50 to-purple-500/10' : 'bg-gradient-to-r from-green-500/50 to-green-500/10'"></div>
-
-    <div class="p-5 flex gap-4">
+  <Card 
+    class="group relative overflow-hidden transition-all duration-300 cursor-pointer flex flex-col h-full min-h-[180px] border-muted hover:shadow-lg hover:border-primary/40 bg-gradient-to-br from-card to-muted/10 hover:-translate-y-1"
+    @click="$emit('edit', item)"
+  >
+    
+    <div class="p-5 pb-3 flex gap-4">
       <!-- Icon Box -->
       <div 
-        class="relative flex-shrink-0 w-12 h-12 rounded-xl border flex items-center justify-center transition-all shadow-sm group-hover:shadow-md group-hover:scale-105"
+        class="relative flex-shrink-0 w-12 h-12 rounded-xl border flex items-center justify-center transition-all shadow-sm group-hover:scale-105"
         :class="item.type === 'mcp' ? 'bg-purple-50/50 border-purple-100 text-purple-600 dark:bg-purple-900/20 dark:border-purple-800' : 'bg-green-50/50 border-green-100 text-green-600 dark:bg-green-900/20 dark:border-green-800'"
       >
         <img v-if="item.iconUrl" :src="item.iconUrl" class="w-7 h-7 object-contain" alt="icon" />
         <Server v-else-if="item.type === 'mcp'" class="w-6 h-6" />
         <Blocks v-else class="w-6 h-6" />
-        
-        <!-- Online Status -->
-        <span v-if="item.is_active !== false" class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500 border-2 border-background"></span>
-        </span>
       </div>
 
       <!-- Title & Badges -->
@@ -25,10 +20,10 @@
         <div class="flex justify-between items-start gap-2">
             <h3 class="font-bold text-base truncate leading-tight py-0.5 group-hover:text-primary transition-colors" :title="item.name">{{ item.name }}</h3>
             <!-- Menu -->
-            <div v-if="!item.is_official" class="-mr-2 -mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div v-if="!item.is_official" class="-mr-2 -mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                  <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground">
+                  <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground">
                     <MoreVertical class="h-4 w-4" />
                     <span class="sr-only">Open menu</span>
                   </Button>
@@ -61,13 +56,13 @@
 
     <!-- Description -->
     <div class="px-5 pb-4 flex-1">
-      <p class="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 min-h-[2.5em]" :title="item.description">
+      <p class="text-xs text-muted-foreground/80 leading-relaxed line-clamp-3 min-h-[2.5em]" :title="item.description">
           {{ item.description || '暂无描述信息' }}
       </p>
     </div>
 
     <!-- Footer Actions -->
-    <div class="px-5 py-3 bg-muted/30 border-t border-border/50 flex items-center justify-between gap-3 mt-auto">
+    <div class="px-5 pt-0 flex items-center justify-between mt-auto border-t border-border/30 pt-3 pb-5">
         <!-- Info -->
         <div class="flex items-center gap-3 text-[10px] text-muted-foreground">
           <div class="flex items-center gap-1.5" :title="item.author">
@@ -126,7 +121,7 @@ import {
   Server,
   Blocks
 } from 'lucide-vue-next';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {

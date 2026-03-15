@@ -1,55 +1,72 @@
 <template>
-  <div class="h-full flex flex-col bg-background text-foreground transition-colors duration-300">
-    <!-- Header Banner -->
-    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-3">
-          <h2 class="text-lg font-semibold tracking-tight">音视频库</h2>
-          <div class="h-4 w-px bg-border"></div>
-          <p class="text-muted-foreground text-xs truncate max-w-xl">
-            管理和分析您的媒体资源。
-          </p>
-        </div>
-        <div class="flex gap-2">
-           <Button 
-            @click="triggerUpload" 
-            size="sm"
-            class="h-9"
-          >
-            <Upload class="w-4 h-4 mr-2" />
-            上传
-          </Button>
-          <input type="file" ref="fileInput" class="hidden" accept="audio/*,video/*" @change="handleFileUpload">
-        </div>
+  <div class="h-full flex flex-col bg-background overflow-hidden transition-colors duration-300">
+    <div class="px-6 py-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold tracking-tight">音视频库</h2>
+        <div class="h-4 w-px bg-border"></div>
+        <p class="text-xs text-muted-foreground m-0 truncate max-w-xl">管理和分析您的媒体资源。</p>
       </div>
     </div>
 
-    <!-- Content -->
-    <div class="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
-      
-      <!-- Loading State -->
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        <div v-for="i in 10" :key="i" class="bg-card rounded-xl border border-border overflow-hidden h-[280px]">
-            <Skeleton class="h-[157px] w-full" />
-            <div class="p-4 space-y-3">
-                 <Skeleton class="h-4 w-3/4" />
-                 <Skeleton class="h-3 w-1/2" />
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-muted/10 flex flex-col">
+      <div class="w-full flex flex-col gap-8 flex-1">
+        <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div class="hidden md:block w-full md:w-64"></div>
+
+          <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div class="relative w-full md:w-64 group">
+              <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              <Input v-model="searchQuery" placeholder="搜索文件..." class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
+              <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors" aria-label="清空搜索">
+                <X class="h-4 w-4" />
+              </button>
             </div>
-        </div>
-      </div>
 
-      <!-- Empty State -->
-      <div v-else-if="files.length === 0" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
-        <div class="w-20 h-20 bg-muted/50 rounded-2xl flex items-center justify-center mb-6 border border-border">
-            <Film class="w-10 h-10 opacity-40" />
-        </div>
-        <span class="text-lg font-semibold text-foreground">暂无内容</span>
-        <p class="text-sm mt-2 opacity-80">您的音视频库是空的</p>
-      </div>
+            <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
 
-      <!-- File Grid -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        <div v-for="file in files" :key="file.id" class="bg-card rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group overflow-hidden relative border border-border">
+            <Button @click="fetchFiles" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+              <RefreshCw class="h-4 w-4 text-muted-foreground" :class="{ 'animate-spin': loading }" />
+            </Button>
+
+            <Button @click="triggerUpload" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0" :disabled="uploading">
+              <Upload class="w-3.5 h-3.5" />
+              上传
+            </Button>
+            <input type="file" ref="fileInput" class="hidden" accept="audio/*,video/*" @change="handleFileUpload">
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-8 px-6 pb-6 flex-1">
+          <div v-if="searchQuery" class="flex items-center gap-2">
+            <h3 class="text-lg font-semibold tracking-tight text-foreground">搜索结果</h3>
+            <span class="text-sm text-muted-foreground">({{ displayedFiles.length }})</span>
+          </div>
+
+          <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            <div v-for="i in 10" :key="i" class="bg-card rounded-xl border border-border overflow-hidden h-[280px]">
+              <Skeleton class="h-[157px] w-full" />
+              <div class="p-4 space-y-3">
+                <Skeleton class="h-4 w-3/4" />
+                <Skeleton class="h-3 w-1/2" />
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="displayedFiles.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
+            <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+              <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
+              <Film v-else class="w-10 h-10 text-muted-foreground/50" />
+            </div>
+            <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ searchQuery ? '未找到相关文件' : '暂无内容' }}</h3>
+            <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ searchQuery ? '请尝试更换关键词搜索，或清空筛选条件。' : '您的音视频库是空的，您可以上传音频或视频开始使用。' }}</p>
+            <Button v-if="!searchQuery" @click="triggerUpload" class="px-8 shadow-sm hover:scale-105 transition-transform" :disabled="uploading">
+              <Upload class="w-4 h-4 mr-2" />
+              立即上传
+            </Button>
+          </div>
+
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            <div v-for="file in displayedFiles" :key="file.id" class="bg-card rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group overflow-hidden relative border border-border">
             <!-- Thumbnail -->
             <div class="aspect-video bg-muted/30 flex items-center justify-center relative overflow-hidden group-hover:bg-muted/50 transition-colors">
                  <!-- Play Overlay -->
@@ -115,6 +132,8 @@
                 </div>
             </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
 
@@ -189,7 +208,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -203,7 +222,10 @@ import {
     Loader2, 
     Edit2, 
     Trash2, 
-    Share2 
+    Share2,
+    Search,
+    RefreshCw,
+    X
 } from 'lucide-vue-next';
 
 // Shadcn Components
@@ -236,7 +258,9 @@ const api = axios.create({
 
 const files = ref([]);
 const loading = ref(false);
+const uploading = ref(false);
 const fileInput = ref(null);
+const searchQuery = ref('');
 const renameModalVisible = ref(false);
 const renameValue = ref('');
 const itemToRename = ref(null);
@@ -262,6 +286,12 @@ const fetchFiles = async () => {
     }
 };
 
+const displayedFiles = computed(() => {
+    if (!searchQuery.value) return files.value;
+    const q = searchQuery.value.toLowerCase();
+    return files.value.filter((f) => (f?.filename || '').toLowerCase().includes(q));
+});
+
 const triggerUpload = () => {
     fileInput.value.click();
 };
@@ -278,6 +308,7 @@ const handleFileUpload = async (e) => {
     formData.append('duration', duration);
     
     try {
+        uploading.value = true;
         message.loading({ content: '上传中...', key: 'upload' });
         await api.post('/recordings/upload', formData);
         message.success({ content: '上传成功，正在后台转写', key: 'upload' });
@@ -285,6 +316,7 @@ const handleFileUpload = async (e) => {
     } catch (e) {
         message.error({ content: '上传失败', key: 'upload' });
     } finally {
+        uploading.value = false;
         e.target.value = ''; // Reset input
     }
 };

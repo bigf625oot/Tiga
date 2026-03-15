@@ -13,6 +13,7 @@ export interface AgentWorkflow {
   };
   tags?: string[];
   is_active: boolean;
+  is_template?: boolean;
   created_at: string;
   updated_at?: string;
 }
@@ -30,8 +31,8 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
   const currentWorkflowId = ref<string | null>(null);
 
   // Getters
-  const selectedNode = computed<Node | null>(() => {
-    return nodes.value.find(n => n.id === selectedNodeId.value) || null;
+  const selectedNode = computed(() => {
+    return (nodes.value.find(n => n.id === selectedNodeId.value) || null) as Node | null;
   });
 
   // Actions - Node Operations
@@ -59,10 +60,10 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
   };
 
   // Actions - API Operations
-  const fetchWorkflows = async (params: { q?: string; skip?: number; limit?: number } = {}) => {
+  const fetchWorkflows = async (params: { q?: string; skip?: number; limit?: number; is_template?: boolean } = {}) => {
     loading.value = true;
     try {
-      const response = await api.get('/agent_workflows/', { params });
+      const response = await api.get('/agent-workflows/', { params });
       workflows.value = response.data;
     } catch (error) {
       console.error('Failed to fetch workflows:', error);
@@ -71,10 +72,10 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
     }
   };
 
-  const createWorkflow = async (data: { name: string; description?: string; definition?: any }) => {
+  const createWorkflow = async (data: { name: string; description?: string; definition?: any; is_template?: boolean }) => {
     loading.value = true;
     try {
-      const response = await api.post('/agent_workflows/', data);
+      const response = await api.post('/agent-workflows/', data);
       workflows.value.push(response.data);
       return response.data;
     } catch (error) {
@@ -88,7 +89,7 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
   const updateWorkflow = async (id: string, data: any) => {
     loading.value = true;
     try {
-      const response = await api.put(`/agent_workflows/${id}`, data);
+      const response = await api.put(`/agent-workflows/${id}`, data);
       const index = workflows.value.findIndex(w => w.id === id);
       if (index !== -1) {
         workflows.value[index] = response.data;
@@ -105,7 +106,7 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
   const deleteWorkflow = async (id: string) => {
     loading.value = true;
     try {
-      await api.delete(`/agent_workflows/${id}`);
+      await api.delete(`/agent-workflows/${id}`);
       workflows.value = workflows.value.filter(w => w.id !== id);
     } catch (error) {
       console.error('Failed to delete workflow:', error);
@@ -121,7 +122,7 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
       // Find in local list first, or fetch
       let workflow = workflows.value.find(w => w.id === id);
       if (!workflow) {
-         const response = await api.get(`/agent_workflows/${id}`);
+         const response = await api.get(`/agent-workflows/${id}`);
          workflow = response.data;
       }
       
@@ -181,7 +182,7 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
     loading.value = true;
     isRunning.value = true;
     try {
-      // TODO: Implement actual run logic calling /agent_workflow/run or /agent_workflow/run_stream
+      // TODO: Implement actual run logic calling /agent-workflows/run or /agent-workflows/run_stream
       // For now, keep mock behavior or integrate later
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log('Running flow...');

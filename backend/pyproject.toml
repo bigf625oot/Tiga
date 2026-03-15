@@ -15,6 +15,7 @@ openai = "^1.0.0"
 lightrag = "^0.0.1"
 tenacity = "^8.2.0"
 networkx = "^3.0"
+docling = ">=2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

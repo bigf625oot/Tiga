@@ -10,6 +10,7 @@ class TeamBase(BaseModel):
     leader_id: Optional[str] = None
     members: List[str] = []
     is_readonly: bool = False
+    is_template: bool = False
 
 class TeamCreate(TeamBase):
     pass
@@ -22,6 +23,7 @@ class TeamUpdate(BaseModel):
     leader_id: Optional[str] = None
     members: Optional[List[str]] = None
     is_readonly: Optional[bool] = None
+    is_template: Optional[bool] = None
 
 class TeamResponse(TeamBase):
     id: int

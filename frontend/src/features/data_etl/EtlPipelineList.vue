@@ -1,247 +1,165 @@
 <template>
-  <div class="h-full w-full flex flex-col bg-background text-foreground transition-colors duration-300">
-    <!-- Header Banner -->
-    <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-3">
-          <h2 class="text-lg font-semibold tracking-tight">ETL 流水线管理</h2>
-          <div class="h-4 w-px bg-border"></div>
-          <p class="text-muted-foreground text-xs truncate max-w-xl">
-            管理和监控所有数据处理流程
-          </p>
-        </div>
-        <div class="flex items-center gap-2">
-           <Button 
-            @click="isCreateDialogOpen = true" 
-            size="sm"
-            class="h-9"
-          >
-            <Plus class="w-4 h-4 mr-2" />
-            新建流水线
-          </Button>
-        </div>
+  <div class="h-full flex flex-col bg-background overflow-hidden">
+    <div class="px-6 py-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold tracking-tight">ETL 流水线管理</h2>
+        <div class="h-4 w-px bg-border"></div>
+        <p class="text-xs text-muted-foreground m-0 truncate max-w-xl">管理和监控所有数据处理流程。</p>
       </div>
     </div>
 
-    <!-- Toolbar -->
-    <div class="px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-4 w-full md:w-auto">
-        <div class="relative flex-1 md:w-80">
-          <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            v-model="searchQuery"
-            placeholder="搜索流水线名称..." 
-            class="pl-9"
-          />
-        </div>
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-muted/10 flex flex-col">
+      <div class="w-full flex flex-col gap-8 flex-1">
+        <div class="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div class="hidden md:block w-full md:w-64"></div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <Button variant="outline" class="gap-2">
-              <Filter class="w-4 h-4" />
-              {{ filterStatus ? getStatusLabel(filterStatus) : '所有状态' }}
-              <ChevronDown class="w-4 h-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem @click="filterStatus = ''">所有状态</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem @click="filterStatus = 'running'">运行中</DropdownMenuItem>
-            <DropdownMenuItem @click="filterStatus = 'stopped'">已停止</DropdownMenuItem>
-            <DropdownMenuItem @click="filterStatus = 'created'">已创建</DropdownMenuItem>
-            <DropdownMenuItem @click="filterStatus = 'failed'">失败</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div class="flex items-center gap-2 w-full md:w-auto justify-end">
-        <Button 
-          v-if="selectedIds.length > 0"
-          variant="destructive"
-          size="sm"
-          @click="batchDelete"
-          class="gap-2"
-        >
-          <Trash2 class="w-4 h-4" />
-          批量删除 ({{ selectedIds.length }})
-        </Button>
-        
-        <Button variant="ghost" size="icon" title="刷新列表" @click="refreshData">
-          <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': isRefreshing }" />
-        </Button>
-      </div>
-    </div>
-
-    <!-- Data Table -->
-    <div class="flex-1 overflow-auto px-8 pb-8">
-      <SkeletonETL v-if="isLoading" :rows="10" />
-      
-      <div v-else class="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead class="w-[50px]">
-                <Checkbox 
-                  :checked="isAllSelected"
-                  @update:checked="toggleSelectAll"
-                  aria-label="Select all"
-                />
-              </TableHead>
-              <TableHead class="w-[300px]">
-                <Button variant="ghost" class="-ml-4 h-8 data-[state=open]:bg-accent" @click="toggleSort('name')">
-                  流水线名称
-                  <ArrowUpDown class="ml-2 h-4 w-4" v-if="sortBy === 'name'" />
+          <div class="flex items-center justify-center flex-1 gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" size="sm" class="h-9 gap-2 shadow-sm">
+                  <Filter class="w-4 h-4" />
+                  {{ filterStatus ? getStatusLabel(filterStatus) : '所有状态' }}
+                  <ChevronDown class="w-4 h-4 opacity-50" />
                 </Button>
-              </TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>
-                <Button variant="ghost" class="-ml-4 h-8 data-[state=open]:bg-accent" @click="toggleSort('last_run_at')">
-                  最近运行
-                  <ArrowUpDown class="ml-2 h-4 w-4" v-if="sortBy === 'last_run_at'" />
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant="ghost" class="-ml-4 h-8 data-[state=open]:bg-accent" @click="toggleSort('created_at')">
-                  创建时间
-                  <ArrowUpDown class="ml-2 h-4 w-4" v-if="sortBy === 'created_at'" />
-                </Button>
-              </TableHead>
-              <TableHead class="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <template v-if="paginatedPipelines.length === 0">
-              <TableRow>
-                <TableCell colspan="7" class="h-24 text-center">
-                  <div class="flex flex-col items-center justify-center text-muted-foreground py-8">
-                    <Search class="h-8 w-8 mb-2 opacity-50" />
-                    <p>暂无符合条件的流水线</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            </template>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem @click="filterStatus = ''">所有状态</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem @click="filterStatus = 'running'">运行中</DropdownMenuItem>
+                <DropdownMenuItem @click="filterStatus = 'stopped'">已停止</DropdownMenuItem>
+                <DropdownMenuItem @click="filterStatus = 'created'">已创建</DropdownMenuItem>
+                <DropdownMenuItem @click="filterStatus = 'failed'">失败</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <template v-else>
-              <TableRow 
-                v-for="pipeline in paginatedPipelines" 
-                :key="pipeline.id"
-                :data-state="selectedIds.includes(pipeline.id) ? 'selected' : undefined"
-              >
-                <TableCell>
-                  <Checkbox 
-                    :checked="selectedIds.includes(pipeline.id)"
-                    @update:checked="toggleSelection(pipeline.id)"
-                    aria-label="Select row"
-                  />
-                </TableCell>
-                <TableCell>
-                  <div class="flex items-center gap-4">
-                    <div 
-                      class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-sm text-white font-semibold text-sm"
-                      :class="getStatusColor(pipeline.status)"
-                    >
-                      {{ pipeline.name.substring(0,1).toUpperCase() }}
-                    </div>
-                    <div>
-                      <div class="font-medium text-foreground hover:text-primary cursor-pointer transition-colors" @click="emit('edit', pipeline)">
-                        {{ pipeline.name }}
-                      </div>
-                      <div class="text-xs text-muted-foreground font-mono mt-0.5">
-                        {{ pipeline.id }}
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge :variant="getStatusBadgeVariant(pipeline.status)" class="capitalize">
-                    {{ getStatusLabel(pipeline.status) }}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div class="text-sm">
-                    {{ formatTimeAgo(pipeline.last_run_at) }}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span class="text-muted-foreground text-sm">{{ formatDate(pipeline.created_at) }}</span>
-                </TableCell>
-                <TableCell class="text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      class="h-8 w-8"
-                      :title="pipeline.status === 'running' ? '暂停' : '启动'"
-                      @click="togglePipelineStatus(pipeline)"
-                    >
-                      <Pause v-if="pipeline.status === 'running'" class="h-4 w-4 text-amber-500" />
-                      <Play v-else class="h-4 w-4 text-green-500" />
-                    </Button>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger as-child>
-                        <Button variant="ghost" size="icon" class="h-8 w-8">
-                          <MoreHorizontal class="h-4 w-4" />
-                          <span class="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem @click="emit('edit', pipeline)">
-                          <Pencil class="mr-2 h-4 w-4" /> 编辑
-                        </DropdownMenuItem>
-                        <DropdownMenuItem @click="duplicatePipeline(pipeline)">
-                          <Copy class="mr-2 h-4 w-4" /> 复制
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem @click="confirmDelete(pipeline)" class="text-destructive focus:text-destructive">
-                          <Trash2 class="mr-2 h-4 w-4" /> 删除
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            </template>
-          </TableBody>
-        </Table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="flex items-center justify-between py-4" v-if="!isLoading && filteredPipelines.length > 0">
-        <div class="text-sm text-muted-foreground">
-          显示 {{ (currentPage - 1) * pageSize + 1 }} 到 {{ Math.min(currentPage * pageSize, filteredPipelines.length) }} 条，共 {{ filteredPipelines.length }} 条
-        </div>
-        <div class="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            :disabled="currentPage === 1"
-            @click="currentPage--"
-          >
-            上一页
-          </Button>
-          <div class="flex items-center gap-1">
-             <Button
-               v-for="page in visiblePages"
-               :key="page"
-               variant="outline"
-               size="sm"
-               class="w-8 p-0"
-               :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground': currentPage === page }"
-               @click="currentPage = typeof page === 'number' ? page : currentPage"
-               :disabled="typeof page !== 'number'"
-             >
-               {{ page }}
-             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" size="sm" class="h-9 gap-2 shadow-sm">
+                  <ArrowUpDown class="w-4 h-4" />
+                  {{ sortByLabel }}
+                  <ChevronDown class="w-4 h-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem @click="setSort('created_at')">创建时间</DropdownMenuItem>
+                <DropdownMenuItem @click="setSort('last_run_at')">最近运行</DropdownMenuItem>
+                <DropdownMenuItem @click="setSort('name')">名称</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem @click="toggleSortDirection">{{ sortDirection === 'asc' ? '升序' : '降序' }}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            :disabled="currentPage === totalPages"
-            @click="currentPage++"
-          >
-            下一页
-          </Button>
+
+          <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div class="relative w-full md:w-64 group">
+              <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              <Input v-model="searchQuery" placeholder="搜索流水线..." class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
+              <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors" aria-label="清空搜索">
+                <X class="h-4 w-4" />
+              </button>
+            </div>
+
+            <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
+
+            <Button v-if="selectedIds.length > 0" variant="destructive" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0" @click="batchDelete">
+              <Trash2 class="w-3.5 h-3.5" />
+              批量删除 ({{ selectedIds.length }})
+            </Button>
+
+            <Button @click="refreshData" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+              <RefreshCw class="h-4 w-4 text-muted-foreground" :class="{ 'animate-spin': isRefreshing }" />
+            </Button>
+
+            <Button @click="isCreateDialogOpen = true" size="sm" class="h-9 px-4 shadow-sm font-medium transition-all hover:scale-105 active:scale-95 gap-2 flex-shrink-0">
+              <Plus class="w-3.5 h-3.5" />
+              新建流水线
+            </Button>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-6 px-6 pb-6 flex-1">
+          <div v-if="searchQuery || filterStatus" class="flex items-center gap-2">
+            <h3 class="text-lg font-semibold tracking-tight text-foreground">筛选结果</h3>
+            <span class="text-sm text-muted-foreground">({{ filteredPipelines.length }})</span>
+          </div>
+
+          <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div v-for="i in 8" :key="i" class="etl-skeleton-card bg-card rounded-xl border border-border/60 overflow-hidden h-[190px] p-5 space-y-3">
+              <div class="flex items-center gap-4">
+                <Skeleton class="h-12 w-12 rounded-xl" />
+                <div class="flex-1 space-y-2">
+                  <Skeleton class="h-4 w-3/4" />
+                  <Skeleton class="h-3 w-1/2" />
+                </div>
+              </div>
+              <Skeleton class="h-3 w-full" />
+              <Skeleton class="h-3 w-5/6" />
+            </div>
+          </div>
+
+          <div v-else-if="paginatedPipelines.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
+            <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+              <Search class="w-10 h-10 text-muted-foreground/50" />
+            </div>
+            <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">暂无符合条件的流水线</h3>
+            <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ (searchQuery || filterStatus) ? '请尝试更换关键词或筛选条件。' : '当前暂无流水线，您可以点击下方按钮创建一条新的流水线。' }}</p>
+            <Button v-if="!searchQuery && !filterStatus" @click="isCreateDialogOpen = true" class="px-8 shadow-sm hover:scale-105 transition-transform">
+              <Plus class="w-4 h-4 mr-2" />
+              立即创建
+            </Button>
+          </div>
+
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start">
+            <EtlPipelineCard
+              v-for="pipeline in paginatedPipelines"
+              :key="pipeline.id"
+              :pipeline="pipeline"
+              :selected="selectedIds.includes(pipeline.id)"
+              :status-label="getStatusLabel(pipeline.status)"
+              :status-badge-variant="getStatusBadgeVariant(pipeline.status)"
+              :status-color-class="getStatusColor(pipeline.status)"
+              :last-run-text="formatTimeAgo(pipeline.last_run_at)"
+              :created-at-text="formatDate(pipeline.created_at)"
+              :is-running="pipeline.status === 'running'"
+              :sort-hint="sortByLabel"
+              @toggleSelect="toggleSelection(pipeline.id)"
+              @edit="emit('edit', pipeline)"
+              @toggleStatus="togglePipelineStatus(pipeline)"
+              @duplicate="duplicatePipeline(pipeline)"
+              @delete="confirmDelete(pipeline)"
+            />
+          </div>
+
+          <div class="flex items-center justify-between py-2" v-if="!isLoading && filteredPipelines.length > 0">
+            <div class="flex items-center gap-2" @click.stop>
+              <Checkbox :checked="isAllSelected" @update:checked="toggleSelectAll" aria-label="全选" />
+              <span class="text-xs text-muted-foreground">全选当前页</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between py-4" v-if="!isLoading && filteredPipelines.length > 0">
+            <div class="text-sm text-muted-foreground">
+              显示 {{ (currentPage - 1) * pageSize + 1 }} 到 {{ Math.min(currentPage * pageSize, filteredPipelines.length) }} 条，共 {{ filteredPipelines.length }} 条
+            </div>
+            <div class="flex items-center space-x-2">
+              <Button variant="outline" size="sm" :disabled="currentPage === 1" @click="currentPage--">上一页</Button>
+              <div class="flex items-center gap-1">
+                <Button
+                  v-for="page in visiblePages"
+                  :key="page"
+                  variant="outline"
+                  size="sm"
+                  class="w-8 p-0"
+                  :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground': currentPage === page }"
+                  @click="currentPage = typeof page === 'number' ? page : currentPage"
+                  :disabled="typeof page !== 'number'"
+                >
+                  {{ page }}
+                </Button>
+              </div>
+              <Button variant="outline" size="sm" :disabled="currentPage === totalPages" @click="currentPage++">下一页</Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -302,36 +220,24 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 
 import { 
   Plus, Search, Filter, ChevronDown, Trash2, RefreshCw, 
-  ArrowUpDown, MoreHorizontal, Pencil, Copy, Play, Pause,
+  ArrowUpDown, X,
   Network, Database, Sparkles, File, FilePlus
 } from 'lucide-vue-next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SkeletonETL } from '@/components/skeletons';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -364,6 +270,7 @@ import { useToast } from '@/components/ui/toast';
 import { usePipelineStore } from '@/features/etl_editor/composables/usePipelineStore';
 import { NodeType, SourceType, TransformType, SinkType, PipelineStatus, type Pipeline } from '@/features/etl_editor/types/pipeline';
 import { PIPELINE_TEMPLATES, type PipelineTemplate } from '@/features/etl_editor/config/templates';
+import EtlPipelineCard from './components/EtlPipelineCard.vue';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -399,6 +306,25 @@ const selectedIds = ref<number[]>([]); // Changed to number[]
 const currentPage = ref(1);
 const pageSize = ref(10);
 
+const sortByLabel = computed(() => {
+  const map: Record<string, string> = {
+    created_at: '创建时间',
+    last_run_at: '最近运行',
+    name: '名称'
+  }
+  return map[sortBy.value] || '排序'
+})
+
+const setSort = (field: string) => {
+  sortBy.value = field
+  currentPage.value = 1
+}
+
+const toggleSortDirection = () => {
+  sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  currentPage.value = 1
+}
+
 // Logic
 const refreshData = async () => {
   isRefreshing.value = true;
@@ -429,15 +355,17 @@ const filteredPipelines = computed(() => {
   }
 
   result = [...result].sort((a, b) => {
-    let valA: any = a[sortBy.value as keyof Pipeline];
-    let valB: any = b[sortBy.value as keyof Pipeline];
-    
+    let valA: any = a[sortBy.value as keyof Pipeline]
+    let valB: any = b[sortBy.value as keyof Pipeline]
+
     if (sortBy.value === 'name') {
-       // string compare
+      valA = String(valA || '').toLowerCase()
+      valB = String(valB || '').toLowerCase()
     } else {
-       // date or number compare
-       valA = new Date(valA as string).getTime();
-       valB = new Date(valB as string).getTime();
+      const tsA = valA ? new Date(valA as string).getTime() : 0
+      const tsB = valB ? new Date(valB as string).getTime() : 0
+      valA = Number.isFinite(tsA) ? tsA : 0
+      valB = Number.isFinite(tsB) ? tsB : 0
     }
 
     if (valA < valB) return sortDirection.value === 'asc' ? -1 : 1;
@@ -453,6 +381,10 @@ const totalPages = computed(() => Math.ceil(filteredPipelines.value.length / pag
 const paginatedPipelines = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
   return filteredPipelines.value.slice(start, start + pageSize.value);
+});
+
+watch([searchQuery, filterStatus, sortBy, sortDirection], () => {
+  currentPage.value = 1
 });
 
 const visiblePages = computed(() => {

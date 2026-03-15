@@ -2,7 +2,7 @@ import json
 import logging
 from typing import List, Dict, Any, Callable, Optional
 from agno.tools import Toolkit
-from app.services.mcp.client import MCPClient
+from app.services.mcp.ws_client import MCPClient
 
 logger = logging.getLogger(__name__)
 
