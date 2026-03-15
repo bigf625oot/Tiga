@@ -1,6 +1,6 @@
 <template>
   <div class="w-full h-full flex flex-col overflow-hidden">
-    <AutoTaskPanel v-if="isAutoTaskMode" @run-task="$emit('run-task', $event)" @close="$emit('close')" class="!border-0 !shadow-none" />
+    <AutoTaskPanel v-if="isAutoTaskMode" @run-task="$emit('run-task', $event)" @open-session="$emit('open-session', $event)" @close="$emit('close')" class="!border-0 !shadow-none" />
     <WorkspaceTabs v-else
       ref="workspaceTabsRef"
       :sessionId="sessionId || ''"
@@ -27,7 +27,7 @@ defineProps<{
   hasKnowledgeBase: boolean;
 }>();
 
-defineEmits(['run-task', 'close']);
+defineEmits(['run-task', 'close', 'open-session']);
 
 const workspaceTabsRef = ref<any>(null);
 

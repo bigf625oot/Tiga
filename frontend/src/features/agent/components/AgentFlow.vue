@@ -97,7 +97,7 @@
 
        <!-- Empty State -->
        <div v-else-if="!store.loading && store.workflows.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto text-muted-foreground animate-in fade-in duration-300">
-          <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
              <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
              <GitBranch v-else class="w-10 h-10 text-muted-foreground/50" />
           </div>
@@ -189,8 +189,12 @@ const handleTabChange = () => {
     store.fetchWorkflows({ q: searchQuery.value, is_template: currentTab.value === 'templates' });
 };
 
-const handleRefresh = () => {
-    store.fetchWorkflows({ q: searchQuery.value, is_template: currentTab.value === 'templates' });
+const handleRefresh = async () => {
+    store.loading = true;
+    store.workflows = []; // 触发骨架屏
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await store.fetchWorkflows({ q: searchQuery.value, is_template: currentTab.value === 'templates', _t: Date.now() });
+    toast({ title: '刷新成功', description: '智能体流数据已更新' });
 };
 
 const handleCreate = () => {
@@ -207,9 +211,7 @@ const handleEdit = async (id: string) => {
 };
 
 const handleDelete = async (id: string) => {
-    if (confirm('确定要删除这个工作流吗？')) {
-        await store.deleteWorkflow(id);
-    }
+    await store.deleteWorkflow(id);
 };
 
 const handleBack = () => {

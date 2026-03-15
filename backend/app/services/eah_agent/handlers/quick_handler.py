@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.eah_agent.core.base_handler import BaseHandler
 from app.services.eah_agent.core.nlu import IntentResult
 from app.services.eah_agent.core.agent_factory import AgentFactory
+from app.core.config import settings
 from app.services.eah_agent.domain.config import AgentConfig, ToolConfig
 from app.services.eah_agent.storage.session_history import SessionHistory
 from app.core.context_compressor import ContextCompressor
@@ -89,10 +90,24 @@ class QuickHandler(BaseHandler):
 
                 # Configure Tools
                 if enable_search:
-                    tools.append(ToolConfig(name="duckduckgo", enabled=True))
-                    instructions.append(
-                        "Use the search tool if the user asks for current events or information not in your knowledge."
-                    )
+                    # Check for Tavily
+                    if settings.TAVILY_API_KEY:
+                        tools.append(ToolConfig(name="tavily", config={"api_key": settings.TAVILY_API_KEY}, enabled=True))
+                        instructions.append(
+                            "Use the 'tavily' search tool if the user asks for current events or information not in your knowledge."
+                        )
+                    else:
+                        # Fallback to DuckDuckGo with proxy support
+                        ddg_config = {}
+                        import os
+                        proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+                        if proxy:
+                            ddg_config["proxy"] = proxy
+                        
+                        tools.append(ToolConfig(name="duckduckgo", config=ddg_config, enabled=True))
+                        instructions.append(
+                            "Use the search tool if the user asks for current events or information not in your knowledge."
+                        )
 
                 config = AgentConfig(
                     name="QuickAgent",
@@ -405,6 +420,10 @@ class QuickHandler(BaseHandler):
                             "type": "status",
                             "content": f"正在使用工具: {', '.join(tool_names)}...",
                         }
+
+                reasoning = getattr(chunk, "reasoning", None) or getattr(chunk, "reasoning_content", None)
+                if reasoning:
+                    yield {"type": "think", "content": reasoning}
 
                 content = getattr(chunk, "content", None)
                 if content:

@@ -98,8 +98,8 @@
           </div>
 
           <div v-else-if="paginatedPipelines.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
-            <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
-              <Search class="w-10 h-10 text-muted-foreground/50" />
+            <div class="w-14 h-14  rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+              <img src="/Placeholder/null_search.svg" alt="暂无内容" class="h-full w-full object-cover" />
             </div>
             <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">暂无符合条件的流水线</h3>
             <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ (searchQuery || filterStatus) ? '请尝试更换关键词或筛选条件。' : '当前暂无流水线，您可以点击下方按钮创建一条新的流水线。' }}</p>

@@ -27,7 +27,7 @@ Chat Endpoints（/chat）
 """
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +37,7 @@ from app.db.session import get_db
 from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatSessionUpdate
 from app.core.sse import format_sse_json
 from app.services.media.chat_attachments import ingest_chat_file, normalize_doc_ids
+from app.services.eah_agent.core.title_generator import TitleGenerator
 
 router = APIRouter()
 
@@ -94,7 +95,7 @@ class ChatRequest(BaseModel):
 
 
 @router.post("/sessions/{session_id}/chat")
-async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat_session(session_id: str, request: ChatRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """
     统一聊天端点，根据意图路由到适当的处理程序。
     支持: Chat, Task, Team, Workflow, Data Query, KG QA.
@@ -152,6 +153,15 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
                 yield format_sse_json(event_type, data)
         
         yield "event: done\ndata: [DONE]\n\n"
+        
+        # Trigger title generation after response
+        # Note: Since we are in a generator, adding to background_tasks here won't work for the route response
+        # But we can run it asynchronously here if we don't await it? 
+        # No, better to add it to the request state or just fire and forget if possible.
+        # Actually, since we have the `background_tasks` object from the route handler, 
+        # we can add the task to it. FastAPI executes background tasks after the response is sent.
+        # For StreamingResponse, it executes after the generator finishes.
+        background_tasks.add_task(TitleGenerator.generate_title, session_id, db)
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
 

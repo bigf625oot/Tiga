@@ -205,7 +205,7 @@ const props = defineProps<{
   templates: any[];
 }>();
 
-const emit = defineEmits(['create-task', 'refresh-activities', 'run-task']);
+const emit = defineEmits(['create-task', 'refresh-activities', 'run-task', 'open-session']);
 
 const inputValue = ref('');
 const inputRef = ref<HTMLTextAreaElement | null>(null);
@@ -294,7 +294,7 @@ const toggleTimeGroup = (time: string) => {
 };
 
 const handleActivityClick = (act: any) => {
-    console.log("Activity clicked", act);
+    if (act?.session_id) emit('open-session', String(act.session_id));
 };
 
 const getActivityIcon = (type: string) => {

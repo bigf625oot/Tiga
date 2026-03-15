@@ -11,6 +11,7 @@ type ToasterToast = {
   variant?: 'default' | 'destructive'
   class?: string
   open?: boolean
+  duration?: number
 }
 
 const toasts = ref<ToasterToast[]>([])

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex-1 flex flex-col min-h-0 relative min-w-0 overflow-hidden">
+  <div class="h-full flex-1 flex flex-col min-h-0 relative min-w-0">
     <!-- Empty State -->
     <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-start pt-[15vh] px-4 overflow-y-auto relative custom-scrollbar">
       <div class="w-full max-w-2xl flex flex-col items-center gap-6">
@@ -35,6 +35,14 @@
                 :class="getTheme(m.themeColor).checkBg">
                 <Check class="w-3 h-3 text-white dark:text-slate-950" stroke-width="3" />
               </div>
+
+              <Badge
+                v-if="m.badge"
+                variant="secondary"
+                class="absolute top-3 left-3 h-5 px-2 text-[10px] font-bold bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30"
+              >
+                {{ m.badge }}
+              </Badge>
 
               <div class="flex flex-col w-full z-10 gap-1 mt-auto">
                 <span class="text-sm font-bold tracking-wide transition-colors duration-300"
@@ -111,21 +119,24 @@
 
     <!-- Message List State -->
     <template v-else>
-      <MessageList
-        ref="messagesContainer"
-        :messages="messages"
-        :current-agent="currentAgent"
-        :is-loading="isLoading"
-        @locate-node="$emit('locate-node', $event)"
-        @open-doc-space="$emit('open-doc-space', $event)"
-        @quote-message="handleQuoteMessage"
-        @excerpt-message="handleExcerptMessage"
-      />
+      <div class="flex-1 relative min-h-0 min-w-0 flex flex-col w-full h-full">
+        <div class="flex-1 min-h-0 min-w-0 w-full relative">
+          <MessageList
+            ref="messagesContainer"
+            :messages="messages"
+            :current-agent="currentAgent"
+            :is-loading="isLoading"
+            :is-streaming="isStreaming"
+            @locate-node="$emit('locate-node', $event)"
+            @open-doc-space="$emit('open-doc-space', $event)"
+            @quote-message="handleQuoteMessage"
+            @excerpt-message="handleExcerptMessage"
+          />
+        </div>
 
-      <!-- Sticky Input Area -->
-      <div class="flex-none w-full p-4 pb-6 z-30 sticky bottom-0 bg-transparent">
-        <div class="absolute -top-12 left-0 w-full h-12 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
-        <div class="max-w-4xl mx-auto relative group/footer">
+        <!-- Sticky Input Area positioned at bottom overlaying the list -->
+        <div class="flex-none w-full px-4 pt-4 pb-6 z-30 bg-background shrink-0 relative border-t border-border/20 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.2)]">
+          <div class="max-w-4xl mx-auto relative group/footer">
            <!-- Mode Toggle Trigger (Visible on hover or if no modes shown) -->
            <div v-if="!isModeBarVisible" class="absolute -top-8 left-0 w-full flex justify-center opacity-0 group-hover/footer:opacity-100 transition-opacity duration-300 pointer-events-none group-hover/footer:pointer-events-auto">
                <Button variant="secondary" size="sm" class="h-6 text-[10px] px-2 shadow-sm bg-background/80 backdrop-blur border border-border/50" @click="isModeBarVisible = true">
@@ -153,8 +164,21 @@
                         <component :is="m.icon" class="w-3.5 h-3.5" />
                     </div>
                     <div class="flex flex-col min-w-0 text-left gap-0.5">
-                        <span class="text-[11px] font-semibold leading-none truncate"
-                            :class="(currentModeId || 'quick') === m.id ? getTheme(m.themeColor).titleText : 'text-foreground'">{{ m.name }}</span>
+                        <div class="flex items-center gap-1 min-w-0">
+                          <span
+                            class="text-[11px] font-semibold leading-none truncate"
+                            :class="(currentModeId || 'quick') === m.id ? getTheme(m.themeColor).titleText : 'text-foreground'"
+                          >
+                            {{ m.name }}
+                          </span>
+                          <Badge
+                            v-if="m.badge"
+                            variant="secondary"
+                            class="h-4 px-1.5 text-[9px] font-bold bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30 shrink-0"
+                          >
+                            {{ m.badge }}
+                          </Badge>
+                        </div>
                         <span class="text-[9px] text-muted-foreground truncate leading-none opacity-80">{{ m.description }}</span>
                     </div>
                  </div>
@@ -185,6 +209,7 @@
             />
         </div>
       </div>
+      </div>
     </template>
   </div>
 </template>
@@ -198,6 +223,7 @@ import SmartQAInput from './SmartQAInput.vue';
 import SmartQAIntroFlipCards from './SmartQAIntroFlipCards.vue';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { Agent, Message, Attachment, UserScript, ModeConfig, Team } from '../../types';
 
 const props = defineProps<{
@@ -206,6 +232,7 @@ const props = defineProps<{
   currentModeId: string | null;
   embedded: boolean;
   isLoading: boolean;
+  isStreaming: boolean;
   isTaskRunning: boolean;
   isStopping: boolean;
   modelValue: string; // Input value

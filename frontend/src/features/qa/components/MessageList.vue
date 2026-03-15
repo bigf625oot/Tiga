@@ -1,8 +1,8 @@
 <template>
-  <div class="flex-1 relative min-h-0 flex flex-col group/scrollbar">
+  <div class="h-full relative min-h-0 min-w-0 flex flex-col group/scrollbar">
     <!-- Original Scroll Container -->
     <div 
-      class="flex-1 overflow-y-auto px-10 pt-8 pb-32 custom-scrollbar scroll-smooth" 
+      class="flex-1 overflow-y-auto px-10 pt-8 pb-10 custom-scrollbar scroll-smooth h-full" 
       v-bind="containerProps"
       @scroll="handleScroll"
     >
@@ -11,57 +11,53 @@
           <div 
             v-for="item in list" 
             :key="item.index" 
-            class="flex flex-col gap-6 mb-8"
+            class="flex flex-col gap-6 pb-8"
           >
-            <!-- Time Separator -->
-          <div v-if="item.data.showTime" class="flex justify-center my-4">
-            <span class="text-[10px] text-muted-foreground/40 px-2 py-0.5 rounded-full select-none">
-              {{ formatGroupTime(item.data.timestamp) }}
-            </span>
-          </div>
-
-            <!-- Messages in Group -->
-            <ChatCard 
-              v-for="(msg, mIdx) in item.data.messages" 
-              :key="mIdx"
-              class="mb-6 last:mb-0"
-              :message="msg"
-              :type="msg.type || 'knowledge_qa'"
-              :is-user="item.data.role === 'user'"
-              :show-avatar="mIdx === 0"
-              :show-meta="mIdx === 0 && item.data.role !== 'user'"
-              :agent="currentAgent"
-              @locate-node="$emit('locate-node', $event)"
-              @open-doc-space="$emit('open-doc-space', $event)"
-              @quote-message="$emit('quote-message', $event)"
-              @excerpt-message="$emit('excerpt-message', $event)"
-            />
-          </div>
-        </div>
-
-        <!-- Loading Indicator (Skeleton) -->
-        <div v-if="isLoading" class="flex gap-4 ml-10 mt-2 pb-4 animate-in fade-in duration-300">
-            <!-- Avatar -->
-            <div class="flex-shrink-0">
-                <Skeleton class="h-8 w-8 rounded-full bg-muted/50" />
-            </div>
-            
-            <!-- Message Bubble Skeleton -->
-            <div class="flex flex-col gap-2 w-full max-w-[80%]">
-                <div class="flex items-center gap-2 mb-1">
-                    <Skeleton class="h-4 w-24 rounded bg-muted/50" />
-                    <Skeleton class="h-3 w-12 rounded bg-muted/30" />
+            <!-- 1. Normal Message Group -->
+            <template v-if="!item.data.isLoader">
+                <!-- Time Separator -->
+                <div v-if="item.data.showTime" class="flex justify-center my-4">
+                    <span class="text-[10px] text-muted-foreground/40 px-2 py-0.5 rounded-full select-none">
+                    {{ formatGroupTime(item.data.timestamp) }}
+                    </span>
                 </div>
-                <div class="space-y-2 p-4 rounded-2xl rounded-tl-none bg-muted/20 border border-border/40 backdrop-blur-sm">
-                    <Skeleton class="h-4 w-full bg-muted/40" />
-                    <Skeleton class="h-4 w-[90%] bg-muted/40" />
-                    <Skeleton class="h-4 w-[95%] bg-muted/40" />
-                    <div class="flex gap-2 pt-2">
-                         <Skeleton class="h-20 w-32 rounded-lg bg-muted/30" />
-                         <Skeleton class="h-20 w-32 rounded-lg bg-muted/30" />
+        
+                <!-- Messages in Group -->
+                <ChatCard 
+                    v-for="(msg, mIdx) in item.data.messages" 
+                    :key="mIdx"
+                    class="mb-6 last:mb-0"
+                    :message="msg"
+                    :type="msg.type || 'knowledge_qa'"
+                    :is-user="item.data.role === 'user'"
+                    :show-avatar="mIdx === 0"
+                    :show-meta="mIdx === 0 && item.data.role !== 'user'"
+                    :agent="currentAgent"
+                    @locate-node="$emit('locate-node', $event)"
+                    @open-doc-space="$emit('open-doc-space', $event)"
+                    @quote-message="$emit('quote-message', $event)"
+                    @excerpt-message="$emit('excerpt-message', $event)"
+                />
+            </template>
+
+            <!-- 2. Loading Indicator (As a Virtual Item) -->
+            <template v-else>
+                <div class="flex gap-4 ml-10 mt-2 pb-4 animate-in fade-in duration-300">
+                    <!-- Avatar -->
+                    <div class="flex-shrink-0">
+                        <Skeleton class="h-8 w-8 rounded-full bg-muted/50" />
+                    </div>
+                    
+                    <!-- Skeleton Loader -->
+                    <div class="flex flex-col gap-2 w-full max-w-[80%]">
+                        <div class="p-4 rounded-2xl rounded-tl-none bg-muted/20 border border-border/40 backdrop-blur-sm space-y-3">
+                           <Skeleton class="h-4 w-[250px] bg-muted/60" />
+                           <Skeleton class="h-4 w-[200px] bg-muted/60" />
+                        </div>
                     </div>
                 </div>
-            </div>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -98,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { useVirtualList, useResizeObserver, useDebounceFn } from '@vueuse/core';
 import { ArrowDown } from 'lucide-vue-next';
 import MessageAnchor from './MessageAnchor.vue';
@@ -112,51 +108,72 @@ const props = defineProps<{
   messages: Message[];
   currentAgent: Agent | Team | undefined;
   isLoading: boolean;
+  isStreaming?: boolean;
 }>();
 
 const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message']);
 
 // Grouping Logic
 const messageGroups = computed(() => {
-  if (!props.messages.length) return [];
-  
   const groups: any[] = [];
-  let currentGroup: any = null;
+  
+  if (props.messages.length) {
+    let currentGroup: any = null;
 
-  props.messages.forEach((msg) => {
-    const msgTime = msg.timestamp ? dayjs(msg.timestamp) : dayjs();
-    
-    let shouldGroup = false;
-    if (currentGroup && currentGroup.role === msg.role) {
-      const lastMsgTime = currentGroup.lastTimestamp;
-      const diffMinutes = msgTime.diff(lastMsgTime, 'minute');
-      if (diffMinutes < 5) {
-        shouldGroup = true;
+    props.messages.forEach((msg) => {
+      const msgTime = msg.timestamp ? dayjs(msg.timestamp) : dayjs();
+      
+      let shouldGroup = false;
+      if (currentGroup && currentGroup.role === msg.role && !currentGroup.isLoader) {
+        const lastMsgTime = currentGroup.lastTimestamp;
+        const diffMinutes = msgTime.diff(lastMsgTime, 'minute');
+        if (diffMinutes < 5) {
+          shouldGroup = true;
+        }
       }
-    }
 
-    if (shouldGroup) {
-      currentGroup.messages.push(msg);
-      currentGroup.lastTimestamp = msgTime;
-    } else {
-      if (currentGroup) groups.push(currentGroup);
-      
-      const showTime = !currentGroup || msgTime.diff(currentGroup.lastTimestamp, 'minute') > 15;
-      
-      currentGroup = {
-        role: msg.role,
-        messages: [msg],
-        timestamp: msgTime,
-        lastTimestamp: msgTime,
-        showTime,
-        // Estimate height: base 60px + 40px per message + extra for content
-        // This is rough estimation, useVirtualList handles dynamic height if configured but simple estimation helps
-        height: undefined 
-      };
-    }
-  });
+      if (shouldGroup) {
+        currentGroup.messages.push(msg);
+        currentGroup.lastTimestamp = msgTime;
+      } else {
+        if (currentGroup) groups.push(currentGroup);
+        
+        const showTime = !currentGroup || msgTime.diff(currentGroup.lastTimestamp, 'minute') > 15;
+        
+        currentGroup = {
+          role: msg.role,
+          messages: [msg],
+          timestamp: msgTime,
+          lastTimestamp: msgTime,
+          showTime,
+          height: undefined,
+          isLoader: false
+        };
+      }
+    });
 
-  if (currentGroup) groups.push(currentGroup);
+    if (currentGroup) groups.push(currentGroup);
+  }
+
+  // Check if we should append a loader group
+  // Logic: Show loader if isLoading is true AND we don't have an active assistant response yet.
+  // We check if it's currently streaming. If it's streaming, the loader should disappear 
+  // because the actual message is being generated (whether reasoning or text).
+  const lastMsg = props.messages[props.messages.length - 1];
+  const hasStartedResponse = lastMsg && lastMsg.role !== 'user' && (lastMsg.content || lastMsg.reasoning || props.isStreaming);
+
+  if (props.isLoading && !hasStartedResponse) {
+      groups.push({
+          isLoader: true,
+          role: 'assistant',
+          messages: [],
+          timestamp: dayjs(),
+          lastTimestamp: dayjs(),
+          showTime: false,
+          index: 'loading-placeholder' // Unique identifier
+      });
+  }
+
   return groups;
 });
 
@@ -270,6 +287,13 @@ const handleScrollToBottomClick = () => {
     isUserAtBottom.value = true;
 };
 
+// Watchers for State Sync
+watch(() => props.isLoading, (newVal) => {
+    if (newVal && isUserAtBottom.value) {
+        scrollToBottom();
+    }
+});
+
 watch(() => props.messages.length, () => {
     // Always scroll to bottom if the last message is from user (they just sent it)
     const lastMsg = props.messages[props.messages.length - 1];
@@ -285,17 +309,28 @@ watch(() => props.messages.length, () => {
     }
 });
 
+// Watch for reasoning content updates (COE)
+watch(() => {
+    const lastMsg = props.messages[props.messages.length - 1];
+    return lastMsg ? lastMsg.reasoning : null;
+}, (newVal, oldVal) => {
+    // If reasoning updates (stream outputting thought), scroll to bottom if user was at bottom
+    if (newVal && newVal !== oldVal) {
+        if (isUserAtBottom.value) {
+            scrollToBottom();
+        } 
+        // Optional: show tip if not at bottom? Usually yes.
+        else {
+             showScrollToBottomTip.value = true;
+        }
+    }
+});
+
 watch(() => props.messages[props.messages.length - 1], (newVal) => {
     if (newVal && newVal.content) {
         if (isUserAtBottom.value) {
             scrollToBottom();
         } 
-        // Note: For streaming updates, we might not want to show the tip repeatedly 
-        // if the user is scrolling up. The tip should already be shown if they are not at bottom 
-        // and a new message (length change) happened. 
-        // But if the message is just growing, and the user hasn't seen the tip yet (maybe they just scrolled up),
-        // we might want to show it?
-        // Let's stick to showing it if content updates and we are not at bottom.
         else {
              showScrollToBottomTip.value = true;
         }

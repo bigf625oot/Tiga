@@ -25,10 +25,12 @@ from urllib.parse import urlparse, urlunparse
 
 from app.core.config import settings
 from app.core.logger import logger
+from sqlalchemy import select
 from app.schemas.openclaw import (
     OpenClawNode, OpenClawActivity, OpenClawStat, OpenClawPlugin,
     OpenClawHealth, OpenClawInfo
 )
+from app.models.chat import ChatSession, ChatMessage
 from app.services.openclaw.gateway.tools import OpenClawTools
 from app.services.openclaw.task.parser import parse_task_intent
 from app.services.openclaw.task.execution import task_worker
@@ -453,6 +455,40 @@ class OpenClawService:
             
             task_id = task.task_id
             logger.info(f"数据库任务记录创建完成: task_id={task_id}, created={created}")
+
+            if not task.session_id:
+                task.session_id = task.task_id
+                db.add(task)
+
+            existing_session = await db.execute(select(ChatSession).where(ChatSession.id == task.session_id))
+            if not existing_session.scalars().first():
+                s = ChatSession(
+                    id=task.session_id,
+                    title=(prompt or "")[:50] or "OpenClaw Task",
+                    agent_id=None,
+                    mode="auto_task",
+                )
+                db.add(s)
+                if prompt:
+                    db.add(
+                        ChatMessage(
+                            session_id=s.id,
+                            role="user",
+                            content=prompt,
+                            message_type="text",
+                            meta_data={"openclaw_task_id": task.task_id},
+                        )
+                    )
+                db.add(
+                    ChatMessage(
+                        session_id=s.id,
+                        role="assistant",
+                        content=f"任务已创建：{task.task_id}",
+                        message_type="text",
+                        meta_data={"openclaw_task_id": task.task_id, "status": task.status},
+                    )
+                )
+            await db.commit()
             
             # 3. 异步分发任务到工作器
             if created and task.is_pending():
@@ -511,6 +547,7 @@ class OpenClawService:
             return {
                 "task_id": task.task_id,
                 "status": task.status,
+                "session_id": task.session_id,
                 "created_at": task.created_at.isoformat() if task.created_at else None,
                 "is_new": created
             }

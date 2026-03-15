@@ -6,7 +6,7 @@
         <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
           <circle cx="18" cy="18" r="16" fill="none" class="stroke-primary transition-all duration-500 ease-in-out" stroke-width="2" stroke-dasharray="100" :stroke-dashoffset="100 - (progress || 0)" />
         </svg>
-        <Avatar class="absolute inset-0 m-auto w-6 h-6 shadow-sm">
+        <Avatar class="absolute inset-0 m-auto w-full h-full rounded-full">
           <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover bg-white" alt="Agent" />
           <AvatarFallback class="bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
             <BaseIcon icon="mdi:file-document-outline" :size="14" />
@@ -39,6 +39,13 @@
           <span class="flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 rounded-full bg-primary/70"></span>
             {{ currentModeName }}
+            <Badge
+              v-if="currentModeBadge"
+              variant="secondary"
+              class="h-4 px-1.5 text-[9px] font-bold bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30"
+            >
+              {{ currentModeBadge }}
+            </Badge>
           </span>
           <span class="text-muted-foreground/30">|</span>
           <span>{{ sessionTime }}</span>
@@ -78,6 +85,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import BaseIcon from '@/shared/components/atoms/BaseIcon';
 import type { Agent, Session, Team } from '../../types';
 import dayjs from 'dayjs';
@@ -94,7 +102,7 @@ const props = defineProps<{
   showControls?: boolean;
 }>();
 
-defineEmits(['toggle-left', 'toggle-right', 'open-logs', 'update-title', 'open-memo']);
+const emit = defineEmits(['toggle-left', 'toggle-right', 'open-logs', 'update-title', 'open-memo']);
 
 const isEditing = ref(false);
 const editTitle = ref('');
@@ -114,15 +122,9 @@ const cancelEditing = () => {
 };
 
 const saveTitle = () => {
-  if (editTitle.value.trim()) {
-    // Emit update event
-    // In real app, we should call API to update title
-    // Here we assume parent handles it or we emit an event
-    // But since props are read-only, we should emit event
-    // Let's assume emit 'update-title'
-    // But first let's update local display if parent doesn't update immediately?
-    // Actually best practice is to emit and let parent update prop
-    // For now we just close edit mode
+  const newTitle = editTitle.value.trim();
+  if (newTitle && props.currentSession && newTitle !== props.currentSession.title) {
+      emit('update-title', { id: props.currentSession.id, title: newTitle });
   }
   isEditing.value = false;
 };
@@ -135,11 +137,17 @@ const agentIcon = computed(() => {
   return agent.icon || agent.icon_url;
 });
 
+const currentMode = computed(() => {
+  if (!props.currentModeId) return undefined;
+  return MODES.find(m => m.id === props.currentModeId);
+});
+
 const currentModeName = computed(() => {
   if (!props.currentModeId) return '快问快答';
-  const mode = MODES.find(m => m.id === props.currentModeId);
-  return mode ? mode.name : '未知模式';
+  return currentMode.value ? currentMode.value.name : '未知模式';
 });
+
+const currentModeBadge = computed(() => currentMode.value?.badge);
 
 const sessionTime = computed(() => {
   if (!props.currentSession?.created_at) return dayjs().format('YYYY-MM-DD HH:mm');

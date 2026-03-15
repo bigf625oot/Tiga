@@ -68,6 +68,12 @@ class PlanHandler(BaseHandler):
             response_stream = self.agent.run(input_text, stream=True)
             
             for chunk in response_stream:
+                # Check for tool calls or status updates
+                if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                    tool_names = [tc.function.name for tc in chunk.tool_calls if tc.function]
+                    if tool_names:
+                        yield {"type": "status", "content": f"正在使用工具: {', '.join(tool_names)}..."}
+
                 # Extract content from the chunk
                 # Assuming chunk is an object with a 'content' attribute
                 content = getattr(chunk, 'content', None)
@@ -75,6 +81,9 @@ class PlanHandler(BaseHandler):
                 # Check for reasoning/thought process if available
                 # Some models/frameworks might separate this
                 # For now, we assume Agno might include it in content or we rely on downstream parsing
+                reasoning = getattr(chunk, "reasoning", None) or getattr(chunk, "reasoning_content", None)
+                if reasoning:
+                    yield {"type": "think", "content": reasoning}
                 
                 if content:
                      yield {"type": "content", "content": content}

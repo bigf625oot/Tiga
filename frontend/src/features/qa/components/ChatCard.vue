@@ -10,7 +10,7 @@
     <div 
       v-if="showAvatar" 
       class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden mt-0 transition-all duration-300 hover:scale-105"
-      :class="[isUser ? 'bg-indigo-600 ml-4' : 'bg-muted mr-4']"
+      :class="[isUser ? 'ml-4' : 'mr-4']"
     >
       <img v-if="isUser" src="/user/hair.svg" alt="user" class="w-full h-full object-cover" />
       <img v-else-if="agent?.icon || agent?.icon_url" :src="agent?.icon || agent?.icon_url" alt="agent" class="w-full h-full object-cover" />
@@ -250,7 +250,8 @@ const handleExcerpt = () => {
 };
 
 // Composables
-const { parsed } = useMessageParser(toRef(props.message, 'content'));
+const contentRef = computed(() => props.message?.content || '');
+const { parsed } = useMessageParser(contentRef);
 const { processOption } = useChartOptions();
 const { render } = useMarkdown();
 

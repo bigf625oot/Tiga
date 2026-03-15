@@ -53,9 +53,9 @@
           </div>
 
           <div v-else-if="displayedFiles.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
-            <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+            <div class="w-12 h-12  flex items-center justify-center mb-6 ">
               <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
-              <Film v-else class="w-10 h-10 text-muted-foreground/50" />
+              <img src="/Placeholder/null_video.svg" alt="暂无内容" class="h-full w-full object-cover" />
             </div>
             <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ searchQuery ? '未找到相关文件' : '暂无内容' }}</h3>
             <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ searchQuery ? '请尝试更换关键词搜索，或清空筛选条件。' : '您的音视频库是空的，您可以上传音频或视频开始使用。' }}</p>

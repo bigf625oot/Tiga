@@ -23,9 +23,20 @@ export function useChatSession() {
 
   const fetchSessionDetails = async (id: string) => {
     try {
+      console.log('[useChatSession] fetching details for:', id);
       const data = await chatService.getSession(id);
+      console.log('[useChatSession] fetched data:', data);
+      
       currentSession.value = data;
-      messages.value = data.messages || [];
+      
+      // Prevent overwriting optimistic messages if the user sent a message 
+      // while the session details were still fetching.
+      if (isLoading.value || isStreaming.value || messages.value.some(m => m.status === 'sending')) {
+          console.log('[useChatSession] skip overwriting messages because user already sent a new message');
+      } else {
+          messages.value = data.messages || [];
+          console.log('[useChatSession] messages set to:', messages.value.length, 'items');
+      }
       
       // Initialize workflow state if needed
       if (data.workflow_state) {
@@ -95,24 +106,61 @@ export function useChatSession() {
     isLoading.value = true;
     abortController.value = new AbortController();
 
-    // 1. Upload attachments first (if any) -> This logic should ideally be in the component or useAttachments, 
-    // but for now we assume they are already uploaded or we handle IDs here. 
-    // In SmartQA.vue, it uploads them before calling chat API.
-    // We will assume `attachments` passed here are already processed or we need to upload them.
-    // To keep it simple, let's assume the component handles upload and passes IDs.
-    // Wait, the component passed `selectedAttachments` which has files.
-    // Let's handle upload here or in the caller. 
-    // The caller `SmartQA.vue` had the upload logic inside `sendMessage`.
-    // I will extract upload logic to `useAttachments` and call it from the component, 
-    // then pass IDs to this function.
-    // So `attachments` here will be just IDs or metadata? 
-    // Let's change the signature to accept `attachmentIds`.
-    
-    // But wait, I can't easily change the flow without changing `SmartQA.vue` first.
-    // I'll stick to the plan: The component orchestrates. 
-    // But `useChatSession` should handle the actual chat API call.
+    // Optimistically add user message
+    messages.value.push({
+      role: 'user',
+      content: userMsg,
+      timestamp: new Date().toISOString(),
+      // Handle attachments display if needed, but for now just text
+    });
 
-    // Let's assume the caller handles upload and passes `attachmentIds`.
+    try {
+      if (!currentSessionId.value) {
+        // Auto create session if not exists
+        await createNewSession(userMsg.slice(0, 20), agentId, mode);
+      }
+      
+      if (!currentSessionId.value) throw new Error("Failed to create session");
+
+      const payload = {
+        message: userMsg,
+        attachments: attachments.map(a => a.id).filter((id): id is string => id !== undefined),
+        enable_search: enableSearch,
+        mode: mode,
+        intent: 'chat'
+      };
+
+      const response = await chatService.sendChatMessage(
+        currentSessionId.value, 
+        payload,
+        abortController.value.signal
+      );
+
+      await handleStreamResponse(response, onStreamUpdate);
+
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        console.log('Request aborted');
+      } else {
+        console.error('Send message failed', e);
+        toast({
+          title: "发送失败",
+          description: e.message || "未知错误",
+          variant: "destructive"
+        });
+        // Remove failed user message? Or mark as error?
+        // For now, let's just leave it but maybe append error to messages?
+        messages.value.push({
+          role: 'assistant',
+          content: `**发送失败**: ${e.message}`,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } finally {
+      isLoading.value = false;
+      isStreaming.value = false;
+      abortController.value = null;
+    }
   };
 
   const handleStreamResponse = async (
@@ -141,17 +189,22 @@ export function useChatSession() {
               const chunk = decoder.decode(value, { stream: true });
               buffer += chunk;
               
-              const parts = buffer.split('\n\n');
+              const parts = buffer.split(/\r\n\r\n|\n\n/);
               buffer = parts.pop() || '';
               
               for (const part of parts) {
-                  const lines = part.split('\n');
+                  const lines = part.split(/\r?\n/);
                   let eventType = 'message';
                   let data = '';
                   
                   for (const line of lines) {
-                      if (line.startsWith('event: ')) eventType = line.substring(7).trim();
-                      else if (line.startsWith('data: ')) data = line.substring(6);
+                      if (line.startsWith('event: ')) {
+                          eventType = line.substring(7).trim();
+                      } else if (line.startsWith('data: ')) {
+                          data += line.substring(6);
+                      } else if (line.startsWith('data:')) {
+                          data += line.substring(5);
+                      }
                   }
                   
                   if (data) {

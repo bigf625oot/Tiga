@@ -13,8 +13,9 @@
           <div class="h-full w-full p-4 flex flex-col justify-between">
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-2 min-w-0">
-                <div class="h-9 w-9 rounded-lg bg-blue-500/10 border border-blue-500/10 flex items-center justify-center">
+                <div class="h-9 w-9 rounded-lg bg-blue-500 border border-blue-500/10 flex items-center justify-center">
                   <!-- <Bot class="w-4 h-4 text-blue-600 dark:text-blue-300" /> -->
+                  <img src="/models/cpu.svg" alt="秒懂" class="h-6 w-6 object-cover" />
                 </div>
                 <div class="min-w-0">
                   <div class="text-sm font-bold tracking-wide text-foreground truncate">秒懂</div>
@@ -65,8 +66,9 @@
           <div class="h-full w-full p-4 flex flex-col justify-between">
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-2 min-w-0">
-                <div class="h-9 w-9 rounded-lg bg-purple-500/10 border border-purple-500/10 flex items-center justify-center">
+                <div class="h-9 w-9 rounded-lg bg-purple-500 border border-purple-500/10 flex items-center justify-center">
                   <!-- <Settings class="w-4 h-4 text-purple-600 dark:text-purple-300" /> -->
+                  <img src="/models/machtion.svg" alt="极客" class="h-6 w-6 object-cover" />
                 </div>
                 <div class="min-w-0">
                   <div class="text-sm font-bold tracking-wide text-foreground truncate">极客</div>

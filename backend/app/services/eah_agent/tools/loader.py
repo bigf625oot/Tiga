@@ -98,7 +98,27 @@ class ToolsManager:
         should_enable_search = enable_search or ("duckduckgo" in tools_config and "duckduckgo" not in loaded_names)
         
         if should_enable_search:
-            tools.append(DuckDuckGoTools())
+            from app.core.config import settings
+            
+            # Check for Tavily
+            tavily_loaded = False
+            if settings.TAVILY_API_KEY:
+                try:
+                    from app.services.eah_agent.tools.libs.search_tools import TavilyTools
+                    tools.append(TavilyTools(api_key=settings.TAVILY_API_KEY))
+                    tavily_loaded = True
+                    logger.info("Loaded TavilyTools (Auto-replacement for DuckDuckGo)")
+                except ImportError:
+                    logger.warning("Tavily configured but import failed.")
+            
+            if not tavily_loaded:
+                # Fallback to DuckDuckGo with proxy
+                import os
+                ddg_kwargs = {}
+                proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+                if proxy:
+                    ddg_kwargs["proxy"] = proxy
+                tools.append(DuckDuckGoTools(**ddg_kwargs))
 
         # Sandbox
         is_sandbox_enabled = skills_config.get("sandbox", {}).get("enabled")

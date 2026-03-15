@@ -80,6 +80,7 @@ async def get_info(service: OpenClawService = Depends(get_service)):
 # 参考实现：[nodes.ts](src/gateway/server-methods/nodes.ts#L415-L480)
 from app.models.openclaw_task import OpenClawTask
 from app.models.node import Node
+from app.models.chat import ChatSession, ChatMessage
 from sqlalchemy import select, desc, func
 from datetime import datetime, timedelta
 
@@ -101,7 +102,44 @@ async def list_activities(
         tasks = result.scalars().all()
         
         activities = []
+        needs_commit = False
         for task in tasks:
+            if not task.session_id:
+                task.session_id = task.task_id
+                db.add(task)
+                needs_commit = True
+                existing_session = await db.execute(
+                    select(ChatSession).where(ChatSession.id == task.session_id)
+                )
+                if not existing_session.scalars().first():
+                    s = ChatSession(
+                        id=task.session_id,
+                        title=(task.original_prompt or "")[:50] or "OpenClaw Task",
+                        agent_id=None,
+                        mode="auto_task",
+                    )
+                    db.add(s)
+                    if task.original_prompt:
+                        db.add(
+                            ChatMessage(
+                                session_id=s.id,
+                                role="user",
+                                content=task.original_prompt,
+                                message_type="text",
+                                meta_data={"openclaw_task_id": task.task_id},
+                            )
+                        )
+                    db.add(
+                        ChatMessage(
+                            session_id=s.id,
+                            role="assistant",
+                            content=f"任务已创建：{task.task_id}",
+                            message_type="text",
+                            meta_data={"openclaw_task_id": task.task_id, "status": task.status},
+                        )
+                    )
+                    needs_commit = True
+
             # 推断类型
             atype = "cron"
             cmd_str = str(task.parsed_command).lower()
@@ -114,10 +152,13 @@ async def list_activities(
                 name=f"Task-{task.task_id[:8]}",
                 type=atype,
                 status=task.status,
+                session_id=task.session_id,
                 schedule=task.schedule.isoformat() if task.schedule else None,
                 last_run=task.updated_at.isoformat() if task.updated_at else task.created_at.isoformat(),
                 description=task.original_prompt[:100]
             ))
+        if needs_commit:
+            await db.commit()
         return activities
     except Exception as e:
         logger.error(f"Failed to fetch activities from DB: {e}")

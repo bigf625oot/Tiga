@@ -72,7 +72,7 @@
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button @click="fetchTeams" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+                <Button @click="refreshData" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
                   <RefreshCw class="h-4 w-4 text-muted-foreground" :class="{ 'animate-spin': loading }" />
                 </Button>
 
@@ -104,9 +104,9 @@
             </div>
 
             <div v-else-if="filteredTeams.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto text-muted-foreground animate-in fade-in duration-300">
-              <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
                  <Search v-if="teamSearchQuery" class="w-10 h-10 text-muted-foreground/50" />
-                 <Users v-else class="w-10 h-10 text-muted-foreground/50" />
+                 <img src="/Placeholder/null.svg" alt="暂无内容" class="h-full w-full object-cover" />
               </div>
               <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ teamSearchQuery ? '未找到相关团队' : '暂无团队' }}</h3>
               <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ teamSearchQuery ? '请尝试调整搜索关键词或筛选条件。' : '当前暂无智能团队，您可以点击下方按钮创建一个新的智能团队。' }}</p>
@@ -348,7 +348,7 @@
                                 :class="formData.members.includes(agent.id) ? 'opacity-50 grayscale-[0.5] pointer-events-none bg-muted' : ''"
                                 @click="!formData.members.includes(agent.id) && addMember(agent.id)"
                              >
-                                <div class="h-8 w-8 rounded-md bg-muted border flex-shrink-0 overflow-hidden">
+                                <div class="h-8 w-8 rounded-md flex-shrink-0 overflow-hidden">
                                    <img :src="getAgentIcon(agent.id)" class="h-full w-full object-cover" />
                                 </div>
                                 <div class="flex-1 min-w-0">
@@ -792,7 +792,7 @@ const fetchTeams = async () => {
   loading.value = true;
   try {
     const isTemplate = currentTab.value === 'templates';
-    const res = await api.get('/teams/', { params: { is_template: isTemplate } });
+    const res = await api.get('/teams/', { params: { is_template: isTemplate, _t: Date.now() } });
     teams.value = res.data;
   } catch (e) {
     toast({ variant: 'destructive', title: '获取团队列表失败', description: '无法连接到服务器，请稍后重试。' });
@@ -803,11 +803,19 @@ const fetchTeams = async () => {
 
 const fetchAgents = async () => {
   try {
-    const res = await api.get('/agents/');
+    const res = await api.get('/agents/', { params: { _t: Date.now() } });
     agents.value = res.data;
   } catch (e) {
     console.error("Failed to fetch agents", e);
   }
+};
+
+const refreshData = async () => {
+  loading.value = true;
+  teams.value = []; // 清空数据以触发骨架屏效果，增强刷新感知
+  await new Promise(resolve => setTimeout(resolve, 300)); // 稍微延迟一下，让骨架屏能被看到
+  await Promise.all([fetchAgents(), fetchTeams()]);
+  toast({ title: '刷新成功', description: '团队与智能体数据已更新' });
 };
 
 const getModeLabel = (mode: string) => {

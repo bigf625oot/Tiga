@@ -41,6 +41,7 @@
       @create-task="handleCreateTask"
       @refresh-activities="fetchActivities"
       @run-task="(msg) => $emit('run-task', msg)"
+      @open-session="(sid) => $emit('open-session', sid)"
     />
 
     <!-- NODES TAB -->
@@ -87,7 +88,7 @@ import NodeList from './NodeList.vue';
 import NodeDetail from './NodeDetail.vue';
 import GatewayInfo from './GatewayInfo.vue';
 
-const emit = defineEmits(['close', 'run-task']);
+const emit = defineEmits(['close', 'run-task', 'open-session']);
 
 const activeTab = ref('host');
 const activitiesLoading = ref(false);

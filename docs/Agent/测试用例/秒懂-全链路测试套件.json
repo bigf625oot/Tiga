@@ -1,0 +1,430 @@
+{
+  "name": "秒懂-全链路语义理解测试套件",
+  "version": "1.0",
+  "defaults": {
+    "enable_search": true,
+    "strict_mode": false,
+    "threshold": 0.85,
+    "debug": false
+  },
+  "cases": [
+    {
+      "id": "work_weekly_report",
+      "group": "职场与生产力",
+      "title": "周报生成（非规范语料结构化）",
+      "steps": [
+        {
+          "message": "把这周干的杂活整理成一份正经的周报。背景：我做了几件小事：修了两个线上小 bug、跟进了一个需求评审、帮同事排查了个接口超时、顺手把文档补了几页、还临时顶班开了个会。不要太空话，要有结构、有数据感（如果缺数据请用占位符并提出要补什么）。"
+        }
+      ],
+      "checks": ["has_sections", "has_action_items", "asks_for_missing_info_or_placeholders"]
+    },
+    {
+      "id": "work_ai_paint_compare",
+      "group": "职场与生产力",
+      "title": "竞品调研（对比表与信息提炼）",
+      "steps": [
+        {
+          "message": "我想了解最近很火的 AI 绘画工具，帮我拉个对比表。至少列 6 个工具，给出价格/优缺点/适合人群/上手门槛/商用授权要点。"
+        }
+      ],
+      "checks": ["has_markdown_table", "mentions_multiple_named_items"]
+    },
+    {
+      "id": "work_meeting_invite",
+      "group": "职场与生产力",
+      "title": "会议邀约（风格适配与要素补全）",
+      "steps": [
+        {
+          "message": "帮我写个下周一开项目启动会的通知，别太死板。要有时间、地点（如果不知道请用占位符）、参会人、议程、会前准备。"
+        }
+      ],
+      "checks": ["has_meeting_essentials", "tone_not_too_formal"]
+    },
+    {
+      "id": "work_ppt_outline",
+      "group": "职场与生产力",
+      "title": "PPT 大纲（宏观到执行拆解）",
+      "steps": [
+        {
+          "message": "要做一个关于“数字化转型”的汇报 PPT，给个思路。听众是高层，时长 15 分钟。希望你给出目录结构、每页的要点、建议讲法。"
+        }
+      ],
+      "checks": ["has_numbered_outline", "has_execution_level_details"]
+    },
+    {
+      "id": "work_interview_prep",
+      "group": "职场与生产力",
+      "title": "面试准备（模拟面试与知识匹配）",
+      "steps": [
+        {
+          "message": "下周二我要去面高级产品经理，帮我突击一下。请按 30 分钟面试节奏给我：自我介绍框架、5 个高频追问、2 个案例题、以及每题的答题要点和常见坑。"
+        }
+      ],
+      "checks": ["has_interview_structure", "has_specific_examples"]
+    },
+    {
+      "id": "dev_todo_app_scaffold",
+      "group": "技术与开发",
+      "title": "项目初始化（脚手架与技术选型）",
+      "steps": [
+        {
+          "message": "我想写个简单的待办清单 App，帮我搭个架子。要求：本地存储、支持标签、支持搜索、移动端友好。给出技术选型（前端框架/状态管理/构建工具）和目录结构，再给一个最小可运行版本的关键代码文件清单。"
+        }
+      ],
+      "checks": ["has_architecture_choice", "has_directory_structure"]
+    },
+    {
+      "id": "dev_layout_bug_debug",
+      "group": "技术与开发",
+      "title": "Bug 排查（信息不全时的引导与预判）",
+      "steps": [
+        {
+          "message": "网页布局乱了，帮我看下是怎么回事。现象：列表项突然变成一列一列挤在一起，按钮跑到屏幕外。"
+        }
+      ],
+      "checks": ["asks_clarifying_questions", "gives_common_causes"]
+    },
+    {
+      "id": "dev_refactor_code",
+      "group": "技术与开发",
+      "title": "代码重构（规范与优雅度）",
+      "steps": [
+        {
+          "message": "这段代码跑是能跑，但感觉写得太烂了，改改。要求：可读性强、边界处理清晰、变量命名合理。代码如下：\n\nfunction f(a){let b=[];for(let i=0;i<a.length;i++){if(a[i]&&a[i].x){b.push(a[i].x)}}return b.sort((m,n)=>m>n?1:-1)}"
+        }
+      ],
+      "checks": ["returns_refactored_code", "explains_changes_concisely"]
+    },
+    {
+      "id": "dev_deepseek_local_setup",
+      "group": "技术与开发",
+      "title": "环境配置（复杂文档简化）",
+      "steps": [
+        {
+          "message": "我想在本地跑 DeepSeek 模型，怎么弄最快？我用 Windows，有一张 24GB 显存的显卡。请给最短路径的步骤，并说明每一步的目的和可能踩坑。"
+        }
+      ],
+      "checks": ["has_step_by_step", "mentions_windows_considerations"]
+    },
+    {
+      "id": "dev_password_regex",
+      "group": "技术与开发",
+      "title": "正则编写（精准执行）",
+      "steps": [
+        {
+          "message": "帮我写个验证复杂密码的正则表达式。规则：长度 12-32；至少 1 个大写、1 个小写、1 个数字、1 个特殊字符；不能包含空格；不能出现 3 个连续相同字符。给出正则并解释。"
+        }
+      ],
+      "checks": ["contains_regex_like", "mentions_rule_limitations"]
+    },
+    {
+      "id": "life_tibet_7days",
+      "group": "个人生活与规划",
+      "title": "旅行规划（限制条件下的自主规划）",
+      "steps": [
+        {
+          "message": "想去西藏玩 7 天，不想太累，帮我排下。偏好：风景为主，少折腾，预算中等。请给每天行程、交通方式、海拔适应建议和备选方案。"
+        }
+      ],
+      "checks": ["has_day_by_day_plan", "mentions_health_risk_warning"]
+    },
+    {
+      "id": "life_copywriter_side_hustle",
+      "group": "个人生活与规划",
+      "title": "副业探索（用户画像匹配）",
+      "steps": [
+        {
+          "message": "我是个文案，想赚点外快，有什么靠谱路子？我每周可投入 6 小时，不想做违规灰产。希望你按上手难度从低到高给 6 条路径，并说明怎么起步、怎么验证市场、怎么避坑。"
+        }
+      ],
+      "checks": ["has_ranked_options", "mentions_compliance"]
+    },
+    {
+      "id": "life_gift_500_programmer",
+      "group": "个人生活与规划",
+      "title": "送礼建议（创意与逻辑关联）",
+      "steps": [
+        {
+          "message": "给程序员男朋友准备生日惊喜，预算 500。不要只给物品清单，要给一个可执行的“惊喜方案”流程（当天怎么安排），并给 3 套风格不同的备选。"
+        }
+      ],
+      "checks": ["has_executable_plan", "has_multiple_variants"]
+    },
+    {
+      "id": "life_abs_30min",
+      "group": "个人生活与规划",
+      "title": "健身计划（定制与可执行）",
+      "steps": [
+        {
+          "message": "每天只有半小时，怎么在家高效练出腹肌？我没有器械，膝盖有点不舒服（不能做太多跳跃）。请给 4 周计划（每周 5 天）、每次训练的动作/组数/休息、以及饮食要点。"
+        }
+      ],
+      "checks": ["has_4week_plan", "considers_knee_constraint"]
+    },
+    {
+      "id": "life_sleep_palpitation",
+      "group": "个人生活与规划",
+      "title": "健康科普（科普化表达与风险提示）",
+      "steps": [
+        {
+          "message": "最近老是熬夜心慌，我该注意点啥？请用通俗话解释可能原因、先做哪些自查、什么时候必须就医、以及一周内的调整建议。"
+        }
+      ],
+      "checks": ["mentions_seek_medical_help_threshold", "uses_plain_language"]
+    },
+    {
+      "id": "learn_quantum_entanglement_kid",
+      "group": "学习与知识消费",
+      "title": "冷门概念（类比解释）",
+      "steps": [
+        {
+          "message": "量子纠缠是怎么回事？用小学生的例子讲一下，要求不胡扯，哪些是类比哪些是事实要讲清楚。"
+        }
+      ],
+      "checks": ["uses_analogy_and_caveats", "avoids_obvious_misconceptions"]
+    },
+    {
+      "id": "learn_restaurant_roleplay",
+      "group": "学习与知识消费",
+      "title": "语言学习（交互式情境创建）",
+      "steps": [
+        {
+          "message": "我想练口语，帮我模拟一个餐厅点餐的场景。你当服务员，我当顾客。先从你的一句开场白开始，然后等我回复再继续。"
+        }
+      ],
+      "checks": ["is_interactive", "does_not_continue_without_user"]
+    },
+    {
+      "id": "learn_polish_email",
+      "group": "学习与知识消费",
+      "title": "纠错提升（润色执行）",
+      "steps": [
+        {
+          "message": "帮我润色一下这段英文邮件，要显得专业且礼貌：\n\nHi Tom,\nI want to know why you didn't reply me. It's urgent and I need it today.\nThanks."
+        }
+      ],
+      "checks": ["outputs_polished_text", "tone_professional"]
+    },
+    {
+      "id": "context_min_summary_2000",
+      "group": "长文本处理",
+      "title": "极简摘要（长文压缩与责任判定）",
+      "steps": [
+        { "template": "long_meeting_notes_zh" },
+        {
+          "message": "用 3 句话告诉我：谁要为进度落后负责，接下来怎么做？"
+        }
+      ],
+      "checks": ["is_three_sentences_or_less", "mentions_accountability_and_next_steps"]
+    },
+    {
+      "id": "context_noise_filtering",
+      "group": "长文本处理",
+      "title": "噪音过滤（提取真正需求）",
+      "steps": [
+        { "template": "noisy_text_with_core_requirement" },
+        {
+          "message": "刚才这段话里，我真正想要实现的功能需求是什么？请用 5 条以内列出来。"
+        }
+      ],
+      "checks": ["extracts_core_requirements", "five_bullets_or_less"]
+    },
+    {
+      "id": "context_dynamic_update_budget",
+      "group": "长文本处理",
+      "title": "动态更新（覆盖旧信息）",
+      "steps": [
+        {
+          "message": "项目 A 预算是 100 万，目标是 3 个月内上线并做到日活 10 万。请评估可行性并给出风险清单。"
+        },
+        {
+          "message": "刚才提到的项目 A 预算现在改成 50 万，但目标不变。请重新评估可行性，并明确哪些必须砍、哪些必须保。"
+        }
+      ],
+      "checks": ["acknowledges_updated_constraint", "proposes_tradeoffs"]
+    },
+    {
+      "id": "context_structure_mapping_mindmap",
+      "group": "长文本处理",
+      "title": "结构化映射（跨轮次重组）",
+      "steps": [
+        {
+          "message": "我们聊聊性能优化：我这边先说三个点：1）接口 P95 很高 3s+；2）数据库慢查询多；3）前端首屏慢。你先给我一些可能原因。"
+        },
+        {
+          "message": "补充：还有缓存命中率低，日志里看到大量重复查询。我们也有一些不必要的第三方请求。"
+        },
+        {
+          "message": "把我们刚才聊的所有关于“性能优化”的零散点，整理成一张 Markdown 脑图。"
+        }
+      ],
+      "checks": ["outputs_markdown_mindmap", "covers_multiple_points"]
+    },
+    {
+      "id": "context_dedup_history",
+      "group": "长文本处理",
+      "title": "冗余消除（语义去重）",
+      "steps": [
+        {
+          "message": "我先啰嗦一下现状：我们这个项目进度有点乱，需求老变，大家沟通也不顺畅。昨天我又开了两个会，发现很多人对目标不一致。"
+        },
+        {
+          "message": "再补充：技术债不少，测试覆盖也不够，线上偶尔出故障。老板还希望我们下个月能交付一版可用的 MVP，压力挺大。"
+        },
+        {
+          "message": "还有：我觉得最核心的问题是我们没有清晰的里程碑，也没有明确负责人，很多事情没人跟。"
+        },
+        {
+          "message": "我之前的表达很啰嗦，请把我前三次对话的内容合并成一段简洁的汇报话术。"
+        }
+      ],
+      "checks": ["is_single_paragraph", "is_deduplicated"]
+    },
+    {
+      "id": "memory_foreshadow_cat",
+      "group": "长记忆",
+      "title": "伏笔测试（长程记忆检索）",
+      "steps": [
+        { "message": "我有一个叫“大黄”的猫。" },
+        { "template": "ten_rounds_tech_discussion" },
+        { "message": "大黄该打疫苗了，你觉得我该注意什么？" }
+      ],
+      "checks": ["mentions_cat_name", "gives_pet_health_advice"]
+    },
+    {
+      "id": "memory_hidden_constraint_servers",
+      "group": "长记忆",
+      "title": "隐含条件（自动关联约束）",
+      "steps": [
+        { "message": "我目前只有 3 台服务器。" },
+        { "message": "现在用户量翻了十倍，我该怎么扩容？请给分阶段方案，并说明在只有 3 台时先做什么缓解。" }
+      ],
+      "checks": ["references_server_constraint", "has_phased_plan"]
+    },
+    {
+      "id": "logic_inversion",
+      "group": "长记忆",
+      "title": "逻辑倒置（反转结论）",
+      "steps": [
+        { "message": "我们考虑用方案 X：先快上线 MVP，再逐步优化。你觉得靠谱吗？给出结论和理由。" },
+        { "message": "如果我刚才说的所有假设都是错的，请反转你的结论，并说明反转后理由。" }
+      ],
+      "checks": ["explicitly_reverses_conclusion", "explains_reversal"]
+    },
+    {
+      "id": "role_lock_toxic_reviewer",
+      "group": "长记忆",
+      "title": "角色锁定（设定保持）",
+      "steps": [
+        { "message": "从现在起你是一个极度毒舌的 Code Review 专家。" },
+        { "template": "five_small_rounds" },
+        { "message": "看看我这段代码：\n\nfunction sum(a){return a.reduce((x,y)=>x+y)}" }
+      ],
+      "checks": ["maintains_role_tone", "gives_code_review_points"]
+    },
+    {
+      "id": "self_decision_trace",
+      "group": "长记忆",
+      "title": "上下文溯源（复盘决策链）",
+      "steps": [
+        { "message": "我做缓存选型，Redis 和 Memcached 选哪个？给一个推荐。" },
+        { "message": "为什么你刚才建议我用 Redis 而不是 Memcached？请按 3 个层面解释，并指出什么情况下 Memcached 更合适。" }
+      ],
+      "checks": ["explains_prior_recommendation", "mentions_when_memcached_fits"]
+    },
+    {
+      "id": "disambiguation_pronoun",
+      "group": "歧义消除与主动引导",
+      "title": "模糊代词（指代消歧）",
+      "steps": [
+        { "message": "我在学编程，在纠结 Python 和 Java。你先分别说下它们的特点。"},
+        { "message": "那个更适合我这种初学者？"}
+      ],
+      "checks": ["disambiguates_pronoun", "asks_user_goal_or_constraints"]
+    },
+    {
+      "id": "disambiguation_default_action_alarm",
+      "group": "歧义消除与主动引导",
+      "title": "缺省执行（主动追问）",
+      "steps": [
+        { "message": "帮我订个下午的闹钟。" }
+      ],
+      "checks": ["asks_time_clarification"]
+    },
+    {
+      "id": "metaphor_understanding",
+      "group": "歧义消除与主动引导",
+      "title": "隐喻理解（语义转化）",
+      "steps": [
+        { "message": "我们的项目现在是“盲人骑瞎马”，给点建议。" }
+      ],
+      "checks": ["explains_metaphor", "gives_actionable_advice"]
+    },
+    {
+      "id": "negative_constraint_no_cloudnative",
+      "group": "歧义消除与主动引导",
+      "title": "负向约束（强制过滤）",
+      "steps": [
+        { "message": "给我一个系统演进方案，但绝对不要提到任何关于“云原生”的技术。你可以讲架构分层、流程、治理，但不要出现“云原生”这三个字。"}
+      ],
+      "checks": ["does_not_mention_cloudnative", "provides_solution"]
+    },
+    {
+      "id": "intent_correction_crawler_to_index",
+      "group": "歧义消除与主动引导",
+      "title": "意图纠偏（技术栈切换与合规边界）",
+      "steps": [
+        { "message": "怎么写爬虫？" },
+        { "message": "别误会，我是想做搜索引擎的索引。请从合规、架构、抓取策略、去重和更新机制说。"}
+      ],
+      "checks": ["mentions_compliance", "switches_to_indexing_architecture"]
+    },
+    {
+      "id": "boundary_conflict_instruction",
+      "group": "边界压力测试",
+      "title": "冲突指令（矛盾限制权衡）",
+      "steps": [
+        { "message": "用最详尽的步骤，在一句话内说清楚如何部署 K8s。" }
+      ],
+      "checks": ["single_sentence", "addresses_constraint_conflict"]
+    },
+    {
+      "id": "cross_style_python_analects",
+      "group": "边界压力测试",
+      "title": "跨载体语义转换（论语风注释）",
+      "steps": [
+        { "message": "把这段 Python 的逻辑，用《论语》的风格写成注释，要求逻辑严密：\n\ndef f(nums):\n    s=0\n    for x in nums:\n        if x%2==0:\n            s+=x\n    return s\n" }
+      ],
+      "checks": ["contains_code_and_comments", "has_classical_chinese_flavor"]
+    },
+    {
+      "id": "nested_reasoning_choose_a_or_b",
+      "group": "边界压力测试",
+      "title": "嵌套推理（隐含时间压力）",
+      "steps": [
+        { "message": "如果 A 方案成本高但快，B 方案便宜但慢，而我老板下周要出国，我该选哪个？请给出选择并说明你的推理链条。"}
+      ],
+      "checks": ["makes_choice", "mentions_time_pressure"]
+    },
+    {
+      "id": "zero_shot_optimize_with_context",
+      "group": "边界压力测试",
+      "title": "极简提示词（补全上下文意图）",
+      "steps": [
+        { "message": "我这个页面加载很慢，首屏 5 秒以上，接口也有时 3 秒才返回。你先问我 3 个关键问题，帮助定位方向。" },
+        { "message": "优化。" }
+      ],
+      "checks": ["uses_prior_context", "provides_optimization_plan"]
+    },
+    {
+      "id": "false_premise_check_ipo",
+      "group": "边界压力测试",
+      "title": "虚假前提检查（拒绝盲从）",
+      "steps": [
+        { "message": "基于我刚才提到的“公司明年上市”这个前提，写个激励方案。" }
+      ],
+      "checks": ["flags_false_premise_or_asks_for_evidence"]
+    }
+  ]
+}

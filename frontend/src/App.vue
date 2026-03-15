@@ -175,8 +175,9 @@
                </div>
             </div>
             <div v-else-if="sessions.length === 0 && !isSidebarCollapsed" class="flex flex-col items-center justify-center h-full text-center p-4">
-               <div class="bg-muted/50 p-4 rounded-full mb-3">
-                  <MessageSquare class="h-8 w-8 text-muted-foreground/50" />
+               <div class="p-4 rounded-full mb-3">
+                  <!-- <MessageSquare class="h-8 w-8 text-muted-foreground/50" /> -->
+                  <img src="/Placeholder/null_message.svg" alt="暂无任务记录" class="h-14 w-14 object-cover" />
                </div>
                <h3 class="font-medium text-sm text-foreground">暂无任务记录</h3>
                <p class="text-xs text-muted-foreground mt-1 max-w-[12rem]">
@@ -221,8 +222,8 @@
                                >
                                   <div class="flex items-center gap-2.5 w-full" :class="isSidebarCollapsed ? 'justify-center' : ''">
                                       <!-- Simple Avatar -->
-                                      <div class="h-7 w-7 rounded-full overflow-hidden shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
-                                          <img src="/message/message.svg" :alt="session.title" class="h-7 w-7" />
+                                      <div class="h-7 w-7 rounded-full overflow-hidden flex-shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
+                                          <img src="/message/message.svg" :alt="session.title" class="h-full w-full object-cover" />
                                       </div>
 
                                       <!-- Content -->
@@ -266,7 +267,7 @@
              <div class="space-y-1">
                  <template v-for="item in currentSidebarItems" :key="item.id || item.type || item.label">
                     
-                    <div v-if="item.type === 'separator'" class="h-px bg-border my-2 mx-1" />
+                    <div v-if="item.type === 'separator'" class="h-px border-b border-border my-2 mx-1" />
 
                     <div v-else-if="item.type === 'group'" class="px-3 py-2 mt-2 first:mt-0">
                        <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2" v-if="!isSidebarCollapsed">
@@ -288,7 +289,10 @@
                             ]"
                           >
                              <component :is="item.icon" class="h-4 w-4 flex-shrink-0" />
-                             <span v-if="!isSidebarCollapsed" class="text-sm truncate">{{ item.label }}</span>
+                             <div v-if="!isSidebarCollapsed" class="flex items-center gap-2 min-w-0">
+                               <span class="text-sm truncate">{{ item.label }}</span>
+                               <span v-if="item.badge" class="px-1.5 py-0.5 rounded-md text-[10px] bg-blue-500/10 text-blue-500 font-bold border border-blue-500/20 leading-none shrink-0">{{ item.badge }}</span>
+                             </div>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="right" v-if="isSidebarCollapsed">{{ item.label }}</TooltipContent>
@@ -303,10 +307,10 @@
       <!-- User Profile -->
       <SidebarFooter class="border-t border-border dark:border-none dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.05)]">
          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group" :class="isSidebarCollapsed ? 'justify-center p-0 flex-col' : ''">
-            <div class="h-9 w-9 rounded-full bg-muted overflow-hidden border border-border dark:border-none shadow-sm dark:avatar-breathing relative group/avatar" @click="triggerFileInput">
+            <div class="h-9 w-9 rounded-full bg-muted overflow-hidden dark:border-none shadow-sm dark:avatar-breathing relative group/avatar" @click="triggerFileInput">
                <img :src="avatarSrc" alt="Avatar" class="h-full w-full object-cover transition-opacity duration-200 group-hover/avatar:opacity-80" />
                <div class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                  <Upload class="text-white w-4 h-4" />
                </div>
                <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileChange" />
             </div>
@@ -366,10 +370,10 @@
     </Sidebar>
 
     <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col overflow-hidden relative bg-background">
+    <main class="flex-1 flex flex-col min-h-0 min-w-0 relative bg-background">
        <!-- Header/Breadcrumbs could go here -->
        
-       <div class="flex-1 overflow-hidden relative">
+       <div class="flex-1 min-h-0 min-w-0 relative">
           <SmartQA 
             v-if="currentView === 'chat' || currentView === 'smart_qa'" 
             :session-id="currentSessionId ?? null" 
@@ -487,7 +491,7 @@ import {
   Menu, X, Plus, MessageSquare, Clock, Search, Mic, BarChart, Calculator,
   LayoutGrid, Database, Film, Box, Workflow, Network, Share2,
   Trash2, Settings, Cpu, MoreHorizontal, ChevronRight, ChevronDown, Users,
-  GitBranch, BookOpen
+  GitBranch, BookOpen, Upload
 } from 'lucide-vue-next';
 import {
   Collapsible,
@@ -788,8 +792,8 @@ const agentSidebarItems: SidebarItem[] = [
     { id: 'model', label: '模型管理', icon: Cpu },
     { id: 'service_market', label: '工具市场', icon: LayoutGrid },
     { id: 'agent', label: '智能体中心', icon: Box },
-    { id: 'smart_team', label: '智能团队', icon: Users },
-    { id: 'agent_flow', label: '智能体流', icon: GitBranch },
+    { id: 'smart_team', label: '智能团队', icon: Users, badge: 'Beta' },
+    { id: 'agent_flow', label: '智能体流', icon: GitBranch, badge: 'Beta' },
     { type: 'separator' },
     { id: 'search', label: '智能爬取', icon: Search },
     { id: 'metrics', label: '指标提取', icon: BarChart },
@@ -837,21 +841,35 @@ const triggerFileInput = () => {
     fileInput.value?.click();
 };
 
-const handleFileChange = (event: Event) => {
+const handleFileChange = async (event: Event) => {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
         const file = target.files[0];
-        // Create local preview URL
+        
+        // Show local preview immediately for better UX
         const previewUrl = URL.createObjectURL(file);
         avatarSrc.value = previewUrl;
         
-        // TODO: Implement actual file upload when backend API is ready
-        // Example:
-        // const formData = new FormData();
-        // formData.append('file', file);
-        // await api.post('/user/avatar', formData);
-        
-        toast({ title: "头像已更新 (仅前端预览)" });
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const res = await api.post('/users/avatar', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            if (res.data && res.data.url) {
+                // Update with the actual remote URL
+                avatarSrc.value = res.data.url;
+                toast({ title: "头像已更新" });
+            }
+        } catch (e) {
+            console.error("Avatar upload failed:", e);
+            toast({ variant: "destructive", title: "头像上传失败" });
+            // Revert back if we want to, or just keep the preview
+        }
     }
 };
 

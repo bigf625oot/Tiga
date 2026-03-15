@@ -127,10 +127,10 @@ class AppWorkflow(Workflow):
                                 full_response += content
                                 # Yield token
                                 await queue.put(json.dumps({"step": "execute", "status": "running", "output": content}))
-                            elif chunk["type"] == "reasoning":
+                            elif chunk["type"] in ["reasoning", "think"]:
                                 rc = chunk["content"]
                                 reasoning_content += rc
-                                await queue.put(json.dumps({"step": "execute", "status": "running", "output": f"<think>{rc}</think>", "type": "reasoning"}))
+                                await queue.put(json.dumps({"step": "execute", "status": "running", "output": f"<think>{rc}</think>", "type": "think"}))
                             elif chunk["type"] == "error":
                                 await queue.put(json.dumps({"step": "execute", "status": "failed", "output": chunk["content"]}))
                     
@@ -181,9 +181,9 @@ class AppWorkflow(Workflow):
                                         c = chunk["content"]
                                         full_response += c
                                         await queue.put(json.dumps({"step": "execute", "status": "running", "output": c}))
-                                    elif chunk["type"] == "reasoning":
+                                    elif chunk["type"] in ["reasoning", "think"]:
                                         rc = chunk["content"]
-                                        await queue.put(json.dumps({"step": "execute", "status": "running", "output": f"<think>{rc}</think>", "type": "reasoning"}))
+                                        await queue.put(json.dumps({"step": "execute", "status": "running", "output": f"<think>{rc}</think>", "type": "think"}))
 
                              self.state.context.final_response = full_response
                              await queue.put(json.dumps({"step": "execute", "status": "success"}))

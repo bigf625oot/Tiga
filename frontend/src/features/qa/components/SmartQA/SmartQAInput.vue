@@ -109,7 +109,7 @@
     ></textarea>
 
     <!-- Bottom Toolbar -->
-    <div class="flex items-end justify-between gap-3 px-3 pb-3 pt-2">
+    <div class="flex items-end justify-between gap-3 px-3 pb-3 pt-2 shrink-0">
       <div class="flex items-center gap-1.5 min-w-0">
         <TooltipProvider>
           <Tooltip>

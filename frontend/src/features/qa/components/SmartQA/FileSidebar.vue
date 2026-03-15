@@ -22,7 +22,7 @@
     </div>
 
     <!-- Toolbar -->
-    <div class="p-4 flex flex-col gap-4 min-w-[384px]">
+    <div class="p-2 flex flex-col gap-4 min-w-[384px]">
       <!-- Search -->
       <div class="relative">
         <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -64,14 +64,7 @@
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
-        
-        <Button size="sm" variant="outline" class="h-8 text-xs gap-1.5 border-dashed" @click="$emit('add-files')">
-          <Plus class="w-3.5 h-3.5" />
-          添加文件
-        </Button>
-      </div>
-      
-      <!-- Active Filters (Mock) -->
+              <!-- Active Filters (Mock) -->
       <div class="flex flex-wrap gap-2">
          <DropdownMenu>
             <DropdownMenuTrigger as-child>
@@ -87,14 +80,21 @@
             </DropdownMenuContent>
          </DropdownMenu>
       </div>
+      
+        <Button size="sm" variant="outline" class="h-8 text-xs gap-1.5 border-dashed" @click="$emit('add-files')">
+          <Plus class="w-3.5 h-3.5" />
+          添加文件
+        </Button>
+      </div>
     </div>
 
     <Separator />
 
     <!-- Empty State -->
     <div v-if="filteredAttachments.length === 0" class="flex-1 min-w-[384px] flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300">
-        <div class="w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center mb-6 ring-1 ring-border/50 shadow-sm">
-            <FileStack class="w-10 h-10 text-muted-foreground/40" stroke-width="1.5" />
+        <div class="w-12 h-12  rounded-full flex items-center justify-center mb-6">
+            <!-- <FileStack class="w-10 h-10 text-muted-foreground/40" stroke-width="1.5" /> -->
+            <img src="/Placeholder/null_file.svg" class="w-full h-full text-muted-foreground/40" stroke-width="1.5" />
         </div>
         <p class="text-sm font-medium text-foreground">暂无文件</p>
         <p class="text-xs text-muted-foreground mt-1 max-w-[180px]">

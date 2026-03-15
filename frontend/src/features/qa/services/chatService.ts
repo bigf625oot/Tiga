@@ -9,41 +9,49 @@ export interface SendChatMessagePayload {
   intent?: string;
 }
 
+const getHeaders = (contentType: string | null = 'application/json') => {
+  const headers: Record<string, string> = {};
+  if (contentType) {
+    headers['Content-Type'] = contentType;
+  }
+  const token = localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 export const chatService = {
   async getSession(sessionId: string): Promise<Session> {
-    const res = await fetch(`/api/v1/chat/sessions/${sessionId}`);
-    if (!res.ok) throw new Error('Failed to fetch session details');
-    return res.json();
+    const res = await api.get(`/chat/sessions/${sessionId}`);
+    console.log('[chatService] getSession response:', res);
+    // Compatibility for wrapped response { code: 200, data: ... }
+    if (res.data && typeof res.data === 'object' && 'data' in res.data) {
+        // Double check if 'messages' is missing in root but present in data
+        if (!('messages' in res.data) && 'messages' in res.data.data) {
+            return res.data.data;
+        }
+    }
+    return res.data;
   },
 
   async createSession(title: string, agentId: string | null, mode: ModeType, signal?: AbortSignal): Promise<Session> {
-    const res = await fetch('/api/v1/chat/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        agent_id: agentId,
-        mode
-      }),
-      signal
-    });
-    if (!res.ok) throw new Error('Failed to create session');
-    return res.json();
+    const res = await api.post('/chat/sessions', {
+      title,
+      agent_id: agentId,
+      mode
+    }, { signal });
+    return res.data;
   },
 
   async updateSession(sessionId: string, data: Partial<Session>): Promise<void> {
-    const res = await fetch(`/api/v1/chat/sessions/${sessionId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!res.ok) throw new Error('Failed to update session');
+    await api.put(`/chat/sessions/${sessionId}`, data);
   },
 
   async sendChatMessage(sessionId: string, payload: SendChatMessagePayload, signal?: AbortSignal): Promise<Response> {
     const res = await fetch(`/api/v1/chat/sessions/${sessionId}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload),
       signal
     });
@@ -54,6 +62,7 @@ export const chatService = {
   async sendChatMessageMultipart(sessionId: string, formData: FormData, signal?: AbortSignal): Promise<Response> {
     const res = await fetch(`/api/v1/chat/sessions/${sessionId}/chat_multipart`, {
       method: 'POST',
+      headers: getHeaders(null), // Let browser set Content-Type for multipart
       body: formData,
       signal
     });

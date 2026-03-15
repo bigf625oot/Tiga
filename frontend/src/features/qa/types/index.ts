@@ -102,4 +102,5 @@ export interface ModeConfig {
   value: ModeType;
   description: string;
   themeColor?: 'blue' | 'green' | 'purple' | 'orange' | 'rose' | 'slate';
+  badge?: string;
 }

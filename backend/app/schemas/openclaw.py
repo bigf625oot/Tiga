@@ -14,6 +14,7 @@ class OpenClawActivity(BaseModel):
     name: str
     type: str  # crawl, screenshot, monitor, cron
     status: str
+    session_id: Optional[str] = None
     schedule: Optional[str] = None
     last_run: Optional[str] = None
     next_run: Optional[str] = None

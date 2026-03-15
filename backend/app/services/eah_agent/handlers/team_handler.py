@@ -95,6 +95,16 @@ class TeamHandler(BaseHandler):
             response_stream = self.team_agent.run(input_text, stream=True)
             
             for chunk in response_stream:
+                # Check for tool calls or status updates
+                if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                    tool_names = [tc.function.name for tc in chunk.tool_calls if tc.function]
+                    if tool_names:
+                        yield {"type": "status", "content": f"正在使用工具: {', '.join(tool_names)}..."}
+
+                reasoning = getattr(chunk, "reasoning", None) or getattr(chunk, "reasoning_content", None)
+                if reasoning:
+                    yield {"type": "think", "content": reasoning}
+
                 # Extract content from the chunk
                 content = getattr(chunk, 'content', None)
                 

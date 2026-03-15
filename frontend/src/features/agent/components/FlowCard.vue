@@ -35,7 +35,7 @@
                             <DropdownMenuItem @click="$emit('edit', flow)" class="cursor-pointer">
                                 <Edit2 class="mr-2 h-4 w-4" /> 编辑
                             </DropdownMenuItem>
-                            <DropdownMenuItem @click="$emit('delete', flow)" class="text-destructive focus:text-destructive cursor-pointer">
+                            <DropdownMenuItem @click="showDeleteAlert = true" class="text-destructive focus:text-destructive cursor-pointer">
                                 <Trash2 class="mr-2 h-4 w-4" /> 删除
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -79,13 +79,32 @@
         </div>
     </CardFooter>
   </Card>
+
+  <AlertDialog :open="showDeleteAlert" @update:open="showDeleteAlert = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>确认删除？</AlertDialogTitle>
+        <AlertDialogDescription>
+          您确定要删除工作流 <span class="font-semibold text-foreground">{{ flow.name }}</span> 吗？此操作无法撤销。
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel @click.stop="showDeleteAlert = false">取消</AlertDialogCancel>
+        <AlertDialogAction class="bg-destructive text-destructive-foreground hover:bg-destructive/90" @click.stop="handleDelete">
+          确认删除
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { MoreVertical, Edit2, Trash2, GitBranch, Clock } from 'lucide-vue-next';
 import dayjs from 'dayjs';
 
@@ -97,6 +116,13 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['click', 'edit', 'delete']);
+
+const showDeleteAlert = ref(false);
+
+const handleDelete = () => {
+    emit('delete', props.flow);
+    showDeleteAlert.value = false;
+};
 
 const formatDate = (date) => {
     if (!date) return '-';

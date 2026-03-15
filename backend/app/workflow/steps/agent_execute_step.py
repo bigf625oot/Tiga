@@ -430,7 +430,7 @@ async def _run_agent_generator(agent, user_msg, history, is_deepseek):
             
             # Yield pseudo-stream
             if rc:
-                yield {"type": "reasoning", "content": rc} # We can yield dicts or objects
+                yield {"type": "think", "content": rc} # We can yield dicts or objects
             
             content = getattr(final_msg, "content", "")
             if content:
@@ -461,6 +461,12 @@ async def _run_agent_generator(agent, user_msg, history, is_deepseek):
             # Agno's `arun` is the async version of `run`.
             stream = await agent.arun(user_msg, stream=True, messages=history)
             async for response in stream:
+                # Check for tool calls
+                if hasattr(response, "tool_calls") and response.tool_calls:
+                    tool_names = [tc.function.name for tc in response.tool_calls if tc.function]
+                    if tool_names:
+                        yield {"type": "status", "content": f"正在使用工具: {', '.join(tool_names)}..."}
+
                 # response is RunResponse
                 # We need to normalize output
                 content = ""
@@ -468,6 +474,10 @@ async def _run_agent_generator(agent, user_msg, history, is_deepseek):
                 # Check for tool calls/outputs in stream if needed
                 # But usually we just want final answer or delta
                 
+                reasoning = getattr(response, "reasoning", None) or getattr(response, "reasoning_content", None)
+                if reasoning:
+                    yield {"type": "think", "content": reasoning}
+
                 if hasattr(response, "content") and response.content:
                     content = response.content
                 elif hasattr(response, "delta") and response.delta:

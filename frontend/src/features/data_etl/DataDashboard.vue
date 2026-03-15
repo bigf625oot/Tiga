@@ -75,7 +75,8 @@
           />
           <div v-else class="flex flex-col items-center justify-center h-full text-muted-foreground/50">
              <div class="p-6 rounded-full bg-muted/20 mb-4">
-                <Workflow class="w-12 h-12" />
+                <!-- <Workflow class="w-12 h-12" /> -->
+                <img src="/Placeholder/null_search.svg" alt="暂无内容" class="h-14 w-14 object-cover" />
              </div>
              <h3 class="text-lg font-medium text-muted-foreground">未选择流水线</h3>
              <p class="text-sm mt-1 max-w-xs text-center">请从左侧数据源列表中选择一条流水线以查看详细流程图</p>
@@ -84,8 +85,7 @@
           <!-- Pipeline Metrics Panel -->
           <div 
             v-if="selectedPipelineId && pipelineMetrics.length > 0"
-            class="absolute left-4 z-20 bg-card/90 backdrop-blur border border-border rounded-lg shadow-lg p-2.5 transition-all duration-300 flex items-center gap-4"
-            :style="{ bottom: isLogExpanded ? '272px' : '52px' }"
+            class="absolute left-4 bottom-4 z-20 bg-card/90 backdrop-blur border border-border rounded-lg shadow-lg p-2.5 transition-all duration-300 flex items-center gap-4"
           >
             <div class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 flex items-center gap-2 border-r border-border pr-3">
               <span>流水线指标</span>

@@ -116,8 +116,9 @@
           </h2>
           
           <div v-if="group.items.length === 0" class="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground">
-            <div class="bg-muted/50 p-6 rounded-full mb-4">
-              <Search class="w-8 h-8 opacity-50" />
+            <div class=" p-6 rounded-full mb-4">
+              <!-- <Search class="w-8 h-8 opacity-50" /> -->
+              <img src="/Placeholder/null_search.svg" alt="暂无内容" class="h-14 w-14 object-cover" />
             </div>
             <p>没有找到相关数据源</p>
             <Button variant="link" @click="openAddModal" class="mt-2">立即创建</Button>

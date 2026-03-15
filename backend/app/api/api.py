@@ -29,6 +29,7 @@ from app.api.endpoints import (
     nodes,
     agent,
     teams,
+    users,
 )
 from app.api.endpoints.search_agent import news
 from app.services.pathway.api import router as pathway_router
@@ -60,6 +61,7 @@ api_router.include_router(data_query.router, prefix="/data_query", tags=["data_q
 api_router.include_router(data_source.router, prefix="/data-sources", tags=["data-sources"])
 api_router.include_router(indicators.router, prefix="/indicators", tags=["indicators"])
 api_router.include_router(health.router, prefix="/health", tags=["health"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(rag.router, prefix="/rag", tags=["rag"])
 api_router.include_router(skills.router, prefix="/skills", tags=["skills"])
 api_router.include_router(service_categories.router, prefix="/service-categories", tags=["service-categories"])

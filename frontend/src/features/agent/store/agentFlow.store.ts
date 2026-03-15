@@ -31,8 +31,9 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
   const currentWorkflowId = ref<string | null>(null);
 
   // Getters
-  const selectedNode = computed(() => {
-    return (nodes.value.find(n => n.id === selectedNodeId.value) || null) as Node | null;
+  const selectedNode = computed<Node | null>(() => {
+    const allNodes: any[] = nodes.value;
+    return (allNodes.find(n => n.id === selectedNodeId.value) as Node) || null;
   });
 
   // Actions - Node Operations
@@ -41,26 +42,26 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
   };
 
   const addNode = (node: Node) => {
-    nodes.value.push(node);
+    (nodes.value as any[]).push(node);
   };
 
   const removeNode = (id: string) => {
-    nodes.value = nodes.value.filter(n => n.id !== id);
-    edges.value = edges.value.filter(e => e.source !== id && e.target !== id);
+    nodes.value = (nodes.value as any[]).filter(n => n.id !== id) as any;
+    edges.value = (edges.value as any[]).filter(e => e.source !== id && e.target !== id) as any;
     if (selectedNodeId.value === id) {
       selectedNodeId.value = null;
     }
   };
 
   const updateNodeData = (id: string, data: any) => {
-    const node = nodes.value.find(n => n.id === id);
+    const node = (nodes.value as any[]).find(n => n.id === id);
     if (node) {
       node.data = { ...node.data, ...data };
     }
   };
 
   // Actions - API Operations
-  const fetchWorkflows = async (params: { q?: string; skip?: number; limit?: number; is_template?: boolean } = {}) => {
+  const fetchWorkflows = async (params: { q?: string; skip?: number; limit?: number; is_template?: boolean; _t?: number } = {}) => {
     loading.value = true;
     try {
       const response = await api.get('/agent-workflows/', { params });
@@ -107,7 +108,7 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
     loading.value = true;
     try {
       await api.delete(`/agent-workflows/${id}`);
-      workflows.value = workflows.value.filter(w => w.id !== id);
+      workflows.value = (workflows.value as any[]).filter(w => w.id !== id) as any;
     } catch (error) {
       console.error('Failed to delete workflow:', error);
       throw error;
@@ -120,7 +121,7 @@ export const useAgentFlowStore = defineStore('agent-flow', () => {
     loading.value = true;
     try {
       // Find in local list first, or fetch
-      let workflow = workflows.value.find(w => w.id === id);
+      let workflow = (workflows.value as any[]).find(w => w.id === id);
       if (!workflow) {
          const response = await api.get(`/agent-workflows/${id}`);
          workflow = response.data;

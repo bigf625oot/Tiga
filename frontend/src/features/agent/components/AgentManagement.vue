@@ -36,10 +36,10 @@
                         <div class="flex items-center gap-3 w-full md:w-auto justify-end">
                             <div class="relative w-full md:w-64 group">
                                 <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                <Input v-model="searchQuery" @focus="handleSearchFocus" @blur="handleSearchBlur"
-                                    @input="handleSearchInput" placeholder="搜索智能体..."
+                                <Input v-model="inputValue" @focus="handleSearchFocus" @blur="handleSearchBlur"
+                                    @input="handleSearchInput" @keydown.enter="handleSearch" placeholder="搜索智能体..."
                                     class="pl-9 h-9 bg-background border-input/80 focus-visible:ring-1 focus-visible:ring-primary/30 pr-8 shadow-sm transition-all hover:border-primary/50" />
-                                <button v-if="searchQuery" @click="searchQuery = ''; showSuggestions = false"
+                                <button v-if="inputValue" @click="clearSearch"
                                     class="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors">
                                     <X class="h-4 w-4" />
                                 </button>
@@ -58,7 +58,7 @@
 
                             <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
 
-                            <Button @click="fetchAgents" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+                            <Button @click="handleRefresh" variant="outline" size="icon" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
                                 <RefreshCw class="h-4 w-4 text-muted-foreground" :class="{ 'animate-spin': isLoading }" />
                             </Button>
 
@@ -190,9 +190,10 @@
                         <!-- Empty State -->
                         <div v-else
                             class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
-                            <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+                            <div class="w-12 h-12  rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
                                 <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
-                                <Box v-else class="w-10 h-10 text-muted-foreground/50" />
+                                <!-- <Box v-else class="w-10 h-10 text-muted-foreground/50" /> -->
+                                <img src="/Placeholder/null.svg" alt="暂无内容" class="h-full w-full object-cover" />
                             </div>
                             <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ searchQuery ? '未找到相关智能体' : '暂无智能体' }}</h3>
                             <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ searchQuery ? '请尝试更换关键词搜索，或创建新的智能体。' : '当前暂无智能体，您可以点击下方按钮创建一个新的智能体助手。' }}</p>
@@ -339,6 +340,7 @@ onUnmounted(() => {
 });
 
 const searchQuery = ref('');
+const inputValue = ref('');
 const selectedCategory = ref('全部');
 const showSuggestions = ref(false);
 
@@ -450,12 +452,12 @@ const searchSuggestions = ref([]);
 
 const fetchSuggestions = async () => {
     // If suggestions are not shown, no need to fetch (e.g. after selection or blur)
-    if (!searchQuery.value || !showSuggestions.value) {
+    if (!inputValue.value || !showSuggestions.value) {
         searchSuggestions.value = [];
         return;
     }
     try {
-        let url = `/api/v1/agents/?limit=10&q=${encodeURIComponent(searchQuery.value)}`;
+        let url = `/api/v1/agents/?limit=10&q=${encodeURIComponent(inputValue.value)}`;
         if (activeTab.value === 'my-agents') {
             url += '&is_template=false';
         } else if (activeTab.value === 'discover') {
@@ -481,28 +483,22 @@ const debouncedFetchSuggestions = ((fn, delay) => {
     };
 })(fetchSuggestions, 300);
 
-const isSelectingSuggestion = ref(false);
-
 const selectSuggestion = (suggestion) => {
-    isSelectingSuggestion.value = true;
+    inputValue.value = suggestion;
     searchQuery.value = suggestion;
     showSuggestions.value = false;
-    // Reset flag after a short delay to allow watcher to skip
-    nextTick(() => {
-        isSelectingSuggestion.value = false;
-    });
+    fetchAgents();
 };
 
 const handleSearchFocus = () => {
-    showSuggestions.value = true;
-    if (searchQuery.value) {
+    if (inputValue.value) {
+        showSuggestions.value = true;
         debouncedFetchSuggestions();
     }
 };
 
 const handleSearchInput = () => {
     showSuggestions.value = true;
-    isSelectingSuggestion.value = false; // Ensure we are in input mode
 };
 
 const handleSearchBlur = () => {
@@ -512,7 +508,51 @@ const handleSearchBlur = () => {
     }, 200);
 };
 
-const fetchAgents = async () => {
+const handleSearch = () => {
+    searchQuery.value = inputValue.value;
+    showSuggestions.value = false;
+    fetchAgents();
+};
+
+const clearSearch = () => {
+    inputValue.value = '';
+    // The watcher on inputValue will handle clearing searchQuery and fetching agents
+};
+
+watch(inputValue, (newVal) => {
+    if (!newVal) {
+        searchSuggestions.value = [];
+        showSuggestions.value = false;
+        if (searchQuery.value) {
+            searchQuery.value = '';
+            fetchAgents();
+        }
+    } else {
+        debouncedFetchSuggestions();
+    }
+});
+
+const highlightMatch = (text) => {
+    if (!inputValue.value) return text;
+    // escape special chars
+    const escapedQuery = inputValue.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return text.replace(regex, '<span class="text-primary font-medium">$1</span>');
+};
+
+const handleRefresh = async () => {
+    isLoading.value = true;
+    if (activeTab.value === 'my-agents') {
+        myAgents.value = [];
+    } else {
+        discoverAgents.value = [];
+    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await fetchAgents(true);
+    toast({ title: '刷新成功', description: '智能体数据已更新' });
+};
+
+const fetchAgents = async (forceRefresh = false) => {
     isLoading.value = true;
     try {
         let url = '/api/v1/agents/?limit=100';
@@ -525,6 +565,10 @@ const fetchAgents = async () => {
             url += '&is_template=false';
         } else if (activeTab.value === 'discover') {
             url += '&is_template=true';
+        }
+        
+        if (forceRefresh) {
+            url += `&_t=${Date.now()}`;
         }
 
         const res = await fetch(url);
@@ -587,24 +631,9 @@ const fetchAgents = async () => {
     }
 };
 
-const debouncedFetchAgents = ((fn, delay) => {
-    let timeoutId;
-    return (...args) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => fn(...args), delay);
-    };
-})(fetchAgents, 300);
 
-watch(searchQuery, () => {
-    if (isSelectingSuggestion.value) {
-        // Trigger search immediately without debounce if selecting from suggestion
-        fetchAgents();
-        return;
-    }
-    // Only fetch if query is empty or long enough to avoid spamming
-    debouncedFetchAgents();
-    debouncedFetchSuggestions();
-});
+
+
 
 watch(activeTab, () => {
     fetchAgents();

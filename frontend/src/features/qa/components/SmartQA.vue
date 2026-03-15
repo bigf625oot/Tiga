@@ -17,6 +17,7 @@
         @toggle-right="toggleRightPane"
         @open-logs="openTaskLogs"
         @open-memo="isMemoDrawerOpen = true"
+        @update-title="handleUpdateTitle"
       />
 
       <div ref="splitContainerRef" class="flex-1 min-h-0 flex flex-col xl:flex-row bg-transparent overflow-hidden">
@@ -31,6 +32,7 @@
             :current-mode-id="currentModeId"
             :embedded="embedded"
             :is-loading="isLoading"
+            :is-streaming="isStreaming"
             :is-task-running="isTaskRunning"
             :is-stopping="isStopping"
             :selected-attachments="selectedAttachments"
@@ -74,6 +76,7 @@
             :attachments-count="selectedAttachments.length"
             :has-knowledge-base="hasKnowledgeBase"
             @run-task="handleRunTask"
+            @open-session="handleOpenSession"
             @close="isRightCollapsed = true"
           />
         </div>
@@ -92,6 +95,7 @@
           :current-mode-id="currentModeId"
           show-controls
           @open-memo="isMemoDrawerOpen = true"
+          @update-title="handleUpdateTitle"
       />
 
       <div class="flex-1 flex min-h-0 relative overflow-hidden">
@@ -113,6 +117,7 @@
             :current-mode-id="currentModeId"
             :embedded="embedded"
             :is-loading="isLoading"
+            :is-streaming="isStreaming"
             :is-task-running="isTaskRunning"
             :is-stopping="isStopping"
             :selected-attachments="selectedAttachments"
@@ -168,6 +173,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import { useTheme } from '@/composables/useTheme';
+import { useToast } from '@/components/ui/toast/use-toast';
 import DynamicGridBackground from '@/shared/components/molecules/DynamicGridBackground.vue';
 
 // Subcomponents
@@ -189,6 +195,7 @@ import { chatService } from '../services/chatService';
 import { knowledgeService } from '../services/knowledgeService';
 import { MODES, STORAGE_KEYS } from '../constants';
 import type { ModeConfig, ModeType, Agent, Attachment } from '../types';
+import { getSmartQADefaults } from '../utils/smartqaDefaults';
 
 const props = defineProps<{
   sessionId: string | null;
@@ -197,6 +204,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['refresh-sessions', 'update:sessionId']);
 
+const { toast } = useToast();
 const workflowStore = useWorkflowStore();
 const { isLightMode } = useTheme();
 const isDark = computed(() => !isLightMode.value);
@@ -206,8 +214,9 @@ const blobColors = computed(() => isDark.value
 
 // UI State
 const input = ref('');
-const mode = ref<ModeType>('auto');
-const currentModeId = ref<string | null>(null);
+const defaults = getSmartQADefaults(props.sessionId);
+const mode = ref<ModeType>(defaults.mode);
+const currentModeId = ref<string | null>(defaults.currentModeId);
 const isFileSidebarOpen = ref(true);
 const isNetworkSearchEnabled = ref(true);
 const isMemoDrawerOpen = ref(false);
@@ -280,10 +289,19 @@ const isTaskRunning = computed(() => isLoading.value || workflowStore.isRunning 
 const taskPanelRef = ref<any>(null);
 
 // Methods
+const handleOpenSession = (sid: string) => {
+  emit('update:sessionId', sid);
+};
+
 const handleModeSelect = (m: ModeConfig) => {
+  // 手动切换模式后，更新 currentModeId 和 mode
   currentModeId.value = m.id;
   mode.value = m.value;
 
+  // 如果手动选择了“秒懂”模式 (auto)，我们需要确保下次加载会话时不会因为它有消息而强制切回 auto?
+  // 不，这里的逻辑是“加载会话”时的默认状态。手动切换是用户行为，优先级更高。
+  // 但这里只是处理点击事件。
+  
   // Reset agent selection logic
   if (m.id === 'quick') {
       const defaultAgent = agents.value.find(a => a.name === '通用' || a.name === '快问快答') || agents.value[0];
@@ -400,6 +418,7 @@ const onSendMessage = async () => {
   messages.value.push({ role: 'user', content: userMsg, timestamp: new Date().toISOString(), status: 'sending' });
 
   // Create session if needed
+  let isNewSession = false;
   if (!currentSessionId.value) {
     try {
       const sess = await createNewSession(
@@ -407,6 +426,16 @@ const onSendMessage = async () => {
         selectedAgentId.value || null,
         mode.value
       );
+      // We do not emit update:sessionId yet to prevent the watcher from firing
+      // and wiping our optimistic messages. We will emit it after setting URL.
+      currentSessionId.value = sess.id;
+      isNewSession = true;
+      
+      // Update URL
+      const url = new URL(window.location.href);
+      url.searchParams.set('session_id', sess.id);
+      window.history.pushState({}, '', url.toString());
+      
       emit('update:sessionId', sess.id);
       emit('refresh-sessions');
     } catch (e) {
@@ -426,6 +455,7 @@ const onSendMessage = async () => {
   // Auto Task Mode
   if (isAutoTaskMode.value) {
       try {
+          isLoading.value = true;
           const res = await chatService.createAutoTask(userMsg);
           if (res && res.status === 'SKIPPED') {
               messages.value.push({ role: 'assistant', content: res.chat_response || '收到。', timestamp: new Date().toISOString() });
@@ -435,30 +465,16 @@ const onSendMessage = async () => {
           }
       } catch (e) {
           messages.value.push({ role: 'assistant', content: '系统错误：无法连接到任务服务。', timestamp: new Date().toISOString() });
+      } finally {
+          isLoading.value = false;
       }
       return;
   }
 
   // Chat Mode
-  if (!currentSessionId.value) {
-      try {
-          const newSession = await createNewSession('新会话', selectedAgentId.value, mode.value);
-          if (newSession) {
-              emit('update:sessionId', newSession.id);
-              // Update URL
-              const url = new URL(window.location.href);
-              url.searchParams.set('session_id', newSession.id);
-              window.history.pushState({}, '', url.toString());
-          }
-      } catch (e) {
-          console.error("Failed to create session", e);
-          messages.value.push({ role: 'assistant', content: "Error: Failed to create session." });
-          return;
-      }
-  }
-
   if (currentSessionId.value) {
       try {
+          isLoading.value = true;
           let res: Response;
           if (mediaFiles.length > 0) {
               const formData = new FormData();
@@ -503,6 +519,7 @@ const onSendMessage = async () => {
       } catch (e) {
           console.error(e);
           messages.value.push({ role: 'assistant', content: "Error: " + (e as Error).message });
+          isLoading.value = false;
       }
   }
 };
@@ -552,6 +569,22 @@ const onToggleKnowledgeSelection = (id: string, checked: boolean) => {
   }
 };
 
+const handleUpdateTitle = async ({ id, title }: { id: string, title: string }) => {
+  try {
+    await chatService.updateSession(id, { title });
+    // Update local session title
+    if (currentSession.value && currentSession.value.id === id) {
+      currentSession.value.title = title;
+    }
+    // Refresh sessions list in parent
+    emit('refresh-sessions');
+    toast({ title: "标题更新成功" });
+  } catch (e) {
+    console.error("Failed to update session title", e);
+    toast({ variant: "destructive", title: "标题更新失败" });
+  }
+};
+
 const handleExcerptMessage = (content: string) => {
   const newMemo: Memo = {
     id: Date.now().toString(),
@@ -584,11 +617,21 @@ onMounted(() => {
 
     if (props.sessionId) {
         currentSessionId.value = props.sessionId;
-        fetchSessionDetails(props.sessionId);
+        messages.value = [];
+        fetchSessionDetails(props.sessionId).then(() => {
+          // fetch 完成后，根据消息内容修正模式
+          // 初始化时不知道是否有消息，默认先用了 quick (通过 getSmartQADefaults 传入 undefined 得到的)
+          // 但这里需要手动更新一下，因为 getSmartQADefaults 只在 setup 跑了一次
+          const nextDefaults = getSmartQADefaults(props.sessionId, messages.value);
+          mode.value = nextDefaults.mode;
+          currentModeId.value = nextDefaults.currentModeId;
+        });
     } else {
-        // Default to Quick mode on new session
-        currentModeId.value = 'quick';
-        mode.value = 'quick';
+        // Default to Auto mode on new session
+        const nextDefaults = getSmartQADefaults(null);
+        mode.value = nextDefaults.mode;
+        currentModeId.value = nextDefaults.currentModeId;
+        
         // Wait for agents to load then select default
         if (agents.value.length === 0) {
             fetchAgents();
@@ -598,19 +641,46 @@ onMounted(() => {
     }
 });
 
-watch(() => props.sessionId, (newId) => {
+watch(() => props.sessionId, (newId, oldId) => {
+    if (newId === oldId) return;
+    
+    // If the prop update matches our internal state and we already have messages,
+    // it means we initiated this session change locally (e.g., creating a new session)
+    // and we shouldn't interrupt the ongoing stream or wipe the messages.
+    if (newId && newId === currentSessionId.value && messages.value.length > 0) {
+        return;
+    }
+
     stopGeneration();
     currentSessionId.value = newId;
-    mode.value = 'auto';
-    currentModeId.value = null;
+    messages.value = [];
     isRightCollapsed.value = true;
     workflowStore.resetWorkflow();
-    if (newId) fetchSessionDetails(newId);
-    else {
+    if (newId) {
+        // 先设为 quick（假设空），等 fetch 完再根据内容决定
+        // 这样可以避免 Loading 期间显示秒懂卡片
+        const loadingDefaults = getSmartQADefaults(newId, []); 
+        mode.value = loadingDefaults.mode;
+        currentModeId.value = loadingDefaults.currentModeId;
+        
+        fetchSessionDetails(newId).then(() => {
+             const nextDefaults = getSmartQADefaults(newId, messages.value);
+             mode.value = nextDefaults.mode;
+             currentModeId.value = nextDefaults.currentModeId;
+        });
+    } else {
+        const nextDefaults = getSmartQADefaults(null);
+        mode.value = nextDefaults.mode;
+        currentModeId.value = nextDefaults.currentModeId;
         currentSession.value = null;
         messages.value = [];
         selectedAttachments.value = [];
         input.value = '';
+        if (agents.value.length === 0) {
+            fetchAgents();
+        }
+        const defaultAgent = agents.value.find(a => a.name === '通用' || a.name === '快问快答') || agents.value[0];
+        if (defaultAgent) selectedAgentId.value = defaultAgent.id;
     }
 });
 

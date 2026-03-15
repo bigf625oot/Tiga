@@ -128,7 +128,7 @@
 
             <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
 
-            <Button @click="fetchModels" variant="outline" size="icon" :disabled="loading" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+            <Button @click="handleRefresh" variant="outline" size="icon" :disabled="loading" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
               <RefreshCw class="w-4 h-4 text-muted-foreground" :class="{'animate-spin': loading}" />
             </Button>
 
@@ -160,8 +160,8 @@
 
         <!-- Empty State -->
         <div v-else-if="filteredModels.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto text-muted-foreground animate-in fade-in duration-500">
-          <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
-            <Bot class="w-10 h-10 opacity-40" />
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+            <img src="/Placeholder/null.svg" alt="暂无内容" class="h-full w-full object-cover" />
           </div>
           <h3 class="text-xl font-semibold text-foreground mb-2">未找到相关模型</h3>
           <p class="text-sm max-w-sm text-center leading-relaxed mb-8 text-muted-foreground">
@@ -525,10 +525,11 @@ const fetchProviders = async () => {
     }
 };
 
-const fetchModels = async () => {
+const fetchModels = async (forceRefresh = false) => {
     loading.value = true;
     try {
-        const res = await api.get('/llm/models');
+        const params = forceRefresh ? { _t: Date.now() } : {};
+        const res = await api.get('/llm/models', { params });
         models.value = res.data;
     } catch (e) {
         toast({
@@ -539,6 +540,14 @@ const fetchModels = async () => {
     } finally {
         loading.value = false;
     }
+};
+
+const handleRefresh = async () => {
+    loading.value = true;
+    models.value = [];
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await fetchModels(true);
+    toast({ title: '刷新成功', description: '模型数据已更新' });
 };
 
 const handleProviderChange = (val) => {

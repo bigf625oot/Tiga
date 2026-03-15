@@ -84,6 +84,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { PropType } from 'vue'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -95,7 +96,7 @@ const props = defineProps({
   pipeline: { type: Object, required: true },
   selected: { type: Boolean, default: false },
   statusLabel: { type: String, default: '' },
-  statusBadgeVariant: { type: String, default: 'outline' },
+  statusBadgeVariant: { type: String as PropType<"default" | "destructive" | "outline" | "secondary" | null | undefined>, default: 'outline' },
   statusColorClass: { type: String, default: 'bg-muted' },
   lastRunText: { type: String, default: '-' },
   createdAtText: { type: String, default: '-' },

@@ -117,7 +117,7 @@
 
             <div class="h-4 w-px bg-border hidden md:block mx-1"></div>
 
-            <Button @click="refreshData" variant="outline" size="icon" :disabled="isLoading" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
+            <Button @click="handleRefresh" variant="outline" size="icon" :disabled="isLoading" class="h-9 w-9 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="刷新列表">
               <RefreshCw class="w-4 h-4 text-muted-foreground" :class="{'animate-spin': isLoading}" />
             </Button>
 
@@ -153,8 +153,8 @@
 
         <!-- Empty State -->
         <div v-else-if="filteredItems.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto text-muted-foreground animate-in fade-in duration-500">
-          <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
-            <Search class="w-10 h-10 opacity-40" />
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+            <img src="/Placeholder/null.svg" alt="暂无内容" class="h-full w-full object-cover" />
           </div>
           <h3 class="text-xl font-semibold text-foreground mb-2">未找到相关服务</h3>
           <p class="text-sm max-w-sm text-center leading-relaxed mb-8 text-muted-foreground">
@@ -557,7 +557,7 @@ const fetchCategories = async () => {
   } catch (e) { console.error("Failed to fetch categories", e); }
 };
 
-const buildQueryParams = () => {
+const buildQueryParams = (forceRefresh = false) => {
   const params = new URLSearchParams();
   if (searchQuery.value) params.append('q', searchQuery.value);
   if (activeCategory.value && activeCategory.value !== 'all' && activeCategory.value !== 'mcp' && activeCategory.value !== 'skills') {
@@ -566,16 +566,19 @@ const buildQueryParams = () => {
   if (activeFilter.value !== 'all') {
     params.append('filter', activeFilter.value);
   }
+  if (forceRefresh) {
+    params.append('_t', Date.now().toString());
+  }
   return params.toString();
 };
 
-const fetchMcpServers = async () => {
+const fetchMcpServers = async (forceRefresh = false) => {
   if (activeCategory.value === 'skills') {
     mcpItems.value = [];
     return;
   }
   try {
-    const query = buildQueryParams();
+    const query = buildQueryParams(forceRefresh);
     const res = await fetch(`/api/v1/mcp/?${query}`);
     if (res.ok) {
       const data = await res.json();
@@ -593,13 +596,13 @@ const fetchMcpServers = async () => {
   } catch (e) { console.error("Failed to fetch MCP servers", e); }
 };
 
-const fetchSkills = async () => {
+const fetchSkills = async (forceRefresh = false) => {
   if (activeCategory.value === 'mcp') {
     skills.value = [];
     return;
   }
   try {
-    const query = buildQueryParams();
+    const query = buildQueryParams(forceRefresh);
     const res = await fetch(`/api/v1/skills/?${query}`);
     if (res.ok) {
       const data = await res.json();
@@ -616,10 +619,19 @@ const fetchSkills = async () => {
   } catch (e) { console.error("Failed to fetch skills", e); }
 };
 
-const refreshData = async () => {
+const refreshData = async (forceRefresh = false) => {
   isLoading.value = true;
-  await Promise.all([fetchSkills(), fetchMcpServers()]);
+  await Promise.all([fetchSkills(forceRefresh), fetchMcpServers(forceRefresh)]);
   isLoading.value = false;
+};
+
+const handleRefresh = async () => {
+  isLoading.value = true;
+  skills.value = [];
+  mcpItems.value = [];
+  await new Promise(resolve => setTimeout(resolve, 300));
+  await refreshData(true);
+  toast({ title: '刷新成功', description: '工具市场数据已更新' });
 };
 
 watch([activeCategory, activeFilter], () => refreshData());

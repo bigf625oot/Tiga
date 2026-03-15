@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="absolute bottom-0 left-0 right-0 border-t backdrop-blur-md z-10 transition-all duration-300 bg-background/95 border-border shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]"
+    class="shrink-0 w-full border-t backdrop-blur-md z-10 transition-all duration-300 bg-background/95 border-border shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]"
     :class="[isExpanded ? 'h-64' : 'h-9']"
   >
     <!-- Header / Toggle Bar -->

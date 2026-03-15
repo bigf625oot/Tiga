@@ -46,9 +46,10 @@
           </div>
 
           <div v-else-if="displayConfigs.length === 0" class="flex-1 flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
-            <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
               <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
-              <Database v-else class="w-10 h-10 text-muted-foreground/50" />
+              <!-- <Database v-else class="w-10 h-10 text-muted-foreground/50" /> -->
+              <img src="/Placeholder/null_file.svg" alt="Placeholder" class="w-full h-full object-cover" />
             </div>
             <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ searchQuery ? '未找到相关数据源' : '暂无数据源连接' }}</h3>
             <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ searchQuery ? '请尝试更换关键词搜索，或清空筛选条件。' : '当前暂无连接配置，您可以点击下方按钮创建一个新的数据源连接。' }}</p>

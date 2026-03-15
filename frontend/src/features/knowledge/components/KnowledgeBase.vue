@@ -145,9 +145,10 @@
               </div>
 
               <div v-else-if="files.length === 0 && !uploading" class="flex flex-col items-center justify-center text-center min-h-[400px] w-full max-w-3xl mx-auto">
-                <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mb-6 ring-8 ring-muted/20">
                   <Search v-if="searchQuery" class="w-10 h-10 text-muted-foreground/50" />
-                  <FolderOpen v-else class="w-10 h-10 text-muted-foreground/50" />
+                  <!-- <FolderOpen v-else class="w-10 h-10 text-muted-foreground/50" /> -->
+                  <img src="/Placeholder/null_file.svg" alt="Placeholder" class="w-full h-full object-cover" />
                 </div>
                 <h3 class="text-xl font-semibold tracking-tight text-foreground mb-2">{{ searchQuery ? '未找到相关文件' : '暂无文件' }}</h3>
                 <p class="text-muted-foreground text-sm max-w-sm mx-auto mb-8">{{ searchQuery ? '请尝试更换关键词搜索，或清空筛选条件。' : (activeTab === 'personal' ? '当前目录暂无文件，您可以上传文件或新建文件夹开始整理。' : '共享空间暂无可用文件。') }}</p>
@@ -179,11 +180,19 @@
                   @move="openMoveForItem(file)"
                   @delete="confirmDelete(file.id)"
                 />
-              </div>
-
-              <div v-if="loadingMore" class="py-4 flex justify-center text-muted-foreground text-xs">
-                <Loader2 class="w-4 h-4 animate-spin mr-2" />
-                加载中...
+                <template v-if="loadingMore">
+                  <div v-for="i in 4" :key="'skel-more-'+i" class="bg-card rounded-xl border border-border/60 overflow-hidden h-[190px] p-5 space-y-3">
+                    <div class="flex items-center gap-4">
+                      <Skeleton class="h-12 w-12 rounded-xl" />
+                      <div class="flex-1 space-y-2">
+                        <Skeleton class="h-4 w-3/4" />
+                        <Skeleton class="h-3 w-1/2" />
+                      </div>
+                    </div>
+                    <Skeleton class="h-3 w-full" />
+                    <Skeleton class="h-3 w-5/6" />
+                  </div>
+                </template>
               </div>
             </div>
           </div>
