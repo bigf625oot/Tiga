@@ -41,6 +41,9 @@ class LightRAGEngine:
     def __init__(self):
         self.working_dir = str(LIGHTRAG_DIR)
         # 不再在 __init__ 中立即初始化，而是等待 ensure_initialized 被调用
+        self._embedding_last_error: Optional[str] = None
+        self._embedding_last_error_at: float = 0.0
+        self._embedding_last_ok_at: float = 0.0
 
     @classmethod
     def get_instance(cls):
@@ -84,6 +87,16 @@ class LightRAGEngine:
 
         # 2. [关键修复] 异步存储初始化
         await self._ensure_storages_initialized()
+
+    def get_last_embedding_error(self) -> Optional[Dict[str, Any]]:
+        if not self._embedding_last_error:
+            return None
+        return {"message": self._embedding_last_error, "at": self._embedding_last_error_at}
+
+    def embedding_recently_failed(self, within_seconds: float = 300.0) -> bool:
+        if not self._embedding_last_error_at:
+            return False
+        return (time.time() - float(self._embedding_last_error_at)) <= float(within_seconds)
 
     def _init_rag(self, llm_config: Optional[LLMModel] = None, embed_config: Optional[LLMModel] = None):
         """
@@ -429,8 +442,16 @@ class LightRAGEngine:
 
             async def embedding_func(texts: list[str]) -> np.ndarray:
                 # client = AsyncOpenAI(api_key=embed_api_key, base_url=embed_base_url)
-                resp = await embed_client.embeddings.create(model=embed_model_name, input=texts)
-                arr = np.array([d.embedding for d in resp.data], dtype=float)
+                try:
+                    resp = await embed_client.embeddings.create(model=embed_model_name, input=texts)
+                    arr = np.array([d.embedding for d in resp.data], dtype=float)
+                    self._embedding_last_error = None
+                    self._embedding_last_ok_at = time.time()
+                except Exception as e:
+                    self._embedding_last_error = str(e)
+                    self._embedding_last_error_at = time.time()
+                    logger.warning(f"Embedding request failed, fallback to zero vectors: {e}")
+                    return np.zeros((len(texts), embed_dim), dtype=float)
                 # ... normalization logic same as original ...
                 try:
                     if isinstance(arr, np.ndarray):
@@ -459,9 +480,18 @@ class LightRAGEngine:
                 def _patched_openai_embed(texts, model, api_key=None, base_url=None, embedding_dim=None):
                     from openai import OpenAI
                     client = OpenAI(api_key=api_key, base_url=base_url) if base_url else OpenAI(api_key=api_key)
-                    resp = client.embeddings.create(model=model, input=texts)
-                    emb = [d.embedding for d in resp.data]
-                    return np.array(emb)
+                    try:
+                        resp = client.embeddings.create(model=model, input=texts)
+                        emb = [d.embedding for d in resp.data]
+                        self._embedding_last_error = None
+                        self._embedding_last_ok_at = time.time()
+                        return np.array(emb)
+                    except Exception as e:
+                        self._embedding_last_error = str(e)
+                        self._embedding_last_error_at = time.time()
+                        dim = int(embedding_dim or embed_dim)
+                        logger.warning(f"Embedding request failed, fallback to zero vectors: {e}")
+                        return np.zeros((len(texts), dim), dtype=float)
                 _lo.openai_embed = _patched_openai_embed
             except Exception as e:
                 logger.warning(f"Failed to patch openai_embed: {e}")

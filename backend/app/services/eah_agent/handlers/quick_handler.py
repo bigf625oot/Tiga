@@ -46,6 +46,7 @@ class QuickHandler(BaseHandler):
     def __init__(self, llm_model: Optional[LLMModel] = None):
         super().__init__(llm_model)
         self.agent: Optional[Agent] = None
+        self._reasoning_enabled: Optional[bool] = None
 
     async def _ensure_agent_initialized(
         self, db: Optional[AsyncSession] = None, session_id: str = None, **kwargs
@@ -54,8 +55,11 @@ class QuickHandler(BaseHandler):
         Initializes the Agno Agent.
         Tries to load configuration from Redis SharedState first.
         """
-        if self.agent and self.llm_model:
+        desired_reasoning = bool(kwargs.get("enable_reasoning", False))
+        if self.agent and self.llm_model and self._reasoning_enabled == desired_reasoning:
             return
+        if self.agent and self.llm_model and self._reasoning_enabled != desired_reasoning:
+            self.agent = None
 
         try:
             state_manager = StateManager.get_instance()
@@ -87,6 +91,8 @@ class QuickHandler(BaseHandler):
 
                 tools = []
                 instructions = ["Answer directly.", "Be polite."]
+                if desired_reasoning:
+                    instructions.append("Write your private reasoning inside <think>...</think> and then write the final answer outside of it.")
 
                 # Configure Tools
                 if enable_search:
@@ -114,7 +120,7 @@ class QuickHandler(BaseHandler):
                     role="You are a helpful and concise assistant.",
                     instructions=instructions,
                     tools=tools,
-                    reasoning=False,
+                    reasoning=desired_reasoning,
                     model_params={"temperature": 0.7},
                 )
 
@@ -122,6 +128,7 @@ class QuickHandler(BaseHandler):
             self.agent = await AgentFactory.create_agent(
                 config, db=db, llm_model=self.llm_model
             )
+            self._reasoning_enabled = desired_reasoning
 
             # 5. Inject Knowledge Tools (Function-based)
             if (

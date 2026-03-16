@@ -38,8 +38,7 @@
         class="relative px-5 py-4 text-sm leading-relaxed transition-all duration-200 shadow-sm"
         :class="bubbleClasses"
       >
-        <!-- User Mode: Simple Text -->
-        <div v-if="isUser" class="whitespace-pre-wrap">{{ message.content }}</div>
+        <div v-if="isUser" class="user-markdown whitespace-pre-wrap" v-html="userHtml"></div>
 
         <!-- Agent Mode: Rich Content -->
         <div v-else class="agent-content flex flex-col gap-4">
@@ -81,9 +80,7 @@
                 <details class="bg-primary/5 rounded-lg border border-primary/10 overflow-hidden group transition-all duration-300" :open="thinkingContent.isPartial">
                     <summary class="p-4 py-2 text-xs font-medium text-primary cursor-pointer flex items-center gap-2 select-none outline-none hover:bg-primary/10 transition-colors">
                         <div class="flex items-center gap-2 flex-1">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                            </svg>
+                             <Activity class="w-3 h-3 text-primary/50" />
                             <span>思考过程</span>
                         </div>
                         <svg class="w-3 h-3 text-primary/50 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -191,27 +188,37 @@
       </div>
 
       <!-- Actions (Outside Bubble) -->
-      <div v-if="!isUser" class="flex items-center gap-2 mt-2 ml-1">
-           <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="引用" @click="$emit('quote-message', message.content)">
-              <Quote class="w-3.5 h-3.5" />
-           </button>
-           <button 
-                class="p-1 text-muted-foreground/60 hover:text-amber-500 transition-colors relative" 
-                title="摘录到秒记" 
-                @click="handleExcerpt"
-            >
-              <Bookmark class="w-3.5 h-3.5" :class="{'fill-current text-amber-500 animate-pulse': isExcerptionAnimating}" />
-              <span v-if="isExcerptionAnimating" class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-amber-600 font-bold animate-out fade-out slide-out-to-top-2 duration-500">+1</span>
-           </button>
-           <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
-              <Copy class="w-3.5 h-3.5" />
-           </button>
-           <button class="p-1 text-muted-foreground/60 hover:text-green-600 transition-colors" title="赞">
-              <ThumbsUp class="w-3.5 h-3.5" />
-           </button>
-           <button class="p-1 text-muted-foreground/60 hover:text-red-600 transition-colors" title="踩">
-              <ThumbsDown class="w-3.5 h-3.5" />
-           </button>
+      <div class="flex items-center gap-2 mt-2" :class="isUser ? 'mr-1 justify-end' : 'ml-1'">
+          <template v-if="isUser">
+              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
+                  <Copy class="w-3.5 h-3.5" />
+              </button>
+              <button class="p-1 text-muted-foreground/60 hover:text-destructive transition-colors" title="删除" @click="$emit('delete-message', message)">
+                  <Trash2 class="w-3.5 h-3.5" />
+              </button>
+          </template>
+          <template v-else>
+              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="引用" @click="$emit('quote-message', message.content)">
+                  <Quote class="w-3.5 h-3.5" />
+              </button>
+              <button
+                  class="p-1 text-muted-foreground/60 hover:text-amber-500 transition-colors relative"
+                  title="摘录到秒记"
+                  @click="handleExcerpt"
+              >
+                  <Bookmark class="w-3.5 h-3.5" :class="{'fill-current text-amber-500 animate-pulse': isExcerptionAnimating}" />
+                  <span v-if="isExcerptionAnimating" class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-amber-600 font-bold animate-out fade-out slide-out-to-top-2 duration-500">+1</span>
+              </button>
+              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
+                  <Copy class="w-3.5 h-3.5" />
+              </button>
+              <button class="p-1 text-muted-foreground/60 hover:text-green-600 transition-colors" title="赞">
+                  <ThumbsUp class="w-3.5 h-3.5" />
+              </button>
+              <button class="p-1 text-muted-foreground/60 hover:text-red-600 transition-colors" title="踩">
+                  <ThumbsDown class="w-3.5 h-3.5" />
+              </button>
+          </template>
       </div>
     </div>
   </div>
@@ -220,7 +227,7 @@
 <script setup lang="ts">
 import { computed, toRef, ref, watch } from 'vue';
 import dayjs from 'dayjs';
-import { Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight } from 'lucide-vue-next';
+import { Activity, Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2 } from 'lucide-vue-next';
 import ChartFrame from '../../analytics/components/ChartFrame.vue';
 import GenericResourceCard from './GenericResourceCard.vue';
 import { useMessageParser } from '../composables/useMessageParser';
@@ -236,7 +243,7 @@ const props = defineProps({
   agent: { type: Object, default: null }
 });
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);
 
 const isExcerptionAnimating = ref(false);
 const isStepsExpanded = ref(true);
@@ -254,6 +261,7 @@ const contentRef = computed(() => props.message?.content || '');
 const { parsed } = useMessageParser(contentRef);
 const { processOption } = useChartOptions();
 const { render } = useMarkdown();
+const userHtml = computed(() => render(contentRef.value, { allowHtml: false }));
 
 watch(() => props.message.steps, (newVal, oldVal) => {
     if (newVal && newVal.length > 0 && (!oldVal || oldVal.length === 0)) {
@@ -291,11 +299,10 @@ const bubbleClasses = computed(() => {
   if (props.isUser) {
     return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm';
   } else {
-    // #F0F4F8 is slate-50/blue-50 like, #1F2937 is gray-800
-    // Using Tailwind classes to approximate: bg-slate-100 text-gray-800
-    // Or custom style if needed. Let's use Tailwind's slate palette which is close.
-    // rounded-xl is 12px usually (0.75rem = 12px)
-    return 'bg-[#F0F4F8] text-[#1F2937] rounded-xl border-none';
+    // Use semantic colors for dark mode compatibility
+    // Light mode: bg-muted (~#F1F5F9) text-foreground
+    // Dark mode: bg-muted (Darker grey) text-foreground (White)
+    return 'bg-muted text-foreground rounded-xl border-none';
   }
 });
 
@@ -324,6 +331,12 @@ const handleResourceClick = (id: string) => {
 .markdown-body :deep(h3) { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: hsl(var(--foreground)); display: flex; align-items: center; gap: 8px; }
 .markdown-body :deep(h3)::before { content: ''; display: inline-block; width: 4px; height: 16px; background: hsl(var(--primary)); border-radius: 2px; }
 .markdown-body :deep(strong) { font-weight: 600; color: hsl(var(--foreground)); }
+
+.user-markdown :deep(p) { margin: 0; }
+.user-markdown :deep(p + p) { margin-top: 0.75rem; }
+.user-markdown :deep(strong) { font-weight: 600; }
+.user-markdown :deep(a) { color: inherit; text-decoration: underline; }
+.user-markdown :deep(blockquote) { margin: 0; padding-left: 0.75rem; border-left: 2px solid hsl(var(--primary-foreground) / 0.35); }
 
 /* Table Styles */
 .table-wrapper :deep(table) {

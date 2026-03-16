@@ -2,7 +2,7 @@
   <div class="h-full relative min-h-0 min-w-0 flex flex-col group/scrollbar">
     <!-- Original Scroll Container -->
     <div 
-      class="flex-1 overflow-y-auto px-10 pt-8 pb-10 custom-scrollbar scroll-smooth h-full" 
+      class="flex-1 overflow-y-auto overscroll-none px-10 pt-8 pb-10 no-scrollbar h-full" 
       v-bind="containerProps"
       @scroll="handleScroll"
     >
@@ -11,7 +11,8 @@
           <div 
             v-for="item in list" 
             :key="item.index" 
-            class="flex flex-col gap-6 pb-8"
+            :data-virtual-index="item.index"
+            class="flex flex-col gap-6 pb-8 scroll-mt-8"
           >
             <!-- 1. Normal Message Group -->
             <template v-if="!item.data.isLoader">
@@ -37,6 +38,7 @@
                     @open-doc-space="$emit('open-doc-space', $event)"
                     @quote-message="$emit('quote-message', $event)"
                     @excerpt-message="$emit('excerpt-message', $event)"
+                    @delete-message="$emit('delete-message', $event)"
                 />
             </template>
 
@@ -63,14 +65,17 @@
     </div>
 
     <!-- Custom Scrollbar/Anchor Navigation -->
-    <MessageAnchor
-        :markers="markers"
-        :total-height="totalHeight"
-        :viewport-height="viewportHeight"
-        :scroll-top="scrollTop"
-        @update:scroll-top="handleScrollUpdate"
-        @scroll-to-index="scrollToGroup"
-    />
+    <div class="absolute right-0 top-0 bottom-32 w-8 z-40 pointer-events-none">
+        <MessageAnchor
+            :markers="markers"
+            :current-visual-progress="currentVisualProgress"
+            :accumulated-offsets="accumulatedHeights.offsets"
+            :estimated-total-height="accumulatedHeights.totalHeight"
+            :viewport-height="viewportHeight"
+            @scroll-to-index="scrollToGroup"
+            @update:currentVisualProgress="handleVisualProgressUpdate"
+        />
+    </div>
 
     <!-- New Message Notification / Scroll to Bottom Button -->
     <transition
@@ -94,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useVirtualList, useResizeObserver, useDebounceFn } from '@vueuse/core';
 import { ArrowDown } from 'lucide-vue-next';
 import MessageAnchor from './MessageAnchor.vue';
@@ -111,7 +116,7 @@ const props = defineProps<{
   isStreaming?: boolean;
 }>();
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);
 
 // Grouping Logic
 const messageGroups = computed(() => {
@@ -198,26 +203,74 @@ const viewportHeight = ref(0);
 const isUserAtBottom = ref(true);
 const showScrollToBottomTip = ref(false);
 
+const actualScrollRange = computed(() => Math.max(1, totalHeight.value - viewportHeight.value));
+
+// Height Map Logic for Accurate Visual Scrollbar
+const itemHeights = ref<Record<number, number>>({});
+const updateItemHeight = (index: number, el: Element | null) => {
+    if (el) {
+        itemHeights.value[index] = el.clientHeight;
+    }
+};
+
+const accumulatedHeights = computed(() => {
+    const total = messageGroups.value.length;
+    const offsets: number[] = [];
+    let current = 0;
+    
+    for (let i = 0; i < total; i++) {
+        offsets.push(current);
+        // Use recorded height or estimate (100)
+        const h = itemHeights.value[i] || 100;
+        current += h;
+    }
+    
+    return { offsets, totalHeight: current };
+});
+
+const scrollRange = computed(() => Math.max(1, accumulatedHeights.value.totalHeight - viewportHeight.value));
+
 const markers = computed(() => {
     if (!messageGroups.value.length) return [];
     
-    // Filter groups to find start of turns (User messages)
-    // Map to percentage based on index
-    const total = messageGroups.value.length;
-    return messageGroups.value
+    const { offsets, totalHeight: estTotalHeight } = accumulatedHeights.value;
+    
+    const userGroups = messageGroups.value
         .map((g, i) => ({ ...g, originalIndex: i }))
-        .filter(g => g.role === 'user')
-        .map((g, i) => {
-            const topPercent = (g.originalIndex / (total - 1 || 1)) * 100;
+        .filter(g => g.role === 'user');
+
+    const lastGroupIndex = messageGroups.value.length - 1;
+    const userMarkers = userGroups.map((g, i) => {
+            // Use visual percentage based on height map
+            const offset = offsets[g.originalIndex] || 0;
+            const topPercent = Math.min(100, Math.max(0, (offset / scrollRange.value) * 100));
+            
             const firstMsg = g.messages[0];
             const contentPreview = firstMsg.content ? (firstMsg.content.slice(0, 15) + (firstMsg.content.length > 15 ? '...' : '')) : `第 ${i + 1} 轮`;
             
             return {
                 index: g.originalIndex,
                 topPercent,
-                label: contentPreview
+                label: contentPreview,
+                isEnd: false
             };
         });
+
+    return [
+        ...userMarkers,
+        {
+            index: lastGroupIndex,
+            topPercent: 100,
+            label: '最新消息',
+            isEnd: true
+        }
+    ];
+});
+
+const currentVisualProgress = computed(() => {
+    if (!messageGroups.value.length) return 0;
+    if (isUserAtBottom.value) return 1;
+    return Math.min(1, Math.max(0, scrollTop.value / actualScrollRange.value));
 });
 
 const updateScrollMetrics = () => {
@@ -227,6 +280,13 @@ const updateScrollMetrics = () => {
     scrollTop.value = st;
     totalHeight.value = scrollHeight;
     viewportHeight.value = clientHeight;
+
+    if (list.value.length > 0) {
+        for (const item of list.value) {
+            const el = containerRef.value.querySelector(`[data-virtual-index="${item.index}"]`);
+            updateItemHeight(item.index, el);
+        }
+    }
 
     // Check if user is at bottom (with 100px threshold)
     const isBottom = scrollHeight - st - clientHeight <= 100;
@@ -254,17 +314,133 @@ const onResize = useDebounceFn(() => {
 
 useResizeObserver(containerRef, onResize);
 
-const scrollToGroup = (index: number) => {
-    scrollTo(index);
-    // Force immediate update after scroll initiation to update thumb position
-    setTimeout(updateScrollMetrics, 50);
+// Watch for DOM changes in visible items to update height map
+let streamObservedIndex = -1;
+let rafMetricsId: number | null = null;
+
+const scheduleMetricsUpdate = () => {
+    if (rafMetricsId !== null) return;
+    rafMetricsId = requestAnimationFrame(() => {
+        rafMetricsId = null;
+        updateScrollMetrics();
+    });
+};
+
+const mutationObserver = new MutationObserver(() => {
+    if (!props.isStreaming) return;
+    if (!containerRef.value) return;
+    if (streamObservedIndex < 0) return;
+    const el = containerRef.value.querySelector(`[data-virtual-index="${streamObservedIndex}"]`);
+    updateItemHeight(streamObservedIndex, el);
+    scheduleMetricsUpdate();
+});
+
+const startStreamingObserver = () => {
+    if (!props.isStreaming) return;
+    if (!containerRef.value) return;
+    mutationObserver.disconnect();
+    streamObservedIndex = messageGroups.value.length - 1;
+    const target = containerRef.value.querySelector(`[data-virtual-index="${streamObservedIndex}"]`) as HTMLElement | null;
+    mutationObserver.observe(target ?? containerRef.value, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: false
+    });
+};
+
+const stopStreamingObserver = () => {
+    mutationObserver.disconnect();
+    streamObservedIndex = -1;
 };
 
 onMounted(() => {
-    // Initial check
-    nextTick(() => updateScrollMetrics());
+    nextTick(() => {
+        updateScrollMetrics();
+        startStreamingObserver();
+    });
 });
-// --- End Custom Scrollbar Logic ---
+
+watch(() => props.isStreaming, (streaming) => {
+    if (streaming) {
+        nextTick(() => startStreamingObserver());
+        return;
+    }
+    stopStreamingObserver();
+});
+
+watch(() => messageGroups.value.length, () => {
+    if (!props.isStreaming) return;
+    nextTick(() => startStreamingObserver());
+});
+
+onUnmounted(() => {
+    if (rafMetricsId !== null) {
+        cancelAnimationFrame(rafMetricsId);
+        rafMetricsId = null;
+    }
+    mutationObserver.disconnect();
+});
+
+
+const handleVisualProgressUpdate = (progress: number) => {
+    // progress is 0-1
+    if (!containerRef.value) return;
+
+    const p = Math.min(1, Math.max(0, progress));
+    containerRef.value.scrollTop = p * actualScrollRange.value;
+    updateScrollMetrics();
+};
+
+const scrollToGroup = (index: number) => {
+    
+    if (!containerRef.value) return;
+
+    if (index >= messageGroups.value.length - 1) {
+        scrollToBottom(true);
+        return;
+    }
+    
+    const el = containerRef.value.querySelector(`[data-virtual-index="${index}"]`) as HTMLElement | null;
+    
+    if (el) {
+        // 元素已经渲染在 DOM 中了，直接平滑滚动
+        const containerTop = containerRef.value.getBoundingClientRect().top;
+        const elTop = el.getBoundingClientRect().top;
+        const scrollOffset = elTop - containerTop + containerRef.value.scrollTop - 20; // 留 20px padding
+        
+        containerRef.value.scrollTo({
+            top: scrollOffset,
+            behavior: 'smooth'
+        });
+        setTimeout(updateScrollMetrics, 300);
+    } else {
+        // 元素还没渲染，需要先跳过去
+        scrollTo(index);
+        
+        // 等待 Vue 渲染完成新的 DOM
+        nextTick(() => {
+            // 使用 setTimeout 确保浏览器完成了绘制
+            setTimeout(() => {
+                if (!containerRef.value) return;
+                const targetEl = containerRef.value.querySelector(`[data-virtual-index="${index}"]`) as HTMLElement | null;
+                
+                if (targetEl) {
+                    const containerTop = containerRef.value.getBoundingClientRect().top;
+                    const elTop = targetEl.getBoundingClientRect().top;
+                    const scrollOffset = elTop - containerTop + containerRef.value.scrollTop - 20;
+                    
+                    // 这里不用 smooth，因为刚刚已经瞬间跳过来了，如果用 smooth 会有来回拉扯的感觉
+                    containerRef.value.scrollTo({
+                        top: scrollOffset,
+                        behavior: 'auto' 
+                    });
+                }
+                updateScrollMetrics();
+            }, 50);
+        });
+    }
+};
 
 const scrollToBottom = (force = false) => {
     nextTick(() => {

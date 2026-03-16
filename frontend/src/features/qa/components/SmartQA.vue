@@ -52,6 +52,7 @@
             @remove-attachment="removeAttachment"
             @add-attachment="addLocalAttachments"
             @excerpt-message="handleExcerptMessage"
+            @delete-message="handleDeleteMessage"
           />
         </div>
 
@@ -137,6 +138,7 @@
             @remove-attachment="removeAttachment"
             @add-attachment="addLocalAttachments"
             @excerpt-message="handleExcerptMessage"
+            @delete-message="handleDeleteMessage"
           />
         </div>
       </div>
@@ -194,7 +196,7 @@ import { useSmartQALayout } from '../composables/useSmartQALayout';
 import { chatService } from '../services/chatService';
 import { knowledgeService } from '../services/knowledgeService';
 import { MODES, STORAGE_KEYS } from '../constants';
-import type { ModeConfig, ModeType, Agent, Attachment } from '../types';
+import type { ModeConfig, ModeType, Agent, Attachment, Message } from '../types';
 import { getSmartQADefaults } from '../utils/smartqaDefaults';
 
 const props = defineProps<{
@@ -217,7 +219,7 @@ const input = ref('');
 const defaults = getSmartQADefaults(props.sessionId);
 const mode = ref<ModeType>(defaults.mode);
 const currentModeId = ref<string | null>(defaults.currentModeId);
-const isFileSidebarOpen = ref(true);
+const isFileSidebarOpen = ref(false);
 const isNetworkSearchEnabled = ref(true);
 const isMemoDrawerOpen = ref(false);
 const memos = ref<Memo[]>([]);
@@ -267,6 +269,13 @@ const sidebarAttachments = computed(() => {
   return out;
 });
 
+watch(() => sidebarAttachments.value.length, (len, prev) => {
+  // 仅当从无到有时展开，避免用户手动收起后被打扰
+  if ((prev === 0 || prev === undefined) && len > 0) {
+    isFileSidebarOpen.value = true;
+  }
+});
+
 const isSameAttachment = (a: Attachment, b: Attachment) => {
   if (a.type !== b.type) return false;
   if (a.type === 'knowledge') return String(a.id ?? '') === String(b.id ?? '');
@@ -287,6 +296,27 @@ const {
 
 const isTaskRunning = computed(() => isLoading.value || workflowStore.isRunning || isStreaming.value);
 const taskPanelRef = ref<any>(null);
+
+const syncSessionAgent = async () => {
+  const sid = currentSessionId.value;
+  const aid = selectedAgentId.value;
+  if (!sid || !aid) return;
+  if (isTaskRunning.value) return;
+  if (currentSession.value && (currentSession.value as any).agent_id === aid) return;
+  try {
+    await chatService.updateSession(sid, { agent_id: aid } as any);
+    if (currentSession.value) (currentSession.value as any).agent_id = aid;
+  } catch (e) {
+  }
+};
+
+watch([selectedAgentId, currentSessionId], () => {
+  syncSessionAgent();
+});
+
+watch(isTaskRunning, (running) => {
+  if (!running) syncSessionAgent();
+});
 
 // Methods
 const handleOpenSession = (sid: string) => {
@@ -421,6 +451,14 @@ const onSendMessage = async () => {
   let isNewSession = false;
   if (!currentSessionId.value) {
     try {
+      if (!selectedAgentId.value) {
+        await fetchAgents();
+        const preferred =
+          agents.value.find(a => a.name === '快问快答') ||
+          agents.value.find(a => a.name === '通用' || (a.name || '').includes('通用')) ||
+          agents.value[0];
+        if (preferred) selectedAgentId.value = preferred.id;
+      }
       const sess = await createNewSession(
         (userMsg && userMsg.slice(0, 20)) || '新对话',
         selectedAgentId.value || null,
@@ -475,13 +513,18 @@ const onSendMessage = async () => {
   if (currentSessionId.value) {
       try {
           isLoading.value = true;
+          const enableReasoning = localStorage.getItem('enable_reasoning') === '1';
           let res: Response;
           if (mediaFiles.length > 0) {
               const formData = new FormData();
               formData.append('message', userMsg);
               formData.append('stream', 'true');
               formData.append('enable_search', String(isNetworkSearchEnabled.value));
+              formData.append('enable_reasoning', String(enableReasoning));
               formData.append('mode', mode.value);
+              if (selectedAgentId.value) {
+                  formData.append('agent_id', selectedAgentId.value);
+              }
               for (const id of attachmentIds) formData.append('attachments', id);
               for (const f of mediaFiles) formData.append('files', f, f.name);
               res = await chatService.sendChatMessageMultipart(currentSessionId.value, formData);
@@ -490,7 +533,9 @@ const onSendMessage = async () => {
                   message: userMsg,
                   attachments: attachmentIds,
                   enable_search: isNetworkSearchEnabled.value,
-                  mode: mode.value
+                  enable_reasoning: enableReasoning,
+                  mode: mode.value,
+                  agent_id: selectedAgentId.value || undefined
               });
           }
           await handleStreamResponse(res, undefined, (eventType, data) => {
@@ -597,6 +642,11 @@ const handleExcerptMessage = (content: string) => {
   isMemoDrawerOpen.value = true;
 };
 
+const handleDeleteMessage = (msg: Message) => {
+  const idx = messages.value.indexOf(msg);
+  if (idx >= 0) messages.value.splice(idx, 1);
+};
+
 const removeMemo = (id: string) => {
   memos.value = memos.value.filter(m => m.id !== id);
 };
@@ -618,6 +668,8 @@ onMounted(() => {
     if (props.sessionId) {
         currentSessionId.value = props.sessionId;
         messages.value = [];
+        sessionAttachments.value = [];
+        isFileSidebarOpen.value = false;
         fetchSessionDetails(props.sessionId).then(() => {
           // fetch 完成后，根据消息内容修正模式
           // 初始化时不知道是否有消息，默认先用了 quick (通过 getSmartQADefaults 传入 undefined 得到的)
@@ -654,6 +706,8 @@ watch(() => props.sessionId, (newId, oldId) => {
     stopGeneration();
     currentSessionId.value = newId;
     messages.value = [];
+    sessionAttachments.value = [];
+    isFileSidebarOpen.value = false;
     isRightCollapsed.value = true;
     workflowStore.resetWorkflow();
     if (newId) {
@@ -675,6 +729,8 @@ watch(() => props.sessionId, (newId, oldId) => {
         currentSession.value = null;
         messages.value = [];
         selectedAttachments.value = [];
+        sessionAttachments.value = [];
+        isFileSidebarOpen.value = false;
         input.value = '';
         if (agents.value.length === 0) {
             fetchAgents();

@@ -46,6 +46,13 @@ class AgentFactory:
                     for key, value in config.model_params.items():
                         if hasattr(model, key):
                             setattr(model, key, value)
+                if config.reasoning and llm_model and (llm_model.provider or "").lower() == "deepseek":
+                    if hasattr(model, "extra_body") and getattr(model, "extra_body", None) is None:
+                        setattr(model, "extra_body", {"thinking": {"type": "enabled"}})
+                    if hasattr(model, "reasoning_effort") and getattr(model, "reasoning_effort", None) is None:
+                        setattr(model, "reasoning_effort", "high")
+                    if hasattr(model, "verbosity") and getattr(model, "verbosity", None) is None:
+                        setattr(model, "verbosity", "high")
             else:
                 # Fallback to default model if not provided
                 # We construct a default LLMModel to use ModelFactory's logic (which includes role_map)
@@ -99,6 +106,13 @@ class AgentFactory:
                      for key, value in config.model_params.items():
                         if hasattr(model, key):
                             setattr(model, key, value)
+                if config.reasoning and (default_llm.provider or "").lower() == "deepseek":
+                    if hasattr(model, "extra_body") and getattr(model, "extra_body", None) is None:
+                        setattr(model, "extra_body", {"thinking": {"type": "enabled"}})
+                    if hasattr(model, "reasoning_effort") and getattr(model, "reasoning_effort", None) is None:
+                        setattr(model, "reasoning_effort", "high")
+                    if hasattr(model, "verbosity") and getattr(model, "verbosity", None) is None:
+                        setattr(model, "verbosity", "high")
 
             # 2. Load Tools
             tools = []

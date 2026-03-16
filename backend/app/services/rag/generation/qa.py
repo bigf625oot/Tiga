@@ -199,7 +199,8 @@ class QAService:
             return []
 
     async def _content_search(self, doc: KnowledgeDocument, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        text = self._read_document_content(doc)
+        import asyncio
+        text = await asyncio.to_thread(self._read_document_content, doc)
         if not text or not (query or "").strip():
             return []
         chunks = self._chunk_text(text)
@@ -445,17 +446,30 @@ class QAService:
                 raw_chunks = await asyncio.to_thread(lightrag_engine.search_doc_chunks, doc_id, query, top_k=15)
 
                 if not raw_chunks:
-                    yield pack("process", "向量检索未命中，尝试读取文档前文...", step=7)
+                    yield pack("process", "向量检索未命中，尝试进行内容扫描检索...", step=7)
                     try:
                         doc_obj = await session.get(KnowledgeDocument, doc_id)
                         if doc_obj:
-                            content = await asyncio.to_thread(self._read_document_content, doc_obj)
-                            if content:
-                                raw_chunks.append({
-                                    "content": content[:8000],
-                                    "file_path": f"doc#{doc_id}:{doc_obj.filename or 'Document'}",
-                                    "score": 100.0,
-                                })
+                            scan_hits = await self._content_search(doc_obj, query, top_k=5)
+                            if scan_hits:
+                                for h in scan_hits:
+                                    raw_chunks.append(
+                                        {
+                                            "content": h.get("content", ""),
+                                            "file_path": f"doc#{doc_id}:{doc_obj.filename or 'Document'}",
+                                            "score": float(h.get("score", 0.0) or 0.0),
+                                        }
+                                    )
+                            if not raw_chunks:
+                                content = await asyncio.to_thread(self._read_document_content, doc_obj)
+                                if content:
+                                    raw_chunks.append(
+                                        {
+                                            "content": content[:8000],
+                                            "file_path": f"doc#{doc_id}:{doc_obj.filename or 'Document'}",
+                                            "score": 100.0,
+                                        }
+                                    )
                     except Exception as e:
                         logger.warning(f"Fallback read failed: {e}")
 
@@ -680,8 +694,12 @@ class QAService:
             tq = time.perf_counter()
             q_gen = f"{query} (请用中文回答)" if "中文" not in query else query
 
-            answer = await lightrag_engine.query_async(q_gen, mode="mix", filter_doc_id=filter_doc_id)
-            logger.info(f"[QA][RAW][{trace_id}] answer len={len(str(answer)) if answer else 0}: {str(answer)[:200]}...")
+            answer = None
+            try:
+                answer = await lightrag_engine.query_async(q_gen, mode="mix", filter_doc_id=filter_doc_id)
+                logger.info(f"[QA][RAW][{trace_id}] answer len={len(str(answer)) if answer else 0}: {str(answer)[:200]}...")
+            except Exception as e:
+                logger.warning(f"[QA][RAW][{trace_id}] mix query failed: {e}")
 
             fail_reason = None
             if not answer or not str(answer).strip() or "查询出错" in str(answer):
@@ -706,6 +724,34 @@ class QAService:
             sources = []
             if invalid:
                 logger.info(f"[QA][FALLBACK][{trace_id}] answer invalid (reason={fail_reason}), trying vector chunks")
+                if scope == "doc":
+                    try:
+                        doc_obj = await db.get(KnowledgeDocument, doc_id)
+                        if doc_obj:
+                            scan_hits = await self._content_search(doc_obj, query, top_k=5)
+                            if scan_hits:
+                                pairs = [
+                                    (str(h.get("content") or "").strip(), float(h.get("score", 0.0) or 0.0))
+                                    for h in scan_hits
+                                    if str(h.get("content") or "").strip()
+                                ]
+                                if pairs:
+                                    previews = [p for p, _ in pairs]
+                                    answer = "以下是与问题相关的文档片段整理：\n\n" + "\n\n".join(previews[:3])
+                                    sources = [
+                                        {
+                                            "source": "content_scan",
+                                            "title": doc_obj.filename or "",
+                                            "content": p,
+                                            "score": s,
+                                            "doc_id": doc_id,
+                                        }
+                                        for p, s in pairs[:3]
+                                    ]
+                                    fail_reason = "内容扫描降级"
+                                    invalid = False
+                    except Exception as e:
+                        logger.warning(f"[QA][FALLBACK][{trace_id}] content scan failed: {e}")
                 previews = []
                 import asyncio
                 vec_refs = await asyncio.to_thread(lightrag_engine.search_chunks, query, top_k=5)

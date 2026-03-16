@@ -119,7 +119,7 @@
 
     <!-- Message List State -->
     <template v-else>
-      <div class="flex-1 relative min-h-0 min-w-0 flex flex-col w-full h-full">
+      <div class="flex-1 relative min-h-0 min-w-0 flex flex-col w-full h-full overflow-hidden">
         <div class="flex-1 min-h-0 min-w-0 w-full relative">
           <MessageList
             ref="messagesContainer"
@@ -131,6 +131,7 @@
             @open-doc-space="$emit('open-doc-space', $event)"
             @quote-message="handleQuoteMessage"
             @excerpt-message="handleExcerptMessage"
+            @delete-message="$emit('delete-message', $event)"
           />
         </div>
 
@@ -257,7 +258,8 @@ const emit = defineEmits([
   'open-attachment',
   'remove-attachment',
   'add-attachment',
-  'excerpt-message'
+  'excerpt-message',
+  'delete-message'
 ]);
 
 const handleQuoteMessage = (content: string) => {

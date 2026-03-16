@@ -25,19 +25,22 @@ Chat Endpoints（/chat）
 - 会话状态更新
 - 会话删除
 """
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.crud.crud_agent import agent as crud_agent
 from app.crud.crud_chat import chat as crud_chat
 from app.db.session import get_db
 from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatSessionUpdate
 from app.core.sse import format_sse_json
 from app.services.media.chat_attachments import ingest_chat_file, normalize_doc_ids
 from app.services.eah_agent.core.title_generator import TitleGenerator
+from app.models.knowledge import KnowledgeDocument
 
 router = APIRouter()
 
@@ -82,16 +85,18 @@ async def update_session(session_id: str, session_in: ChatSessionUpdate, db: Asy
 
 
 class ChatRequest(BaseModel):
-    message: str
-    stream: bool = True
-    mode: Optional[str] = None
-    intent: Optional[str] = None
-    strict_mode: bool = False
-    threshold: float = 0.85
-    debug: bool = False
-    ab_variant: Optional[str] = None
-    attachments: Optional[List[str]] = None
-    enable_search: bool = True
+    message: str  # 聊天消息内容
+    stream: bool = True  # 是否启用流式响应
+    mode: Optional[str] = None  # 聊天模式，可选值：chat, task, team, workflow, data_query, kg_qa
+    intent: Optional[str] = None   # 意图分类，可选值：chat, task, team, workflow, data_query, kg_qa
+    strict_mode: bool = False  # 是否严格遵循意图分类
+    threshold: float = 0.85  # 意图分类阈值
+    debug: bool = False  # 是否开启调试模式
+    ab_variant: Optional[str] = None  # AB测试变体，可选值：control, variant_a, variant_b等
+    attachments: Optional[List[str]] = None  # 附件ID列表，用于引用知识库文档
+    enable_search: bool = True  # 是否启用知识库搜索
+    enable_reasoning: bool = False  # 是否启用推理
+    agent_id: Optional[str] = None  # 关联的智能体ID
 
 
 @router.post("/sessions/{session_id}/chat")
@@ -113,6 +118,38 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
     session_mode = getattr(session, "mode", None) if session else None
     effective_mode = request.mode or (session_mode if session_mode and session_mode != "chat" else None)
     doc_ids = normalize_doc_ids(request.attachments)
+    agent_doc_ids: List[int] = []
+    agent_strict_only = False
+    
+    # Priority: request.agent_id > session.agent_id
+    effective_agent_id = request.agent_id or (session.agent_id if session else None)
+    if effective_agent_id:
+        agent = await crud_agent.get(db, effective_agent_id)
+        if agent:
+            knowledge_config: Dict[str, Any] = getattr(agent, "knowledge_config", None) or {}
+            agent_doc_ids = normalize_doc_ids(knowledge_config.get("document_ids"))
+            agent_strict_only = bool(knowledge_config.get("strict_only"))
+            
+    if agent_doc_ids:
+        doc_ids = normalize_doc_ids([*doc_ids, *agent_doc_ids])
+    effective_strict_mode = bool(request.strict_mode or agent_strict_only)
+    kb_scope_context = None
+    if doc_ids:
+        try:
+            rows = await db.execute(
+                select(KnowledgeDocument).where(KnowledgeDocument.id.in_(doc_ids))
+            )
+            docs = rows.scalars().all()
+            if docs:
+                kb_scope_context = "【本会话可用的知识库文档】\n" + "\n".join(
+                    [
+                        f"- doc#{d.id}:{d.filename} ({getattr(d.status, 'value', d.status)})"
+                        for d in docs
+                        if d and getattr(d, "id", None) is not None
+                    ]
+                )
+        except Exception:
+            kb_scope_context = None
     
     # Use SSE
     async def sse_generator():
@@ -124,11 +161,13 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
             intent_override=request.intent,
             doc_ids=doc_ids,
             enable_search=request.enable_search,
-            strict_mode=request.strict_mode,
+            enable_reasoning=request.enable_reasoning,
+            strict_mode=effective_strict_mode,
             threshold=request.threshold,
             debug=request.debug,
             ab_variant=request.ab_variant,
             attachments=request.attachments,
+            attachment_context=kb_scope_context,
         ):
             # Format SSE
             event_type = chunk.get("type", "message")
@@ -178,6 +217,8 @@ async def chat_session_multipart(
     debug: bool = Form(False),
     ab_variant: Optional[str] = Form(None),
     enable_search: bool = Form(True),
+    enable_reasoning: bool = Form(False),
+    agent_id: Optional[str] = Form(None),
     attachments: Optional[List[str]] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
     db: AsyncSession = Depends(get_db),
@@ -193,6 +234,38 @@ async def chat_session_multipart(
     effective_mode = mode or (session_mode if session_mode and session_mode != "chat" else None)
 
     doc_ids = normalize_doc_ids(attachments)
+    agent_doc_ids: List[int] = []
+    agent_strict_only = False
+    
+    # Priority: request.agent_id > session.agent_id
+    effective_agent_id = agent_id or (session.agent_id if session else None)
+    if effective_agent_id:
+        agent = await crud_agent.get(db, effective_agent_id)
+        if agent:
+            knowledge_config: Dict[str, Any] = getattr(agent, "knowledge_config", None) or {}
+            agent_doc_ids = normalize_doc_ids(knowledge_config.get("document_ids"))
+            agent_strict_only = bool(knowledge_config.get("strict_only"))
+            
+    if agent_doc_ids:
+        doc_ids = normalize_doc_ids([*doc_ids, *agent_doc_ids])
+    effective_strict_mode = bool(strict_mode or agent_strict_only)
+    kb_scope_context = None
+    if doc_ids:
+        try:
+            rows = await db.execute(
+                select(KnowledgeDocument).where(KnowledgeDocument.id.in_(doc_ids))
+            )
+            docs = rows.scalars().all()
+            if docs:
+                kb_scope_context = "【本会话可用的知识库文档】\n" + "\n".join(
+                    [
+                        f"- doc#{d.id}:{d.filename} ({getattr(d.status, 'value', d.status)})"
+                        for d in docs
+                        if d and getattr(d, "id", None) is not None
+                    ]
+                )
+        except Exception:
+            kb_scope_context = None
     attachment_context_parts: List[str] = []
     uploaded_files: List[dict] = []
     if files:
@@ -210,7 +283,12 @@ async def chat_session_multipart(
                     snippet = snippet[:2000]
                 attachment_context_parts.append(f"[{media_kind}] doc#{doc_id}:{f.filename}\n{snippet}")
 
-    attachment_context = "\n\n".join(attachment_context_parts) if attachment_context_parts else None
+    attachment_context_parts_all = []
+    if kb_scope_context:
+        attachment_context_parts_all.append(kb_scope_context)
+    if attachment_context_parts:
+        attachment_context_parts_all.append("\n\n".join(attachment_context_parts))
+    attachment_context = "\n\n".join(attachment_context_parts_all) if attachment_context_parts_all else None
 
     async def sse_generator():
         for meta in uploaded_files:
@@ -241,7 +319,8 @@ async def chat_session_multipart(
             doc_ids=doc_ids,
             attachment_context=attachment_context,
             enable_search=enable_search,
-            strict_mode=strict_mode,
+            strict_mode=effective_strict_mode,
+            enable_reasoning=enable_reasoning,
             threshold=threshold,
             debug=debug,
             ab_variant=ab_variant,

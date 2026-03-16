@@ -1,7 +1,7 @@
 <template>
   <div 
     ref="anchorRef"
-    class="absolute right-4 top-4 bottom-4 w-4 z-50 flex flex-col justify-center select-none group/scrollbar"
+    class="absolute right-4 top-4 bottom-4 w-4 z-50 flex flex-col justify-center select-none group/scrollbar pointer-events-none"
     @mousedown="onTrackMouseDown"
   >
     <!-- Track -->
@@ -13,11 +13,18 @@
         v-for="(marker, idx) in markers"
         :key="idx"
         class="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--scrollbar-marker)] shadow-sm cursor-pointer pointer-events-auto transition-all duration-200 hover:scale-125 hover:bg-primary z-30 group/marker opacity-80 hover:opacity-100 border border-background"
+        :class="{
+          'bg-primary opacity-100 animate-pulse': marker.isEnd === true,
+          'scale-150 bg-primary opacity-100': snappedMarkerIndex === marker.index
+        }"
         :style="{ top: marker.topPercent + '%' }"
         @mousedown.stop="onMarkerMouseDown($event, marker.index)"
       >
         <!-- Tooltip -->
-        <div class="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-md shadow-md border border-border opacity-0 group-hover/marker:opacity-100 whitespace-nowrap pointer-events-none transition-all duration-200 translate-x-2 group-hover/marker:translate-x-0 z-40 max-w-[200px] truncate">
+        <div
+          class="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-md shadow-md border border-border opacity-0 group-hover/marker:opacity-100 whitespace-nowrap pointer-events-none transition-all duration-200 translate-x-2 group-hover/marker:translate-x-0 z-40 max-w-[200px] truncate"
+          :class="{ 'opacity-100 translate-x-0': snappedMarkerIndex === marker.index }"
+        >
           {{ marker.label }}
         </div>
       </div>
@@ -26,9 +33,9 @@
     <!-- Thumb -->
     <div
       v-if="canScroll"
-      class="absolute left-1/2 -translate-x-1/2 w-1 bg-[var(--scrollbar-thumb)] opacity-80 rounded-[2px] cursor-pointer touch-none pointer-events-auto transition-all duration-200 hover:w-2 hover:opacity-100 z-20"
+      class="absolute left-1/2 -translate-x-1/2 w-1 bg-[var(--scrollbar-thumb)] opacity-80 rounded-[2px] cursor-pointer touch-none pointer-events-auto transition-[width,opacity] duration-200 hover:w-2 hover:opacity-100 z-20"
       :class="{ 'w-2 opacity-100': isDragging || isHovering }"
-      :style="{ height: thumbHeight + 'px', top: thumbTop + 'px' }"
+      :style="{ height: thumbHeight + 'px', top: animatedThumbTop + 'px' }"
       @mousedown.stop="onThumbMouseDown"
       @mouseenter="isHovering = true"
       @mouseleave="isHovering = false"
@@ -37,46 +44,117 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, toRef } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps<{
-  totalHeight: number;
+  currentVisualProgress: number;
+  accumulatedOffsets: number[];
+  estimatedTotalHeight: number;
   viewportHeight: number;
-  scrollTop: number;
-  markers: Array<{ topPercent: number; label: string; index: number }>;
+  markers: Array<{ topPercent: number; label: string; index: number; isEnd?: boolean }>;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:scrollTop', value: number): void;
   (e: 'scroll-to-index', index: number): void;
+  (e: 'update:currentVisualProgress', value: number): void;
 }>();
 
 const isDragging = ref(false);
 const isHovering = ref(false);
 const anchorRef = ref<HTMLElement | null>(null);
 
-// Thumb Logic
-const canScroll = computed(() => props.totalHeight > props.viewportHeight);
+const canScroll = computed(() => props.estimatedTotalHeight > props.viewportHeight + 1);
 
 const thumbHeight = computed(() => {
-  if (!canScroll.value) return 0;
-  // Proportion: thumbHeight / viewportHeight = viewportHeight / totalHeight
-  const height = (props.viewportHeight / props.totalHeight) * props.viewportHeight;
-  return Math.max(20, height);
+  if (!canScroll.value) return 40;
+  return 40;
 });
+
+const trackRange = computed(() => Math.max(0, props.viewportHeight - thumbHeight.value));
 
 const thumbTop = computed(() => {
   if (!canScroll.value) return 0;
-  const maxScrollTop = props.totalHeight - props.viewportHeight;
-  const maxThumbTop = props.viewportHeight - thumbHeight.value;
-  if (maxScrollTop <= 0) return 0;
-  // Map scrollTop to thumbTop
-  return (props.scrollTop / maxScrollTop) * maxThumbTop;
+  if (trackRange.value <= 0) return 0;
+  const p = Math.max(0, Math.min(1, props.currentVisualProgress));
+  return p * trackRange.value;
 });
+
+const animatedThumbTop = ref(0);
+const targetThumbTop = ref(0);
+let rafId: number | null = null;
+
+const startTopAnimation = () => {
+  if (rafId !== null) return;
+  const step = () => {
+    rafId = null;
+    if (isDragging.value) return;
+    const target = targetThumbTop.value;
+    const current = animatedThumbTop.value;
+    const next = current + (target - current) * 0.22;
+    if (Math.abs(target - next) < 0.5) {
+      animatedThumbTop.value = target;
+      return;
+    }
+    animatedThumbTop.value = next;
+    rafId = requestAnimationFrame(step);
+  };
+  rafId = requestAnimationFrame(step);
+};
+
+watch(thumbTop, (val) => {
+  targetThumbTop.value = val;
+  if (isDragging.value) {
+    animatedThumbTop.value = val;
+    return;
+  }
+  startTopAnimation();
+}, { immediate: true });
+
+watch(isDragging, (dragging) => {
+  if (dragging) {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    const v = thumbTop.value;
+    targetThumbTop.value = v;
+    animatedThumbTop.value = v;
+    return;
+  }
+  targetThumbTop.value = thumbTop.value;
+  startTopAnimation();
+});
+
+const snappedMarkerIndex = ref<number | null>(null);
+
+const updateSnappedMarker = () => {
+  if (!isDragging.value || !canScroll.value) {
+    snappedMarkerIndex.value = null;
+    return;
+  }
+
+  const thumbCenterY = thumbTop.value + thumbHeight.value / 2;
+  let bestIndex: number | null = null;
+  let bestDist = Number.POSITIVE_INFINITY;
+
+  for (const marker of props.markers) {
+    const markerY = (marker.topPercent / 100) * props.viewportHeight;
+    const d = Math.abs(markerY - thumbCenterY);
+    if (d < bestDist) {
+      bestDist = d;
+      bestIndex = marker.index;
+    }
+  }
+
+  snappedMarkerIndex.value = bestDist <= 12 ? bestIndex : null;
+};
+
+watch([thumbTop, isDragging], updateSnappedMarker, { immediate: true });
+watch(() => props.markers, updateSnappedMarker, { deep: true });
 
 // Interaction Logic
 let startY = 0;
-let startScrollTop = 0;
+let startVisualProgress = 0; // 0-1
 let pendingMarkerIndex: number | null = null;
 let interactionType: 'none' | 'thumb-drag' | 'marker-check' | 'track-drag' = 'none';
 
@@ -86,28 +164,23 @@ const onTrackMouseDown = (e: MouseEvent) => {
   e.preventDefault();
   
   if (!anchorRef.value) return;
+  if (!canScroll.value) return;
   const rect = anchorRef.value.getBoundingClientRect();
   const clickY = e.clientY - rect.top;
+
+  const range = trackRange.value;
+  const targetTop = Math.max(0, Math.min(range, clickY - thumbHeight.value / 2));
+  const targetProgress = range > 0 ? targetTop / range : 0;
+
+  emit('update:currentVisualProgress', targetProgress);
   
-  // Calculate expected scroll position from click percentage
-  // clickY / viewportHeight = scrollTop / totalHeight ? No.
-  // Scrollbar logic: clickY / viewportHeight = scrollTop / (totalHeight - viewportHeight) ?
-  // Usually track click centers the thumb at click location.
-  // thumbTop = clickY - thumbHeight/2
-  let targetThumbTop = clickY - thumbHeight.value / 2;
-  const maxThumbTop = props.viewportHeight - thumbHeight.value;
-  targetThumbTop = Math.max(0, Math.min(targetThumbTop, maxThumbTop));
-  
-  const maxScrollTop = props.totalHeight - props.viewportHeight;
-  const newScrollTop = (targetThumbTop / maxThumbTop) * maxScrollTop;
-  
-  emit('update:scrollTop', newScrollTop);
-  
-  // Start dragging from here
+  // Start dragging
   interactionType = 'track-drag';
   isDragging.value = true;
   startY = e.clientY;
-  startScrollTop = newScrollTop;
+  
+  // For dragging, we track visual progress
+  startVisualProgress = targetProgress;
   
   addGlobalListeners();
 };
@@ -116,11 +189,12 @@ const onTrackMouseDown = (e: MouseEvent) => {
 const onThumbMouseDown = (e: MouseEvent) => {
   e.preventDefault();
   e.stopPropagation();
+  if (!canScroll.value) return;
   
   interactionType = 'thumb-drag';
   isDragging.value = true;
   startY = e.clientY;
-  startScrollTop = props.scrollTop;
+  startVisualProgress = props.currentVisualProgress;
   
   addGlobalListeners();
 };
@@ -133,7 +207,7 @@ const onMarkerMouseDown = (e: MouseEvent, index: number) => {
   interactionType = 'marker-check';
   pendingMarkerIndex = index;
   startY = e.clientY;
-  startScrollTop = props.scrollTop; // If we start dragging, we start from current pos
+  startVisualProgress = props.currentVisualProgress;
   
   addGlobalListeners();
 };
@@ -142,35 +216,28 @@ const onGlobalMouseMove = (e: MouseEvent) => {
   const deltaY = e.clientY - startY;
   
   if (interactionType === 'marker-check') {
-    // Threshold check
     if (Math.abs(deltaY) > 3) {
-      interactionType = 'thumb-drag'; // Switch to drag mode
+      interactionType = 'thumb-drag'; 
       isDragging.value = true;
-      pendingMarkerIndex = null; // Cancel click
+      pendingMarkerIndex = null; 
     }
   }
   
   if (interactionType === 'thumb-drag' || interactionType === 'track-drag') {
     e.preventDefault();
     
-    // Calculate scroll delta
-    const maxThumbTop = props.viewportHeight - thumbHeight.value;
-    const maxScrollTop = props.totalHeight - props.viewportHeight;
+    // Calculate new visual progress
+    const range = Math.max(1, trackRange.value);
+    const deltaRatio = deltaY / range;
+    const newProgress = Math.max(0, Math.min(1, startVisualProgress + deltaRatio));
     
-    // Ratio: 1px of thumb movement = X px of scroll
-    const scrollRatio = maxScrollTop / (maxThumbTop || 1);
-    
-    const newScrollTop = startScrollTop + deltaY * scrollRatio;
-    // Clamp
-    const clampedScrollTop = Math.max(0, Math.min(newScrollTop, maxScrollTop));
-    
-    emit('update:scrollTop', clampedScrollTop);
+    // Emit progress update directly
+    emit('update:currentVisualProgress', newProgress);
   }
 };
 
 const onGlobalMouseUp = (e: MouseEvent) => {
   if (interactionType === 'marker-check' && pendingMarkerIndex !== null) {
-    // It was a click
     emit('scroll-to-index', pendingMarkerIndex);
   }
   
@@ -191,6 +258,10 @@ const removeGlobalListeners = () => {
 };
 
 onUnmounted(() => {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
   removeGlobalListeners();
 });
 </script>

@@ -1,4 +1,5 @@
-import { marked } from 'marked';
+import { marked, Renderer } from 'marked';
+import type { Tokens } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -6,19 +7,64 @@ import 'katex/dist/katex.min.css';
  * Hook for markdown rendering with Katex and custom extensions
  */
 export function useMarkdown() {
-    // Configure marked options once
-    marked.setOptions({
+    const baseMarkedOptions = {
         breaks: true,
         gfm: true
-    });
+    } as const;
+
+    const escapeHtml = (value: string) =>
+        value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+    const sanitizeHref = (href: string): string => {
+        const original = (href || '').trim();
+        if (!original) return '';
+        if (original.startsWith('#') || original.startsWith('/') || original.startsWith('./') || original.startsWith('../')) {
+            return original;
+        }
+
+        const compact = original.replace(/[\u0000-\u001F\u007F\s]+/g, '');
+        const lower = compact.toLowerCase();
+        if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) {
+            return '';
+        }
+
+        try {
+            const url = new URL(original);
+            const protocol = url.protocol.toLowerCase();
+            if (protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:' || protocol === 'tel:') {
+                return original;
+            }
+            return '';
+        } catch {
+            return original;
+        }
+    };
+
+    const safeRenderer = new Renderer();
+    const defaultLink = safeRenderer.link;
+    safeRenderer.html = ({ text }: Tokens.HTML | Tokens.Tag) => escapeHtml(text || '');
+    safeRenderer.image = ({ text }: Tokens.Image) => escapeHtml(text || '');
+    safeRenderer.link = function (token: Tokens.Link) {
+        const safeHref = sanitizeHref(token.href);
+        if (!safeHref) {
+            return this.parser.parseInline(token.tokens, this);
+        }
+        return defaultLink.call(this, { ...token, href: safeHref });
+    };
 
     /**
      * Render markdown string to HTML
      * @param {string} text Raw markdown text
      * @returns {string} Rendered HTML
      */
-    const render = (text: string): string => {
+    const render = (text: string, options?: { allowHtml?: boolean }): string => {
         if (!text) return '';
+        const allowHtml = options?.allowHtml ?? true;
         let inputText = text.trim();
 
         // Katex Pre-processing
@@ -41,7 +87,10 @@ export function useMarkdown() {
         });
 
         // Parse markdown
-        let html = marked.parse(inputText) as string;
+        const markedOptions = allowHtml
+            ? baseMarkedOptions
+            : { ...baseMarkedOptions, renderer: safeRenderer };
+        let html = marked.parse(inputText, markedOptions) as string;
 
         // Post-processing
         // 1. Remove empty paragraphs

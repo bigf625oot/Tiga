@@ -49,7 +49,16 @@ async def search_knowledge_base(query: str, num_documents: int = 5, doc_ids: Opt
         results = lightrag_engine.search_chunks(query, top_k=num_documents, doc_ids=doc_ids)
         
         if not results:
-            return "No relevant documents found."
+            if doc_ids:
+                return (
+                    "未在指定文档范围内检索到与问题直接相关的片段（这不代表知识库为空）。\n"
+                    f"已限定 DocID 范围: {doc_ids}\n"
+                    "建议：把问题问得更具体，或使用 'query_knowledge_graph'（例如 mode='global'）做全局概览。"
+                )
+            return (
+                "未检索到与问题直接相关的片段。\n"
+                "这可能是因为：知识库尚未完成索引、当前问题过于宽泛、或需要换一种问法。"
+            )
             
         # Format output as a readable string for the LLM
         response = []

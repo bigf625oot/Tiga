@@ -5,8 +5,10 @@ export interface SendChatMessagePayload {
   message: string;
   attachments?: string[];
   enable_search?: boolean;
+  enable_reasoning?: boolean;
   mode?: ModeType;
   intent?: string;
+  agent_id?: string;
 }
 
 const getHeaders = (contentType: string | null = 'application/json') => {

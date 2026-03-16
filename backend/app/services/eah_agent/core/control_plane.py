@@ -146,6 +146,7 @@ class AgnoControlPlane:
                 logger.error(f"Failed to save user message: {e}")
 
         enable_search = bool(kwargs.get("enable_search", True))
+        enable_knowledge = bool(kwargs.get("enable_knowledge", True))
         raw_doc_ids = kwargs.get("doc_ids") or []
         doc_ids = []
         if isinstance(raw_doc_ids, (list, tuple)):
@@ -163,11 +164,11 @@ class AgnoControlPlane:
                     continue
         attachment_context = kwargs.get("attachment_context")
         augmented_input = user_input
-        if attachment_context or (enable_search and doc_ids):
+        if attachment_context or (enable_knowledge and doc_ids):
             parts = []
             if attachment_context:
                 parts.append("【用户上传/选择的附件内容（提取结果）】\n" + str(attachment_context))
-            if enable_search and doc_ids:
+            if enable_knowledge and doc_ids:
                 try:
                     results = await asyncio.to_thread(lightrag_engine.search_chunks, query=user_input, top_k=6, doc_ids=doc_ids)
                 except Exception:

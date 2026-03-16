@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="resource-card cursor-pointer bg-white border border-slate-200 rounded-lg p-4 my-2 flex items-center gap-4 hover:shadow-md transition-all group select-none relative overflow-hidden"
+    class="resource-card cursor-pointer bg-card border border-border rounded-lg p-4 my-2 flex items-center gap-4 hover:shadow-md transition-all group select-none relative overflow-hidden"
     @click="$emit('click', id)"
   >
     <!-- Icon Container -->
@@ -20,7 +20,7 @@
 
     <!-- Content -->
     <div class="flex-1 min-w-0 text-left">
-      <h4 class="text-sm font-semibold text-slate-800 truncate mb-0.5 leading-tight">{{ title }}</h4>
+      <h4 class="text-sm font-semibold text-foreground truncate mb-0.5 leading-tight">{{ title }}</h4>
       <p class="text-xs text-muted-foreground m-0">{{ subtitle }}</p>
     </div>
 
@@ -55,9 +55,9 @@ defineEmits<{
 
 const iconClasses = computed(() => {
     if (props.type === 'doc') {
-        return 'bg-primary/10 text-primary group-hover:bg-blue-100';
+        return 'bg-primary/10 text-primary group-hover:bg-primary/20';
     }
-    return 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100';
+    return 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40';
 });
 
 const subtitle = computed(() => {
