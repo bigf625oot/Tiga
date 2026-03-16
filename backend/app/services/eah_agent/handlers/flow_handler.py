@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.eah_agent.core.base_handler import BaseHandler
 from app.services.eah_agent.core.nlu import IntentResult
-from app.services.eah_agent.core.workflow import AgentWorkflowEngine
+from app.services.eah_agent.workflows.unified_workflow import UnifiedAgentWorkflow
 from app.core.i18n import _
 from app.models.llm_model import LLMModel
 
@@ -31,20 +31,25 @@ class FlowHandler(BaseHandler):
     async def process(self, input_text: str, intent: IntentResult, **kwargs) -> AsyncGenerator[Dict[str, Any], None]:
         db: Optional[AsyncSession] = kwargs.get("db")
         session_id = kwargs.get("session_id") or str(uuid.uuid4())
+        images = kwargs.get("images", [])
         
         if not db:
              yield {"type": "error", "content": _("Database session not provided for workflow execution.")}
              return
 
         try:
-            yield {"type": "status", "content": _("Initializing Workflow Engine...")}
+            yield {"type": "status", "content": _("Initializing Unified Workflow...")}
             
-            # Initialize Workflow Engine
-            engine = AgentWorkflowEngine(db)
+            # Initialize Unified Workflow
+            workflow = UnifiedAgentWorkflow(
+                session_id=session_id,
+                db=db,
+                user_goal=input_text,
+                images=images
+            )
             
             # Start workflow and stream events
-            # We treat input_text as the user_goal for now
-            async for event in engine.start_workflow(session_id, input_text):
+            async for event in workflow.run_stream():
                 yield event
             
         except Exception as e:

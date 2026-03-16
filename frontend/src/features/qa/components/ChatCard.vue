@@ -10,11 +10,9 @@
     <div 
       v-if="showAvatar" 
       class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden mt-0 transition-all duration-300 hover:scale-105"
-      :class="[isUser ? 'ml-4' : 'mr-4']"
+      :class="isUser ? 'ml-4' : 'mr-4'"
     >
-      <img v-if="isUser" src="/user/hair.svg" alt="user" class="w-full h-full object-cover" />
-      <img v-else-if="agent?.icon || agent?.icon_url" :src="agent?.icon || agent?.icon_url" alt="agent" class="w-full h-full object-cover" />
-      <img v-else src="/tiga.svg" alt="agent" class="w-full h-full object-cover" />
+      <img :src="avatarSrc" :alt="avatarAlt" class="w-full h-full object-cover" />
     </div>
 
     <!-- Message Content Wrapper -->
@@ -26,6 +24,7 @@
       <div v-if="!isUser" class="flex items-center gap-2 mb-2 px-1">
         <span class="text-xs font-medium text-muted-foreground/70">{{ agent?.name || 'Tiga' }}</span>
         <span class="text-[10px] text-muted-foreground/50">{{ formatTime(message.timestamp) }}</span>
+        <span v-if="message.meta_data?.duration" class="text-[10px] text-muted-foreground/40">耗时 {{ formatDuration(message.meta_data.duration) }}</span>
       </div>
 
       <!-- Sender Name & Time (User - Optional, usually hidden or on right) -->
@@ -38,11 +37,20 @@
         class="relative px-5 py-4 text-sm leading-relaxed transition-all duration-200 shadow-sm"
         :class="bubbleClasses"
       >
-        <div v-if="isUser" class="user-markdown whitespace-pre-wrap" v-html="userHtml"></div>
+        <div v-if="isUser" class="user-markdown" v-html="userHtml"></div>
 
         <!-- Agent Mode: Rich Content -->
         <div v-else class="agent-content flex flex-col gap-4">
             
+            <!-- 0. Empty State / Initial Loading -->
+            <div v-if="!parsed.text && !parsed.html && !parsed.sql && !thinkingContent && !chartOption && !message.steps?.length && isStreaming && isLast" class="flex items-center gap-2 py-1">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
+                </span>
+                <span class="text-xs text-muted-foreground/60 font-medium animate-pulse">正在生成回复...</span>
+            </div>
+
             <!-- 0. Process Steps (New) -->
             <div v-if="message.steps && message.steps.length > 0" class="border border-amber-200/40 dark:border-amber-900/40 rounded-xl overflow-hidden mb-2 bg-amber-50/40 dark:bg-amber-950/20 w-full shadow-sm">
                 <button 
@@ -184,6 +192,11 @@
                 </div>
             </div>
 
+            <!-- 5. Streaming Cursor -->
+            <div v-if="isStreaming && isLast && (parsed.text || parsed.html || thinkingContent)" class="h-4 mt-1">
+                 <span class="inline-block w-2 h-4 bg-indigo-500/80 animate-pulse rounded-sm"></span>
+            </div>
+
         </div>
       </div>
 
@@ -240,7 +253,9 @@ const props = defineProps({
   isUser: { type: Boolean, default: false },
   showAvatar: { type: Boolean, default: true },
   showMeta: { type: Boolean, default: false },
-  agent: { type: Object, default: null }
+  agent: { type: Object, default: null },
+  isLast: { type: Boolean, default: false },
+  isStreaming: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);
@@ -314,9 +329,19 @@ const chartOption = computed(() => {
 
 const hasReferences = computed(() => props.message.sources && props.message.sources.length > 0);
 const combinedSources = computed(() => props.message.sources || []);
+const avatarSrc = computed(() => {
+  if (props.isUser) return '/user/hair.svg';
+  return props.agent?.icon || props.agent?.icon_url || '/tiga.svg';
+});
+const avatarAlt = computed(() => (props.isUser ? 'user' : 'agent'));
 
 // Methods
 const formatTime = (ts: any) => dayjs(ts).format('YYYY-MM-DD HH:mm');
+const formatDuration = (ms?: number) => {
+    if (!ms) return '';
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+};
 const copyText = (text: string) => navigator.clipboard.writeText(text || '');
 
 const handleResourceClick = (id: string) => {
@@ -337,6 +362,45 @@ const handleResourceClick = (id: string) => {
 .user-markdown :deep(strong) { font-weight: 600; }
 .user-markdown :deep(a) { color: inherit; text-decoration: underline; }
 .user-markdown :deep(blockquote) { margin: 0; padding-left: 0.75rem; border-left: 2px solid hsl(var(--primary-foreground) / 0.35); }
+.user-markdown :deep(ul) { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.user-markdown :deep(ol) { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.user-markdown :deep(li) { margin-bottom: 0.25rem; }
+.user-markdown :deep(pre) { 
+    background-color: hsl(var(--primary-foreground) / 0.1); 
+    padding: 0.75rem; 
+    border-radius: 0.5rem; 
+    overflow-x: auto; 
+    margin: 0.5rem 0;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+.user-markdown :deep(code) { 
+    background-color: hsl(var(--primary-foreground) / 0.15); 
+    padding: 0.125rem 0.25rem; 
+    border-radius: 0.25rem; 
+    font-family: monospace;
+    font-size: 0.9em;
+}
+.user-markdown :deep(pre code) {
+    background-color: transparent;
+    padding: 0;
+    font-size: 1em;
+    color: inherit;
+}
+.user-markdown :deep(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+    font-size: 0.9em;
+}
+.user-markdown :deep(th), .user-markdown :deep(td) {
+    border: 1px solid hsl(var(--primary-foreground) / 0.2);
+    padding: 0.25rem 0.5rem;
+}
+.user-markdown :deep(th) {
+    background-color: hsl(var(--primary-foreground) / 0.1);
+    font-weight: 600;
+}
 
 /* Table Styles */
 .table-wrapper :deep(table) {

@@ -191,15 +191,8 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
                 # Default fallback
                 yield format_sse_json(event_type, data)
         
-        yield "event: done\ndata: [DONE]\n\n"
+        yield format_sse_json("done", "[DONE]")
         
-        # Trigger title generation after response
-        # Note: Since we are in a generator, adding to background_tasks here won't work for the route response
-        # But we can run it asynchronously here if we don't await it? 
-        # No, better to add it to the request state or just fire and forget if possible.
-        # Actually, since we have the `background_tasks` object from the route handler, 
-        # we can add the task to it. FastAPI executes background tasks after the response is sent.
-        # For StreamingResponse, it executes after the generator finishes.
         background_tasks.add_task(TitleGenerator.generate_title, session_id, db)
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")

@@ -33,6 +33,17 @@ from app.core.i18n import _
 # Setup logging
 setup_logging()
 
+# Initialize Telemetry (Langtrace)
+try:
+    from langtrace_python_sdk import langtrace
+    # Initialize with optional API key from environment
+    langtrace.init(api_key=os.getenv("LANGTRACE_API_KEY"))
+    logger.info("Langtrace SDK initialized.")
+except ImportError:
+    pass
+except Exception as e:
+    logger.warning(f"Failed to initialize Langtrace: {e}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

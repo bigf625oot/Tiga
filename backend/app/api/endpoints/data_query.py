@@ -54,20 +54,24 @@ def update_job_status(job_id, status, progress, message):
     }
 
 @router.post("/connect")
-async def connect_database(config: DbConnectionConfig, request: Request):
+async def connect_database(request: Request, config: DbConnectionConfig = None, source_id: int = None):
     """
-    Connect to a database using the provided configuration.
+    Connect to a database using the provided configuration OR source_id.
     Executes the blocking connection logic in a separate thread to avoid blocking the event loop.
     """
     start_time = time.time()
     client_host = request.client.host
-    logger.info(f"[{client_host}] Received connect request for DB type: {config.type}")
+    
+    if not config and not source_id:
+        raise HTTPException(status_code=400, detail="Either config or source_id must be provided")
 
     try:
-        # Use run_in_threadpool to execute blocking IO operations
-        logger.info(f"Initiating connection to {config.host}:{config.port}...")
-        # connect_db is now async and handles threadpool internally for heavy lifting
-        await data_query_service.connect_db(config)
+        if source_id:
+             logger.info(f"[{client_host}] Received connect request for Source ID: {source_id}")
+             await data_query_service.connect_db(source_id=source_id)
+        else:
+             logger.info(f"[{client_host}] Received connect request for DB type: {config.type}")
+             await data_query_service.connect_db(config=config)
 
         duration = (time.time() - start_time) * 1000
         logger.info(f"Connection established successfully in {duration:.2f}ms")
@@ -207,47 +211,19 @@ async def query_data(request: VannaRequest):
 @router.post("/config/save")
 async def save_config(config: DbConnectionConfig):
     """
-    Save the database configuration to a file.
+    [Deprecated] Save the database configuration to a file.
     """
-    try:
-        async with aiofiles.open(CONFIG_FILE, mode="w") as f:
-            await f.write(config.model_dump_json(indent=2))
-        return {"message": "Configuration saved successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save config: {str(e)}")
+    logger.warning("Attempted to use deprecated /config/save endpoint")
+    return {"message": "Deprecated. Please use DataSource management."}
 
 
 @router.get("/config")
 async def get_config():
     """
-    Load the database configuration from a file.
-    If a config exists but no connection is active, try to auto-connect.
+    [Deprecated] Load the database configuration from a file.
     """
-    if not os.path.exists(CONFIG_FILE):
-        return {}
-
-    try:
-        async with aiofiles.open(CONFIG_FILE, mode="r") as f:
-            content = await f.read()
-            config_dict = json.loads(content)
-
-            # Check if we need to auto-connect
-            if config_dict and not data_query_service.current_db_config:
-                try:
-                    # Parse config dict to model
-                    config_model = DbConnectionConfig(**config_dict)
-                    logger.info("Auto-connecting to database using saved config...")
-                    
-                    # Await connection to ensure ready state when UI loads
-                    await data_query_service.connect_db(config_model)
-                    logger.info("Auto-connection successful.")
-                except Exception as e:
-                    logger.error(f"Auto-connection failed: {e}")
-                    # We don't raise here, just return the config so the user can see it and try manually.
-
-            return config_dict
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load config: {str(e)}")
+    logger.warning("Attempted to use deprecated /config endpoint")
+    return {}
 
 
 # ----- Session Endpoints -----

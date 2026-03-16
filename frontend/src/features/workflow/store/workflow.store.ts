@@ -88,6 +88,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
             }
         }
 
+        graph.value = { nodes: [], edges: [] };
+        selectedTaskId.value = null;
+
         if (data) {
             tasks.value = data.tasks || [];
             logs.value = data.logs || [];
@@ -98,6 +101,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
             logs.value = [];
             documents.value = [];
         }
+        tasks.value.forEach(t => updateGraph(t));
         isRunning.value = false;
         executeBuffer.value = '';
     };
@@ -146,6 +150,23 @@ export const useWorkflowStore = defineStore('workflow', () => {
             message,
             step
         });
+    };
+
+    const appendOutput = (output: string, step?: string) => {
+        if (!output) return;
+        const runningTask = tasks.value.find(t => t.status === 'running');
+        if (runningTask) {
+            runningTask.logs.push(output);
+            updateGraph(runningTask);
+            return;
+        }
+        const lastTask = tasks.value[tasks.value.length - 1];
+        if (lastTask) {
+            lastTask.logs.push(output);
+            updateGraph(lastTask);
+            return;
+        }
+        addLog(output, 'info', step);
     };
 
     const clearLogs = () => {
@@ -448,6 +469,23 @@ export const useWorkflowStore = defineStore('workflow', () => {
         }
     };
 
+    const handleWorkflowEvent = (data: any) => {
+        if (data == null) return;
+        if (typeof data === 'string') {
+            addLog(data, 'info', 'status');
+            return;
+        }
+        if (typeof data === 'object' && (data.step || data.system || data.status || data.output || data.plan)) {
+            handleEvent(data);
+            return;
+        }
+        try {
+            addLog(JSON.stringify(data, null, 2), 'info', 'status');
+        } catch {
+            addLog(String(data), 'info', 'status');
+        }
+    };
+
     const deriveDocumentTitle = (content: string) => {
         const m = content.match(/^\s{0,3}#{1,6}\s+(.+?)\s*$/m);
         if (m && m[1]) return m[1].trim().slice(0, 40);
@@ -463,6 +501,113 @@ export const useWorkflowStore = defineStore('workflow', () => {
         addLog('Workflow stopped by user', 'warning');
     };
 
+    const updatePlanFromBackend = (steps: Array<{ title: string, description?: string, status: string }>) => {
+        // Sync tasks with backend plan
+        // Strategy: 
+        // 1. Identify existing tasks by title/name to preserve logs/progress/history
+        // 2. Add new tasks
+        // 3. Update status of existing tasks
+        // 4. Remove tasks not in the plan (careful with completed history?)
+        //    Actually, if the agent re-plans, it might remove steps. So we should reflect that.
+        
+        const newTasks: WorkflowTask[] = [];
+        
+        steps.forEach((step, index) => {
+            // Try to find existing task
+            const existingTask = tasks.value.find(t => t.name === step.title);
+            
+            if (existingTask) {
+                // Update existing
+                // Map backend status string to frontend status
+                let newStatus: WorkflowTask['status'] = 'pending';
+                const s = step.status.toLowerCase();
+                if (s === 'running') newStatus = 'running';
+                else if (s === 'completed') newStatus = 'completed';
+                else if (s === 'failed') newStatus = 'failed';
+                
+                // If status changed to running, set start time
+                if (newStatus === 'running' && existingTask.status !== 'running') {
+                    existingTask.startTime = Date.now();
+                }
+                // If completed/failed, set end time
+                if ((newStatus === 'completed' || newStatus === 'failed') && existingTask.status !== 'completed' && existingTask.status !== 'failed') {
+                    existingTask.endTime = Date.now();
+                    existingTask.progress = 100;
+                }
+                
+                existingTask.status = newStatus;
+                existingTask.description = step.description || existingTask.description;
+                
+                newTasks.push(existingTask);
+            } else {
+                // Create new
+                let newStatus: WorkflowTask['status'] = 'pending';
+                const s = step.status.toLowerCase();
+                if (s === 'running') newStatus = 'running';
+                else if (s === 'completed') newStatus = 'completed';
+                else if (s === 'failed') newStatus = 'failed';
+
+                newTasks.push({
+                    id: `step-${index}-${Date.now()}`, // Unique ID
+                    name: step.title,
+                    description: step.description,
+                    status: newStatus,
+                    progress: newStatus === 'completed' ? 100 : 0,
+                    logs: [],
+                    startTime: newStatus === 'running' ? Date.now() : undefined,
+                    endTime: (newStatus === 'completed' || newStatus === 'failed') ? Date.now() : undefined
+                });
+            }
+        });
+        
+        tasks.value = newTasks;
+        
+        // Update graph nodes
+        graph.value = { nodes: [], edges: [] };
+        tasks.value.forEach(t => updateGraph(t));
+        
+        // Log update
+        addLog(`任务计划已更新: ${steps.length} 个步骤`, 'info', 'plan');
+    };
+
+    const updateToolStatus = (toolName: string, status: 'running' | 'completed' | 'failed', payload?: any) => {
+        const idBase = `tool:${toolName}`;
+        let task = tasks.value.find(t => t.id === idBase || t.name === idBase);
+        if (!task) {
+            task = {
+                id: idBase,
+                name: idBase,
+                status: 'pending',
+                progress: 0,
+                logs: []
+            };
+            tasks.value.push(task);
+        }
+
+        if (status === 'running') {
+            task.status = 'running';
+            task.startTime = Date.now();
+            task.progress = 0;
+            if (payload?.args != null) {
+                task.logs.push(`args: ${JSON.stringify(payload.args, null, 2)}`);
+            }
+        } else {
+            task.status = status === 'failed' ? 'failed' : 'completed';
+            task.endTime = Date.now();
+            task.progress = 100;
+            const res = payload?.result;
+            if (res != null) {
+                try {
+                    task.logs.push(typeof res === 'string' ? res : JSON.stringify(res, null, 2));
+                } catch {
+                    task.logs.push(String(res));
+                }
+            }
+        }
+
+        updateGraph(task);
+    };
+
     return {
         isRunning,
         tasks,
@@ -475,8 +620,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
         runWorkflow,
         stopWorkflow,
         addLog,
+        appendOutput,
         clearLogs,
         resetWorkflow,
-        updateGraph // Export updateGraph action
+        updateGraph, // Export updateGraph action
+        updatePlanFromBackend, // Export new action
+        updateToolStatus,
+        handleWorkflowEvent
     };
 });

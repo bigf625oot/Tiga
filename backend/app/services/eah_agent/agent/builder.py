@@ -203,6 +203,7 @@ class AgentBuilder:
             reasoning=is_reasoning,
             # show_tool_calls=show_tool_calls,
             debug_mode=True,
+            monitoring=settings.AGNO_MONITORING,
         )
         
         return agent

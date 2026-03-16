@@ -61,6 +61,7 @@ class AgentTask(Base):
     result = Column(Text, nullable=True)
     error = Column(Text, nullable=True)
     artifacts = Column(JSON, nullable=True) # List of file paths or object references
+    dependencies = Column(JSON, default=[]) # List of task names/ids
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())

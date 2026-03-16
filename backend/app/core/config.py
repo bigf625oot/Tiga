@@ -104,6 +104,10 @@ class Settings(BaseSettings):
     OPENCLAW_LLM_MODEL: str = "gpt-3.5-turbo"  # Default model for OpenClaw fallbacks
     OPENCLAW_VERIFY_SSL: bool = True # Default to True, can be disabled via env
     
+    # Agno / Phidata Monitoring
+    AGNO_OS_API_KEY: Optional[str] = None
+    AGNO_MONITORING: bool = True
+
     # Proxy / 代理设置
     NO_PROXY: Optional[str] = None
 
@@ -176,3 +180,13 @@ import os
 if settings.NO_PROXY:
     os.environ["NO_PROXY"] = settings.NO_PROXY
     os.environ["no_proxy"] = settings.NO_PROXY
+
+# Configure Agno / Phidata Environment
+if settings.AGNO_OS_API_KEY:
+    os.environ["AGNO_API_KEY"] = settings.AGNO_OS_API_KEY
+    # Backward compatibility
+    os.environ["PHI_API_KEY"] = settings.AGNO_OS_API_KEY
+
+if settings.AGNO_MONITORING:
+    os.environ["AGNO_MONITORING"] = "true"
+    os.environ["PHI_MONITORING"] = "true"

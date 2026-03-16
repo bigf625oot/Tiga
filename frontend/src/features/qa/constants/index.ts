@@ -25,3 +25,14 @@ export const STORAGE_KEYS = {
 export const DEFAULT_SPLIT_RATIO = 0.6;
 export const MAX_FILE_SIZE_MB = 50;
 export const ACCEPTED_FILE_TYPES = ['.pdf', '.docx', '.pptx', '.xlsx', '.txt'];
+
+export const MODE_LABELS: Record<string, string> = {
+    'auto': '秒懂模式',
+    'chat': '智能问答',
+    'quick': '快问快答',
+    'solo': '自规划任务',
+    'team': '团队协作',
+    'workflow': '任务工作流',
+    'auto_task': '自主任务',
+    'default': '其他任务'
+};

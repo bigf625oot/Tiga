@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.llm_model import LLMModel
 from app.models.data_query_session import DataQuerySession, DataQueryMessage
+from app.services.pathway.connectors.bridge import bridge
 from .models import DbConnectionConfig
 from .runners.sql_runner import SQLAlchemyRunner
 from .core import VannaCore
@@ -214,11 +215,31 @@ class SmartDataQueryService:
 
         return conn_str, connect_args
 
-    async def connect_db(self, config: DbConnectionConfig):
+    async def connect_db(self, config: DbConnectionConfig = None, source_id: int = None):
         """
         Connect to a database and train Vanna.
         Async wrapper that handles LLM config and offloads sync work.
+        Can connect via direct config (DbConnectionConfig) or source_id (DataSource).
         """
+        if source_id:
+             # Load config from DataSource via Bridge
+             # We need to map bridge config (dict) to DbConnectionConfig
+             try:
+                 # Note: bridge.get_source_config returns a dict with 'connection_string' and other fields
+                 # but DbConnectionConfig expects specific fields (host, port, etc.)
+                 # The bridge config is optimized for Pathway/SQLAlchemy URL construction.
+                 # However, we can also reconstruct DbConnectionConfig from the raw DataSource if needed,
+                 # OR we can just use the connection string directly if we modify _connect_and_train_sync to accept it.
+                 
+                 # Let's use a helper to get DbConnectionConfig from source_id
+                 config = await run_in_threadpool(self._get_config_from_source_id, source_id)
+             except Exception as e:
+                 logger.error(f"Failed to load config from source_id {source_id}: {e}")
+                 raise e
+
+        if not config:
+            raise ValueError("Either config or source_id must be provided")
+
         # 1. Configure LLM first
         try:
             (
@@ -241,6 +262,46 @@ class SmartDataQueryService:
         # 2. Run sync connection logic in threadpool
         await run_in_threadpool(self._connect_and_train_sync, config)
 
+    def _get_config_from_source_id(self, source_id: int) -> DbConnectionConfig:
+        """
+        Helper to convert DataSource to DbConnectionConfig using the bridge logic.
+        """
+        # We can re-use the bridge's logic to get the raw source first
+        # But bridge.get_source_config returns a dict that might be already processed (e.g. conn string).
+        # We need the raw fields for DbConnectionConfig if possible, OR we construct DbConnectionConfig with minimal fields.
+        
+        # Actually, DbConnectionConfig is used to build the connection string in _connect_and_train_sync.
+        # Let's modify _connect_and_train_sync to be smarter, OR we map here.
+        
+        # Using bridge to get the source directly might be cleaner if we want full control
+        from app.models.data_source import DataSource
+        from app.services.pathway.connectors.bridge import SessionLocal, decrypt_field
+        
+        db = SessionLocal()
+        try:
+            source = db.query(DataSource).filter(DataSource.id == source_id).first()
+            if not source:
+                raise Exception(f"DataSource {source_id} not found")
+            
+            password = decrypt_field(source.password_encrypted) if source.password_encrypted else None
+            
+            # Map DataSource fields to DbConnectionConfig
+            return DbConnectionConfig(
+                name=source.name,
+                type=source.type,
+                host=source.host,
+                port=source.port,
+                database=source.database,
+                user=source.username,
+                password=password,
+                db_schema=source.db_schema,
+                # Default others
+                timeout=30,
+                pool_size=5
+            )
+        finally:
+            db.close()
+
     def _connect_and_train_sync(self, config: DbConnectionConfig):
         """
         Synchronous part of connection and training.
@@ -255,8 +316,17 @@ class SmartDataQueryService:
             )
             self.vanna_core.set_sql_runner(sql_runner)
             self.current_db_config = config
-            logger.info("SQLAlchemy engine created.")
             
+            # Verify connection immediately
+            # SQLAlchemy creates engine lazily, so we must force a connection to check validity
+            try:
+                with sql_runner.engine.connect() as connection:
+                    connection.execute(text("SELECT 1"))
+                logger.info("SQLAlchemy engine created and connection verified.")
+            except Exception as e:
+                logger.error(f"Failed to establish initial connection: {e}")
+                raise e
+
             # Auto-Train (Extract Schema)
             # Wrap in try-except to prevent blocking connection if embedding/vector-db fails
             try:

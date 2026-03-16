@@ -117,7 +117,7 @@
       </div>
     </div>
 
-    <!-- Message List State -->
+      <!-- Message List State -->
     <template v-else>
       <div class="flex-1 relative min-h-0 min-w-0 flex flex-col w-full h-full overflow-hidden">
         <div class="flex-1 min-h-0 min-w-0 w-full relative">
@@ -127,6 +127,7 @@
             :current-agent="currentAgent"
             :is-loading="isLoading"
             :is-streaming="isStreaming"
+            :loading-status="loadingStatus"
             @locate-node="$emit('locate-node', $event)"
             @open-doc-space="$emit('open-doc-space', $event)"
             @quote-message="handleQuoteMessage"
@@ -136,6 +137,7 @@
         </div>
 
         <!-- Sticky Input Area positioned at bottom overlaying the list -->
+        <!-- Use z-30 to ensure input area is above message list -->
         <div class="flex-none w-full px-4 pt-4 pb-6 z-30 bg-background shrink-0 relative border-t border-border/20 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.2)]">
           <div class="max-w-4xl mx-auto relative group/footer">
            <!-- Mode Toggle Trigger (Visible on hover or if no modes shown) -->
@@ -234,6 +236,7 @@ const props = defineProps<{
   embedded: boolean;
   isLoading: boolean;
   isStreaming: boolean;
+  loadingStatus?: string;
   isTaskRunning: boolean;
   isStopping: boolean;
   modelValue: string; // Input value

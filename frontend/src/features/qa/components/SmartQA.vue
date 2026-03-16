@@ -35,6 +35,7 @@
             :is-streaming="isStreaming"
             :is-task-running="isTaskRunning"
             :is-stopping="isStopping"
+            :loading-status="loadingStatus"
             :selected-attachments="selectedAttachments"
             :current-agent="currentAgent"
             :selected-agent-id="selectedAgentId"
@@ -121,6 +122,7 @@
             :is-streaming="isStreaming"
             :is-task-running="isTaskRunning"
             :is-stopping="isStopping"
+            :loading-status="loadingStatus"
             :selected-attachments="selectedAttachments"
             :current-agent="currentAgent"
             :selected-agent-id="selectedAgentId"
@@ -290,7 +292,7 @@ const removeSidebarAttachment = (index: number) => {
 };
 
 const {
-  currentSessionId, currentSession, messages, isLoading, isStreaming, isStopping,
+  currentSessionId, currentSession, messages, isLoading, isStreaming, isStopping, loadingStatus,
   fetchSessionDetails, createNewSession, stopGeneration, handleStreamResponse
 } = useChatSession();
 
@@ -302,7 +304,10 @@ const syncSessionAgent = async () => {
   const aid = selectedAgentId.value;
   if (!sid || !aid) return;
   if (isTaskRunning.value) return;
-  if (currentSession.value && (currentSession.value as any).agent_id === aid) return;
+  // If currentSession is not loaded or id mismatch, do not sync (avoid overwriting with old state)
+  if (!currentSession.value || currentSession.value.id !== sid) return;
+  
+  if ((currentSession.value as any).agent_id === aid) return;
   try {
     await chatService.updateSession(sid, { agent_id: aid } as any);
     if (currentSession.value) (currentSession.value as any).agent_id = aid;
@@ -630,6 +635,40 @@ const handleUpdateTitle = async ({ id, title }: { id: string, title: string }) =
   }
 };
 
+const syncModeFromSession = () => {
+    if (currentSession.value) {
+        let sessionMode = (currentSession.value as any).mode;
+        if (!sessionMode) return; // Fallback to defaults if no mode
+        
+        // Backend 'plan' mode maps to frontend 'solo' mode (Self-Planning)
+        if (sessionMode === 'plan') sessionMode = 'solo';
+        
+        // Try to match by value or id
+        const matched = MODES.find(m => m.value === sessionMode || m.id === sessionMode);
+        
+        if (matched) {
+            mode.value = matched.value;
+            currentModeId.value = matched.id;
+            
+            // Also ensure layout matches mode
+            if (matched.value === 'workflow' || matched.value === 'auto_task') {
+                isRightCollapsed.value = false;
+                if (matched.value === 'auto_task') isNetworkSearchEnabled.value = false;
+            } else if (matched.id === 'solo' || matched.id === 'team') {
+                isRightCollapsed.value = false;
+            } else {
+                isRightCollapsed.value = true;
+            }
+            return;
+        }
+    }
+    
+    // Fallback if no session or unknown mode
+    const nextDefaults = getSmartQADefaults(currentSessionId.value, messages.value);
+    mode.value = nextDefaults.mode;
+    currentModeId.value = nextDefaults.currentModeId;
+};
+
 const handleExcerptMessage = (content: string) => {
   const newMemo: Memo = {
     id: Date.now().toString(),
@@ -671,12 +710,11 @@ onMounted(() => {
         sessionAttachments.value = [];
         isFileSidebarOpen.value = false;
         fetchSessionDetails(props.sessionId).then(() => {
-          // fetch 完成后，根据消息内容修正模式
-          // 初始化时不知道是否有消息，默认先用了 quick (通过 getSmartQADefaults 传入 undefined 得到的)
-          // 但这里需要手动更新一下，因为 getSmartQADefaults 只在 setup 跑了一次
-          const nextDefaults = getSmartQADefaults(props.sessionId, messages.value);
-          mode.value = nextDefaults.mode;
-          currentModeId.value = nextDefaults.currentModeId;
+          syncModeFromSession();
+          
+          if (currentSession.value && (currentSession.value as any).agent_id) {
+              selectedAgentId.value = (currentSession.value as any).agent_id;
+          }
         });
     } else {
         // Default to Auto mode on new session
@@ -718,9 +756,11 @@ watch(() => props.sessionId, (newId, oldId) => {
         currentModeId.value = loadingDefaults.currentModeId;
         
         fetchSessionDetails(newId).then(() => {
-             const nextDefaults = getSmartQADefaults(newId, messages.value);
-             mode.value = nextDefaults.mode;
-             currentModeId.value = nextDefaults.currentModeId;
+             syncModeFromSession();
+             
+             if (currentSession.value && (currentSession.value as any).agent_id) {
+                 selectedAgentId.value = (currentSession.value as any).agent_id;
+             }
         });
     } else {
         const nextDefaults = getSmartQADefaults(null);

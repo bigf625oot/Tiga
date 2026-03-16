@@ -10,6 +10,7 @@ Agno Control Plane
 """
 import asyncio
 import logging
+import time
 from typing import Dict, Any, Optional, AsyncGenerator
 
 from app.core.config import settings
@@ -108,7 +109,11 @@ class AgnoControlPlane:
         elif isinstance(requested_mode, str) and requested_mode.strip():
             mode = requested_mode.strip().lower()
             if mode in {"quick", "chat"}:
-                forced_intent = "chat"
+                # 只有 Quick/Chat 模式才需要 NLU 分析（或者 forced_intent=None 让其走下面的 else 分支）
+                # 这里显式设置为 None，让其进入 NLU 流程
+                forced_intent = None
+            elif mode in {"solo", "plan", "task"}:
+                forced_intent = "task"
             elif mode in {"team"}:
                 forced_intent = "team"
             elif mode in {"workflow", "flow"}:
@@ -119,10 +124,44 @@ class AgnoControlPlane:
                 forced_intent = "kg_qa"
 
         result: Optional[IntentResult] = None
-        if forced_intent in {"chat", "team", "workflow", "data_query", "kg_qa"}:
+        
+        # 0. Early Feedback & Parallel Execution Setup
+        yield {"type": "status", "content": _("Processing...")}
+        
+        nlu_future = None
+        rag_future = None
+        
+        # Start RAG early if needed
+        enable_search = bool(kwargs.get("enable_search", True))
+        enable_knowledge = bool(kwargs.get("enable_knowledge", True))
+        raw_doc_ids = kwargs.get("doc_ids") or []
+        doc_ids = []
+        if isinstance(raw_doc_ids, (list, tuple)):
+            for x in raw_doc_ids:
+                try:
+                    if x is None:
+                        continue
+                    if isinstance(x, int):
+                        doc_ids.append(x)
+                        continue
+                    s = str(x).strip()
+                    if s.isdigit():
+                        doc_ids.append(int(s))
+                except Exception:
+                    continue
+        
+        attachment_context = kwargs.get("attachment_context")
+        
+        if enable_knowledge and doc_ids:
+             # Start RAG in background
+             rag_future = asyncio.create_task(asyncio.to_thread(lightrag_engine.search_chunks, query=user_input, top_k=6, doc_ids=doc_ids))
+
+        # 1. Intent Analysis
+        if forced_intent in {"chat", "team", "workflow", "data_query", "kg_qa", "task"}:
             result = IntentResult(intent=forced_intent, confidence=1.0, task_params=None)
         else:
             try:
+                yield {"type": "status", "content": _("Analyzing intent...")}
                 result = await self.nlu.analyze(user_input)
                 logger.info(f"Intent Analysis: {result}")
             except Exception as e:
@@ -141,39 +180,30 @@ class AgnoControlPlane:
                     # In a real app, user_id should come from auth context
                     await history.create_session(user_id="guest", agent_id=None, title=user_input[:50])
                 
+                # Async add message without blocking the main flow too much? 
+                # Actually, await is fine as it's usually fast, but we can parallelize with RAG if needed.
                 await history.add_message(session_id, "user", user_input)
             except Exception as e:
                 logger.error(f"Failed to save user message: {e}")
 
-        enable_search = bool(kwargs.get("enable_search", True))
-        enable_knowledge = bool(kwargs.get("enable_knowledge", True))
-        raw_doc_ids = kwargs.get("doc_ids") or []
-        doc_ids = []
-        if isinstance(raw_doc_ids, (list, tuple)):
-            for x in raw_doc_ids:
-                try:
-                    if x is None:
-                        continue
-                    if isinstance(x, int):
-                        doc_ids.append(x)
-                        continue
-                    s = str(x).strip()
-                    if s.isdigit():
-                        doc_ids.append(int(s))
-                except Exception:
-                    continue
-        attachment_context = kwargs.get("attachment_context")
+        # 3. RAG Result Retrieval
         augmented_input = user_input
+        
         if attachment_context or (enable_knowledge and doc_ids):
+            yield {"type": "status", "content": _("Retrieving knowledge...")}
             parts = []
             if attachment_context:
                 parts.append("【用户上传/选择的附件内容（提取结果）】\n" + str(attachment_context))
-            if enable_knowledge and doc_ids:
+            
+            results = []
+            if rag_future:
                 try:
-                    results = await asyncio.to_thread(lightrag_engine.search_chunks, query=user_input, top_k=6, doc_ids=doc_ids)
-                except Exception:
+                    results = await rag_future
+                except Exception as e:
+                    logger.error(f"RAG search failed: {e}")
                     results = []
-                if results:
+            
+            if results:
                     lines = []
                     for r in results:
                         title = r.get("title") or ""
@@ -192,21 +222,17 @@ class AgnoControlPlane:
 
         # 3. Dispatch & Stream
         full_response = ""
+        full_reasoning = ""
+        start_time = time.time()
         
         try:
             handler_stream = None
-            mode = requested_mode.strip().lower() if isinstance(requested_mode, str) and requested_mode.strip() else None
-            if mode in {"solo", "plan"}:
-                solo_intent = IntentResult(intent="task", confidence=1.0, task_params=None)
-                handler_stream = self.plan_handler.process(augmented_input, solo_intent, db=db, session_id=session_id, **kwargs)
-            elif result.intent == "chat" or result.confidence < threshold:
+            
+            if result.intent == "chat" or result.confidence < threshold:
                 handler_stream = self.quick_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             elif result.intent == "task":
-                # Special case for now: _handle_task is blocking
-                task_response = await self._handle_task(result.task_params or {})
-                full_response = task_response
-                yield {"type": "content", "content": task_response}
-                # No stream to iterate
+                # Use PlanHandler for all task intents (both forced Solo/Plan mode and NLU detected tasks)
+                handler_stream = self.plan_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             elif result.intent == "team":
                  handler_stream = self.team_handler.process(augmented_input, result, db=db, session_id=session_id, **kwargs)
             elif result.intent == "workflow":
@@ -222,6 +248,10 @@ class AgnoControlPlane:
                         content = chunk.get("content")
                         if isinstance(content, str):
                             full_response += content
+                    elif chunk.get("type") == "think":
+                        content = chunk.get("content")
+                        if isinstance(content, str):
+                            full_reasoning += content
                     yield chunk
 
         except Exception as e:
@@ -231,8 +261,13 @@ class AgnoControlPlane:
         
         # 4. Session Persistence (Save Assistant Message)
         if history and session_id and full_response:
+            end_time = time.time()
+            duration_ms = int((end_time - start_time) * 1000)
+            meta_data = {"duration": duration_ms}
+            if full_reasoning:
+                meta_data["reasoning"] = full_reasoning
             try:
-                await history.add_message(session_id, "assistant", full_response)
+                await history.add_message(session_id, "assistant", full_response, meta_data=meta_data)
             except Exception as e:
                 logger.error(f"Failed to save assistant message: {e}")
 

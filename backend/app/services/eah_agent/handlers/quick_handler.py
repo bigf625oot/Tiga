@@ -130,6 +130,10 @@ class QuickHandler(BaseHandler):
             )
             self._reasoning_enabled = desired_reasoning
 
+            # 开启监控
+            if self.agent:
+                self.agent.monitoring = True
+
             # 5. Inject Knowledge Tools (Function-based)
             if (
                 kwargs.get("enable_knowledge", True)
@@ -402,40 +406,53 @@ class QuickHandler(BaseHandler):
                         "content": "历史对话过长，已自动压缩上下文。",
                     }
 
+            # Load Knowledge Base for Session
+            if session_id:
+                try:
+                    kb_manager = SessionKnowledgeManager(session_id)
+                    kb = kb_manager.get_knowledge_base(
+                        api_key=self.llm_model.api_key if self.llm_model else None,
+                        base_url=self.llm_model.base_url if self.llm_model else None,
+                    )
+                    if kb:
+                        self.agent.knowledge = kb
+                        self.agent.search_knowledge = True
+                        if "search_knowledge_base" not in str(self.agent.instructions):
+                             self.agent.instructions.append(
+                                "Use 'search_knowledge_base' to find information in the user's documents. "
+                                "Use 'query_knowledge_graph' for complex queries involving relationships."
+                            )
+                except Exception as e:
+                    logger.error(f"Failed to load session knowledge base: {e}")
+
             # Stream response
             # Pass images if available
             run_kwargs = {"messages": history_messages, "stream": True}
             if images:
                 run_kwargs["images"] = images
 
-            # response_stream = await self.agent.arun(input_text, **run_kwargs)
-            # TypeError: object async_generator can't be used in 'await' expression
-            # This means arun(stream=True) returns an async generator directly.
-
             async for chunk in self.agent.arun(input_text, **run_kwargs):
-                # Check for tool calls or status updates if available in chunk
-                # Note: Agno chunk structure depends on version, checking common attributes
-
-                # If chunk represents a tool call start or execution
+                # 1. 优先处理工具调用状态 (Tool Call)
                 if hasattr(chunk, "tool_calls") and chunk.tool_calls:
-                    # Identify which tool is being called
-                    tool_names = [
-                        tc.function.name for tc in chunk.tool_calls if tc.function
-                    ]
+                    tool_names = [tc.function.name for tc in chunk.tool_calls if tc.function]
                     if tool_names:
-                        yield {
+                         yield {
                             "type": "status",
                             "content": f"正在使用工具: {', '.join(tool_names)}...",
                         }
 
+                # 2. 处理思考过程 (Chain-of-Thought)
                 reasoning = getattr(chunk, "reasoning", None) or getattr(chunk, "reasoning_content", None)
                 if reasoning:
                     yield {"type": "think", "content": reasoning}
 
+                # 3. 处理最终回复内容 (Content)
+                # 注意：Agno 的 chunk 有时同时包含 content 和 tool_calls，需要分开处理
                 content = getattr(chunk, "content", None)
                 if content:
                     yield {"type": "content", "content": content}
                 elif isinstance(chunk, str):
+                    # 兼容部分旧版本或特殊模型返回字符串的情况
                     yield {"type": "content", "content": chunk}
 
         except Exception as e:
@@ -443,11 +460,7 @@ class QuickHandler(BaseHandler):
 
             error_trace = traceback.format_exc()
             logger.error(f"QuickHandler processing failed: {e}\n{error_trace}")
-            try:
-                with open("quick_handler_process_error.log", "w") as f:
-                    f.write(f"Error: {e}\nTraceback:\n{error_trace}")
-            except Exception:
-                pass
+            
             yield {
                 "type": "error",
                 "content": _("I'm having trouble thinking right now."),

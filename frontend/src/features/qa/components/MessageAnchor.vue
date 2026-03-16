@@ -1,7 +1,7 @@
 <template>
   <div 
     ref="anchorRef"
-    class="absolute right-4 top-4 bottom-4 w-4 z-50 flex flex-col justify-center select-none group/scrollbar pointer-events-none"
+    class="absolute right-4 top-4 bottom-4 w-4 z-50 flex flex-col justify-center select-none group/scrollbar"
     @mousedown="onTrackMouseDown"
   >
     <!-- Track -->
@@ -10,14 +10,14 @@
     <!-- Markers -->
     <div class="absolute inset-0 pointer-events-none z-30">
       <div 
-        v-for="(marker, idx) in markers"
+        v-for="(marker, idx) in markersWithPosition"
         :key="idx"
-        class="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--scrollbar-marker)] shadow-sm cursor-pointer pointer-events-auto transition-all duration-200 hover:scale-125 hover:bg-primary z-30 group/marker opacity-80 hover:opacity-100 border border-background"
+        class="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--scrollbar-marker)] shadow-sm cursor-pointer pointer-events-auto transition-all duration-200 hover:scale-125 hover:bg-primary z-30 group/marker opacity-80 hover:opacity-100 border border-background"
         :class="{
           'bg-primary opacity-100 animate-pulse': marker.isEnd === true,
           'scale-150 bg-primary opacity-100': snappedMarkerIndex === marker.index
         }"
-        :style="{ top: marker.topPercent + '%' }"
+        :style="{ top: marker.topPx + 'px' }"
         @mousedown.stop="onMarkerMouseDown($event, marker.index)"
       >
         <!-- Tooltip -->
@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{
   currentVisualProgress: number;
@@ -63,6 +63,28 @@ const isDragging = ref(false);
 const isHovering = ref(false);
 const anchorRef = ref<HTMLElement | null>(null);
 
+const trackHeight = ref(0);
+
+const updateTrackHeight = () => {
+  if (anchorRef.value) {
+    trackHeight.value = anchorRef.value.clientHeight;
+  }
+};
+
+onMounted(() => {
+  updateTrackHeight();
+  window.addEventListener('resize', updateTrackHeight);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateTrackHeight);
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  removeGlobalListeners();
+});
+
 const canScroll = computed(() => props.estimatedTotalHeight > props.viewportHeight + 1);
 
 const thumbHeight = computed(() => {
@@ -70,7 +92,7 @@ const thumbHeight = computed(() => {
   return 40;
 });
 
-const trackRange = computed(() => Math.max(0, props.viewportHeight - thumbHeight.value));
+const trackRange = computed(() => Math.max(0, trackHeight.value - thumbHeight.value));
 
 const thumbTop = computed(() => {
   if (!canScroll.value) return 0;
@@ -125,6 +147,17 @@ watch(isDragging, (dragging) => {
   startTopAnimation();
 });
 
+const markersWithPosition = computed(() => {
+  return props.markers.map(marker => {
+    const p = Math.max(0, Math.min(1, marker.topPercent / 100));
+    const topPx = p * trackRange.value + thumbHeight.value / 2;
+    return {
+      ...marker,
+      topPx
+    };
+  });
+});
+
 const snappedMarkerIndex = ref<number | null>(null);
 
 const updateSnappedMarker = () => {
@@ -137,9 +170,8 @@ const updateSnappedMarker = () => {
   let bestIndex: number | null = null;
   let bestDist = Number.POSITIVE_INFINITY;
 
-  for (const marker of props.markers) {
-    const markerY = (marker.topPercent / 100) * props.viewportHeight;
-    const d = Math.abs(markerY - thumbCenterY);
+  for (const marker of markersWithPosition.value) {
+    const d = Math.abs(marker.topPx - thumbCenterY);
     if (d < bestDist) {
       bestDist = d;
       bestIndex = marker.index;

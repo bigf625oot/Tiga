@@ -93,6 +93,12 @@
          <div v-if="!isSidebarCollapsed" class="flex items-center gap-4 overflow-hidden flex-shrink-0 ml-1">
             <img :src="isLightMode ? '/logo_light.svg' : '/logo_dark.svg'" alt="TiGA Logo" class="h-6 w-auto flex-shrink-0" />
          </div>
+         <div v-if="!isSidebarCollapsed">
+             <badge class="text-xs font-medium text-white bg-red-500 rounded-full px-2.5 py-0.5 ml-2">
+            内部开发
+             </badge>
+         </div>
+
          <Button variant="ghost" size="icon" @click="isSidebarCollapsed = !isSidebarCollapsed" class="p-1.5 rounded-lg hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10 text-muted-foreground transition-colors flex-shrink-0">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                <path d="M7.77782 3.33325V16.6666M6.88893 3.33325H13.1112C14.3557 3.33325 14.978 3.33325 15.4534 3.57546C15.8715 3.78851 16.2114 4.12847 16.4245 4.54661C16.6667 5.02197 16.6667 5.64425 16.6667 6.88881V13.111C16.6667 14.3556 16.6667 14.9779 16.4245 15.4532C16.2114 15.8714 15.8715 16.2113 15.4534 16.4244C14.978 16.6666 14.3557 16.6666 13.1112 16.6666H6.88893C5.64437 16.6666 5.02209 16.6666 4.54673 16.4244C4.12859 16.2113 3.78863 15.8714 3.57558 15.4532C3.33337 14.9779 3.33337 14.3556 3.33337 13.111V6.88881C3.33337 5.64425 3.33337 5.02197 3.57558 4.54661C3.78863 4.12847 4.12859 3.78851 4.54673 3.57546C5.02209 3.33325 5.64437 3.33325 6.88893 3.33325Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
@@ -469,6 +475,7 @@ import { ref, onMounted, computed, defineAsyncComponent, reactive, watch } from 
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
+import { MODE_LABELS } from '@/features/qa/constants';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTheme } from '@/composables/useTheme';
 import { useToast } from '@/components/ui/toast/use-toast';
@@ -680,21 +687,14 @@ const groupedSessions = computed(() => {
     // 2. Group by mode
     const groups: Record<string, { agent: any, sessions: any[] }> = {};
     
-    const modeInfo: Record<string, any> = {
-        'chat': { id: 'chat', name: '智能问答' },
-        'workflow': { id: 'workflow', name: '任务工作流' },
-        'auto_task': { id: 'auto_task', name: '自主任务' },
-        'default': { id: 'default', name: '其他任务' }
-    };
-    
     sortedSessions.forEach(session => {
         // Default to 'chat' if mode is missing or empty
         const mode = session.mode || 'chat';
-        const groupKey = modeInfo[mode] ? mode : 'default';
+        const groupKey = MODE_LABELS[mode] ? mode : 'default';
         
         if (!groups[groupKey]) {
             groups[groupKey] = {
-                agent: modeInfo[groupKey], // Reusing 'agent' prop for mode info to minimize template changes
+                agent: { id: groupKey, name: MODE_LABELS[groupKey] }, // Reusing 'agent' prop for mode info to minimize template changes
                 sessions: []
             };
         }
@@ -702,9 +702,12 @@ const groupedSessions = computed(() => {
     });
 
     // 3. Sort groups by defined order
-    const order = ['chat', 'workflow', 'auto_task', 'default'];
+    const order = ['auto', 'chat', 'quick', 'solo', 'team', 'workflow', 'auto_task', 'default'];
     return Object.values(groups).sort((a, b) => {
-        return order.indexOf(a.agent.id) - order.indexOf(b.agent.id);
+        const indexA = order.indexOf(a.agent.id);
+        const indexB = order.indexOf(b.agent.id);
+        // Put unknown types at the end
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
     });
 });
 
@@ -884,6 +887,14 @@ watch(() => groupedSessions.value, (newVal) => {
 onMounted(() => {
     fetchSessions();
     fetchAgents();
+    
+    // Check URL for session_id
+    const urlParams = new URLSearchParams(window.location.search);
+    const sid = urlParams.get('session_id');
+    if (sid) {
+        currentSessionId.value = sid;
+        currentView.value = 'chat';
+    }
 });
 </script>
 
