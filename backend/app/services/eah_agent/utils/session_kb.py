@@ -26,7 +26,12 @@ class SessionKnowledgeManager:
     """
     Manages a temporary, session-scoped Knowledge Base using LanceDB.
     """
-    def __init__(self, session_id: str, base_dir: str = "data/sessions"):
+    def __init__(self, session_id: str, base_dir: Optional[str] = None):
+        if base_dir is None:
+            # Default to backend/data/sessions
+            backend_dir = Path(__file__).resolve().parents[4]
+            base_dir = str(backend_dir / "data" / "sessions")
+            
         self.session_id = session_id
         self.base_dir = Path(base_dir) / session_id
         self.kb_dir = self.base_dir / "knowledge"

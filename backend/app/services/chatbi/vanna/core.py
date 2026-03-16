@@ -16,6 +16,8 @@ from .runners.sql_runner import SQLAlchemyRunner
 
 logger = logging.getLogger(__name__)
 
+from pathlib import Path
+
 # --- Data Models for LanceDB ---
 # Make vector dimension dynamic
 # The 'vector' field is handled as a plain list in Pydantic, 
@@ -29,7 +31,12 @@ class VannaContext(LanceModel):
 
 # --- Core Vanna Engine (Re-implementation for Vanna 2.0 / Custom RAG) ---
 class VannaCore:
-    def __init__(self, db_path: str = "data/vanna_lancedb"):
+    def __init__(self, db_path: Optional[str] = None):
+        if db_path is None:
+            # Default to backend/data/vanna_lancedb
+            backend_dir = Path(__file__).resolve().parents[4]
+            db_path = str(backend_dir / "data" / "vanna_lancedb")
+            
         self.db = lancedb.connect(db_path)
         # We don't pre-create the table here because we don't know the embedding dimension yet.
         # It will be created/opened on first write or read.

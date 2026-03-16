@@ -1,7 +1,7 @@
 """
 Quick Handler:
 Handles 'quick' intent: fast Q&A, chit-chat, simple queries.
-是一种特殊的Agent，用于处理用户简单的查询和互动。本质就是reasoning = True/False，默认False。
+是一种特殊的Basic Agent，用于处理用户简单的查询和互动。本质就是reasoning = True/False，默认False。
 核心功能：
 1. 快速响应用户简单查询（如“你好”、“天气”等）。
 2. 支持异步操作，确保在高并发场景下的响应速度。
