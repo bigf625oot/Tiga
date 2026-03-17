@@ -30,7 +30,7 @@ async def resolve_active_llm_model(
 ) -> Optional[LLMModel]:
     prefer_types_norm = _normalize_types(prefer_types)
 
-    base_filters = [LLMModel.is_active == True]
+    base_filters = [LLMModel.filter_active()]
     if model_id:
         base_filters.append(LLMModel.model_id == model_id)
     if prefer_types_norm:
@@ -41,8 +41,7 @@ async def resolve_active_llm_model(
             select(LLMModel)
             .where(
                 *base_filters,
-                LLMModel.api_key != None,
-                LLMModel.api_key != "",
+                LLMModel.filter_has_api_key(),
             )
             .order_by(LLMModel.updated_at.desc())
         )
@@ -77,4 +76,45 @@ async def resolve_chat_llm_model(
         prefer_types=prefer_types,
         require_api_key=False,
     )
+
+
+async def resolve_fast_llm_model(
+    db: AsyncSession,
+) -> Optional[LLMModel]:
+    """
+    全局快慢型 LLM 模型解析器
+    优先返回非 reasoning 模型，且带 api_key 的
+    """
+    # 查找非 reasoning 的活跃模型，优先带 api_key 的
+    stmt = (
+        select(LLMModel)
+        .where(
+            LLMModel.filter_active(),
+            LLMModel.filter_has_api_key(),
+            LLMModel.filter_fast_models()
+        )
+        .order_by(LLMModel.updated_at.desc())
+    )
+    res = await db.execute(stmt)
+    m = res.scalars().first()
+    if m:
+        return m
+        
+    # 如果没有带 api_key 的，查找不带的
+    stmt = (
+        select(LLMModel)
+        .where(
+            LLMModel.filter_active(),
+            LLMModel.filter_fast_models()
+        )
+        .order_by(LLMModel.updated_at.desc())
+    )
+    res = await db.execute(stmt)
+    m = res.scalars().first()
+    
+    # 如果实在找不到，只能回退到普通的聊天模型
+    if not m:
+        m = await resolve_chat_llm_model(db)
+        
+    return m
 

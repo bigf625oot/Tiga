@@ -45,6 +45,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
 
 const props = defineProps<{
   currentVisualProgress: number;
@@ -71,19 +72,13 @@ const updateTrackHeight = () => {
   }
 };
 
+useResizeObserver(anchorRef, updateTrackHeight);
+
 onMounted(() => {
   updateTrackHeight();
-  window.addEventListener('resize', updateTrackHeight);
 });
 
-onUnmounted(() => {
-  window.removeEventListener('resize', updateTrackHeight);
-  if (rafId !== null) {
-    cancelAnimationFrame(rafId);
-    rafId = null;
-  }
-  removeGlobalListeners();
-});
+
 
 const canScroll = computed(() => props.estimatedTotalHeight > props.viewportHeight + 1);
 
@@ -124,11 +119,10 @@ const startTopAnimation = () => {
 };
 
 watch(thumbTop, (val) => {
-  targetThumbTop.value = val;
   if (isDragging.value) {
-    animatedThumbTop.value = val;
     return;
   }
+  targetThumbTop.value = val;
   startTopAnimation();
 }, { immediate: true });
 
@@ -138,9 +132,6 @@ watch(isDragging, (dragging) => {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
-    const v = thumbTop.value;
-    targetThumbTop.value = v;
-    animatedThumbTop.value = v;
     return;
   }
   targetThumbTop.value = thumbTop.value;
@@ -166,7 +157,7 @@ const updateSnappedMarker = () => {
     return;
   }
 
-  const thumbCenterY = thumbTop.value + thumbHeight.value / 2;
+  const thumbCenterY = animatedThumbTop.value + thumbHeight.value / 2;
   let bestIndex: number | null = null;
   let bestDist = Number.POSITIVE_INFINITY;
 
@@ -181,12 +172,12 @@ const updateSnappedMarker = () => {
   snappedMarkerIndex.value = bestDist <= 12 ? bestIndex : null;
 };
 
-watch([thumbTop, isDragging], updateSnappedMarker, { immediate: true });
+watch([animatedThumbTop, isDragging], updateSnappedMarker, { immediate: true });
 watch(() => props.markers, updateSnappedMarker, { deep: true });
 
 // Interaction Logic
 let startY = 0;
-let startVisualProgress = 0; // 0-1
+let startThumbTop = 0;
 let pendingMarkerIndex: number | null = null;
 let interactionType: 'none' | 'thumb-drag' | 'marker-check' | 'track-drag' = 'none';
 
@@ -202,17 +193,18 @@ const onTrackMouseDown = (e: MouseEvent) => {
 
   const range = trackRange.value;
   const targetTop = Math.max(0, Math.min(range, clickY - thumbHeight.value / 2));
-  const targetProgress = range > 0 ? targetTop / range : 0;
-
-  emit('update:currentVisualProgress', targetProgress);
   
   // Start dragging
   interactionType = 'track-drag';
   isDragging.value = true;
   startY = e.clientY;
+  startThumbTop = targetTop;
   
-  // For dragging, we track visual progress
-  startVisualProgress = targetProgress;
+  // Immediate update
+  animatedThumbTop.value = targetTop;
+  
+  const targetProgress = range > 0 ? targetTop / range : 0;
+  emit('update:currentVisualProgress', targetProgress);
   
   addGlobalListeners();
 };
@@ -226,7 +218,7 @@ const onThumbMouseDown = (e: MouseEvent) => {
   interactionType = 'thumb-drag';
   isDragging.value = true;
   startY = e.clientY;
-  startVisualProgress = props.currentVisualProgress;
+  startThumbTop = animatedThumbTop.value;
   
   addGlobalListeners();
 };
@@ -239,7 +231,7 @@ const onMarkerMouseDown = (e: MouseEvent, index: number) => {
   interactionType = 'marker-check';
   pendingMarkerIndex = index;
   startY = e.clientY;
-  startVisualProgress = props.currentVisualProgress;
+  startThumbTop = animatedThumbTop.value;
   
   addGlobalListeners();
 };
@@ -260,10 +252,13 @@ const onGlobalMouseMove = (e: MouseEvent) => {
     
     // Calculate new visual progress
     const range = Math.max(1, trackRange.value);
-    const deltaRatio = deltaY / range;
-    const newProgress = Math.max(0, Math.min(1, startVisualProgress + deltaRatio));
+    let newTop = startThumbTop + deltaY;
+    newTop = Math.max(0, Math.min(range, newTop));
     
-    // Emit progress update directly
+    // Drive by absolute mouse position
+    animatedThumbTop.value = newTop;
+    
+    const newProgress = newTop / range;
     emit('update:currentVisualProgress', newProgress);
   }
 };
@@ -271,6 +266,8 @@ const onGlobalMouseMove = (e: MouseEvent) => {
 const onGlobalMouseUp = (e: MouseEvent) => {
   if (interactionType === 'marker-check' && pendingMarkerIndex !== null) {
     emit('scroll-to-index', pendingMarkerIndex);
+  } else if ((interactionType === 'thumb-drag' || interactionType === 'track-drag') && snappedMarkerIndex.value !== null) {
+    emit('scroll-to-index', snappedMarkerIndex.value);
   }
   
   interactionType = 'none';

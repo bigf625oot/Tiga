@@ -78,10 +78,19 @@ class AgnoControlPlane:
         Dispatches to handlers based on NLU intent.
         """
         if not self.llm_model and db:
-            from app.services.llm.resolver import resolve_chat_llm_model
+            from app.services.llm.resolver import resolve_chat_llm_model, resolve_fast_llm_model
+            from sqlalchemy import select
+            from app.models.llm_model import LLMModel
 
             self.llm_model = await resolve_chat_llm_model(db)
-            self.nlu = NluService(self.llm_model)
+            
+            # 使用统一的快速模型解析器为 NLU 选择一个轻量级模型
+            nlu_model = await resolve_fast_llm_model(db) or self.llm_model
+            
+            if nlu_model and self.llm_model and nlu_model.model_id != self.llm_model.model_id:
+                logger.info(f"Using fast model {nlu_model.model_id} for NLU instead of {self.llm_model.model_id}")
+
+            self.nlu = NluService(nlu_model)
             for h in (
                 self.quick_handler,
                 self.plan_handler,
@@ -162,8 +171,13 @@ class AgnoControlPlane:
         else:
             try:
                 yield {"type": "status", "content": _("Analyzing intent...")}
-                result = await self.nlu.analyze(user_input)
-                logger.info(f"Intent Analysis: {result}")
+                # Set a timeout for NLU analysis to prevent long waits, especially if using a reasoning model
+                try:
+                    result = await asyncio.wait_for(self.nlu.analyze(user_input), timeout=8.0)
+                    logger.info(f"Intent Analysis: {result}")
+                except asyncio.TimeoutError:
+                    logger.warning("NLU Analysis timed out after 8s. Falling back to 'chat' intent.")
+                    result = IntentResult(intent="chat", confidence=0.0)
             except Exception as e:
                 logger.error(f"NLU Analysis failed: {e}")
                 yield {"type": "error", "content": _("I couldn't understand that.")}

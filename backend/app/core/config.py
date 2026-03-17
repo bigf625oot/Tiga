@@ -30,9 +30,6 @@ class Settings(BaseSettings):
 
         if self.USE_SQLITE:
             import os
-            # Ensure we use an absolute path to avoid CWD issues
-            # Base it on the backend directory (where main.py usually is)
-            # This file is in backend/app/core/config.py -> backend is 3 levels up
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             db_path = os.path.join(base_dir, "recorder_v5.db")
             # Windows path handling for SQLAlchemy URL

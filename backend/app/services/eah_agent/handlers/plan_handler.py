@@ -37,15 +37,6 @@ from app.services.eah_agent.utils.session_kb import SessionKnowledgeManager
 from app.core.context_compressor import ContextCompressor
 from app.services.eah_agent.storage.session_history import SessionHistory
 
-# 初始化 AgentOS
-try:
-    AgentOS(
-        api_key=settings.AGNO_OS_API_KEY,
-        monitoring=settings.AGNO_MONITORING
-    )
-except Exception as e:
-    logger.warning(f"Failed to initialize AgentOS: {e}")
-
 class PlanHandler(BaseHandler):
     """
     Handles 'task' intent with autonomous planning (ReAct).

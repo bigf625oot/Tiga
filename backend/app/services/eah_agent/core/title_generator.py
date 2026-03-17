@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.eah_agent.storage.session_history import SessionHistory
-from app.services.llm.resolver import resolve_chat_llm_model
+from app.services.llm.resolver import resolve_fast_llm_model
 from app.services.llm.factory import ModelFactory
 from app.core.i18n import _
 
@@ -48,10 +48,10 @@ class TitleGenerator:
             if not (is_default or is_truncated or is_truncated_short):
                 return
 
-            # Resolve LLM Model
-            llm_model = await resolve_chat_llm_model(db)
+            # Resolve LLM Model, explicitly use fast model to avoid slow reasoning models
+            llm_model = await resolve_fast_llm_model(db)
             if not llm_model:
-                logger.warning("No active LLM model found for title generation.")
+                logger.warning("No LLM model available for title generation.")
                 return
 
             # Create Model Instance

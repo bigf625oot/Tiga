@@ -229,10 +229,12 @@ const messageGroups = computed(() => {
 });
 
 // Virtual List
+const ESTIMATED_ITEM_HEIGHT = 150;
+
 const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
   messageGroups,
   {
-    itemHeight: 100 // Estimate height
+    itemHeight: ESTIMATED_ITEM_HEIGHT // Estimate height
   }
 );
 
@@ -304,8 +306,8 @@ const accumulatedHeights = computed(() => {
     
     for (let i = 0; i < total; i++) {
         offsets.push(current);
-        // Use recorded height or estimate (100)
-        const h = itemHeights.value[i] || 100;
+        // Use recorded height or estimate
+        const h = itemHeights.value[i] || ESTIMATED_ITEM_HEIGHT;
         current += h;
     }
     
@@ -393,7 +395,10 @@ const handleScroll = () => {
 
 const handleScrollUpdate = (val: number) => {
     if (containerRef.value) {
-        containerRef.value.scrollTop = val;
+        containerRef.value.scrollTo({
+            top: val,
+            behavior: 'auto'
+        });
     }
 };
 
@@ -481,7 +486,14 @@ const handleVisualProgressUpdate = (progress: number) => {
     if (!containerRef.value) return;
 
     const p = Math.min(1, Math.max(0, progress));
-    containerRef.value.scrollTop = p * actualScrollRange.value;
+    
+    // 使用 scrollRange (基于 HeightMap) 
+    // 这提供了更稳定的滚动目标，避免基于 DOM scrollHeight 带来的抖动
+    containerRef.value.scrollTo({
+        top: p * scrollRange.value,
+        behavior: 'auto'
+    });
+    
     updateScrollMetrics();
 };
 
@@ -551,13 +563,19 @@ const scrollToBottom = (force = false) => {
         setTimeout(() => {
             if (!containerRef.value) return;
             // Force scrollTop to scrollHeight
-            containerRef.value.scrollTop = containerRef.value.scrollHeight;
+            containerRef.value.scrollTo({
+                top: containerRef.value.scrollHeight,
+                behavior: 'auto'
+            });
             updateScrollMetrics();
             
             // Double check after another delay (sometimes layout takes longer)
             setTimeout(() => {
                 if (!containerRef.value) return;
-                containerRef.value.scrollTop = containerRef.value.scrollHeight;
+                containerRef.value.scrollTo({
+                    top: containerRef.value.scrollHeight,
+                    behavior: 'auto'
+                });
                 updateScrollMetrics();
             }, 100);
         }, 50);

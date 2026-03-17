@@ -14,13 +14,23 @@ class ContextCompressor:
         self.model = model
         self.agent = None
         if model:
-             # Create a specialized summarizer agent
-             self.agent = Agent(
-                 model=ModelFactory.create_model(model),
-                 instructions="You are a concise summarizer. Summarize the provided conversation history focusing on key facts, user preferences, and important decisions. Keep it brief.",
-                 # show_tool_calls=False,
-                 markdown=True
-             )
+            # 尝试使用轻量级模型作为压缩器，避免使用推理模型
+            compressor_model = model
+            if model.model_id and ("reasoner" in model.model_id.lower() or "deepseek-r1" in model.model_id.lower()):
+                try:
+                    import asyncio
+                    # 这里不能直接写异步查询，所以我们在 _init_default_agent 或 compress_context 中延迟初始化
+                    self.agent = None # 延迟初始化以获取更好的模型
+                except Exception:
+                    pass
+            else:
+                 # Create a specialized summarizer agent
+                 self.agent = Agent(
+                     model=ModelFactory.create_model(compressor_model),
+                     instructions="You are a concise summarizer. Summarize the provided conversation history focusing on key facts, user preferences, and important decisions. Keep it brief.",
+                     # show_tool_calls=False,
+                     markdown=True
+                 )
 
     async def compress_context(self, history: List[Dict[str, Any]], max_tokens: int = 4000) -> List[Dict[str, Any]]:
         """
@@ -123,13 +133,8 @@ class ContextCompressor:
         """Initialize a default agent if none was provided"""
         try:
             async with AsyncSessionLocal() as db:
-                # Find active model
-                res = await db.execute(
-                    select(LLMModel)
-                    .filter(LLMModel.is_active == True, LLMModel.api_key != None)
-                    .order_by(LLMModel.updated_at.desc())
-                )
-                active_model = res.scalars().first()
+                from app.services.llm.resolver import resolve_fast_llm_model
+                active_model = await resolve_fast_llm_model(db)
                 
                 if active_model:
                      self.agent = Agent(

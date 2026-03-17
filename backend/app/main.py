@@ -1,24 +1,10 @@
-import sys
-import asyncio
-
-try:
-    import duckduckgo_search
-
-    sys.modules["ddgs"] = duckduckgo_search
-except ImportError:
-    pass
-
-# Set Windows Event Loop Policy to avoid "RuntimeError: Event loop is closed" or anyio issues
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+# 应用所有必要的启动补丁和配置
+from app.core.bootstrap import apply_patches
+apply_patches()
 
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-
-# Patch asyncio to allow nested event loops (fixes "NoEventLoopError" in some environments)
-import nest_asyncio
-nest_asyncio.apply()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,16 +19,16 @@ from app.core.i18n import _
 # Setup logging
 setup_logging()
 
-# Initialize Telemetry (Langtrace)
-try:
-    from langtrace_python_sdk import langtrace
-    # Initialize with optional API key from environment
-    langtrace.init(api_key=os.getenv("LANGTRACE_API_KEY"))
-    logger.info("Langtrace SDK initialized.")
-except ImportError:
-    pass
-except Exception as e:
-    logger.warning(f"Failed to initialize Langtrace: {e}")
+# 连接(Langtrace)进行监控
+# try:
+#     from langtrace_python_sdk import langtrace
+#     # Initialize with optional API key from environment
+#     langtrace.init(api_key=os.getenv("LANGTRACE_API_KEY"))
+#     logger.info("Langtrace SDK initialized.")
+# except ImportError:
+#     pass
+# except Exception as e:
+#     logger.warning(f"Failed to initialize Langtrace: {e}")
 
 
 @asynccontextmanager
@@ -159,8 +145,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount uploads directory for local access
-# Fix: Use absolute path to backend/data/storage for uploads
+# 挂载上传目录以本地访问
+# 修复：使用绝对路径 backend/data/storage 作为上传目录
 BACKEND_DIR = Path(__file__).resolve().parents[1]  # backend/
 UPLOADS_DIR = BACKEND_DIR / "data" / "storage"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
