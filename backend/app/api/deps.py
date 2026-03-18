@@ -43,7 +43,7 @@ async def get_current_user_id_optional(authorization: Optional[str] = Header(Non
         token = authorization.replace("Bearer ", "")
         payload = jwt.decode(token, options={"verify_signature": False})
         return payload.get("sub")
-    except:
+    except Exception:
         return None
 
 async def get_current_user_tools(
@@ -58,7 +58,7 @@ async def get_current_user_tools(
     stmt = select(UserTool).where(
         UserTool.user_id == user_id,
         UserTool.tool_id == tool_id,
-        or_(UserTool.expires_at == None, UserTool.expires_at > func.now())
+        or_(UserTool.expires_at is None, UserTool.expires_at > func.now())
     )
     result = await db.execute(stmt)
     user_tool = result.scalars().first()

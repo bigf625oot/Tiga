@@ -323,7 +323,7 @@ async def run_graph_export(*, db: AsyncSession = Depends(get_db), id: int, backg
     if isinstance(export_config, str):
         try:
             export_config = json.loads(export_config)
-        except:
+        except Exception:
             pass
 
     if isinstance(export_config, dict):

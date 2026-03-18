@@ -2,7 +2,7 @@
 定义 Team 的公共配置、共享存储等
 """
 
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any
 from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 from agno.agent import Agent as AgnoAgent

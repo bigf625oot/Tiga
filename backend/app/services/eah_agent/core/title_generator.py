@@ -1,11 +1,9 @@
 import logging
-from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.eah_agent.storage.session_history import SessionHistory
 from app.services.llm.resolver import resolve_fast_llm_model
 from app.services.llm.factory import ModelFactory
-from app.core.i18n import _
 
 logger = logging.getLogger(__name__)
 

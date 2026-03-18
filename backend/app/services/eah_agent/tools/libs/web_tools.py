@@ -1,4 +1,3 @@
-from typing import Optional
 try:
     from agno.tools.website import WebsiteTools as AgnoWebsiteTools
 except ImportError:
@@ -14,7 +13,7 @@ try:
 except ImportError:
     class AgnoWikipediaTools:
         def __init__(self, *args, **kwargs): pass
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 class WebsiteTools(AgnoWebsiteTools):
     _name = "website_tools"

@@ -7,8 +7,6 @@ from app.schemas.search_agent.search_schemas import SearchResponse
 
 # --- Aliyun SDK ---
 try:
-    import os
-
     from alibabacloud_searchplat20240529.client import Client
     from alibabacloud_searchplat20240529.models import GetWebSearchRequest, GetWebSearchRequestHistory
     from alibabacloud_tea_openapi.models import Config

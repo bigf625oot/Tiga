@@ -11,7 +11,7 @@ __author__ = "xucao"
 
 import json
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 

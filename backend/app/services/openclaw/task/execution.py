@@ -14,17 +14,14 @@ __author__ = "xucao"
 
 import asyncio
 import json
-import logging
 import traceback
 from datetime import datetime
-from typing import Dict, Any, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Dict, Any
 
+from sqlalchemy import select
 from app.models.openclaw_task import OpenClawTask
 from app.crud.crud_openclaw_task import OpenClawTaskCRUD
 from app.core.logger import logger
-
-logger = logging.getLogger(__name__)
 
 class OpenClawTaskWorker:
     """OpenClaw 任务工作器 - 负责异步处理任务状态更新"""

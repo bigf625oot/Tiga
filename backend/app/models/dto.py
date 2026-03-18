@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Any, Dict, Optional, AsyncGenerator
+from pydantic import BaseModel
+from typing import List, Any, Dict, Optional
 
 class MetadataModel(BaseModel):
     name: str

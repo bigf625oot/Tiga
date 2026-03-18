@@ -28,7 +28,6 @@ from app.db.session import AsyncSessionLocal
 from app.models.node import Node, NodeStatus
 from app.schemas.node import NodeMetricCreate
 from app.services.openclaw.node.manager import node_manager
-from app.services.openclaw.node.metadata import node_metadata_manager
 from app.services.openclaw.clients.node import OpenClawWsClient
 
 logger = logging.getLogger(__name__)

@@ -14,9 +14,8 @@ Date: 2026-03-08
 import re
 import json
 import unicodedata
-import statistics
 import difflib
-from typing import Dict, Any, List, Optional, Union, Callable
+from typing import Dict, Any
 import pathway as pw
 from app.services.pathway.core.exceptions import OperatorError
 from app.services.pathway.operators.registry import OperatorRegistry
@@ -207,7 +206,8 @@ def _apply_text_process(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
             replace_char = params.get("replace_char", "*")
             for out_col, in_col in col_map.items():
                 def _filter(text):
-                    if not text: return text
+                    if not text:
+                        return text
                     for w in sensitive_words:
                         text = text.replace(w, replace_char * len(w))
                     return text
@@ -388,7 +388,7 @@ def _apply_variable_aggregation(table: pw.Table, config: Dict[str, Any]) -> pw.T
     action = config.get("action")
     group_by = config.get("group_by", [])
     aggregations = config.get("aggregations", {}) # {"new_col": {"col": "old_col", "func": "sum"}}
-    params = config.get("params", {})
+    config.get("params", {})
 
     try:
         grouped = table.groupby(*[table[c] for c in group_by])

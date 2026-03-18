@@ -1,12 +1,4 @@
-import sys
 import asyncio
-import os
-from pathlib import Path
-from typing import List, Dict, Any
-
-# Add backend directory to sys.path
-backend_dir = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(backend_dir))
 
 from app.db.session import AsyncSessionLocal
 from app.services.eah_agent.core.service import agent_service
@@ -464,7 +456,7 @@ async def import_all_agents():
                 failed_count += 1
         
         print("-" * 50)
-        print(f"Import Summary:")
+        print("Import Summary:")
         print(f"  Total Processed: {len(AGENTS_DATA)}")
         print(f"  Imported:        {imported_count}")
         print(f"  Skipped:         {skipped_count}")

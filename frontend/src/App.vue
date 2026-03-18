@@ -93,11 +93,11 @@
          <div v-if="!isSidebarCollapsed" class="flex items-center gap-4 overflow-hidden flex-shrink-0 ml-1">
             <img :src="isLightMode ? '/logo_light.svg' : '/logo_dark.svg'" alt="TiGA Logo" class="h-6 w-auto flex-shrink-0" />
          </div>
-         <div v-if="!isSidebarCollapsed">
+         <!-- <div v-if="!isSidebarCollapsed">
              <badge class="text-xs font-medium text-white bg-red-500 rounded-full px-2.5 py-0.5 ml-2">
             内部开发
              </badge>
-         </div>
+         </div> -->
 
          <Button variant="ghost" size="icon" @click="isSidebarCollapsed = !isSidebarCollapsed" class="p-1.5 rounded-lg hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-indigo-500/10 text-muted-foreground transition-colors flex-shrink-0">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -467,6 +467,8 @@
        </DialogContent>
     </Dialog>
 
+    <!-- 全局任务中心 -->
+    <TaskCenter />
   </div>
 </template>
 
@@ -492,6 +494,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import SmartQA from '@/features/qa/components/SmartQA.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import AgentIcon from '@/shared/components/atoms/AgentIcon/AgentIcon.vue';
+import TaskCenter from '@/components/TaskCenter.vue';
 
 // Icons
 import {

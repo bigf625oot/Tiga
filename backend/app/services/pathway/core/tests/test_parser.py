@@ -1,11 +1,4 @@
-import sys
-import os
 from unittest.mock import MagicMock, patch
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../"))
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
 import unittest
 from app.services.pathway.core.models import DAGPipeline, DAGNode
 from app.services.pathway.core.parser import DAGParser

@@ -89,7 +89,7 @@ class DataExtractionService:
                 # But typically we want the specific model requested.
                 # If not found, maybe we check if it's a known preset like 'qwen-plus' and see if we have an aliyun key?
                 # For now, let's assume the user has configured it or we try to find a default.
-                stmt = select(LLMModel).filter(LLMModel.is_active == True).order_by(LLMModel.updated_at.desc())
+                stmt = select(LLMModel).filter(LLMModel.is_active).order_by(LLMModel.updated_at.desc())
                 result = await db.execute(stmt)
                 db_model = result.scalars().first()
 

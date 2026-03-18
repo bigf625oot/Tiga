@@ -1,5 +1,4 @@
 import uuid
-from typing import List, Optional
 from sqlalchemy import Column, String, DateTime, Text, Enum, ForeignKey, Integer, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

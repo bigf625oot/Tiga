@@ -1,6 +1,5 @@
-from typing import Optional, List
 from agno.tools.shell import ShellTools as AgnoShellTools
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 class ShellTools(AgnoShellTools):
     _name = "shell"

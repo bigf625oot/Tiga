@@ -90,6 +90,9 @@ python -m venv venv
 # 虚拟环境 (macOS/Linux)
 source venv/bin/activate
 
+# 验证 Python 版本 (需 >= 3.10)
+python -V
+
 # 安装依赖
 pip install -r requirements.txt
 # 或: make install

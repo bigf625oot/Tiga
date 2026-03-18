@@ -7,8 +7,7 @@ Handles 'team' intent: Multi-agent collaboration.
 3. 提供基础的错误处理机制，避免系统崩溃。
 """
 import logging
-import json
-from typing import AsyncGenerator, Dict, Any, Optional, List
+from typing import AsyncGenerator, Dict, Any, Optional
 from pathlib import Path
 import shutil
 
@@ -142,7 +141,6 @@ class TeamHandler(BaseHandler):
             
             # Analyze intent to determine team composition
             task_params = intent.task_params if intent else {}
-            input_text_lower = "" # We don't have raw input here easily unless passed, but we rely on intent params
             
             # Use intent.intent or task_params to guide
             # Example: intent="team", task_params={"team_type": "research"}
@@ -331,7 +329,7 @@ class TeamHandler(BaseHandler):
             
             # 4. Async Streaming Execution
             # Prepare arguments
-            run_kwargs = {"messages": history_messages, "stream": True}
+            run_kwargs = {"messages": history_messages, "stream": True, "yield_run_output": True}
             if images:
                 run_kwargs["images"] = images
             
@@ -346,6 +344,24 @@ class TeamHandler(BaseHandler):
             current_agent_name = None
             
             async for chunk in response_stream:
+                # 提取最终 RunOutput 对象
+                if type(chunk).__name__ == "RunOutput":
+                    try:
+                        run_output_dict = chunk.to_dict()
+                    except Exception:
+                        run_output_dict = {
+                            "content": getattr(chunk, "content", None),
+                            "tools": getattr(chunk, "tools", []),
+                            "messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in getattr(chunk, "messages", [])],
+                            "reasoning_content": getattr(chunk, "reasoning_content", None),
+                            "metrics": getattr(chunk, "metrics", None)
+                        }
+                    yield {
+                        "type": "run_output",
+                        "data": run_output_dict
+                    }
+                    continue
+
                 # 5. Intercept Agent Switch
                 # Check for agent name in chunk (depends on Agno version/implementation)
                 # Often it's in `extra_data` or a specific attribute

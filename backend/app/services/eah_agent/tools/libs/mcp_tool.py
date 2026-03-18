@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Dict, Any, Callable, Optional
+from typing import List, Dict
 from agno.tools import Toolkit
 from app.services.mcp.ws_client import MCPClient
 

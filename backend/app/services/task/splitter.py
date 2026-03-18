@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Optional
+from typing import List
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from app.schemas.task import SubTaskCreate

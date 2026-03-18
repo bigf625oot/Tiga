@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from app.core.config import settings

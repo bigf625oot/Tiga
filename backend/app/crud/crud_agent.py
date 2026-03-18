@@ -2,7 +2,6 @@ from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.agent import Agent
-from app.models.user_script import UserScript
 from app.schemas.agent import AgentCreate, AgentUpdate
 
 

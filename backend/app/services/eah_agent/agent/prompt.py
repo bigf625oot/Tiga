@@ -1,5 +1,4 @@
 from typing import List, Dict, Optional
-import logging
 from app.core.i18n import _
 
 class InstructionBuilder:

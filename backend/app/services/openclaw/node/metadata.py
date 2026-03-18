@@ -5,8 +5,7 @@ OpenClaw Node Metadata Management
 支持基于标签的节点筛选和查询。
 """
 
-import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.node import Node
@@ -91,7 +90,7 @@ class NodeMetadataManager:
         # Let's implement a simple filter here or extend TagSelector.
         
         matching_nodes = []
-        selector = TagSelector(tags) # Reuse logic for checking subset
+        TagSelector(tags) # Reuse logic for checking subset
         
         for node in nodes:
             # We can use the internal helper _is_subset from TagSelector if we make it public or duplicate logic.

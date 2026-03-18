@@ -3,7 +3,7 @@ OpenClaw Node Least Load Selector
 
 Selects the node with the minimum load.
 """
-from typing import List, Optional, Protocol, Any
+from typing import List, Optional, Protocol
 from app.models.node import Node, NodeStatus
 from .base import BaseSelector, NodeSelectionError
 

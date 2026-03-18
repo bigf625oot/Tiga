@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.crud.crud_team import team as crud_team
 from app.schemas.team import TeamCreate, TeamResponse, TeamUpdate
-from app.models.team import Team
 from datetime import datetime
 
 router = APIRouter()

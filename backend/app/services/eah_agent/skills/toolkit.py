@@ -1,7 +1,6 @@
-from typing import List, Dict, Optional, Any
+from typing import List, Optional
 from agno.tools import Toolkit
 from .skill import Skill
-from .loaders.base import SkillLoader
 from .loaders.local import LocalSkills
 from .manager import Skills as SkillsManager
 

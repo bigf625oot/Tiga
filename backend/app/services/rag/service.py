@@ -22,7 +22,7 @@ class RagService:
         texts = [it.text for it in req.items]
         res = await db.execute(
             select(LLMModel)
-            .filter(LLMModel.is_active == True, LLMModel.model_type == "embedding")
+            .filter(LLMModel.is_active, LLMModel.model_type == "embedding")
             .order_by(LLMModel.updated_at.desc())
         )
         embed_model = res.scalars().first()
@@ -58,7 +58,7 @@ class RagService:
         knowledge = "\n\n".join([r.get("preview") or "" for r in refs])
         res = await db.execute(
             select(LLMModel)
-            .filter(LLMModel.is_active == True, LLMModel.model_type != "embedding")
+            .filter(LLMModel.is_active, LLMModel.model_type != "embedding")
             .order_by(LLMModel.updated_at.desc())
         )
         llm = res.scalars().first()
@@ -88,13 +88,13 @@ class RagService:
         try:
             res = await db.execute(
                 select(LLMModel)
-                .filter(LLMModel.is_active == True, LLMModel.model_type != "embedding")
+                .filter(LLMModel.is_active, LLMModel.model_type != "embedding")
                 .order_by(LLMModel.updated_at.desc())
             )
             llm_model = res.scalars().first()
             res = await db.execute(
                 select(LLMModel)
-                .filter(LLMModel.is_active == True, LLMModel.model_type == "embedding")
+                .filter(LLMModel.is_active, LLMModel.model_type == "embedding")
                 .order_by(LLMModel.updated_at.desc())
             )
             embed_model = res.scalars().first()

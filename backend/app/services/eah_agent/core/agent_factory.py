@@ -7,7 +7,7 @@ Agent Factory
 """
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional
 from agno.agent import Agent
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,10 +18,9 @@ from app.models.llm_model import LLMModel
 from app.services.eah_agent.tools.tool_factory import ToolFactory
 from app.services.eah_agent.skills.loaders.local import LocalSkills
 from app.services.eah_agent.skills.manager import Skills
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-from app.core.config import settings
 
 class AgentFactory:
     """
@@ -157,7 +156,7 @@ class AgentFactory:
                 description=config.role,
                 instructions=config.instructions,
                 tools=tools,
-                # show_tool_calls=True,  # Deprecated or not supported in this version
+                # show_tool_calls=True,  # 中文注释：是否展示工具调用，已被弃用或不支持
                 markdown=True,
                 reasoning=config.reasoning
             )

@@ -1,18 +1,13 @@
 import logging
-import time
 import json
 import uuid
-from typing import Any, Callable, Generator, List, Optional, AsyncGenerator, Dict
-
-import pandas as pd
+from typing import Any, Callable, List, Optional, AsyncGenerator
 from sqlalchemy import text, inspect, select, update, delete, desc, func
 from starlette.concurrency import run_in_threadpool
-
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.llm_model import LLMModel
 from app.models.data_query_session import DataQuerySession, DataQueryMessage
-from app.services.pathway.connectors.bridge import bridge
 from .models import DbConnectionConfig
 from .runners.sql_runner import SQLAlchemyRunner
 from .core import VannaCore
@@ -70,7 +65,7 @@ class SmartDataQueryService:
             )
             
             if status == "archived":
-                query = query.filter(DataQuerySession.is_archived == True)
+                query = query.filter(DataQuerySession.is_archived)
             else:
                 query = query.filter(DataQuerySession.is_archived == False)
                 
@@ -134,7 +129,7 @@ class SmartDataQueryService:
             # 1. Get Chat Model
             result_chat = await session.execute(
                 select(LLMModel)
-                .filter(LLMModel.is_active == True, LLMModel.model_type != "embedding")
+                .filter(LLMModel.is_active, LLMModel.model_type != "embedding")
                 .order_by(LLMModel.updated_at.desc())
             )
             chat_model = result_chat.scalars().first()
@@ -142,7 +137,7 @@ class SmartDataQueryService:
             # 2. Get Embedding Model
             result_embed = await session.execute(
                 select(LLMModel)
-                .filter(LLMModel.is_active == True, LLMModel.model_type == "embedding")
+                .filter(LLMModel.is_active, LLMModel.model_type == "embedding")
                 .order_by(LLMModel.updated_at.desc())
             )
             embed_model = result_embed.scalars().first()
@@ -387,7 +382,6 @@ class SmartDataQueryService:
         """
         运行 Tiga 查询并以 SSE 格式流式返回结果。
         """
-        step_id = 1
         
         def sse_pack(event: str, data: Any) -> str:
             if isinstance(data, (dict, list)):
@@ -514,7 +508,7 @@ class SmartDataQueryService:
 
                 except Exception as e:
                     logger.warning(f"Chart generation failed: {e}")
-                    yield sse_pack("message", f"图表生成失败，已降级为表格视图。")
+                    yield sse_pack("message", "图表生成失败，已降级为表格视图。")
             
         except Exception as e:
             error_msg = str(e)
@@ -758,7 +752,7 @@ class SmartDataQueryService:
 
                 except Exception as e:
                     logger.warning(f"Chart generation failed: {e}")
-                    yield wrap_msg(f"图表生成失败，已降级为表格视图。", "process")
+                    yield wrap_msg("图表生成失败，已降级为表格视图。", "process")
             
         except Exception as e:
             error_msg = str(e)
@@ -841,7 +835,7 @@ class SmartDataQueryService:
                     df = self.vanna_core.sql_runner.run_sql(sql)
                     if not df.empty:
                          total_records += int(df.iloc[0, 0])
-                except Exception as e:
+                except Exception:
                     # Ignore individual table errors (e.g. permission denied)
                     pass
             

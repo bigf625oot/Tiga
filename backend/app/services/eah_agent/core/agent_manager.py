@@ -1,10 +1,8 @@
 import logging
-import inspect
-from typing import Optional, List, Any, TYPE_CHECKING, Dict
+from typing import Optional, Any, TYPE_CHECKING, Dict
 
 from agno.agent import Agent as AgnoAgent
 # from agno.tools.duckduckgo import DuckDuckGoTools # Removed: Handled by loader
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
@@ -12,19 +10,12 @@ if TYPE_CHECKING:
     from app.services.eah_agent.core.executor import ExecutorAgent
 
 # from agno.tools.python import PythonTools # Assuming this exists or similar
-from app.models.agent import Agent as AgentModel
-from app.models.chat import ChatMessage
 from app.models.llm_model import LLMModel
-from app.services.rag.knowledge_base import kb_service
-from app.services.eah_agent.skills.manager import Skills as FileSkillsManager
-from app.services.eah_agent.skills.loaders.local import LocalSkills
-from app.services.eah_agent.domain.config import AgentConfig, TeamConfig
+from app.services.eah_agent.domain.config import AgentConfig
 from app.services.eah_agent.core.agent_factory import AgentFactory
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-from app.core.config import settings
-from app.services.llm.factory import ModelFactory
 # from app.services.eah_agent.tools.registry import discover_tools # Removed: Handled by loader
 
 try:

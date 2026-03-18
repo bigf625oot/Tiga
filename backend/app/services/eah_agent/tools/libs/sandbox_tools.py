@@ -1,10 +1,9 @@
 import logging
-import json
 import base64
 import tempfile
 import os
 from uuid import uuid4
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, Union
 from agno.tools import Toolkit
 from agno.tools.function import ToolResult
 from agno.media import Image

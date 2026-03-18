@@ -1,11 +1,10 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Dict, Set, Any
+from typing import Dict, Any
 from app.crud.crud_task import task as crud_task
 from app.crud.crud_task import sub_task as crud_sub_task
 from app.core.task_stream import TaskStream
 from app.schemas.task import SubTaskUpdate, TaskUpdate
-import logging
 
 logger = logging.getLogger(__name__)
 

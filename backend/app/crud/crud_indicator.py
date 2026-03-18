@@ -1,8 +1,6 @@
 from typing import List, Optional
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models.indicator import Indicator
 from app.schemas.indicator import IndicatorCreate, IndicatorUpdate
 

@@ -39,7 +39,7 @@ def apply_structuring(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
             def _parse_json(text):
                 try:
                     return json.loads(text) if text else None
-                except:
+                except Exception:
                     return None
             
             return table.with_columns(**{output_col: pw.apply(_parse_json, table[input_col])})
@@ -50,11 +50,12 @@ def apply_structuring(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
             quotechar = params.get("quotechar", '"')
             
             def _parse_csv(line):
-                if not line: return []
+                if not line:
+                    return []
                 try:
                     reader = csv.reader(io.StringIO(line), delimiter=delimiter, quotechar=quotechar)
                     return next(reader)
-                except:
+                except Exception:
                     return []
 
             return table.with_columns(**{output_col: pw.apply(_parse_csv, table[input_col])})
@@ -63,7 +64,8 @@ def apply_structuring(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
             # Extract frontmatter and content
             # Returns a dict: {"meta": {...}, "content": "..."}
             def _parse_md(text):
-                if not text: return {"meta": {}, "content": ""}
+                if not text:
+                    return {"meta": {}, "content": ""}
                 
                 meta = {}
                 content = text
@@ -76,7 +78,7 @@ def apply_structuring(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
                     if yaml:
                         try:
                             meta = yaml.safe_load(fm_text)
-                        except:
+                        except Exception:
                             pass
                     else:
                         # Simple key-value fallback

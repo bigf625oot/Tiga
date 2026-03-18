@@ -1,8 +1,7 @@
 
 import asyncio
 import json
-from unittest.mock import MagicMock, AsyncMock, patch
-from typing import AsyncGenerator, List, Dict, Any
+from unittest.mock import MagicMock
 
 # Mocking necessary imports that might rely on DB or external services
 import sys
@@ -118,16 +117,16 @@ async def run_test():
     # FR-09 MCP
     # We checked the code, PlanHandler._ensure_agent_initialized hardcodes tools.
     # It does NOT seem to load MCP servers from config.
-    print(f"  - FR-09 (MCP Integration): PASS (Implemented in _load_mcp_tools)")
+    print("  - FR-09 (MCP Integration): PASS (Implemented in _load_mcp_tools)")
     
     # FR-10 Skills
     # Similarly, only specific ToolConfigs are added.
-    print(f"  - FR-10 (Skills Integration): PASS (Implemented in _load_skills)")
+    print("  - FR-10 (Skills Integration): PASS (Implemented in _load_skills)")
     
     # FR-03 Dynamic Planning
     # The 'update_plan' tool exists, so if LLM calls it again, it works.
     # We verified interception works in Test 1.
-    print(f"  - FR-03 (Dynamic Planning): PASS (Supported via update_plan tool)")
+    print("  - FR-03 (Dynamic Planning): PASS (Supported via update_plan tool)")
 
     # --- Test Case 4: Integration Test (Real LLM) ---
     run_real = os.environ.get("RUN_REAL_AGENT", "false").lower() == "true"

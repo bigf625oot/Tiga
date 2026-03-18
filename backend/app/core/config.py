@@ -1,4 +1,5 @@
 from typing import Optional
+import os
 
 from pydantic_settings import BaseSettings
 
@@ -173,7 +174,6 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Apply network proxy settings globally
-import os
 if settings.NO_PROXY:
     os.environ["NO_PROXY"] = settings.NO_PROXY
     os.environ["no_proxy"] = settings.NO_PROXY

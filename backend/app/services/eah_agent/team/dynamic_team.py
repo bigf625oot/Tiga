@@ -1,4 +1,3 @@
-from typing import List, Optional, Any
 from agno.agent import Agent as AgnoAgent
 from .base_team import BaseTeam
 from app.services.eah_agent.agent.builder import AgentBuilder
@@ -121,7 +120,7 @@ Please coordinate them to answer the user request.
         model = ModelFactory.create_model(builder.llm_model)
         is_reasoning = ModelFactory.should_use_agno_reasoning(builder.llm_model)
         model_config = getattr(builder.agent_model, "model_config", {}) or {}
-        show_tool_calls = model_config.get("show_tool_calls", True)
+        model_config.get("show_tool_calls", True)
 
         self.team_agent = AgnoAgent(
             name=builder.agent_model.name,

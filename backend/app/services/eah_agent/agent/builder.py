@@ -8,8 +8,6 @@ from app.models.agent import Agent as AgentModel
 from app.models.llm_model import LLMModel
 from app.services.llm.factory import ModelFactory
 from app.services.eah_agent.tools import default_tools
-from app.services.eah_agent.skills.manager import Skills as FileSkillsManager
-from app.services.eah_agent.skills.loaders.local import LocalSkills
 from app.core.config import settings
 
 from .prompt import InstructionBuilder
@@ -55,8 +53,8 @@ class AgentBuilder:
             res = await self.db.execute(
                 select(LLMModel).filter(
                     LLMModel.model_id == llm_model_id,
-                    LLMModel.is_active == True,
-                    LLMModel.api_key != None,
+                    LLMModel.is_active,
+                    LLMModel.api_key is not None,
                     LLMModel.api_key != "",
                 )
             )
@@ -65,7 +63,7 @@ class AgentBuilder:
             if not self.llm_model:
                 # Fallback to model without key
                 res = await self.db.execute(
-                    select(LLMModel).filter(LLMModel.model_id == llm_model_id, LLMModel.is_active == True)
+                    select(LLMModel).filter(LLMModel.model_id == llm_model_id, LLMModel.is_active)
                 )
                 self.llm_model = res.scalars().first()
 
@@ -79,7 +77,7 @@ class AgentBuilder:
         if should_fallback:
             res = await self.db.execute(
                 select(LLMModel)
-                .filter(LLMModel.is_active == True, LLMModel.api_key != None, LLMModel.api_key != "")
+                .filter(LLMModel.is_active == True, LLMModel.api_key.is_not(None), LLMModel.api_key != "")
                 .order_by(LLMModel.updated_at.desc())
             )
             fallback_model = res.scalars().first()
@@ -94,7 +92,7 @@ class AgentBuilder:
                 # Last resort: try any active model
                 if not self.llm_model:
                     res = await self.db.execute(
-                        select(LLMModel).filter(LLMModel.is_active == True).order_by(LLMModel.updated_at.desc())
+                        select(LLMModel).filter(LLMModel.is_active).order_by(LLMModel.updated_at.desc())
                     )
                     self.llm_model = res.scalars().first()
 
@@ -108,7 +106,7 @@ class AgentBuilder:
         
         # Handle file skills specifically as they might add instructions
         skills_config = getattr(self.agent_model, "skills_config", {}) or {}
-        file_skills_config = skills_config.get("file_skills", {})
+        skills_config.get("file_skills", {})
         
         # NOTE: File Skills are now handled inside default_tools.load_tools
         # However, we still need to extract instructions if the tool was loaded
@@ -190,7 +188,7 @@ class AgentBuilder:
             is_reasoning = ModelFactory.should_use_agno_reasoning(self.llm_model)
         
         model_config = getattr(self.agent_model, "model_config", {}) or {}
-        show_tool_calls = model_config.get("show_tool_calls", False)
+        model_config.get("show_tool_calls", False)
         
         # 5. Create Agent
         agent = AgnoAgent(

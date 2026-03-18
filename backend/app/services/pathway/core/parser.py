@@ -1,10 +1,10 @@
-from typing import Dict, List, Any, Optional
+from typing import Dict, List
 import pathway as pw
 from app.services.pathway.core.models import DAGPipeline, DAGNode
 from app.services.pathway.connectors.source import get_source
 from app.services.pathway.connectors.sink import get_sink
 from app.services.pathway.operators.registry import OperatorRegistry
-from app.services.pathway.core.exceptions import ConfigurationError, PathwayException
+from app.services.pathway.core.exceptions import ConfigurationError
 from app.core.logger import logger
 
 class DAGParser:
@@ -135,7 +135,7 @@ class DAGParser:
             right = input_tables[1]
             
             on = node.config.get("on") # Column name or list
-            how = node.config.get("how", "inner") # inner, outer, left, right
+            node.config.get("how", "inner") # inner, outer, left, right
             
             # Pathway join syntax: left.join(right, left.col == right.col, ...)
             # Or simplified: left.join(right, on="col") if supported (Pathway syntax varies)

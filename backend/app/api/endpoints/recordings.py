@@ -22,10 +22,6 @@ import tempfile
 import json
 from pydub import AudioSegment
 import imageio_ffmpeg
-
-# Configure pydub to use imageio-ffmpeg
-AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
-
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,6 +37,9 @@ from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 from agno.agent import Agent
 
 logger = logging.getLogger(__name__)
+
+# Configure pydub to use imageio-ffmpeg
+AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
 
 router = APIRouter()
 
@@ -101,7 +100,7 @@ async def process_audio_background(recording_id: int, db_session_maker):
                     # Fetch active LLM model
                     model_res = await db.execute(
                         select(LLMModel)
-                        .filter(LLMModel.is_active == True)
+                        .filter(LLMModel.is_active)
                         .limit(1)
                     )
                     llm_model = model_res.scalars().first()
@@ -273,7 +272,7 @@ async def move_recording(
     # Check if target folder exists (if not root)
     if target_parent_id is not None:
         target_result = await db.execute(
-            select(Recording).filter(Recording.id == target_parent_id, Recording.is_folder == True)
+            select(Recording).filter(Recording.id == target_parent_id, Recording.is_folder)
         )
         target_folder = target_result.scalars().first()
         if not target_folder:

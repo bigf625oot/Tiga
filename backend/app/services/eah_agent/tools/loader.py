@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional, Type, Union
+from typing import List, Any, Type, Union
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from agno.tools import Toolkit
@@ -141,7 +141,7 @@ class ToolsManager:
             try:
                 from app.models.workflow import Workflow
                 from sqlalchemy import select
-                wf_res = await db.execute(select(Workflow).filter(Workflow.is_active == True))
+                wf_res = await db.execute(select(Workflow).filter(Workflow.is_active))
                 workflows = wf_res.scalars().all()
                 if workflows:
                     wf_dicts = [{"name": w.name, "webhook_url": w.webhook_url} for w in workflows]

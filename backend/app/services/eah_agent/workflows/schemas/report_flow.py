@@ -3,7 +3,7 @@
 """
 
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from app.services.eah_agent.workflows.base import EAHWorkflowState
 
 class ReportSection(BaseModel):

@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, Any, Optional
 from app.services.sandbox.e2b_sandbox import E2BSandboxService
 
 logger = logging.getLogger(__name__)

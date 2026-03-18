@@ -4,14 +4,12 @@
 处理脏数据检测（校验和不匹配、版本不匹配、乱序）并触发补偿逻辑。
 """
 
-import asyncio
 import logging
 from typing import Dict, Any, List
 from datetime import datetime
 from app.models.node import Node, NodeStatus
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import AsyncSessionLocal
-from sqlalchemy import update, select
+from sqlalchemy import update
 
 logger = logging.getLogger("openclaw.gateway.consistency")
 

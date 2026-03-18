@@ -43,8 +43,8 @@ async def create_model(model_in: LLMModelCreate, db: AsyncSession = Depends(get_
         model_in.is_active = True
     elif model_in.is_active:
         # Deactivate others if this one is active
-        await db.execute(select(LLMModel).filter(LLMModel.is_active == True))
-        active_models = (await db.execute(select(LLMModel).filter(LLMModel.is_active == True))).scalars().all()
+        await db.execute(select(LLMModel).filter(LLMModel.is_active))
+        active_models = (await db.execute(select(LLMModel).filter(LLMModel.is_active))).scalars().all()
         for m in active_models:
             m.is_active = False
 
@@ -64,7 +64,7 @@ async def update_model(model_id: int, model_in: LLMModelUpdate, db: AsyncSession
 
     if model_in.is_active:
         # Deactivate others
-        active_models = (await db.execute(select(LLMModel).filter(LLMModel.is_active == True))).scalars().all()
+        active_models = (await db.execute(select(LLMModel).filter(LLMModel.is_active))).scalars().all()
         for m in active_models:
             if m.id != model_id:
                 m.is_active = False
@@ -98,7 +98,7 @@ async def activate_model(model_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Model not found")
 
     # Deactivate all others
-    active_models = (await db.execute(select(LLMModel).filter(LLMModel.is_active == True))).scalars().all()
+    active_models = (await db.execute(select(LLMModel).filter(LLMModel.is_active))).scalars().all()
     for m in active_models:
         m.is_active = False
 

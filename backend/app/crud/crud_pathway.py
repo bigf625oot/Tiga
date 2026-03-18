@@ -6,7 +6,6 @@ from cryptography.fernet import Fernet
 import os
 
 from app.models.pathway import PathwaySource, PathwayJob, PathwayJobStatus
-from app.core.config import settings
 
 # In a real app, KEY should be in env vars or KMS
 # Generate a key if not exists or use a fixed one for dev

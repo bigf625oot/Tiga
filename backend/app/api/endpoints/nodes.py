@@ -16,11 +16,11 @@
 """
 import logging
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
-from app.schemas.node import Node, NodeCreate, NodeUpdate, NodeMetricCreate, Alert, CommandRequest
+from app.schemas.node import Node, NodeCreate, NodeMetricCreate, CommandRequest
 from app.services.openclaw.node.manager import node_manager
 
 # 初始化日志记录器

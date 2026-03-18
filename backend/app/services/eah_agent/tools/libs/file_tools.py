@@ -3,7 +3,6 @@ from agno.tools import Toolkit
 from agno.tools.file import FileTools as AgnoFileTools
 from pydantic import BaseModel, Field
 import json
-import os
 
 class FileTools(AgnoFileTools):
     _name = "file_tools"

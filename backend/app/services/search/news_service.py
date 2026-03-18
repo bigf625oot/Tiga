@@ -34,7 +34,7 @@ async def _fetch_text(session: aiohttp.ClientSession, url: str) -> Optional[str]
                 except UnicodeDecodeError:
                     try:
                         return content.decode("gbk")
-                    except:
+                    except Exception:
                         return content.decode("utf-8", errors="ignore")
     except Exception as e:
         logger.error(f"Error fetching {url}: {e}")
@@ -496,10 +496,10 @@ class NewsQueryExecutor:
                             if not isinstance(item, dict):
                                 try:
                                     item = item.to_map()
-                                except:
+                                except Exception:
                                     try:
                                         item = vars(item)
-                                    except:
+                                    except Exception:
                                         pass
 
                             url = item.get("link") or item.get("url")
@@ -521,7 +521,7 @@ class NewsQueryExecutor:
                                     if url:
                                         parsed_uri = urlparse(url)
                                         source = parsed_uri.netloc
-                                except:
+                                except Exception:
                                     pass
 
                                 if item.get("siteName"):
@@ -630,10 +630,10 @@ class NewsQueryExecutor:
                             if not isinstance(item, dict):
                                 try:
                                     item = item.to_map()
-                                except:
+                                except Exception:
                                     try:
                                         item = vars(item)
-                                    except:
+                                    except Exception:
                                         continue
 
                             url = item.get("link") or item.get("url")
@@ -663,7 +663,7 @@ class NewsQueryExecutor:
                                     if url:
                                         parsed_uri = urlparse(url)
                                         source = parsed_uri.netloc
-                                except:
+                                except Exception:
                                     pass
 
                                 if item.get("siteName"):

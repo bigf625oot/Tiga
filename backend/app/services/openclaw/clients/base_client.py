@@ -8,7 +8,7 @@ import asyncio
 import json
 import logging
 import uuid
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Callable, Dict, Optional, Awaitable
 
 import websockets

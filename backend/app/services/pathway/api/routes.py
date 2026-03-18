@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,7 @@ from app.services.pathway.core.exceptions import PathwayException
 from app.crud import crud_pathway
 from app.models.pathway import PathwayJobStatus
 from app.schemas.pathway import PipelineCreate, PipelineUpdate, PipelineResponse, PipelineRunResponse
+from app.services.pathway.connectors.source import get_source as get_source_connector
 
 router = APIRouter()
 
@@ -37,8 +38,6 @@ async def list_sources(skip: int = 0, limit: int = 100, db: AsyncSession = Depen
     sources = await crud_pathway.list_sources(db, skip, limit)
     return [{"id": s.id, "name": s.name, "type": s.type} for s in sources]
 
-from app.services.pathway.connectors.source import get_source as get_source_connector
-
 @router.post("/sources/discover")
 def discover_source_schema(
     type: str, 
@@ -49,8 +48,7 @@ def discover_source_schema(
     Discover schema for a given source configuration without saving it.
     """
     try:
-        source_conn = get_source_connector(type)
-        full_config = {**config, **(secrets or {})}
+        get_source_connector(type)
         
         # Check if discovery is implemented (BaseSource doesn't enforce it yet, assume read returns table or similar)
         # For now, we just return a success message or mock schema

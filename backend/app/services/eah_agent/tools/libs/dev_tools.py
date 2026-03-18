@@ -1,4 +1,3 @@
-from typing import Optional, List
 try:
     from agno.tools.github import GithubTools as AgnoGithubTools
 except ImportError:

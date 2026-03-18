@@ -1,11 +1,10 @@
-from typing import Optional, List
 try:
     from agno.tools.youtube import YouTubeTools as AgnoYouTubeTools
 except ImportError:
     class AgnoYouTubeTools:
         def __init__(self, *args, **kwargs):
             raise ImportError("youtube-transcript-api is required. Please install it.")
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 class YouTubeTools(AgnoYouTubeTools):
     _name = "youtube"

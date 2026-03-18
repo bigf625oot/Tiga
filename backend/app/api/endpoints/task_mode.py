@@ -284,7 +284,7 @@ async def list_task_logs(
         skip=skip,
         limit=limit,
     )
-    data = [TaskLogResponse.model_validate(l).model_dump() for l in logs]
+    data = [TaskLogResponse.model_validate(log_entry).model_dump() for log_entry in logs]
     await cache.set_json(cache_key, data, ttl_seconds=settings.TASK_MODE_CACHE_TTL_SECONDS)
     return data
 
@@ -339,4 +339,3 @@ async def import_backup(
 ):
     result = await task_mode.import_backup(db, payload=payload, overwrite=overwrite)
     return TaskBackupImportResult(**result)
-

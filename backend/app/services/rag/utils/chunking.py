@@ -34,7 +34,8 @@ def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> List[s
         try:
             import tiktoken
             enc = tiktoken.get_encoding(settings.CHUNK_TOKENIZER)
-            token_count = lambda s: len(enc.encode(s))
+            def token_count(s):
+                return len(enc.encode(s))
         except Exception:
             token_count = None
 

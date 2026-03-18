@@ -135,7 +135,7 @@ class DatabaseSource(BaseSource):
                  pass
             
             # Wrap in text()
-            query = text(sql_query)
+            text(sql_query)
             # We might not be able to apply LIMIT/OFFSET easily to arbitrary SQL without parsing
             # So we might just execute it as is, or wrap it in a subquery?
             # "SELECT * FROM ({sql_query}) AS sub LIMIT :limit OFFSET :offset"

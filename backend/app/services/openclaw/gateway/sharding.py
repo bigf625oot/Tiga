@@ -6,9 +6,8 @@ OpenClaw Task Sharding & Dispatch
 """
 
 import asyncio
-import logging
 from enum import Enum
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from app.models.node import Node
 from app.services.openclaw.gateway.dispatch import DispatchService
 from app.core.logger import logger
@@ -116,7 +115,7 @@ class TaskSharder:
                         target_node_id = nodes[i % num_nodes].id
                     else:
                          # No nodes to assign
-                         failures.append(f"No node for task {i}")
+                         logger.error(f"No node for task {i}")
                          continue
 
                 tasks.append(self.dispatch_service.dispatch_to_gateway(payload, target_node_id, task_id))

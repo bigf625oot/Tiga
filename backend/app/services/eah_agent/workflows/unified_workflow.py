@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from app.services.eah_agent.workflows.base import EAHWorkflow, EAHWorkflowState
 from app.services.eah_agent.utils.session_kb import SessionKnowledgeManager
 from app.services.eah_agent.core.agent_manager import agent_manager
-from app.models.agent_plan import AgentPlan, AgentTask, PlanStatus, TaskStatus
+from app.models.agent_plan import AgentPlan, AgentTask, TaskStatus
 from app.core.context_compressor import ContextCompressor
 from app.core.shared_state import StateManager, SharedState
 from app.core.i18n import _

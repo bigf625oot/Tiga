@@ -458,21 +458,29 @@ const viewGlobalGraph = () => {
     graphVisible.value = true;
 };
 
-const fetchFiles = async (reset = false) => {
+const fetchFiles = async (reset = false, silent = false) => {
+    let currentFetchPage = 1;
+    let currentFetchPageSize = pageSize;
+
     if (reset) {
-        page.value = 1;
-        files.value = [];
-        hasMore.value = true;
-        loading.value = true;
+        if (!silent) {
+            page.value = 1;
+            files.value = [];
+            hasMore.value = true;
+            loading.value = true;
+        } else {
+            currentFetchPageSize = Math.max(pageSize, (page.value - 1) * pageSize);
+        }
     } else {
         if (!hasMore.value || loadingMore.value) return;
         loadingMore.value = true;
+        currentFetchPage = page.value;
     }
 
     try {
         const params = {
-            page: page.value,
-            page_size: pageSize
+            page: currentFetchPage,
+            page_size: currentFetchPageSize
         };
         if (searchQuery.value && searchQuery.value.trim()) {
             params.keyword = searchQuery.value.trim();
@@ -483,18 +491,34 @@ const fetchFiles = async (reset = false) => {
         const res = await api.get('/knowledge/list', { params });
         const newFiles = res.data;
         
-        if (newFiles.length < pageSize) {
-            hasMore.value = false;
+        if (reset) {
+            if (!silent) {
+                if (newFiles.length < pageSize) hasMore.value = false;
+            } else {
+                if (newFiles.length < currentFetchPageSize) hasMore.value = false;
+            }
+        } else {
+            if (newFiles.length < pageSize) {
+                hasMore.value = false;
+            }
         }
         
         if (reset) {
             files.value = newFiles;
-            selectedFiles.value = [];
+            if (!silent) {
+                selectedFiles.value = [];
+            } else {
+                selectedFiles.value = selectedFiles.value.filter(id => newFiles.some(f => f.id === id));
+            }
         } else {
             files.value = [...files.value, ...newFiles];
         }
         
-        page.value++;
+        if (!reset) {
+            page.value++;
+        } else if (!silent) {
+            page.value = 2;
+        }
         
         // Check if we need to poll (if any file is in transient state)
         const hasPending = files.value.some(f => ['上传中', '已上传', '解析中'].includes(f.status_text));
@@ -507,7 +531,7 @@ const fetchFiles = async (reset = false) => {
         console.error(e);
         stopPolling();
     } finally {
-        loading.value = false;
+        if (!silent) loading.value = false;
         loadingMore.value = false;
     }
 };
@@ -616,7 +640,7 @@ const confirmMove = async () => {
 
 const startPolling = () => {
     if (pollTimer) return;
-    pollTimer = setInterval(() => fetchFiles(true), 3000); 
+    pollTimer = setInterval(() => fetchFiles(true, true), 3000); 
 };
 
 const stopPolling = () => {

@@ -1,5 +1,4 @@
 import importlib.util
-import os
 import sys
 from typing import Callable, Dict, Any
 import pathway as pw
@@ -52,7 +51,7 @@ def apply_udf(table: pw.Table, config: Dict[str, Any]) -> pw.Table:
         "dict": dict,
         "list": list
     }
-    return_type = type_map.get(return_type_str, str)
+    type_map.get(return_type_str, str)
 
     try:
         udf_func = load_udf(file_path, function_name)

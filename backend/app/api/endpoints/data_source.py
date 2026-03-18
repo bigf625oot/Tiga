@@ -26,7 +26,7 @@ from app.api import deps
 from app.crud.crud_data_source import data_source as crud_data_source
 from app.schemas.data_source import DataSourceCreate, DataSourceOut, DataSourceTest, DataSourceUpdate, DataSourceTestResult
 from app.strategies import get_strategy
-from app.models.domain import MetadataModel, DataChunk
+from app.models.domain import MetadataModel
 
 router = APIRouter()
 

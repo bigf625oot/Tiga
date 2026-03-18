@@ -93,30 +93,6 @@ async def _retrieve_context(session_id: str, prompt: str) -> str:
             
     return "\n".join(context_parts)
 
-async def parse_task_intent(prompt: str, db: AsyncSession, session_id: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Parse user prompt into a structured task definition using an active LLM.
-    Includes retry logic, schema validation, and Context Recall.
-    """
-    api_key, base_url, model_id = await _get_active_llm(db)
-    
-    if not api_key:
-         raise HTTPException(status_code=500, detail="No active LLM model found for parsing task")
-
-    # 1. Retrieve Context
-    context_str = await _retrieve_context(session_id, prompt)
-    
-    # 2. Construct Augmented Prompt
-    system_prompt_augmented = SYSTEM_PROMPT
-    if context_str:
-        system_prompt_augmented += f"\n\nContext Information:\n{context_str}\n\nUse the above context to resolve references (e.g., 'it', 'previous task')."
-
-    messages = [
-        {"role": "system", "content": system_prompt_augmented},
-        {"role": "user", "content": prompt}
-    ]
-    
-    max_retries = 1
 # JSON Schema definition for task intent
 TASK_INTENT_SCHEMA = {
     "type": "object",
@@ -134,7 +110,7 @@ async def _get_active_llm(db: AsyncSession) -> tuple[str, str, str]:
     """Helper to get active LLM configuration"""
     res = await db.execute(
         select(LLMModel)
-        .filter(LLMModel.is_active == True)
+        .filter(LLMModel.is_active)
         .filter(LLMModel.model_type == "text")  # Ensure we only pick text generation models
         .order_by(LLMModel.updated_at.desc())
     )
@@ -233,7 +209,6 @@ async def parse_task_intent(prompt: str, db: AsyncSession, session_id: Optional[
     ]
     
     max_retries = 1
-    last_error = None
     
     async with httpx.AsyncClient(timeout=30.0) as client:
         for attempt in range(max_retries + 1):
@@ -288,7 +263,6 @@ async def parse_task_intent(prompt: str, db: AsyncSession, session_id: Optional[
                     
                 except ValueError as ve:
                     logger.warning(f"Validation failed (attempt {attempt}): {ve}")
-                    last_error = ve
                     
                     # Prepare retry message
                     if attempt < max_retries:

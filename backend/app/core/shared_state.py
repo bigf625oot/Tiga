@@ -1,6 +1,5 @@
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
-import json
 import time
 from app.core.redis import get_redis_connection
 

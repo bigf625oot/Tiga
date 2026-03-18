@@ -198,7 +198,7 @@ class ModelFactory:
         Check if the model is known to support multimodal inputs (Images, Video, etc.).
         """
         mid = (llm_model.model_id or "").lower()
-        provider = (llm_model.provider or "").lower()
+        (llm_model.provider or "").lower()
         
         # Known multimodal models
         if "gpt-4o" in mid or "gpt-4-turbo" in mid or "gpt-4-vision" in mid:

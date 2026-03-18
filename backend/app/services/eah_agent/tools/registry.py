@@ -1,9 +1,8 @@
 import importlib
 import inspect
 import pkgutil
-import re
 from pathlib import Path
-from typing import Dict, Type, Any, List, Optional, Union
+from typing import Dict, Type, Any, List, Union
 from pydantic import BaseModel
 
 from agno.tools import Toolkit
@@ -55,10 +54,10 @@ def get_tool_metadata(tool_class: Type[Toolkit], tool_name: str) -> ToolMetadata
     config_schema = {}
     if hasattr(tool_class, "Config") and inspect.isclass(tool_class.Config):
          # If using Pydantic model for config
-         try:
-             config_schema = tool_class.Config.model_json_schema()
-         except:
-             pass
+        try:
+            config_schema = tool_class.Config.model_json_schema()
+        except Exception:
+            pass
     elif hasattr(tool_class, "config_schema"):
          config_schema = tool_class.config_schema
 

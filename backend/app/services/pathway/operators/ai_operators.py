@@ -9,7 +9,6 @@ def mock_llm_call(text: str, config: Dict[str, Any]) -> Dict[str, Any]:
     Simulate LLM call with latency and structured output.
     In production, this would use OpenAI/Anthropic API.
     """
-    import time
     import random
     
     # Simulate network latency (stream processing might block, so in real world use async/thread)
@@ -88,7 +87,6 @@ def mock_knowledge_retrieval(query: str, config: Dict[str, Any]) -> Dict[str, An
     """
     Simulate RAG retrieval.
     """
-    import random
     
     top_k = config.get("top_k", 3)
     score_threshold = config.get("score_threshold", 0.7)

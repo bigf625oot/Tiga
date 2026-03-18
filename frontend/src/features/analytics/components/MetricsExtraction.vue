@@ -138,7 +138,7 @@
                 </Card>
 
                 <!-- Preview -->
-                <div class="space-y-3 transition-all duration-500 ease-in-out" :class="textContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'">
+                <div class="space-y-3 transition-all duration-500 ease-in-out" :class="(textContent || loadingContent) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'">
                     <div class="flex justify-between items-center">
                         <Label>文本预览</Label>
                         <Badge variant="outline" v-if="textContent" class="font-mono text-xs">
@@ -146,6 +146,9 @@
                         </Badge>
                     </div>
                     <div class="relative group">
+                        <div v-if="loadingContent" class="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-lg">
+                            <Loader2 class="w-8 h-8 animate-spin text-primary" />
+                        </div>
                         <Textarea 
                             v-model="textContent" 
                             readonly
@@ -548,6 +551,7 @@ const selectedFileId = ref(null);
 const selectedKbFileId = ref(null);
 const uploading = ref(false);
 const textContent = ref('');
+const loadingContent = ref(false);
 const docInput = ref(null);
 
 // Step 2: Indicators
@@ -633,23 +637,37 @@ const fetchFiles = async () => {
     }
 };
 
-const handleFileChange = async () => {
-    if (!selectedFileId.value) return;
+const handleFileChange = async (val) => {
+    const id = val || selectedFileId.value;
+    if (!id) return;
+    
+    loadingContent.value = true;
+    textContent.value = '';
+    
     try {
-        const res = await api.get(`/recordings/${selectedFileId.value}`);
+        const res = await api.get(`/recordings/${id}`);
         textContent.value = res.data.transcription_text || "无转写内容";
     } catch (e) {
         toast({ title: '获取内容失败', variant: 'destructive' });
+    } finally {
+        loadingContent.value = false;
     }
 };
 
-const handleKbFileChange = async () => {
-    if (!selectedKbFileId.value) return;
+const handleKbFileChange = async (val) => {
+    const id = val || selectedKbFileId.value;
+    if (!id) return;
+    
+    loadingContent.value = true;
+    textContent.value = '';
+
     try {
-        const res = await api.get(`/knowledge/${selectedKbFileId.value}/content`);
+        const res = await api.get(`/knowledge/${id}/content`);
         textContent.value = res.data.content || "无内容";
     } catch (e) {
         toast({ title: '获取内容失败', variant: 'destructive' });
+    } finally {
+        loadingContent.value = false;
     }
 };
 

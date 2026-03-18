@@ -1,7 +1,7 @@
 import numpy as np
 import asyncio
 import logging
-from typing import List, Dict, Any
+from typing import Dict, Any
 from pathlib import Path
 from app.services.rag.knowledge.service import kb_service
 from app.services.rag.knowledge.parser import parse_local_file_chunks
@@ -40,7 +40,8 @@ class TempKnowledgeBase:
         for p in pages:
             page_num = p.get("page")
             text = p.get("text", "")
-            if not text: continue
+            if not text:
+                continue
             
             page_chunks = kb_service._chunk_text(text)
             all_chunks_text.extend(page_chunks)
@@ -113,14 +114,16 @@ class TempKnowledgeBase:
         
         # Top K
         k = min(top_k, len(chunks))
-        if k == 0: return []
+        if k == 0:
+            return []
         
         indices = np.argsort(sims)[::-1][:k]
         
         results = []
         for idx in indices:
             score = float(sims[idx])
-            if score < 0.3: continue # threshold
+            if score < 0.3:
+                continue
             chunk = chunks[idx]
             results.append({
                 "title": Path(chunk['source']).name,

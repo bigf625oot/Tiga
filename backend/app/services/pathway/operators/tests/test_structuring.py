@@ -1,15 +1,6 @@
-import sys
-import os
 from unittest.mock import MagicMock, patch
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../"))
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
 import unittest
-import json
 from app.services.pathway.operators.registry import OperatorRegistry
-import app.services.pathway.operators.structuring as structuring
 
 class TestStructuringOperator(unittest.TestCase):
 

@@ -4,6 +4,7 @@ import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import io
 
 import PyPDF2
 from sqlalchemy import select
@@ -15,7 +16,6 @@ from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 from app.services.rag.knowledge.service import UPLOAD_DIR, kb_service
 from app.services.storage.service import storage_service
 from app.services.utils.markdown import to_markdown
-from app.services.rag.utils.common import sse_pack
 from app.services.rag.utils.chunking import chunk_text
 
 logger = logging.getLogger(__name__)
@@ -60,17 +60,17 @@ class QAService:
             try:
                 # 优先尝试直接读取 (OSS legacy)
                 if storage_service.bucket:
-                     raw_data = storage_service.bucket.get_object(doc.oss_key).read()
+                    raw_data = storage_service.bucket.get_object(doc.oss_key).read()
                 else:
-                     # 下载到临时文件读取
-                     temp_path = UPLOAD_DIR / f"temp_read_{doc.id}_{int(time.time())}"
-                     storage_service.download_file(doc.oss_key, str(temp_path))
-                     if temp_path.exists():
-                         raw_data = temp_path.read_bytes()
-                         try:
-                             temp_path.unlink()
-                         except:
-                             pass
+                    # 下载到临时文件读取
+                    temp_path = UPLOAD_DIR / f"temp_read_{doc.id}_{int(time.time())}"
+                    storage_service.download_file(doc.oss_key, str(temp_path))
+                    if temp_path.exists():
+                        raw_data = temp_path.read_bytes()
+                        try:
+                            temp_path.unlink()
+                        except Exception:
+                            pass
             except Exception:
                 pass
 
@@ -377,7 +377,7 @@ class QAService:
                                 try:
                                     json_str = str(raw_content).replace("::: echarts", "").replace(":::", "").strip()
                                     chart_data = json.loads(json_str)
-                                except:
+                                except Exception:
                                     pass
                             
                             if chart_data:
@@ -530,7 +530,7 @@ class QAService:
                 except Exception as e:
                     yield pack("process", f"检索过程警告: {e}", step=7)
 
-            tq = time.perf_counter()
+            time.perf_counter()
             q_gen = f"{query} (请用中文回答)" if "中文" not in query else query
 
             yield pack("process", "正在调用大模型生成回答...", step=11)
@@ -557,15 +557,12 @@ class QAService:
 
 
             # 处理结果
-            fail_reason = None
             if not answer or not str(answer).strip() or "查询出错" in str(answer):
-                fail_reason = "混合模式生成失败"
                 alt = await lightrag_engine.query_async(q_gen, mode="local")
                 answer = alt or answer
             else:
                 s = str(answer)
                 if any(x in s for x in ["[no-context]", "Authentication", "认证失败", "Sorry"]):
-                    fail_reason = "触发敏感词屏蔽"
                     alt = await lightrag_engine.query_async(q_gen, mode="local")
                     answer = alt or answer
 
@@ -609,7 +606,7 @@ class QAService:
                             did = int(did_str)
                         if len(parts) > 1:
                             fname = parts[1]
-                    except:
+                    except Exception:
                         pass
                 
                 sources.append({

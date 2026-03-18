@@ -1,9 +1,8 @@
 import logging
 import time
-import uuid
 import traceback
 import contextlib
-from typing import Optional, Any, Dict
+from typing import Any, Dict
 
 class StructuredLogger:
     def __init__(self, logger: logging.Logger, defaults: Dict[str, Any] = None):

@@ -2,9 +2,7 @@
 定义 Operations Team 的具体实现
 """
 
-from typing import List, Dict, Optional
 from agno.agent import Agent as AgnoAgent
-from sqlalchemy.ext.asyncio import AsyncSession
 from .base_team import BaseTeam
 
 class OperationsTeam(BaseTeam):

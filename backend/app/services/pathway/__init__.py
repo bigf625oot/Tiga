@@ -23,7 +23,6 @@ except ImportError:
     class MockTable:
         def __init__(self, *args, **kwargs): pass
         def __getitem__(self, item): return self
-        def __add__(self, other): return self
         def with_columns(self, *args, **kwargs): return self
         def filter(self, *args, **kwargs): return self
         def select(self, *args, **kwargs): return self

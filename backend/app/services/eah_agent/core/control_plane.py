@@ -79,8 +79,6 @@ class AgnoControlPlane:
         """
         if not self.llm_model and db:
             from app.services.llm.resolver import resolve_chat_llm_model, resolve_fast_llm_model
-            from sqlalchemy import select
-            from app.models.llm_model import LLMModel
 
             self.llm_model = await resolve_chat_llm_model(db)
             
@@ -137,11 +135,10 @@ class AgnoControlPlane:
         # 0. Early Feedback & Parallel Execution Setup
         yield {"type": "status", "content": _("Processing...")}
         
-        nlu_future = None
         rag_future = None
         
         # Start RAG early if needed
-        enable_search = bool(kwargs.get("enable_search", True))
+        bool(kwargs.get("enable_search", True))
         enable_knowledge = bool(kwargs.get("enable_knowledge", True))
         raw_doc_ids = kwargs.get("doc_ids") or []
         doc_ids = []

@@ -1,23 +1,14 @@
 import asyncio
 import logging
-import os
-import sys
-
 import nest_asyncio
+from app.db.session import AsyncSessionLocal
+from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 
 nest_asyncio.apply()
-
-# Add backend directory to path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.dirname(current_dir)
-sys.path.append(backend_dir)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-from app.db.session import AsyncSessionLocal
-from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 
 
 async def run():

@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from agno.agent import Agent
 from app.services.llm.factory import ModelFactory
@@ -54,7 +54,7 @@ class IntentClassifier:
             async with AsyncSessionLocal() as db:
                 res = await db.execute(
                     select(LLMModel)
-                    .filter(LLMModel.is_active == True, LLMModel.api_key != None)
+                    .filter(LLMModel.is_active == True, LLMModel.api_key.is_not(None))
                     .order_by(LLMModel.updated_at.desc())
                 )
                 active_model = res.scalars().first()
@@ -99,7 +99,7 @@ Also extract relevant parameters like time ranges, locations, and entities.
                     response = await self.agent.arun(question, response_model=IntentResponse)
                 except TypeError:
                      # Fallback: prompt engineering for JSON
-                     response_text = await self.agent.arun(question + "\nRespond in JSON format matching the schema.")
+                     await self.agent.arun(question + "\nRespond in JSON format matching the schema.")
                      # Parse JSON manually (omitted for brevity in this fix, assuming fallback handles it)
                      return self._rule_based_classify(question) # Temporary fallback
                 
@@ -113,7 +113,7 @@ Also extract relevant parameters like time ranges, locations, and entities.
                          # Check if content is JSON string
                          data = json.loads(response.content)
                          return QueryIntent(data.get("intent", "RAG_QUERY"))
-                     except:
+                     except Exception:
                          pass
             except Exception as e:
                 logger.error(f"LLM Classification failed: {e}. Falling back to rules.")
@@ -147,7 +147,7 @@ Also extract relevant parameters like time ranges, locations, and entities.
                      try:
                          data = json.loads(response.content)
                          return IntentResponse(**data)
-                     except:
+                     except Exception:
                          pass
             except Exception as e:
                 logger.error(f"LLM Detailed Classification failed: {e}")

@@ -9,10 +9,9 @@ import json
 import zlib
 import time
 import logging
-import random
 from collections import deque
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field
+from typing import Dict, Any, List
+from dataclasses import dataclass
 
 # Prometheus Metrics (Mock or Import)
 # from prometheus_client import Counter, Histogram
@@ -132,7 +131,7 @@ class HeartbeatMonitor:
         # Simulate WS send
         # In real impl, use self.ws_client.send(json.dumps(...))
         # Support compression?
-        data = json.dumps(payload.__dict__)
+        json.dumps(payload.__dict__)
         # compressed = zlib.compress(data.encode())
         # await self.ws_client.send_bytes(compressed)
         pass

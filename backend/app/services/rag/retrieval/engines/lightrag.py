@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.services.rag.config.settings import settings as rag_settings, LIGHTRAG_DIR, UPLOAD_DIR, DATA_DIR
+from app.services.rag.config.settings import LIGHTRAG_DIR, UPLOAD_DIR, DATA_DIR
 from app.models.knowledge import KnowledgeDocument
 from app.models.llm_model import LLMModel
 from app.services.rag.knowledge.parser import parse_local_file
@@ -64,7 +64,7 @@ class LightRAGEngine:
                 # 获取 LLM 模型
                 res = await db.execute(
                     select(LLMModel)
-                    .filter(LLMModel.is_active == True, LLMModel.model_type != "embedding")
+                    .filter(LLMModel.is_active, LLMModel.model_type != "embedding")
                     .order_by(LLMModel.updated_at.desc())
                 )
                 llm_model = res.scalars().first()
@@ -72,7 +72,7 @@ class LightRAGEngine:
                 # 获取 Embedding 模型
                 res = await db.execute(
                     select(LLMModel)
-                    .filter(LLMModel.is_active == True, LLMModel.model_type == "embedding")
+                    .filter(LLMModel.is_active, LLMModel.model_type == "embedding")
                     .order_by(LLMModel.updated_at.desc())
                 )
                 embed_model = res.scalars().first()
@@ -252,7 +252,7 @@ class LightRAGEngine:
                                             entities_kept = True
                                     except json.JSONDecodeError:
                                         pass
-                            except Exception as e:
+                            except Exception:
                                 pass
 
                             if not entities_kept:
@@ -778,7 +778,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                             preview = ""
                             try:
                                 preview = getattr(r, "text", None) or getattr(r, "content", None) or ""
-                            except:
+                            except Exception:
                                 pass
                             if not preview and cid in self._chunks_cache:
                                 preview = self._chunks_cache[cid]
@@ -789,7 +789,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                         preview = ""
                         try:
                             preview = getattr(r, "text", None) or getattr(r, "content", None) or ""
-                        except:
+                        except Exception:
                             pass
                         if not preview and cid and cid in self._chunks_cache:
                             preview = self._chunks_cache[cid]
@@ -1104,7 +1104,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                                     doc_id_str = doc_part.split(":")[0]
                                     if doc_id_str.isdigit():
                                         doc_id = int(doc_id_str)
-                            except:
+                            except Exception:
                                 pass
                     
                     if doc_ids and (doc_id is None or doc_id not in doc_ids):

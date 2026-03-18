@@ -1,9 +1,8 @@
 import logging
 import uuid
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 
 from app.models.chat import ChatSession, ChatMessage
 from app.core.i18n import _

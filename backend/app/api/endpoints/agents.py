@@ -34,7 +34,6 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.i18n import _
-from app.crud.crud_agent import agent as crud_agent
 from app.db.session import get_db
 from app.schemas.agent import AgentCreate, AgentResponse, AgentUpdate, AgentClone
 

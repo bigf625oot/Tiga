@@ -1,4 +1,3 @@
-from typing import Optional
 from agno.tools.sql import SQLTools as AgnoSQLTools
 from pydantic import BaseModel, Field
 

@@ -67,7 +67,7 @@ async def create_folder(request: CreateFolderRequest, db: AsyncSession = Depends
     # Check if folder with same name exists in same parent
     stmt = select(KnowledgeDocument).where(
         KnowledgeDocument.filename == request.name,
-        KnowledgeDocument.is_folder == True,
+        KnowledgeDocument.is_folder,
         KnowledgeDocument.parent_id == request.parent_id
     )
     result = await db.execute(stmt)
@@ -694,7 +694,7 @@ async def list_doc_sessions(doc_id: int, db: AsyncSession = Depends(get_db)):
             func.count(KnowledgeChat.id).label("msg_count"),
         )
         .where(KnowledgeChat.doc_id == doc_id)
-        .where(KnowledgeChat.session_id != None)
+        .where(KnowledgeChat.session_id.is_not(None))
         .group_by(KnowledgeChat.session_id)
         .order_by(func.max(KnowledgeChat.created_at).desc())
     )

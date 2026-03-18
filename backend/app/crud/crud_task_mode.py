@@ -446,18 +446,18 @@ class CRUDTaskMode:
         ]
         logs_payload = [
             {
-                "id": l.id,
-                "task_id": l.task_id,
-                "actor_id": l.actor_id,
-                "action_type": l.action_type,
-                "importance": l.importance,
-                "content": l.content,
-                "before_state": l.before_state,
-                "after_state": l.after_state,
-                "created_at": l.created_at.isoformat() if l.created_at else None,
-                "expires_at": l.expires_at.isoformat() if l.expires_at else None,
+                "id": log_item.id,
+                "task_id": log_item.task_id,
+                "actor_id": log_item.actor_id,
+                "action_type": log_item.action_type,
+                "importance": log_item.importance,
+                "content": log_item.content,
+                "before_state": log_item.before_state,
+                "after_state": log_item.after_state,
+                "created_at": log_item.created_at.isoformat() if log_item.created_at else None,
+                "expires_at": log_item.expires_at.isoformat() if log_item.expires_at else None,
             }
-            for l in logs
+            for log_item in logs
         ]
         return tasks_payload, versions_payload, qas_payload, logs_payload
 
@@ -521,16 +521,16 @@ class CRUDTaskMode:
             db.add(qa)
             created["qas_created"] += 1
 
-        for l in logs:
+        for log_entry in logs:
             log = TaskLog(
-                id=l.get("id"),
-                task_id=l.get("task_id"),
-                actor_id=l.get("actor_id"),
-                action_type=l.get("action_type") or "import",
-                importance=l.get("importance") or "normal",
-                content_enc=encrypt_text(l.get("content")),
-                before_state_enc=encrypt_json(l.get("before_state")),
-                after_state_enc=encrypt_json(l.get("after_state")),
+                id=log_entry.get("id"),
+                task_id=log_entry.get("task_id"),
+                actor_id=log_entry.get("actor_id"),
+                action_type=log_entry.get("action_type") or "import",
+                importance=log_entry.get("importance") or "normal",
+                content_enc=encrypt_text(log_entry.get("content")),
+                before_state_enc=encrypt_json(log_entry.get("before_state")),
+                after_state_enc=encrypt_json(log_entry.get("after_state")),
             )
             db.add(log)
             created["logs_created"] += 1

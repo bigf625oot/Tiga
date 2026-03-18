@@ -427,11 +427,31 @@ class QuickHandler(BaseHandler):
 
             # Stream response
             # Pass images if available
-            run_kwargs = {"messages": history_messages, "stream": True}
+            run_kwargs = {"messages": history_messages, "stream": True, "yield_run_output": True}
             if images:
                 run_kwargs["images"] = images
 
             async for chunk in self.agent.arun(input_text, **run_kwargs):
+                # 如果是最终的 RunOutput 对象，包含所有运行信息（metrics, messages, tools等）
+                if type(chunk).__name__ == "RunOutput":
+                    # 提取完整的执行结果并输出，满足调用方对 content, tools, messages, reasoning_content, metrics 等字段的需求
+                    try:
+                        run_output_dict = chunk.to_dict()
+                    except Exception:
+                        # 兼容处理
+                        run_output_dict = {
+                            "content": getattr(chunk, "content", None),
+                            "tools": getattr(chunk, "tools", []),
+                            "messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in getattr(chunk, "messages", [])],
+                            "reasoning_content": getattr(chunk, "reasoning_content", None),
+                            "metrics": getattr(chunk, "metrics", None)
+                        }
+                    yield {
+                        "type": "run_output",
+                        "data": run_output_dict
+                    }
+                    continue
+
                 # 1. 优先处理工具调用状态 (Tool Call)
                 if hasattr(chunk, "tool_calls") and chunk.tool_calls:
                     tool_names = [tc.function.name for tc in chunk.tool_calls if tc.function]

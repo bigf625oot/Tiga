@@ -1,7 +1,6 @@
 import multiprocessing
-import yaml
 import time
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Union
 import pathway as pw
 from app.services.pathway.core.config import PathwayJobConfig
 from app.services.pathway.core.models import DAGPipeline
@@ -9,10 +8,6 @@ from app.services.pathway.connectors.source import get_source
 from app.services.pathway.connectors.sink import get_sink
 from app.services.pathway.operators.cleaning import apply_operator
 # Import udf and structuring modules to ensure registration of operators
-import app.services.pathway.operators.udf 
-import app.services.pathway.operators.structuring
-import app.services.pathway.operators.ai_operators
-import app.services.pathway.operators.logic
 from app.services.pathway.core.parser import DAGParser
 from app.services.pathway.core.exceptions import ConfigurationError, PathwayException
 from app.core.logger import logger

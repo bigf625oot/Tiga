@@ -1,9 +1,8 @@
 import time
 import json
-import logging
 import uuid
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import pathway as pw
 from neo4j import GraphDatabase, Driver
 from app.services.pathway.connectors.base import BaseSink
@@ -160,13 +159,16 @@ class LightRAGSink(BaseSink):
                 r_type = row.get('type')
                 
                 if r_type == 'entity':
-                    if doc_id not in entities: entities[doc_id] = []
+                    if doc_id not in entities:
+                        entities[doc_id] = []
                     entities[doc_id].append(row)
                 elif r_type == 'relation':
-                    if doc_id not in relations: relations[doc_id] = []
+                    if doc_id not in relations:
+                        relations[doc_id] = []
                     relations[doc_id].append(row)
                 elif r_type == 'chunk':
-                    if doc_id not in chunks: chunks[doc_id] = []
+                    if doc_id not in chunks:
+                        chunks[doc_id] = []
                     chunks[doc_id].append(row)
             
             # Write JSON files (KV Store simulation)
@@ -225,11 +227,11 @@ class VectorObjectSink(BaseSink):
                 return
             
             texts = [row.get('text', '') for row in rows]
-            ids = [row.get('id') for row in rows]
+            [row.get('id') for row in rows]
             
             # 1. Generate Embeddings
             # embeddings = self.embedder.encode(texts)
-            embeddings = [[0.1] * 384 for _ in texts] # Mock
+            [[0.1] * 384 for _ in texts] # Mock
             
             # 2. Upload to S3
             for row in rows:
@@ -241,4 +243,3 @@ class VectorObjectSink(BaseSink):
             pass
 
         pw.io.python.write(table, _process_batch)
-

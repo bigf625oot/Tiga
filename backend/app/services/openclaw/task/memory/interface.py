@@ -5,8 +5,8 @@ Defines the abstract interface for memory operations.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
-from .models import MemoryUnit, SessionContext
+from typing import List, Optional
+from .models import MemoryUnit
 
 class AgentMemoryInterface(ABC):
     

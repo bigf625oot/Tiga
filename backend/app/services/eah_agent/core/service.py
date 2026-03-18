@@ -1,10 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.core.i18n import _
 from app.crud.crud_agent import agent as crud_agent
 from app.models.user_script import UserScript
-from app.schemas.agent import AgentCreate, AgentUpdate, AgentResponse, AgentClone
+from app.schemas.agent import AgentCreate, AgentUpdate, AgentClone
 from app.models.agent import Agent
 from typing import List
 

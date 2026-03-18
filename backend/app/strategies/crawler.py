@@ -76,8 +76,8 @@ class CrawlerSource(BaseSource):
         url = kwargs.get('url') or self.config.get('url')
         selector = self.config.get('selector')
         use_custom_selector = self.config.get('use_custom_selector', False)
-        js_render = self.config.get('js_render', False)
-        depth = self.config.get('depth', 1)
+        self.config.get('js_render', False)
+        self.config.get('depth', 1)
 
         if not url:
             raise ValueError("URL is required for crawling")

@@ -21,21 +21,19 @@ from agno.agent import Agent
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 import json
-
-logger = logging.getLogger(__name__)
-
-from app.core.config import settings
 import os
 from app.services.eah_agent.skills.manager import Skills
 from app.services.eah_agent.skills.loaders.local import LocalSkills
 from app.services.eah_agent.tools.factory import get_mcp_toolkit
 from agno.tools import Toolkit
-from agno.os import AgentOS
 from agno.tools.e2b import E2BTools
 from app.core.shared_state import StateManager, SharedState
 from app.services.eah_agent.utils.session_kb import SessionKnowledgeManager
 from app.core.context_compressor import ContextCompressor
 from app.services.eah_agent.storage.session_history import SessionHistory
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 class PlanHandler(BaseHandler):
     """
@@ -251,9 +249,12 @@ class PlanHandler(BaseHandler):
                 status_str = step.get("status", "pending").upper()
                 # 安全地将字符串状态映射为枚举
                 status_enum = TaskStatus.PENDING
-                if status_str == "RUNNING": status_enum = TaskStatus.IN_PROGRESS
-                elif status_str == "COMPLETED": status_enum = TaskStatus.COMPLETED
-                elif status_str == "FAILED": status_enum = TaskStatus.FAILED
+                if status_str == "RUNNING":
+                    status_enum = TaskStatus.IN_PROGRESS
+                elif status_str == "COMPLETED":
+                    status_enum = TaskStatus.COMPLETED
+                elif status_str == "FAILED":
+                    status_enum = TaskStatus.FAILED
                 
                 # 使用元数据或上下文作为任务类型和依赖项
                 input_context = {}
@@ -414,13 +415,31 @@ class PlanHandler(BaseHandler):
             """
             
             # Execute the agent with streaming (Async)
-            run_kwargs = {"stream": True}
+            run_kwargs = {"stream": True, "yield_run_output": True}
             if images:
                 run_kwargs["images"] = images
                 
             response_stream = await self.agent.arun(enhanced_prompt, **run_kwargs)
             
             async for chunk in response_stream:
+                # 提取最终 RunOutput 对象
+                if type(chunk).__name__ == "RunOutput":
+                    try:
+                        run_output_dict = chunk.to_dict()
+                    except Exception:
+                        run_output_dict = {
+                            "content": getattr(chunk, "content", None),
+                            "tools": getattr(chunk, "tools", []),
+                            "messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in getattr(chunk, "messages", [])],
+                            "reasoning_content": getattr(chunk, "reasoning_content", None),
+                            "metrics": getattr(chunk, "metrics", None)
+                        }
+                    yield {
+                        "type": "run_output",
+                        "data": run_output_dict
+                    }
+                    continue
+
                 # 1. Tool Status
                 if hasattr(chunk, "tool_calls") and chunk.tool_calls:
                     tool_names = [tc.function.name for tc in chunk.tool_calls if tc.function]

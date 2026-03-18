@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -43,7 +43,7 @@ class ContextLoader:
                 # If it's sync, we use db.execute directly.
                 # AgentManager passes AsyncSession.
 
-                stmt = select(Skill).where(Skill.id.in_(selected_skill_ids)).where(Skill.is_active == True)
+                stmt = select(Skill).where(Skill.id.in_(selected_skill_ids)).where(Skill.is_active)
                 result = await db.execute(stmt)
                 skills = result.scalars().all()
 

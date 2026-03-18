@@ -1,5 +1,4 @@
 import logging
-import base64
 import time
 from typing import Dict, Any, Optional, List, Union, Callable
 from e2b_code_interpreter import Sandbox
@@ -156,7 +155,7 @@ class E2BSandboxService:
             if not session_id and sandbox:
                 try:
                     sandbox.close()
-                except:
+                except Exception:
                     pass
 
     async def upload_file(self, session_id: str, path: str, content: Union[str, bytes]):

@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Optional, Awaitable, Callable
+from typing import Any, Optional
 from app.core.redis import get_redis_connection
 
 logger = logging.getLogger(__name__)

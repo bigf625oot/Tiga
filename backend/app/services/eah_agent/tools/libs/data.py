@@ -1,4 +1,3 @@
-from typing import Optional
 from agno.tools import Toolkit
 from pydantic import BaseModel, Field
 

@@ -3,9 +3,7 @@ import logging
 from app.services.llm.factory import ModelFactory
 from app.models.llm_model import LLMModel
 from agno.agent import Agent
-from agno.models.openai import OpenAIChat
 from app.db.session import AsyncSessionLocal
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +16,6 @@ class ContextCompressor:
             compressor_model = model
             if model.model_id and ("reasoner" in model.model_id.lower() or "deepseek-r1" in model.model_id.lower()):
                 try:
-                    import asyncio
                     # 这里不能直接写异步查询，所以我们在 _init_default_agent 或 compress_context 中延迟初始化
                     self.agent = None # 延迟初始化以获取更好的模型
                 except Exception:

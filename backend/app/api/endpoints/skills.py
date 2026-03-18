@@ -63,7 +63,7 @@ async def read_skills(
         
     # Other Filters
     if filter == "official":
-        stmt = stmt.where(Skill.is_official == True)
+        stmt = stmt.where(Skill.is_official)
     
     # Sorting
     if filter == "hot":

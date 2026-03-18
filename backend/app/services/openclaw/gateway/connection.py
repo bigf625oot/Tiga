@@ -4,15 +4,12 @@
 功能：处理高并发 WebSocket 连接，包含限流、版本检查、消息去重、解压缩及数据一致性校验。
 """
 
-import asyncio
 import json
 import logging
 import time
 import zlib
-from typing import Dict, Any, Optional
-from fastapi import WebSocket, WebSocketDisconnect
-from pydantic import ValidationError
-from starlette.websockets import WebSocketState
+from typing import Dict, Any
+from fastapi import WebSocket
 from collections import defaultdict
 
 class TokenBucket:
@@ -78,7 +75,7 @@ class WSConnectionManager:
             if isinstance(message, bytes):
                 try:
                     data_str = zlib.decompress(message).decode("utf-8")
-                except:
+                except Exception:
                     data_str = message.decode("utf-8")
             else:
                 data_str = message

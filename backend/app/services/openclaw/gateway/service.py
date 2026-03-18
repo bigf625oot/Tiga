@@ -16,11 +16,9 @@ Last Modified: 2025-03
 """
 
 import json
-import uuid
 import traceback
 from typing import List, Optional, Any, Dict
 from fastapi import HTTPException
-from datetime import datetime
 from urllib.parse import urlparse, urlunparse
 
 from app.core.config import settings
@@ -272,9 +270,12 @@ class OpenClawService:
             for job in jobs_data:
                 cmd = (job.get("command") or "").lower()
                 atype = "cron"
-                if "crawl" in cmd: atype = "crawl"
-                elif "screenshot" in cmd: atype = "screenshot"
-                elif "monitor" in cmd: atype = "monitor"
+                if "crawl" in cmd:
+                    atype = "crawl"
+                elif "screenshot" in cmd:
+                    atype = "screenshot"
+                elif "monitor" in cmd:
+                    atype = "monitor"
                 
                 activities.append(OpenClawActivity(
                     id=str(job.get("id", "")),
@@ -385,7 +386,7 @@ class OpenClawService:
             
             # 意图过滤：如果是闲聊，直接返回
             if task_data.get("intent_type") == "chat":
-                logger.info(f"用户意图为闲聊，跳过任务创建流程")
+                logger.info("用户意图为闲聊，跳过任务创建流程")
                 
                 # 尝试调用 OpenClaw 获取真实回复
                 raw_command = task_data.get("command", "")
@@ -516,7 +517,6 @@ class OpenClawService:
                     )
                     
                     try:
-                        target_node = task.target_node_id or "gateway" 
                         payload = {
                             "id": task.task_id,
                             "schedule": schedule_str,

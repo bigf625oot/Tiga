@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Optional, List
+from typing import Optional
 from pathlib import Path
 
 # Agno Imports

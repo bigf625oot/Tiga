@@ -1,6 +1,4 @@
 import logging
-from typing import Dict, Any, Optional
-from agno.agent import Agent as AgnoAgent
 from app.models.agent_plan import AgentPlan, AgentTask
 from app.core.i18n import _
 from sqlalchemy.ext.asyncio import AsyncSession

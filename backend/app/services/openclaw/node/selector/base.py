@@ -4,7 +4,7 @@ OpenClaw Node Selector Base Module
 Defines the base class and interface for node selection strategies.
 """
 import abc
-from typing import List, Optional, Any, Dict
+from typing import List, Optional
 from app.models.node import Node
 
 class NodeSelectionError(Exception):

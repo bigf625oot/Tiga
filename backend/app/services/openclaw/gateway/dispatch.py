@@ -15,20 +15,15 @@ Created: 2025-03
 
 import asyncio
 import json
-import logging
-import traceback
-from datetime import datetime
 from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import insert
 
 from app.services.openclaw.node.discovery import NodeDiscoveryService
 from app.services.openclaw.common.errors import DispatchErrorType, DispatchException, DispatchPhase
-from app.models.openclaw_task import OpenClawTask
 from app.db.session import AsyncSessionLocal
 from app.core.logger import logger
 from app.models.node import Node
-from app.services.openclaw.node.selector import BaseSelector, TagSelector, LeastLoadSelector, NodeSelectionError, MetricsClient
+from app.services.openclaw.node.selector import BaseSelector, TagSelector, LeastLoadSelector, NodeSelectionError
 from app.services.openclaw.task.session import task_session_manager
 from app.services.openclaw.gateway.routing_lock import lock_routing_payload, verify_routing_payload
 
@@ -160,11 +155,9 @@ class DispatchService:
                     raise ws_e
                 
                 async with AsyncSessionLocal() as db:
-                    phase = DispatchPhase.WS_SEND
                     err_type = DispatchErrorType.UNKNOWN
                     if isinstance(ws_e, asyncio.TimeoutError):
                         err_type = DispatchErrorType.WS_TIMEOUT
-                        phase = DispatchPhase.WS_ACK
                     elif "not connected" in str(ws_e).lower():
                         err_type = DispatchErrorType.WS_NOT_CONNECTED
                     

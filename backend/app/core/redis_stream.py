@@ -1,6 +1,5 @@
 import logging
-import time
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Tuple
 from redis.exceptions import ResponseError
 from app.core.redis import get_redis_connection
 

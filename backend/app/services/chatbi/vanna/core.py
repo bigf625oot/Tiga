@@ -2,26 +2,19 @@ import json
 import logging
 import uuid
 import re
-from typing import List, Optional, Dict, Any, Union
-from functools import lru_cache
+from typing import List, Optional, Dict, Any
 import pandas as pd
 import lancedb
 from lancedb.pydantic import LanceModel, Vector
-from lancedb.embeddings import EmbeddingFunctionRegistry
 from openai import OpenAI
 import sqlparse
+from pathlib import Path
 
-from app.core.config import settings
 from .runners.sql_runner import SQLAlchemyRunner
 
 logger = logging.getLogger(__name__)
 
-from pathlib import Path
-
 # --- Data Models for LanceDB ---
-# Make vector dimension dynamic
-# The 'vector' field is handled as a plain list in Pydantic, 
-# but LanceDB will infer the correct FixedSizeList from the first inserted data.
 class VannaContext(LanceModel):
     id: str
     text: str = ""
@@ -38,8 +31,7 @@ class VannaCore:
             db_path = str(backend_dir / "data" / "vanna_lancedb")
             
         self.db = lancedb.connect(db_path)
-        # We don't pre-create the table here because we don't know the embedding dimension yet.
-        # It will be created/opened on first write or read.
+
         self.table_name = "vanna_context"
         self.table = None
         
@@ -145,7 +137,7 @@ class VannaCore:
             if not self.table:
                 try:
                     self.table = self.db.open_table(self.table_name)
-                except:
+                except Exception:
                     # Table not found
                     pass
 
@@ -179,7 +171,7 @@ class VannaCore:
         if not self.table:
             try:
                 self.table = self.db.open_table(self.table_name)
-            except:
+            except Exception:
                 # Table doesn't exist yet (no training data)
                 return []
                 
@@ -314,7 +306,7 @@ Generate SQL:
         try:
             parsed = sqlparse.parse(sql)[0]
             return parsed.get_type().upper() == 'SELECT'
-        except:
+        except Exception:
             # If parsing fails, assume unsafe
             return False
 
@@ -357,7 +349,7 @@ Generate ECharts JSON:
         json_str = json_str.strip().replace("```json", "").replace("```", "").strip()
         try:
             return json.loads(json_str)
-        except:
+        except Exception:
             return {}
 
     def ask(self, question: str) -> Dict[str, Any]:

@@ -3,7 +3,7 @@ Agno Agent 专用客户端 - 控制面
 """
 import time
 import uuid
-from typing import Dict, Optional
+from typing import Dict
 import logging
 import hmac
 import hashlib
@@ -66,7 +66,7 @@ class AgnoGatewayClient(WebSocketBaseClient):
             "X-Agno-Signature": signature,
             "X-Agno-Timestamp": timestamp,
             "X-Agno-Nonce": nonce,
-            "User-Agent": f"Agno-Agent/1.0.0"
+            "User-Agent": "Agno-Agent/1.0.0"
         }
     
     async def _after_connect(self) -> None:
@@ -139,7 +139,7 @@ class AgnoGatewayClient(WebSocketBaseClient):
     ) -> Dict:
         """执行任务并等待结果"""
         # 1. 提交任务
-        req_id = str(uuid.uuid4())
+        str(uuid.uuid4())
         result = await self.request("execute", {
             "task_type": task_type,
             "target": target,

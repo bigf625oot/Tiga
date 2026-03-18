@@ -78,7 +78,7 @@ def process_chunk(
             if isinstance(val, float) and val.is_integer():
                 return str(int(val))
             return str(val)
-        except:
+        except Exception:
             return str(val)
 
     for _, row in chunk_data.iterrows():
@@ -199,7 +199,7 @@ class GraphExporter:
             try:
                 with open(self.checkpoint_file, "r") as f:
                     self.state = json.load(f)
-            except:
+            except Exception:
                 self.state = {"processed_tables": {}}
         else:
             self.state = {"processed_tables": {}}

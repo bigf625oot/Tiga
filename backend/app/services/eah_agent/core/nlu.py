@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 from agno.models.openai import OpenAIChat
 from app.services.llm.factory import ModelFactory
 from app.models.llm_model import LLMModel
-from sqlalchemy.orm import Session # Import Session if needed for real usage, but here just mock/use model
 
 class IntentResult(BaseModel):
     intent: str = Field(..., description="The intent of the user input. Either 'chat', 'task', 'data_query', or 'kg_qa'.")
@@ -90,7 +89,7 @@ class NluService:
             data = json.loads(content)
             return IntentResult(**data)
             
-        except Exception as e:
+        except Exception:
             # Fallback for errors or low confidence
             return IntentResult(intent="chat", confidence=0.0)
 

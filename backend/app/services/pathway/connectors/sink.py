@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 import pathway as pw
 from app.services.pathway.connectors.base import BaseSink

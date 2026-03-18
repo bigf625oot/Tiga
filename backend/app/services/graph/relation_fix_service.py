@@ -6,7 +6,7 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 
 try:
-    from pypinyin import lazy_pinyin, Style
+    from pypinyin import lazy_pinyin
     PYPINYIN_AVAILABLE = True
 except ImportError:
     PYPINYIN_AVAILABLE = False

@@ -1,5 +1,4 @@
 import uuid
-from typing import List
 from sqlalchemy import Boolean, Column, DateTime, String, JSON
 from sqlalchemy.sql import func
 from app.db.base import Base

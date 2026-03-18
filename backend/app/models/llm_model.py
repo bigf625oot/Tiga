@@ -37,7 +37,7 @@ class LLMModel(Base):
     @classmethod
     def filter_has_api_key(cls):
         """返回有 API Key 的模型过滤条件"""
-        return (cls.api_key != None) & (cls.api_key != "")
+        return cls.api_key.is_not(None) & (cls.api_key != "")
 
     @classmethod
     def filter_fast_models(cls):

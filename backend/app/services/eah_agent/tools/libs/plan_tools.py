@@ -1,7 +1,6 @@
 from typing import List, Dict, Optional, Any
 from agno.tools import Toolkit
 from pydantic import BaseModel, Field, validator
-import json
 
 class PlanStep(BaseModel):
     title: str = Field(..., description="The title of the step")
@@ -48,7 +47,7 @@ class PlanTools(Toolkit):
         """
         # Validate input structure
         try:
-            validated_steps = [PlanStep(**s).model_dump() for s in steps]
+            [PlanStep(**s).model_dump() for s in steps]
             # In a real tool, we might save this to a file or variable.
             # Here, we rely on the PlanHandler to intercept this call and persist it to the DB.
             return "Plan updated successfully."

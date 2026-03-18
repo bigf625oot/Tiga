@@ -14,7 +14,7 @@ Sandbox Endpoint
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from app.services.sandbox.codebox import codebox_service
 import uuid
 import os
@@ -129,7 +129,8 @@ async def websocket_sandbox_stream(websocket: WebSocket, session_id: str):
                 async def consumer():
                     while True:
                         item = await queue.get()
-                        if item is None: break
+                        if item is None:
+                            break
                         await websocket.send_json(item)
                         queue.task_done()
                 

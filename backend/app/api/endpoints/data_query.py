@@ -17,11 +17,9 @@ Data Query Endpoint
 """
 import json
 import logging
-import os
 import time
 import uuid
 
-import aiofiles
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
@@ -35,6 +33,8 @@ from app.services.chatbi.vanna.models import (
     VannaRequest,
 )
 from app.services.chatbi.vanna.service import data_query_service
+from app.services.rag.kg_query import KGQueryService
+from app.services.nlu.classifier import IntentClassifier, QueryIntent
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -143,9 +143,6 @@ async def get_conversion_status(job_id: str):
     return status
 
 
-from app.services.rag.kg_query import KGQueryService
-from app.services.nlu.classifier import IntentClassifier, QueryIntent
-
 # Initialize Services
 kg_query_service = KGQueryService.get_instance()
 intent_classifier = IntentClassifier.get_instance()
@@ -196,7 +193,7 @@ async def query_data(request: VannaRequest):
                 # If evt=think, it expects data to be string or object.
                 # If evt=text, it expects data to be string.
                 yield f"event: {evt}\ndata: {json.dumps(content, ensure_ascii=False)}\n\n"
-            except:
+            except Exception:
                 # Fallback for non-JSON chunks
                 yield f"event: text\ndata: {json.dumps(chunk, ensure_ascii=False)}\n\n"
 
@@ -211,18 +208,33 @@ async def query_data(request: VannaRequest):
 @router.post("/config/save")
 async def save_config(config: DbConnectionConfig):
     """
-    [Deprecated] Save the database configuration to a file.
+    Save the database configuration to a file.
     """
-    logger.warning("Attempted to use deprecated /config/save endpoint")
-    return {"message": "Deprecated. Please use DataSource management."}
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(config.model_dump(), f)
+        return {"message": "Config saved successfully"}
+    except Exception as e:
+        logger.error(f"Failed to save config: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save configuration")
 
 
 @router.get("/config")
 async def get_config():
     """
-    [Deprecated] Load the database configuration from a file.
+    Load the current database configuration from the service or file.
     """
-    logger.warning("Attempted to use deprecated /config endpoint")
+    if data_query_service.current_db_config:
+        return data_query_service.current_db_config.model_dump()
+        
+    try:
+        import os
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load config: {e}")
+        
     return {}
 
 

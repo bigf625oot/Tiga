@@ -16,19 +16,16 @@ Last Modified: 2025-03
 """
 
 import logging
-import json
-import uuid
 import asyncio
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.node import Node, NodeMetric, Alert, NodeStatus, AlertLevel, AlertStatus
 from app.models.task import SubTask
-from app.schemas.node import NodeCreate, NodeUpdate, NodeMetricCreate
+from app.schemas.node import NodeCreate, NodeMetricCreate
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -197,7 +194,8 @@ class NodeManager:
             
             for n in nodes_data:
                 node_id = n.id
-                if not node_id: continue
+                if not node_id:
+                    continue
                 
                 # Check existence
                 result = await db.execute(select(Node).filter(Node.id == node_id))
@@ -213,9 +211,12 @@ class NodeManager:
                     
                     existing.last_heartbeat = datetime.now()
                     # Update other fields if available
-                    if n.name: existing.name = n.name
-                    if n.version: existing.version = n.version
-                    if n.platform: existing.platform = n.platform
+                    if n.name:
+                        existing.name = n.name
+                    if n.version:
+                        existing.version = n.version
+                    if n.platform:
+                        existing.platform = n.platform
                     
                 else:
                     new_node = Node(

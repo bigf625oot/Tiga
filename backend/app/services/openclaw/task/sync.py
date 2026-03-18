@@ -6,7 +6,6 @@ OpenClaw Task Status Synchronization & Failover
 """
 
 import asyncio
-import logging
 from datetime import datetime, timedelta
 from typing import List
 
@@ -128,7 +127,6 @@ class TaskStatusSync:
             
             try:
                 # Fetch active nodes
-                from app.services.openclaw.node.metadata import node_metadata_manager
                 # We can use simple query or metadata manager
                 # Let's get all online nodes
                 online_nodes_result = await db.execute(select(Node).filter(Node.status == NodeStatus.ONLINE))

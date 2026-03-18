@@ -1,35 +1,27 @@
 # 应用所有必要的启动补丁和配置
-from app.core.bootstrap import apply_patches
-apply_patches()
-
 import os
+import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from app.api.api import api_router
+from app.core.bootstrap import apply_patches
 from app.core.config import settings
 from app.core.exceptions import global_exception_handler
 from app.core.logger import logger, setup_logging
 from app.core.i18n import _
 
+apply_patches()
+
 # Setup logging
 setup_logging()
-
-# 连接(Langtrace)进行监控
-# try:
-#     from langtrace_python_sdk import langtrace
-#     # Initialize with optional API key from environment
-#     langtrace.init(api_key=os.getenv("LANGTRACE_API_KEY"))
-#     logger.info("Langtrace SDK initialized.")
-# except ImportError:
-#     pass
-# except Exception as e:
-#     logger.warning(f"Failed to initialize Langtrace: {e}")
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,29 +38,10 @@ async def lifespan(app: FastAPI):
     from app.db.session import engine
 
     # Import models to ensure they are registered
-    from app.models import (
-        agent,
-        agent_plan,
-        chat,
-        data_source,
-        graph_export,
-        indicator,
-        knowledge,
-        llm_model,
-        mcp,
-        node,
-        recording,
-        service_category,
-        skill,
-        task_mode,
-        tool,
-        user,
-        user_script,
-        user_tool,
-        workflow,
-        task,
-        team,
-    )
+    import app.models.user  # Add this to resolve the users table reference
+    import app.models.openclaw_task
+    import app.models.task_mode
+    import app.models.agent
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -111,11 +84,6 @@ async def lifespan(app: FastAPI):
     await task_worker.stop()
     await node_monitor.stop()
 
-
-import time
-import uuid
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
 class TraceIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

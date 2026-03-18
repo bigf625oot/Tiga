@@ -1,4 +1,3 @@
-from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, Text
 from app.db.base import Base

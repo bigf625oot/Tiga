@@ -13,6 +13,7 @@ import json
 import logging
 from typing import List, Optional, Any
 import redis.asyncio as redis
+from redis.commands.search.field import TagField, TextField, NumericField
 try:
     from redis.commands.search.query import Query
 except ImportError:
@@ -71,7 +72,7 @@ class RedisMemoryStorage(AgentMemoryInterface):
         try:
             await self.redis.ft(self.INDEX_NAME).info()
             self._index_created = True
-        except:
+        except Exception:
             # Create index
             # Fields: 
             # - session_id (TAG)
@@ -80,7 +81,7 @@ class RedisMemoryStorage(AgentMemoryInterface):
             # - timestamp (NUMERIC)
             # - embedding (VECTOR) - HNSW
             
-            schema = (
+            (
                 TagField("$.session_id", as_name="session_id"),
                 TextField("$.content", as_name="content"),
                 TagField("$.type", as_name="type"),

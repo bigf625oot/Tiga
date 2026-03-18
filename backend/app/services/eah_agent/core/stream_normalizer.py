@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Dict
 
 from app.services.eah_agent.core.stream_processor import parse_thinking_stream
 

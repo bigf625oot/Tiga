@@ -1,4 +1,3 @@
-from typing import Optional, List
 try:
     from agno.tools.exa import ExaTools as AgnoExaTools
 except ImportError:

@@ -74,7 +74,7 @@ async def _run_reasoning_tool_loop_async_stream(
                     rc = raw.get("reasoning_content")
                 elif hasattr(msg, "__dict__"):
                     rc = msg.__dict__.get("reasoning_content")
-            except:
+            except Exception:
                 pass
 
         if rc:

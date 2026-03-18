@@ -8,12 +8,11 @@
 import io
 import logging
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from fastapi import HTTPException, UploadFile
-from app.core.config import settings
 from app.services.utils.markdown import to_markdown
 from .parsing.orchestrator import parse_bytes_chunks, parse_path_chunks
-from .parsing.text import is_text_valid, sanitize_text
+from .parsing.text import sanitize_text
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ async def parse_document(file: UploadFile) -> str:
 
     try:
         content = await file.read()
-        file_stream = io.BytesIO(content)
+        io.BytesIO(content)
 
         text = ""
 

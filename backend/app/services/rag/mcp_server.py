@@ -1,4 +1,3 @@
-import asyncio
 from typing import List, Optional
 # [Fix] Import mcp directly to avoid pywintypes error on Windows
 # 'FastMCP' uses 'mcp' under the hood which might trigger windows specific imports

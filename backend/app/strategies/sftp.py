@@ -1,6 +1,5 @@
 import asyncssh
 import base64
-import os
 import asyncio
 from typing import List, AsyncGenerator, Any, Dict, Tuple
 from app.strategies.base import BaseSource
@@ -81,7 +80,7 @@ class SftpSource(BaseSource):
                 
                 metadata_list = []
                 for file_attr in files:
-                    is_dir = getattr(file_attr, 'isdir', False) or (hasattr(file_attr, 'attrs') and file_attr.attrs.permissions and str(file_attr.attrs.permissions).startswith('d'))
+                    getattr(file_attr, 'isdir', False) or (hasattr(file_attr, 'attrs') and file_attr.attrs.permissions and str(file_attr.attrs.permissions).startswith('d'))
                     # asyncssh SFTPAttrs logic might differ slightly, scandir returns SFTPName
                     # SFTPName has filename and attrs
                     

@@ -139,7 +139,7 @@ async def list_mcp_servers(
         
     # Other Filters
     if filter == "official":
-        stmt = stmt.where(MCPServer.is_official == True)
+        stmt = stmt.where(MCPServer.is_official)
     
     # Sorting
     if filter == "hot":

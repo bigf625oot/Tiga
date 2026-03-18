@@ -10,7 +10,6 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger("openclaw.auth")
 

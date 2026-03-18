@@ -5,7 +5,6 @@
 import json
 import logging
 
-from typing import Any, Optional
 from app.services.eah_agent.workflows.base import EAHWorkflowState
 
 logger = logging.getLogger(__name__)

@@ -1,23 +1,20 @@
 import logging
 import json
 import re
-from typing import AsyncGenerator, Dict, Any, Optional, List
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import AsyncGenerator, Dict, Any, Optional
 
 from app.services.eah_agent.core.base_handler import BaseHandler
 from app.services.eah_agent.core.nlu import IntentResult
 from app.services.eah_agent.core.agent_factory import AgentFactory
-from app.services.eah_agent.domain.config import AgentConfig, ToolConfig
+from app.services.eah_agent.domain.config import AgentConfig
 from app.models.llm_model import LLMModel
 from app.core.i18n import _
 from app.core.config import settings
 from app.core.shared_state import StateManager, SharedState
 from app.core.context_compressor import ContextCompressor
 from app.services.eah_agent.storage.session_history import SessionHistory
-from app.services.eah_agent.utils.session_kb import SessionKnowledgeManager
 
 from agno.agent import Agent
-from agno.tools import Toolkit
 # Import DataToolkit
 from app.services.eah_agent.tools.libs.data_toolkit import DataToolkit
 # Import E2BTools
@@ -183,13 +180,31 @@ class DataHandler(BaseHandler):
             yield {"type": "status", "content": _("Analyzing data request...")}
             
             # Using run_kwargs to pass history
-            run_kwargs = {"messages": history_messages, "stream": True}
+            run_kwargs = {"messages": history_messages, "stream": True, "yield_run_output": True}
             
             response_stream = await self.agent.arun(input_text, **run_kwargs)
             
             buffer = ""
             
             async for chunk in response_stream:
+                # 提取最终 RunOutput 对象
+                if type(chunk).__name__ == "RunOutput":
+                    try:
+                        run_output_dict = chunk.to_dict()
+                    except Exception:
+                        run_output_dict = {
+                            "content": getattr(chunk, "content", None),
+                            "tools": getattr(chunk, "tools", []),
+                            "messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in getattr(chunk, "messages", [])],
+                            "reasoning_content": getattr(chunk, "reasoning_content", None),
+                            "metrics": getattr(chunk, "metrics", None)
+                        }
+                    yield {
+                        "type": "run_output",
+                        "data": run_output_dict
+                    }
+                    continue
+
                 # Tool Status
                 if hasattr(chunk, "tool_calls") and chunk.tool_calls:
                     tool_names = [tc.function.name for tc in chunk.tool_calls if tc.function]

@@ -2,7 +2,7 @@ import asyncio
 import os
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
  
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession

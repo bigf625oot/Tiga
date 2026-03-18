@@ -1,14 +1,10 @@
 import os
-import time
 import argparse
-import pandas as pd
 import pathway as pw
-from typing import Dict, Any, List
 from loguru import logger
 
 # Import our custom sinks
 from app.services.pathway.connectors.persistence import Neo4jSink, LightRAGSink, VectorObjectSink
-from app.services.pathway.core.config import PathwayJobConfig
 
 def run_persistence_pipeline(config_path: str):
     """
@@ -44,7 +40,6 @@ def run_persistence_pipeline(config_path: str):
                         "source_id": "benchmark_stream",
                         "relation_type": "RELATED_TO",
                         "weight": 1.0,
-                        "source_id": row_id, # Reusing for rel test
                         "target_id": f"id_{i}_{j+1}"
                     })
                 # Yield row by row or batch? pw.io.python.read expects iterable of rows if schema is provided,

@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.rag.config.settings import settings, UPLOAD_DIR, LANCEDB_DIR
+from app.services.rag.config.settings import UPLOAD_DIR
 from app.models.knowledge import KnowledgeDocument
 from app.models.llm_model import LLMModel
 from app.services.rag.knowledge.parser import parse_local_file
@@ -226,7 +226,7 @@ Text:
             else:
                 try:
                     content = str(response)
-                except:
+                except Exception:
                     content = ""
 
             logger.debug(f"LLM Chunk Response (First 200 chars): {content[:200]}...")
@@ -298,7 +298,7 @@ Text:
                 try:
                     res = await db.execute(
                         select(LLMModel)
-                        .filter(LLMModel.is_active == True, LLMModel.model_type != "embedding")
+                        .filter(LLMModel.is_active, LLMModel.model_type != "embedding")
                         .order_by(LLMModel.updated_at.desc())
                     )
                     llm_model = res.scalars().first()

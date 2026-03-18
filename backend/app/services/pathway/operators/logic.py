@@ -1,5 +1,5 @@
 import pathway as pw
-from typing import Dict, Any, Union
+from typing import Dict, Any
 from app.services.pathway.operators.registry import OperatorRegistry
 from app.services.pathway.core.exceptions import OperatorError
 

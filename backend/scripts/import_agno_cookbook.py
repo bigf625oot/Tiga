@@ -1,10 +1,8 @@
 import sys
 import os
 import asyncio
-import json
 import uuid
-from sqlalchemy import select, update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import select
 
 # Add the backend directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -86,7 +84,7 @@ async def import_templates():
         # 1. Find a default model to assign (optional, but good for UX)
         print("Resolving default model...")
         result = await session.execute(
-            select(LLMModel).filter(LLMModel.is_active == True).order_by(LLMModel.updated_at.desc())
+            select(LLMModel).filter(LLMModel.is_active).order_by(LLMModel.updated_at.desc())
         )
         default_model = result.scalars().first()
         model_config = {}
@@ -103,7 +101,7 @@ async def import_templates():
         count = 0
         for template in COOKBOOK_AGENTS:
             # Check if exists by name to avoid duplicates (or update)
-            stmt = select(Agent).filter(Agent.name == template["name"], Agent.is_template == True)
+            stmt = select(Agent).filter(Agent.name == template["name"], Agent.is_template)
             result = await session.execute(stmt)
             existing_agent = result.scalars().first()
 

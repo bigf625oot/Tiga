@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Any, Optional
+from typing import Callable, Dict, Any
 import pathway as pw
 from app.services.pathway.core.exceptions import OperatorError
 from app.core.logger import logger
