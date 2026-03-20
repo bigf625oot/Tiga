@@ -1,0 +1,473 @@
+{
+  "id": "memory_hidden_constraint_servers",
+  "group": "长记忆",
+  "title": "隐含条件（自动关联约束）",
+  "evaluation": {
+    "pass": false,
+    "score": 50,
+    "results": [
+      {
+        "id": "references_server_constraint",
+        "pass": true
+      },
+      {
+        "id": "has_phased_plan",
+        "pass": false
+      }
+    ],
+    "finalText": "Based on your statement, it seems you currently operate with 3 servers. However, without additional context, it's unclear what specific assistance or information you're seeking. Here are some possible directions you might be interested in:\n\n1. **Server Management**: Are you looking for tips on optimizing or managing these servers?\n2. **Scaling**: Do you need advice on scaling up or down based on demand?\n3. **Troubleshooting**: Are you facing any issues with the servers?\n4. **Monitoring**: Do you need tools or strategies for monitoring server performance?\n\nTo provide the most relevant help, could you clarify your needs or goals regarding these servers? For example:\n- What is the purpose of these servers (e.g., hosting, databases, etc.)?\n- Are you experiencing any challenges?\n- Are you planning to expand or reduce the number of servers?  \n\nLet me know how I can assist further!\n\n"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 2,
+      "finalTextChars": 889,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:50:18.556Z",
+          "durationMs": 22149,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 2051,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 3,
+            "text": 39,
+            "done": 1
+          }
+        },
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:50:40.705Z",
+          "durationMs": 4175,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 186,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "error": 1,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "我目前只有 3 台服务器。"
+          },
+          {
+            "step": 2,
+            "message": "现在用户量翻了十倍，我该怎么扩容？请给分阶段方案，并说明在只有 3 台时先做什么缓解。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:50:18.556Z",
+            "durationMs": 22149,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 2051,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 3,
+              "text": 39,
+              "done": 1
+            }
+          },
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:50:40.705Z",
+            "durationMs": 4175,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 186,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "references_server_constraint"
+        ],
+        "failedChecks": [
+          "has_phased_plan"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "has_phased_plan",
+            "evidence": "未通过检查项：has_phased_plan",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "has_phased_plan",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "我目前只有 3 台服务器。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "我目前只有 3 台服务器。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:50:18.556Z",
+        "durationMs": 22149,
+        "bytesRead": 2051,
+        "eventCounts": {
+          "status": 3,
+          "text": 39,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:50:18 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08951926231384277",
+          "x-request-id": "f5d2dc99-05e8-469c-a9e4-f1043d7ab39c"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Warming up Data Analyst Engine..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Analyzing dataset and generating insights..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Bas"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ed o"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "n your statement, it"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " seems you curr"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ently operate with 3 serve"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "rs. However, without additional c"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ontext, it's unclear what specific assis"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "tance or informa"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "tion you're seeking. He"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "re are some possible directions you mi"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ght be interested in:\n\n1."
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **Server Management**:"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " Are you looking for t"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ips on optimizing or mana"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ging these serv"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ers?\n2. **Scaling**: Do you ne"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ed advice on scaling up or "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "down based "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "on demand?\n3. **Troubleshooti"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ng**: Are you facing"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " any issues wit"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "h the servers?\n4. **Monit"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "oring**: Do you need tools or strat"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "egies for monitoring ser"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ver performance?\n\nTo provi"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "de the most relevant hel"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "p, could you clarify your need"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "s or goals regarding these se"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "rvers? For example:\n- Wh"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "at is the purpose of "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "these servers (e.g., hosti"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ng, databases, etc.)?\n- "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Are you experiencing a"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ny challenges?\n- Are you planning"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " to expand or reduce th"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "e number of servers? "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " \n\nLet me know how I"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " can assis"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "t further!"
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "Based on your statement, it seems you currently operate with 3 servers. However, without additional context, it's unclear what specific assistance or information you're seeking. Here are some possible directions you might be interested in:\n\n1. **Server Management**: Are you looking for tips on optimizing or managing these servers?\n2. **Scaling**: Do you need advice on scaling up or down based on demand?\n3. **Troubleshooting**: Are you facing any issues with the servers?\n4. **Monitoring**: Do you need tools or strategies for monitoring server performance?\n\nTo provide the most relevant help, could you clarify your needs or goals regarding these servers? For example:\n- What is the purpose of these servers (e.g., hosting, databases, etc.)?\n- Are you experiencing any challenges?\n- Are you planning to expand or reduce the number of servers?  \n\nLet me know how I can assist further!"
+    },
+    {
+      "role": "user",
+      "type": "text",
+      "content": "现在用户量翻了十倍，我该怎么扩容？请给分阶段方案，并说明在只有 3 台时先做什么缓解。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "现在用户量翻了十倍，我该怎么扩容？请给分阶段方案，并说明在只有 3 台时先做什么缓解。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:50:40.705Z",
+        "durationMs": 4175,
+        "bytesRead": 186,
+        "eventCounts": {
+          "status": 1,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:50:40 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.09422612190246582",
+          "x-request-id": "bdbf5dc0-1b05-4cb6-9578-aa0efdefdd40"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "Workflow execution failed."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    }
+  ]
+}

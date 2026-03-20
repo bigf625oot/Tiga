@@ -176,27 +176,30 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
             attachments=request.attachments,
             attachment_context=kb_scope_context,
         ):
-            # Format SSE
+            # 映射内部事件类型到前端期望的 SSE 事件类型
             event_type = chunk.get("type", "message")
-            data = chunk.get("content", "")
             
-            # Map internal types to frontend expected types if needed
+            # 兼容处理：将 content 映射为 text，think 保持为 think
             if event_type == "content":
-                yield format_sse_json("text", data)
+                sse_event = "text"
+                chunk_data = chunk.get("content", "")
             elif event_type == "think":
-                yield format_sse_json("think", data)
+                sse_event = "think"
+                chunk_data = chunk.get("content", "")
             elif event_type == "chart":
-                # Frontend expects 'chart' event with config
-                yield format_sse_json("chart", data)
+                sse_event = "chart"
+                chunk_data = chunk
             elif event_type == "status":
-                # Frontend might expect 'meta' or specific status events
-                # For now, let's send as 'status' event
-                yield format_sse_json("status", data)
+                sse_event = "status"
+                chunk_data = chunk
             elif event_type == "error":
-                yield format_sse_json("error", data)
+                sse_event = "error"
+                chunk_data = chunk
             else:
-                # Default fallback
-                yield format_sse_json(event_type, data)
+                sse_event = event_type
+                chunk_data = chunk
+                
+            yield format_sse_json(sse_event, chunk_data)
         
         yield format_sse_json("done", "[DONE]")
         
@@ -327,21 +330,24 @@ async def chat_session_multipart(
             ab_variant=ab_variant,
             attachments=attachments,
         ):
+            # 映射内部事件类型到前端期望的 SSE 事件类型
             event_type = chunk.get("type", "message")
-            data = chunk.get("content", "")
-
+            
+            # 兼容处理：将 content 映射为 text，think 保持为 think
             if event_type == "content":
-                yield format_sse_json("text", data)
+                sse_event = "text"
             elif event_type == "think":
-                yield format_sse_json("think", data)
+                sse_event = "think"
             elif event_type == "chart":
-                yield format_sse_json("chart", data)
+                sse_event = "chart"
             elif event_type == "status":
-                yield format_sse_json("status", data)
+                sse_event = "status"
             elif event_type == "error":
-                yield format_sse_json("error", data)
+                sse_event = "error"
             else:
-                yield format_sse_json(event_type, data)
+                sse_event = event_type
+                
+            yield format_sse_json(sse_event, chunk)
 
         yield "event: done\ndata: [DONE]\n\n"
 

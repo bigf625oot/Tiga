@@ -1,0 +1,201 @@
+{
+  "id": "learn_restaurant_roleplay",
+  "group": "学习与知识消费",
+  "title": "语言学习（交互式情境创建）",
+  "evaluation": {
+    "pass": false,
+    "score": 50,
+    "results": [
+      {
+        "id": "is_interactive",
+        "pass": false
+      },
+      {
+        "id": "does_not_continue_without_user",
+        "pass": true
+      }
+    ],
+    "finalText": "好的，我们开始吧！  \n\n**服务员（我）**：\"您好，欢迎光临！请问您几位用餐呢？\"  \n\n（现在轮到您作为顾客回答，我会根据您的"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 66,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:37:49.850Z",
+          "durationMs": 7356,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 459,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "text": 8,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "我想练口语，帮我模拟一个餐厅点餐的场景。你当服务员，我当顾客。先从你的一句开场白开始，然后等我回复再继续。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:37:49.850Z",
+            "durationMs": 7356,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 459,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "text": 8,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "does_not_continue_without_user"
+        ],
+        "failedChecks": [
+          "is_interactive"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "is_interactive",
+            "evidence": "未通过检查项：is_interactive",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "is_interactive",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "我想练口语，帮我模拟一个餐厅点餐的场景。你当服务员，我当顾客。先从你的一句开场白开始，然后等我回复再继续。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "我想练口语，帮我模拟一个餐厅点餐的场景。你当服务员，我当顾客。先从你的一句开场白开始，然后等我回复再继续。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:37:49.850Z",
+        "durationMs": 7356,
+        "bytesRead": 459,
+        "eventCounts": {
+          "status": 1,
+          "text": 8,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:37:49 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.10482120513916016",
+          "x-request-id": "78107869-46be-457b-8727-b8bc2dffdf15"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "好的，我们开始吧"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "！  \n\n**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "服务员（我）*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*：\"您好，欢迎"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "光临！请问您几位用"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "餐呢？\"  \n\n（"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "现在轮到您作为顾"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "客回答，我会根据您的"
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "好的，我们开始吧！  \n\n**服务员（我）**：\"您好，欢迎光临！请问您几位用餐呢？\"  \n\n（现在轮到您作为顾客回答，我会根据您的"
+    }
+  ]
+}

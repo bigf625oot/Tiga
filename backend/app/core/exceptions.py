@@ -4,6 +4,16 @@ from fastapi.responses import JSONResponse
 from app.core.logger import logger
 
 
+class ServiceException(HTTPException):
+    def __init__(self, *, detail: str = "Service Error", status_code: int = 500):
+        super().__init__(status_code=status_code, detail=detail)
+
+
+class EntityNotFoundException(HTTPException):
+    def __init__(self, *, entity: str, identifier: str):
+        super().__init__(status_code=404, detail=f"{entity} not found: {identifier}")
+
+
 class AgentBuildError(Exception):
     pass
 

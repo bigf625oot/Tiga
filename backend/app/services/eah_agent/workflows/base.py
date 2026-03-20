@@ -33,6 +33,7 @@ class EAHWorkflow(Workflow):
         if "name" not in kwargs:
             kwargs["name"] = self.__class__.__name__
             
+        kwargs["session_id"] = session_id
         super().__init__(**kwargs)
 
     async def run(self, *args, **kwargs) -> Any:

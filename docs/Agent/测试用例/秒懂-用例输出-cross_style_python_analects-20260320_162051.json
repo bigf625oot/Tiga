@@ -1,0 +1,178 @@
+{
+  "id": "cross_style_python_analects",
+  "group": "边界压力测试",
+  "title": "跨载体语义转换（论语风注释）",
+  "evaluation": {
+    "pass": false,
+    "score": 0,
+    "results": [
+      {
+        "id": "contains_code_and_comments",
+        "pass": false
+      },
+      {
+        "id": "has_classical_chinese_flavor",
+        "pass": false
+      }
+    ],
+    "finalText": ""
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 0,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:24:59.607Z",
+          "durationMs": 4399,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 249,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "error": 1,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "把这段 Python 的逻辑，用《论语》的风格写成注释，要求逻辑严密：\n\ndef f(nums):\n    s=0\n    for x in nums:\n        if x%2==0:\n            s+=x\n    return s\n"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:24:59.607Z",
+            "durationMs": 4399,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 249,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [],
+        "failedChecks": [
+          "contains_code_and_comments",
+          "has_classical_chinese_flavor"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "contains_code_and_comments",
+            "evidence": "未通过检查项：contains_code_and_comments",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "has_classical_chinese_flavor",
+            "evidence": "未通过检查项：has_classical_chinese_flavor",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "contains_code_and_comments",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "has_classical_chinese_flavor",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "把这段 Python 的逻辑，用《论语》的风格写成注释，要求逻辑严密：\n\ndef f(nums):\n    s=0\n    for x in nums:\n        if x%2==0:\n            s+=x\n    return s\n"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "把这段 Python 的逻辑，用《论语》的风格写成注释，要求逻辑严密：\n\ndef f(nums):\n    s=0\n    for x in nums:\n        if x%2==0:\n            s+=x\n    return s\n",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:24:59.607Z",
+        "durationMs": 4399,
+        "bytesRead": 249,
+        "eventCounts": {
+          "status": 1,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:24:59 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.0889279842376709",
+          "x-request-id": "aa59c04d-26a7-45d0-9d02-01be5235be16"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "System orchestration error: Critical failure in AgentAssembler: Agent entity None missing"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    }
+  ]
+}

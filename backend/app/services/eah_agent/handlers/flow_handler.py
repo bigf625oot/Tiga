@@ -18,7 +18,7 @@ from app.services.eah_agent.core.agent_base_handler import BaseHandler, StreamRe
 from app.services.eah_agent.core.agent_nlu import IntentResult
 from app.services.eah_agent.workflows.unified_workflow import UnifiedAgentWorkflow
 from app.services.eah_agent.workflows.pipelines.dynamic import DynamicWorkflow
-from app.services.eah_agent.core.agent_workflow import AgentWorkflowEngine
+from app.services.eah_agent.core.agent_orchestrator import AgentWorkflowEngine
 from app.core.i18n import _
 from app.models.llm_model import LLMModel
 from app.models.workflow import Workflow
@@ -126,20 +126,35 @@ class FlowHandler(BaseHandler):
                 if isinstance(definition, dict) and definition.get("nodes"):
                     yield {"type": "status", "content": _("正在执行工作流: {} (v{})").format(wf.name, wf.version)}
                     
+                    # 加载历史记录，注入工作流上下文，防止“记忆盲区”
+                    from app.services.eah_agent.storage.session_history import SessionHistory
+                    from app.core.context_compressor import ContextCompressor
+                    
+                    history = SessionHistory(db)
+                    msgs = await history.get_messages(session_id, limit=10)
+                    raw_history = [{"role": m.role, "content": m.content} for m in msgs]
+                    
+                    compressor = ContextCompressor(model=self.llm_model)
+                    compressed_history = await compressor.compress_context(raw_history, max_tokens=2000)
+                    
                     # 替换旧的 DynamicWorkflow，使用统一引擎的静态编排解析
                     engine = AgentWorkflowEngine(db=db)
-                    async for chunk in engine.execute_from_definition(session_id, definition):
+                    async for chunk in engine.execute_from_definition(session_id, definition, history=compressed_history):
                         yield chunk
                     return
 
                 yield {"type": "error", "content": _("工作流定义为空或不支持执行。")}
                 return
 
-            # 如果没有找到指定的工作流，由于这是一个 flow_handler，我们期望至少应该执行一个静态流程
-            # 如果依然 fallback 到自规划，这就和 plan_handler 职能重复了。
-            # 为了防止冲突，我们在未匹配时给出明确提示。
-            yield {"type": "error", "content": _("未找到匹配的工作流配置，无法执行拖拽编排。")}
+            # 如果没有找到指定的工作流，自动降级为基于 PlanHandler 的动态规划
+            logger.info("No static workflow config found, falling back to dynamic planning (PlanHandler).")
+            from app.services.eah_agent.handlers.plan_handler import PlanHandler
+            fallback_handler = PlanHandler(self.llm_model)
+            # 移除明确传递的参数以防止 kwargs 中重复
+            safe_kwargs = {k: v for k, v in kwargs.items() if k not in ("db", "session_id")}
+            async for chunk in fallback_handler.process(input_text, intent, db=db, session_id=session_id, **safe_kwargs):
+                yield chunk
             
         except Exception as e:
             logger.error(f"FlowHandler processing failed: {e}", exc_info=True)
-            yield {"type": "error", "content": _("Workflow execution failed.")}
+            yield {"type": "error", "content": f"Workflow execution failed: {e}"}

@@ -129,7 +129,7 @@
                 <button
                   type="button"
                   class="inline-flex items-center gap-2 h-8 px-2 sm:px-3 rounded-full border transition-colors"
-                  :class="isNetworkSearchEnabled ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/40'"
+                  :class="isNetworkSearchEnabled ? 'text-blue-700 hover:bg-blue-100' : 'border-border/60  text-muted-foreground hover:bg-muted/40'"
                   @click="toggleNetworkSearch"
                 >
                   <Globe class="w-4 h-4" />
@@ -153,7 +153,7 @@
             :class="(isLoading || isTaskRunning) ? 'border-blue-200 bg-blue-50 text-blue-700 shadow-[0_0_0_1px_rgba(59,130,246,0.12)] dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200' : 'border-border/60 bg-muted/30 text-foreground/80'"
           >
             <Avatar class="w-4 h-4">
-              <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover bg-white" />
+              <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover" />
               <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
                 <Zap class="w-3 h-3 text-blue-600" />
               </AvatarFallback>
@@ -169,7 +169,7 @@
           </div>
           <div v-else class="flex items-center gap-2 h-8 px-2 rounded-lg border border-border/50 bg-background/40 hover:bg-muted/40 transition-colors min-w-0">
             <Avatar class="w-5 h-5">
-              <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover bg-white" />
+              <AvatarImage v-if="agentIcon" :src="agentIcon" class="object-cover" />
               <AvatarFallback class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
                 <Zap class="w-3.5 h-3.5 text-blue-500" />
               </AvatarFallback>

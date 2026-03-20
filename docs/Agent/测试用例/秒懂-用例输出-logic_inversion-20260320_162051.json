@@ -1,0 +1,279 @@
+{
+  "id": "logic_inversion",
+  "group": "长记忆",
+  "title": "逻辑倒置（反转结论）",
+  "evaluation": {
+    "pass": false,
+    "score": 0,
+    "results": [
+      {
+        "id": "explicitly_reverses_conclusion",
+        "pass": false
+      },
+      {
+        "id": "explains_reversal",
+        "pass": false
+      }
+    ],
+    "finalText": "\n\n"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 2,
+      "finalTextChars": 2,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:23:52.450Z",
+          "durationMs": 2472,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 249,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "error": 1,
+            "done": 1
+          }
+        },
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:23:54.922Z",
+          "durationMs": 2871,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 249,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "error": 1,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "我们考虑用方案 X：先快上线 MVP，再逐步优化。你觉得靠谱吗？给出结论和理由。"
+          },
+          {
+            "step": 2,
+            "message": "如果我刚才说的所有假设都是错的，请反转你的结论，并说明反转后理由。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:23:52.450Z",
+            "durationMs": 2472,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 249,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            }
+          },
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:23:54.922Z",
+            "durationMs": 2871,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 249,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [],
+        "failedChecks": [
+          "explicitly_reverses_conclusion",
+          "explains_reversal"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "explicitly_reverses_conclusion",
+            "evidence": "未通过检查项：explicitly_reverses_conclusion",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "explains_reversal",
+            "evidence": "未通过检查项：explains_reversal",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "explicitly_reverses_conclusion",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "explains_reversal",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "我们考虑用方案 X：先快上线 MVP，再逐步优化。你觉得靠谱吗？给出结论和理由。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "我们考虑用方案 X：先快上线 MVP，再逐步优化。你觉得靠谱吗？给出结论和理由。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:23:52.450Z",
+        "durationMs": 2472,
+        "bytesRead": 249,
+        "eventCounts": {
+          "status": 1,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:23:51 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08752918243408203",
+          "x-request-id": "f0378dbd-38a0-460e-8cbb-e3098f283e9a"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "System orchestration error: Critical failure in AgentAssembler: Agent entity None missing"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    },
+    {
+      "role": "user",
+      "type": "text",
+      "content": "如果我刚才说的所有假设都是错的，请反转你的结论，并说明反转后理由。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "如果我刚才说的所有假设都是错的，请反转你的结论，并说明反转后理由。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:23:54.922Z",
+        "durationMs": 2871,
+        "bytesRead": 249,
+        "eventCounts": {
+          "status": 1,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:23:53 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.09644794464111328",
+          "x-request-id": "fc5c4715-9d83-4723-a89c-7dab084e749c"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "System orchestration error: Critical failure in AgentAssembler: Agent entity None missing"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    }
+  ]
+}

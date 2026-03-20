@@ -1,0 +1,1088 @@
+{
+  "id": "work_weekly_report",
+  "group": "职场与生产力",
+  "title": "周报生成（非规范语料结构化）",
+  "evaluation": {
+    "pass": false,
+    "score": 33,
+    "results": [
+      {
+        "id": "has_sections",
+        "pass": false
+      },
+      {
+        "id": "has_action_items",
+        "pass": false
+      },
+      {
+        "id": "asks_for_missing_info_or_placeholders",
+        "pass": true
+      }
+    ],
+    "finalText": "{\"type\":\"content\",\"content\":\"###\"}{\"type\":\"content\",\"content\":\" 周报（2023年XX月\"}{\"type\":\"content\",\"content\":\"XX日 - XX月XX\"}{\"type\":\"content\",\"content\":\"日）\\n\\n#### \"}{\"type\":\"content\",\"content\":\"1. **线上问题修\"}{\"type\":\"content\",\"content\":\"复**\\n- **\"}{\"type\":\"content\",\"content\":\"修复2个线上小Bug\"}{\"type\":\"content\",\"content\":\"**：\\n  - **\"}{\"type\":\"content\",\"content\":\"Bug 1**：\"}{\"type\":\"content\",\"content\":\"修复了XX模块的XX问\"}{\"type\":\"content\",\"content\":\"题（影响范围：\"}{\"type\":\"content\",\"content\":\"XX用户）。\\n \"}{\"type\":\"content\",\"content\":\"   - 修复方式\"}{\"type\":\"content\",\"content\":\"：XX。\\n  \"}{\"type\":\"content\",\"content\":\"  - 结果：问题已解决\"}{\"type\":\"content\",\"content\":\"，验证通过。\\n \"}{\"type\":\"content\",\"content\":\" - **Bug\"}{\"type\":\"content\",\"content\":\" 2**：修复\"}{\"type\":\"content\",\"content\":\"了XX接口的XX异常（\"}{\"type\":\"content\",\"content\":\"影响范围：XX服务）\"}{\"type\":\"content\",\"content\":\"。\\n    - \"}{\"type\":\"content\",\"content\":\"修复方式：XX。\\n \"}{\"type\":\"content\",\"content\":\"   - 结果\"}{\"type\":\"content\",\"content\":\"：问题已解决，验证\"}{\"type\":\"content\",\"content\":\"通过。\\n  - \"}{\"type\":\"content\",\"content\":\"**待补充数据*\"}{\"type\":\"content\",\"content\":\"*：具体Bug编号、影响用\"}{\"type\":\"content\",\"content\":\"户数、修复耗时。\\n\\n#\"}{\"type\":\"content\",\"content\":\"### 2. *\"}{\"type\":\"content\",\"content\":\"*需求跟进*\"}{\"type\":\"content\",\"content\":\"*\\n- **需求评\"}{\"type\":\"content\",\"content\":\"审**：\\n \"}{\"type\":\"content\",\"content\":\" - 需求名\"}{\"type\":\"content\",\"content\":\"称：XX需求。\\n  \"}{\"type\":\"content\",\"content\":\"- 参与人员：XX\"}{\"type\":\"content\",\"content\":\"、XX、XX。\\n \"}{\"type\":\"content\",\"content\":\" - 评审结果\"}{\"type\":\"content\",\"content\":\"：XX（通\"}{\"type\":\"content\",\"content\":\"过/待修改）。\\n  - \"}{\"type\":\"content\",\"content\":\"下一步：XX（如：等待\"}{\"type\":\"content\",\"content\":\"需求文档更新）\"}{\"type\":\"content\",\"content\":\"。\\n  - *\"}{\"type\":\"content\",\"content\":\"*待补充数据**：需求文\"}{\"type\":\"content\",\"content\":\"档链接、评审耗时、修改点。\"}{\"type\":\"content\",\"content\":\"\\n\\n#### 3.\"}{\"type\":\"content\",\"content\":\" **技术支持*\"}{\"type\":\"content\",\"content\":\"*\\n- **接口超\"}{\"type\":\"content\",\"content\":\"时排查**：\"}{\"type\":\"content\",\"content\":\"\\n  - 问题描\"}{\"type\":\"content\",\"content\":\"述：XX接口在\"}{\"type\":\"content\",\"content\":\"XX场景下\"}{\"type\":\"content\",\"content\":\"超时。\\n  \"}{\"type\":\"content\",\"content\":\"- 排查过程：XX（\"}{\"type\":\"content\",\"content\":\"如：日志分析\"}{\"type\":\"content\",\"content\":\"、压测复现）。\"}{\"type\":\"content\",\"content\":\"\\n  - 解决方式：X\"}{\"type\":\"content\",\"content\":\"X（如：优化S\"}{\"type\":\"content\",\"content\":\"QL查询、增加缓\"}{\"type\":\"content\",\"content\":\"存）。\\n  -\"}{\"type\":\"content\",\"content\":\" 结果：超时问题解决，\"}{\"type\":\"content\",\"content\":\"响应时间从XX降至\"}{\"type\":\"content\",\"content\":\"XX。\\n  - \"}{\"type\":\"content\",\"content\":\"**待补充数据**：超时频\"}{\"type\":\"content\",\"content\":\"率、优化前后的性\"}{\"type\":\"content\",\"content\":\"能数据。\\n\\n#### 4.\"}{\"type\":\"content\",\"content\":\" **文档补充*\"}{\"type\":\"content\",\"content\":\"*\\n- **文档\"}{\"type\":\"content\",\"content\":\"更新**：\\n  \"}{\"type\":\"content\",\"content\":\"- 补充了XX\"}{\"type\":\"content\",\"content\":\"文档的XX章节。\"}{\"type\":\"content\",\"content\":\"\\n  - 内容：\"}{\"type\":\"content\",\"content\":\"XX（如：新\"}{\"type\":\"content\",\"content\":\"增接口说明、流\"}{\"type\":\"content\",\"content\":\"程示例）。\\n  - \"}{\"type\":\"content\",\"content\":\"影响：XX（如：减少团队\"}{\"type\":\"content\",\"content\":\"沟通成本）。\\n \"}{\"type\":\"content\",\"content\":\" - **\"}{\"type\":\"content\",\"content\":\"待补充数据**：文档\"}{\"type\":\"content\",\"content\":\"链接、更新页数、受\"}{\"type\":\"content\",\"content\":\"益团队。\\n\\n##\"}{\"type\":\"content\",\"content\":\"## 5. *\"}{\"type\":\"content\",\"content\":\"*临时会议**\\n-\"}{\"type\":\"content\",\"content\":\" **顶班开会**：\"}{\"type\":\"content\",\"content\":\"\\n  - 会议主题\"}{\"type\":\"content\",\"content\":\"：XX。\\n  - 参\"}{\"type\":\"content\",\"content\":\"与人员：XX\"}{\"type\":\"content\",\"content\":\"、XX、XX。\"}{\"type\":\"content\",\"content\":\"\\n  - 会议结\"}{\"type\":\"content\",\"content\":\"论：XX（如：明确了X\"}{\"type\":\"content\",\"content\":\"X事项）。\\n \"}{\"type\":\"content\",\"content\":\" - **待补充数据**\"}{\"type\":\"content\",\"content\":\"：会议时长、具体任务\"}{\"type\":\"content\",\"content\":\"分配。\\n\\n---\"}{\"type\":\"content\",\"content\":\"\\n\\n### 数据\"}{\"type\":\"content\",\"content\":\"补充建议\\n1. **\"}{\"type\":\"content\",\"content\":\"线上Bug**：\"}{\"type\":\"content\",\"content\":\"补充Bug编号、影响用\"}{\"type\":\"content\",\"content\":\"户数、修复耗时。\\n2\"}{\"type\":\"content\",\"content\":\". **需求评审**\"}{\"type\":\"content\",\"content\":\"：补充需求文档链接\"}{\"type\":\"content\",\"content\":\"、评审耗时、修改点\"}{\"type\":\"content\",\"content\":\"。\\n3. **接口超\"}{\"type\":\"content\",\"content\":\"时**：补充超时频率、\"}{\"type\":\"content\",\"content\":\"优化前后的性能数据。\"}{\"type\":\"content\",\"content\":\"\\n4. **文档更\"}{\"type\":\"content\",\"content\":\"新**：补充文档链接、\"}{\"type\":\"content\",\"content\":\"更新页数、受益团队。\"}{\"type\":\"content\",\"content\":\"\\n5. **临时会议*\"}{\"type\":\"content\",\"content\":\"*：补充会议时长、\"}{\"type\":\"content\",\"content\":\"具体任务分配。\"}{\"type\":\"content\",\"content\":\"\\n\\n需要我帮你整\"}{\"type\":\"content\",\"content\":\"理这些数据吗\"}{\"type\":\"content\",\"content\":\"？或者我可以帮你查询\"}{\"type\":\"content\",\"content\":\"某些具体信息（如文档\"}"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 4584,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/fb19c016-17dc-4ad5-a251-3b6e90d6200a/chat",
+          "startedAt": "2026-03-20T08:30:03.197Z",
+          "durationMs": 26526,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 8461,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "text": 114,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "把这周干的杂活整理成一份正经的周报。背景：我做了几件小事：修了两个线上小 bug、跟进了一个需求评审、帮同事排查了个接口超时、顺手把文档补了几页、还临时顶班开了个会。不要太空话，要有结构、有数据感（如果缺数据请用占位符并提出要补什么）。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/fb19c016-17dc-4ad5-a251-3b6e90d6200a/chat",
+            "startedAt": "2026-03-20T08:30:03.197Z",
+            "durationMs": 26526,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 8461,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "text": 114,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "asks_for_missing_info_or_placeholders"
+        ],
+        "failedChecks": [
+          "has_sections",
+          "has_action_items"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "has_sections",
+            "evidence": "未通过检查项：has_sections",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "has_action_items",
+            "evidence": "未通过检查项：has_action_items",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "has_sections",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "has_action_items",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "把这周干的杂活整理成一份正经的周报。背景：我做了几件小事：修了两个线上小 bug、跟进了一个需求评审、帮同事排查了个接口超时、顺手把文档补了几页、还临时顶班开了个会。不要太空话，要有结构、有数据感（如果缺数据请用占位符并提出要补什么）。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/fb19c016-17dc-4ad5-a251-3b6e90d6200a/chat",
+        "request": {
+          "message": "把这周干的杂活整理成一份正经的周报。背景：我做了几件小事：修了两个线上小 bug、跟进了一个需求评审、帮同事排查了个接口超时、顺手把文档补了几页、还临时顶班开了个会。不要太空话，要有结构、有数据感（如果缺数据请用占位符并提出要补什么）。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:30:03.197Z",
+        "durationMs": 26526,
+        "bytesRead": 8461,
+        "eventCounts": {
+          "status": 1,
+          "text": 114,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:30:03 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08580923080444336",
+          "x-request-id": "8621ff46-af36-4ec7-bf77-caf66ea2d8d0"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "###"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " 周报（2023年XX月"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "XX日 - XX月XX"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "日）\n\n#### "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "1. **线上问题修"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "复**\n- **"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "修复2个线上小Bug"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "**：\n  - **"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "Bug 1**："
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "修复了XX模块的XX问"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "题（影响范围："
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "XX用户）。\n "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "   - 修复方式"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "：XX。\n  "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "  - 结果：问题已解决"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "，验证通过。\n "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " - **Bug"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " 2**：修复"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "了XX接口的XX异常（"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "影响范围：XX服务）"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "。\n    - "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "修复方式：XX。\n "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "   - 结果"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "：问题已解决，验证"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "通过。\n  - "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "**待补充数据*"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*：具体Bug编号、影响用"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "户数、修复耗时。\n\n#"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "### 2. *"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*需求跟进*"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*\n- **需求评"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "审**：\n "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " - 需求名"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "称：XX需求。\n  "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "- 参与人员：XX"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "、XX、XX。\n "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " - 评审结果"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "：XX（通"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "过/待修改）。\n  - "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "下一步：XX（如：等待"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "需求文档更新）"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "。\n  - *"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*待补充数据**：需求文"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "档链接、评审耗时、修改点。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n\n#### 3."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " **技术支持*"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*\n- **接口超"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "时排查**："
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n  - 问题描"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "述：XX接口在"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "XX场景下"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "超时。\n  "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "- 排查过程：XX（"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "如：日志分析"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "、压测复现）。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n  - 解决方式：X"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "X（如：优化S"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "QL查询、增加缓"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "存）。\n  -"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " 结果：超时问题解决，"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "响应时间从XX降至"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "XX。\n  - "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "**待补充数据**：超时频"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "率、优化前后的性"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "能数据。\n\n#### 4."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " **文档补充*"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*\n- **文档"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "更新**：\n  "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "- 补充了XX"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "文档的XX章节。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n  - 内容："
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "XX（如：新"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "增接口说明、流"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "程示例）。\n  - "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "影响：XX（如：减少团队"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "沟通成本）。\n "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " - **"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "待补充数据**：文档"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "链接、更新页数、受"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "益团队。\n\n##"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "## 5. *"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*临时会议**\n-"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " **顶班开会**："
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n  - 会议主题"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "：XX。\n  - 参"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "与人员：XX"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "、XX、XX。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n  - 会议结"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "论：XX（如：明确了X"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "X事项）。\n "
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": " - **待补充数据**"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "：会议时长、具体任务"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "分配。\n\n---"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n\n### 数据"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "补充建议\n1. **"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "线上Bug**："
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "补充Bug编号、影响用"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "户数、修复耗时。\n2"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": ". **需求评审**"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "：补充需求文档链接"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "、评审耗时、修改点"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "。\n3. **接口超"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "时**：补充超时频率、"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "优化前后的性能数据。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n4. **文档更"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "新**：补充文档链接、"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "更新页数、受益团队。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n5. **临时会议*"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "*：补充会议时长、"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "具体任务分配。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "\n\n需要我帮你整"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "理这些数据吗"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "？或者我可以帮你查询"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": {
+        "type": "content",
+        "content": "某些具体信息（如文档"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "{\"type\":\"content\",\"content\":\"###\"}{\"type\":\"content\",\"content\":\" 周报（2023年XX月\"}{\"type\":\"content\",\"content\":\"XX日 - XX月XX\"}{\"type\":\"content\",\"content\":\"日）\\n\\n#### \"}{\"type\":\"content\",\"content\":\"1. **线上问题修\"}{\"type\":\"content\",\"content\":\"复**\\n- **\"}{\"type\":\"content\",\"content\":\"修复2个线上小Bug\"}{\"type\":\"content\",\"content\":\"**：\\n  - **\"}{\"type\":\"content\",\"content\":\"Bug 1**：\"}{\"type\":\"content\",\"content\":\"修复了XX模块的XX问\"}{\"type\":\"content\",\"content\":\"题（影响范围：\"}{\"type\":\"content\",\"content\":\"XX用户）。\\n \"}{\"type\":\"content\",\"content\":\"   - 修复方式\"}{\"type\":\"content\",\"content\":\"：XX。\\n  \"}{\"type\":\"content\",\"content\":\"  - 结果：问题已解决\"}{\"type\":\"content\",\"content\":\"，验证通过。\\n \"}{\"type\":\"content\",\"content\":\" - **Bug\"}{\"type\":\"content\",\"content\":\" 2**：修复\"}{\"type\":\"content\",\"content\":\"了XX接口的XX异常（\"}{\"type\":\"content\",\"content\":\"影响范围：XX服务）\"}{\"type\":\"content\",\"content\":\"。\\n    - \"}{\"type\":\"content\",\"content\":\"修复方式：XX。\\n \"}{\"type\":\"content\",\"content\":\"   - 结果\"}{\"type\":\"content\",\"content\":\"：问题已解决，验证\"}{\"type\":\"content\",\"content\":\"通过。\\n  - \"}{\"type\":\"content\",\"content\":\"**待补充数据*\"}{\"type\":\"content\",\"content\":\"*：具体Bug编号、影响用\"}{\"type\":\"content\",\"content\":\"户数、修复耗时。\\n\\n#\"}{\"type\":\"content\",\"content\":\"### 2. *\"}{\"type\":\"content\",\"content\":\"*需求跟进*\"}{\"type\":\"content\",\"content\":\"*\\n- **需求评\"}{\"type\":\"content\",\"content\":\"审**：\\n \"}{\"type\":\"content\",\"content\":\" - 需求名\"}{\"type\":\"content\",\"content\":\"称：XX需求。\\n  \"}{\"type\":\"content\",\"content\":\"- 参与人员：XX\"}{\"type\":\"content\",\"content\":\"、XX、XX。\\n \"}{\"type\":\"content\",\"content\":\" - 评审结果\"}{\"type\":\"content\",\"content\":\"：XX（通\"}{\"type\":\"content\",\"content\":\"过/待修改）。\\n  - \"}{\"type\":\"content\",\"content\":\"下一步：XX（如：等待\"}{\"type\":\"content\",\"content\":\"需求文档更新）\"}{\"type\":\"content\",\"content\":\"。\\n  - *\"}{\"type\":\"content\",\"content\":\"*待补充数据**：需求文\"}{\"type\":\"content\",\"content\":\"档链接、评审耗时、修改点。\"}{\"type\":\"content\",\"content\":\"\\n\\n#### 3.\"}{\"type\":\"content\",\"content\":\" **技术支持*\"}{\"type\":\"content\",\"content\":\"*\\n- **接口超\"}{\"type\":\"content\",\"content\":\"时排查**：\"}{\"type\":\"content\",\"content\":\"\\n  - 问题描\"}{\"type\":\"content\",\"content\":\"述：XX接口在\"}{\"type\":\"content\",\"content\":\"XX场景下\"}{\"type\":\"content\",\"content\":\"超时。\\n  \"}{\"type\":\"content\",\"content\":\"- 排查过程：XX（\"}{\"type\":\"content\",\"content\":\"如：日志分析\"}{\"type\":\"content\",\"content\":\"、压测复现）。\"}{\"type\":\"content\",\"content\":\"\\n  - 解决方式：X\"}{\"type\":\"content\",\"content\":\"X（如：优化S\"}{\"type\":\"content\",\"content\":\"QL查询、增加缓\"}{\"type\":\"content\",\"content\":\"存）。\\n  -\"}{\"type\":\"content\",\"content\":\" 结果：超时问题解决，\"}{\"type\":\"content\",\"content\":\"响应时间从XX降至\"}{\"type\":\"content\",\"content\":\"XX。\\n  - \"}{\"type\":\"content\",\"content\":\"**待补充数据**：超时频\"}{\"type\":\"content\",\"content\":\"率、优化前后的性\"}{\"type\":\"content\",\"content\":\"能数据。\\n\\n#### 4.\"}{\"type\":\"content\",\"content\":\" **文档补充*\"}{\"type\":\"content\",\"content\":\"*\\n- **文档\"}{\"type\":\"content\",\"content\":\"更新**：\\n  \"}{\"type\":\"content\",\"content\":\"- 补充了XX\"}{\"type\":\"content\",\"content\":\"文档的XX章节。\"}{\"type\":\"content\",\"content\":\"\\n  - 内容：\"}{\"type\":\"content\",\"content\":\"XX（如：新\"}{\"type\":\"content\",\"content\":\"增接口说明、流\"}{\"type\":\"content\",\"content\":\"程示例）。\\n  - \"}{\"type\":\"content\",\"content\":\"影响：XX（如：减少团队\"}{\"type\":\"content\",\"content\":\"沟通成本）。\\n \"}{\"type\":\"content\",\"content\":\" - **\"}{\"type\":\"content\",\"content\":\"待补充数据**：文档\"}{\"type\":\"content\",\"content\":\"链接、更新页数、受\"}{\"type\":\"content\",\"content\":\"益团队。\\n\\n##\"}{\"type\":\"content\",\"content\":\"## 5. *\"}{\"type\":\"content\",\"content\":\"*临时会议**\\n-\"}{\"type\":\"content\",\"content\":\" **顶班开会**：\"}{\"type\":\"content\",\"content\":\"\\n  - 会议主题\"}{\"type\":\"content\",\"content\":\"：XX。\\n  - 参\"}{\"type\":\"content\",\"content\":\"与人员：XX\"}{\"type\":\"content\",\"content\":\"、XX、XX。\"}{\"type\":\"content\",\"content\":\"\\n  - 会议结\"}{\"type\":\"content\",\"content\":\"论：XX（如：明确了X\"}{\"type\":\"content\",\"content\":\"X事项）。\\n \"}{\"type\":\"content\",\"content\":\" - **待补充数据**\"}{\"type\":\"content\",\"content\":\"：会议时长、具体任务\"}{\"type\":\"content\",\"content\":\"分配。\\n\\n---\"}{\"type\":\"content\",\"content\":\"\\n\\n### 数据\"}{\"type\":\"content\",\"content\":\"补充建议\\n1. **\"}{\"type\":\"content\",\"content\":\"线上Bug**：\"}{\"type\":\"content\",\"content\":\"补充Bug编号、影响用\"}{\"type\":\"content\",\"content\":\"户数、修复耗时。\\n2\"}{\"type\":\"content\",\"content\":\". **需求评审**\"}{\"type\":\"content\",\"content\":\"：补充需求文档链接\"}{\"type\":\"content\",\"content\":\"、评审耗时、修改点\"}{\"type\":\"content\",\"content\":\"。\\n3. **接口超\"}{\"type\":\"content\",\"content\":\"时**：补充超时频率、\"}{\"type\":\"content\",\"content\":\"优化前后的性能数据。\"}{\"type\":\"content\",\"content\":\"\\n4. **文档更\"}{\"type\":\"content\",\"content\":\"新**：补充文档链接、\"}{\"type\":\"content\",\"content\":\"更新页数、受益团队。\"}{\"type\":\"content\",\"content\":\"\\n5. **临时会议*\"}{\"type\":\"content\",\"content\":\"*：补充会议时长、\"}{\"type\":\"content\",\"content\":\"具体任务分配。\"}{\"type\":\"content\",\"content\":\"\\n\\n需要我帮你整\"}{\"type\":\"content\",\"content\":\"理这些数据吗\"}{\"type\":\"content\",\"content\":\"？或者我可以帮你查询\"}{\"type\":\"content\",\"content\":\"某些具体信息（如文档\"}"
+    }
+  ]
+}

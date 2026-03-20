@@ -49,7 +49,7 @@ class ChatSessionResponse(ChatSessionBase):
     id: str
     created_at: datetime
     updated_at: Optional[datetime]
-    messages: List[ChatMessageResponse] = []
+    messages: List[ChatMessageResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

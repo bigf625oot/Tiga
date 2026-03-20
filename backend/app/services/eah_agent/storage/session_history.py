@@ -32,6 +32,36 @@ class SessionHistory:
         await self.db.refresh(session)
         return session
 
+    async def ensure_session(self, session_id: str, *, user_id: str, agent_id: Optional[str] = None) -> ChatSession:
+        session = await self.get_session(session_id)
+        if session:
+            dirty = False
+            if user_id and not session.user_id:
+                session.user_id = user_id
+                dirty = True
+            if agent_id is not None and session.agent_id != agent_id:
+                session.agent_id = agent_id
+                dirty = True
+            if not session.mode:
+                session.mode = "chat"
+                dirty = True
+            if dirty:
+                await self.db.commit()
+                await self.db.refresh(session)
+            return session
+
+        session = ChatSession(
+            id=session_id,
+            user_id=user_id,
+            agent_id=agent_id,
+            title=_("New Chat"),
+            mode="chat",
+        )
+        self.db.add(session)
+        await self.db.commit()
+        await self.db.refresh(session)
+        return session
+
     async def get_session(self, session_id: str) -> Optional[ChatSession]:
         """
         Retrieves a chat session by ID.

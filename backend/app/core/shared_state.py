@@ -21,6 +21,7 @@ class SharedState(BaseModel):
 
 class StateManager:
     _instance = None
+    _in_memory_state: Dict[str, str] = {}
 
     def __init__(self):
         self.redis = None
@@ -33,17 +34,40 @@ class StateManager:
 
     async def get_redis(self):
         if not self.redis:
-            self.redis = await get_redis_connection()
+            try:
+                self.redis = await get_redis_connection()
+                # Test connection
+                await self.redis.ping()
+            except Exception:
+                # If Redis is unavailable, fallback to None
+                self.redis = None
         return self.redis
 
     async def save_state(self, session_id: str, state: SharedState):
-        redis = await self.get_redis()
         state.updated_at = time.time()
-        await redis.set(f"shared_state:{session_id}", state.json(), ex=3600*24) # 24h TTL
+        try:
+            redis = await self.get_redis()
+            if redis:
+                await redis.set(f"shared_state:{session_id}", state.json(), ex=3600*24) # 24h TTL
+                return
+        except Exception:
+            pass
+        
+        # Fallback to in-memory
+        self._in_memory_state[f"shared_state:{session_id}"] = state.json()
 
     async def get_state(self, session_id: str) -> Optional[SharedState]:
-        redis = await self.get_redis()
-        data = await redis.get(f"shared_state:{session_id}")
+        data = None
+        try:
+            redis = await self.get_redis()
+            if redis:
+                data = await redis.get(f"shared_state:{session_id}")
+        except Exception:
+            pass
+            
+        if not data:
+            data = self._in_memory_state.get(f"shared_state:{session_id}")
+            
         if data:
             return SharedState.parse_raw(data)
         return None

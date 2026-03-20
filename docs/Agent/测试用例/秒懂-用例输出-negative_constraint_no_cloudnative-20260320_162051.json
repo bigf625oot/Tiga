@@ -1,0 +1,169 @@
+{
+  "id": "negative_constraint_no_cloudnative",
+  "group": "歧义消除与主动引导",
+  "title": "负向约束（强制过滤）",
+  "evaluation": {
+    "pass": false,
+    "score": 50,
+    "results": [
+      {
+        "id": "does_not_mention_cloudnative",
+        "pass": true
+      },
+      {
+        "id": "provides_solution",
+        "pass": false
+      }
+    ],
+    "finalText": ""
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 0,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:24:42.855Z",
+          "durationMs": 4481,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 223,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "error": 1,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "给我一个系统演进方案，但绝对不要提到任何关于“云原生”的技术。你可以讲架构分层、流程、治理，但不要出现“云原生”这三个字。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:24:42.855Z",
+            "durationMs": 4481,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 223,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "does_not_mention_cloudnative"
+        ],
+        "failedChecks": [
+          "provides_solution"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "provides_solution",
+            "evidence": "未通过检查项：provides_solution",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "provides_solution",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "给我一个系统演进方案，但绝对不要提到任何关于“云原生”的技术。你可以讲架构分层、流程、治理，但不要出现“云原生”这三个字。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "给我一个系统演进方案，但绝对不要提到任何关于“云原生”的技术。你可以讲架构分层、流程、治理，但不要出现“云原生”这三个字。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:24:42.855Z",
+        "durationMs": 4481,
+        "bytesRead": 223,
+        "eventCounts": {
+          "status": 1,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:24:42 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08941888809204102",
+          "x-request-id": "501707cd-b886-44dc-8e25-c4cdd06b0632"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "未找到匹配的工作流配置，无法执行拖拽编排。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    }
+  ]
+}

@@ -1,0 +1,778 @@
+{
+  "id": "work_weekly_report",
+  "group": "职场与生产力",
+  "title": "周报生成（非规范语料结构化）",
+  "evaluation": {
+    "pass": true,
+    "score": 100,
+    "results": [
+      {
+        "id": "has_sections",
+        "pass": true
+      },
+      {
+        "id": "has_action_items",
+        "pass": true
+      },
+      {
+        "id": "asks_for_missing_info_or_placeholders",
+        "pass": true
+      }
+    ],
+    "finalText": "以下是一份结构清晰、数据感强的周报模板，供你参考。括号内为占位符或需补充的内容，你可以根据实际情况填写：\n\n---\n\n### **周报 - [2023年XX月XX日至XX月XX日]**\n\n#### **1. 线上问题修复**\n- **Bug修复**：共修复2个线上小Bug。\n  - **Bug 1**：[描述Bug现象，如“用户登录页面偶现500错误”]  \n    **修复方案**：[简述修复方法，如“修复了后端接口的null值处理逻辑”]  \n    **影响范围**：[如“影响约5%的用户访问”]  \n  - **Bug 2**：[描述Bug现象，如“订单列表页分页失效”]  \n    **修复方案**：[简述修复方法，如“调整了前端分页参数传递逻辑”]  \n    **影响范围**：[如“影响所有订单列表页用户”]  \n\n#### **2. 需求跟进**\n- **需求评审**：跟进[需求名称或编号]，完成评审并记录[具体进展，如“确认了核心功能点”]。  \n  **下一步**：[待补充]（如“等待PRD终稿确认”或“排期开发”）。\n\n#### **3. 协作支持**\n- **接口超时排查**：协助同事[同事姓名]排查[接口名称]超时问题。  \n  **根因**：[如“数据库查询未加索引”]  \n  **解决方案**：[如“优化SQL查询并添加索引”]  \n  **耗时**：[如“耗时2小时”]  \n\n#### **4. 文档完善**\n- **文档更新**：补充了[文档名称]的[具体内容，如“API接口说明”]，共更新[页数或字数，如“3页”]。  \n  **遗留问题**：[如“还需补充示例代码”]。  \n\n#### **5. 临时任务**\n- **顶班会议**：临时代表[原参会人姓名]参加[会议主题]会议。  \n  **会议结论**：[如“确认了项目里程碑节点”]。  \n\n---\n\n### **待补充数据**\n1. **Bug影响范围**：需补充具体数据（如影响的用户数或请求量）。  \n2. **需求进展**：需明确下一步计划或排期时间。  \n3. **接口排查**：需补充优化后的性能指标（如接口响应时间从Xms降低到Yms）。  \n\n### **本周小结**\n- **产出**：共完成[5项]任务，覆盖开发、协作、文档等多方面。  \n- **不足**：临时任务较多，导致[某项工作]进度略有延迟。  \n- **下周重点**：优先处理[具体事项，如“需求开发”或“文档补全”]。  \n\n--- \n\n如果需要更详细的数据或调整"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 1082,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/101c98ca-76b8-45de-b283-aeb0a3560173/chat",
+          "startedAt": "2026-03-20T08:32:04.269Z",
+          "durationMs": 29377,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 5242,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "text": 125,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "把这周干的杂活整理成一份正经的周报。背景：我做了几件小事：修了两个线上小 bug、跟进了一个需求评审、帮同事排查了个接口超时、顺手把文档补了几页、还临时顶班开了个会。不要太空话，要有结构、有数据感（如果缺数据请用占位符并提出要补什么）。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/101c98ca-76b8-45de-b283-aeb0a3560173/chat",
+            "startedAt": "2026-03-20T08:32:04.269Z",
+            "durationMs": 29377,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 5242,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "text": 125,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "has_sections",
+          "has_action_items",
+          "asks_for_missing_info_or_placeholders"
+        ],
+        "failedChecks": []
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": []
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": []
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "把这周干的杂活整理成一份正经的周报。背景：我做了几件小事：修了两个线上小 bug、跟进了一个需求评审、帮同事排查了个接口超时、顺手把文档补了几页、还临时顶班开了个会。不要太空话，要有结构、有数据感（如果缺数据请用占位符并提出要补什么）。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/101c98ca-76b8-45de-b283-aeb0a3560173/chat",
+        "request": {
+          "message": "把这周干的杂活整理成一份正经的周报。背景：我做了几件小事：修了两个线上小 bug、跟进了一个需求评审、帮同事排查了个接口超时、顺手把文档补了几页、还临时顶班开了个会。不要太空话，要有结构、有数据感（如果缺数据请用占位符并提出要补什么）。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:32:04.269Z",
+        "durationMs": 29377,
+        "bytesRead": 5242,
+        "eventCounts": {
+          "status": 1,
+          "text": 125,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:32:04 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08589649200439453",
+          "x-request-id": "76316721-da07-440f-bff3-c62199a79428"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "以下"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "是一份结构清晰"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、数据感"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "强的周报模板，供你参"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "考。括号内为占位符或需补充的内容"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "，你可以根据实际情况"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "填写：\n\n--"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "-\n\n### "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**周报 -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " [2023年XX月XX日"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "至XX月XX日]**\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n#### **1"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ". 线上问题修"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "复**\n- *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*Bug修复**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：共修复2个线上小"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Bug。\n  - *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*Bug 1**：[描"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "述Bug现象，如“用"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "户登录页面偶现500错"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "误”]  \n   "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **修复方案**：[简"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "述修复方法，如"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "“修复了后端接口的nu"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ll值处理逻辑"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "”]  \n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "    **影响范围*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*：[如“影响约5%"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "的用户访问”]"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "  \n  - *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*Bug 2"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：[描述Bu"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "g现象，如“订单列表页分"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "页失效”]  \n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "    **修复"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "方案**：["
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "简述修复方法，如“调"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "整了前端分页参数传递逻"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "辑”]  \n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "  **影响范围**："
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "[如“影响所有订单列表页"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "用户”]  \n\n###"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "# **2. 需"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "求跟进**\n- *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*需求评审**："
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "跟进[需求名称"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "或编号]，完成"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "评审并记录[具体"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "进展，如“确认了核心功能点"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "”]。 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " \n  **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "下一步**：["
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "待补充]（如“等"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "待PRD终稿确认”或"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "“排期开发”）。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n\n#### **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "3. 协作支持*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*\n- **接口"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "超时排查**：协助"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "同事[同事姓名]排"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "查[接口名称"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "]超时问题。 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " \n  **根因"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：[如“数据库查询未"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "加索引”]  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n  **解决方"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "案**：[如“优化SQL"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "查询并添加索"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "引”]  \n  *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*耗时**：[如“耗"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "时2小时”]  \n\n#"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "### **4"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ". 文档完善**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n- **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "文档更新*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*：补充了[文档名称"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "]的[具体"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "内容，如“"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "API接口"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "说明”]，共更新[页数"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "或字数，如“3"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "页”]。  \n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "  **遗留问题**：[如“还需"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "补充示例代码”"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "]。  \n\n###"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "# **5. 临时"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "任务**\n- "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**顶班会议**："
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "临时代表[原参会人姓名]"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "参加[会议主题]"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "会议。  \n  **会"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "议结论**：[如“确认了项目里程碑节"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "点”]。  \n\n---\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n### **待补充"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "数据**\n1. "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**Bug影响范"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "围**：需补充具体数"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "据（如影响的用户数或请"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "求量）。  \n2."
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **需求进展**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：需明确下一步计划"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "或排期时间。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "  \n3. **接口"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "排查**：需"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "补充优化后的性能"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "指标（如接口响应时间从Xms"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "降低到Yms）。 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " \n\n###"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **本周小"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "结**\n- *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*产出**：共完"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "成[5项]任务，覆盖开发"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、协作、文档等多方"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "面。  \n-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **不足**：临时"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "任务较多，导致[某"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "项工作]进度略"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "有延迟。  \n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- **下周重"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "点**：优先处"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "理[具体事项，如“需"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "求开发”或“文档补全"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "”]。  \n\n-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "-- \n\n如果需"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "要更详细的数据或调整"
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "以下是一份结构清晰、数据感强的周报模板，供你参考。括号内为占位符或需补充的内容，你可以根据实际情况填写：\n\n---\n\n### **周报 - [2023年XX月XX日至XX月XX日]**\n\n#### **1. 线上问题修复**\n- **Bug修复**：共修复2个线上小Bug。\n  - **Bug 1**：[描述Bug现象，如“用户登录页面偶现500错误”]  \n    **修复方案**：[简述修复方法，如“修复了后端接口的null值处理逻辑”]  \n    **影响范围**：[如“影响约5%的用户访问”]  \n  - **Bug 2**：[描述Bug现象，如“订单列表页分页失效”]  \n    **修复方案**：[简述修复方法，如“调整了前端分页参数传递逻辑”]  \n    **影响范围**：[如“影响所有订单列表页用户”]  \n\n#### **2. 需求跟进**\n- **需求评审**：跟进[需求名称或编号]，完成评审并记录[具体进展，如“确认了核心功能点”]。  \n  **下一步**：[待补充]（如“等待PRD终稿确认”或“排期开发”）。\n\n#### **3. 协作支持**\n- **接口超时排查**：协助同事[同事姓名]排查[接口名称]超时问题。  \n  **根因**：[如“数据库查询未加索引”]  \n  **解决方案**：[如“优化SQL查询并添加索引”]  \n  **耗时**：[如“耗时2小时”]  \n\n#### **4. 文档完善**\n- **文档更新**：补充了[文档名称]的[具体内容，如“API接口说明”]，共更新[页数或字数，如“3页”]。  \n  **遗留问题**：[如“还需补充示例代码”]。  \n\n#### **5. 临时任务**\n- **顶班会议**：临时代表[原参会人姓名]参加[会议主题]会议。  \n  **会议结论**：[如“确认了项目里程碑节点”]。  \n\n---\n\n### **待补充数据**\n1. **Bug影响范围**：需补充具体数据（如影响的用户数或请求量）。  \n2. **需求进展**：需明确下一步计划或排期时间。  \n3. **接口排查**：需补充优化后的性能指标（如接口响应时间从Xms降低到Yms）。  \n\n### **本周小结**\n- **产出**：共完成[5项]任务，覆盖开发、协作、文档等多方面。  \n- **不足**：临时任务较多，导致[某项工作]进度略有延迟。  \n- **下周重点**：优先处理[具体事项，如“需求开发”或“文档补全”]。  \n\n--- \n\n如果需要更详细的数据或调整"
+    }
+  ]
+}

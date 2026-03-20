@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.i18n import _
 from app.models.llm_model import LLMModel
 from app.services.eah_agent.core.agent_nlu import NluService, IntentResult
-from app.services.eah_agent.core.agent_stream_normalizer import normalize_event_stream
+from app.services.eah_agent.core.agent_stream_adapter import AgnoStreamAdapter
 from app.services.eah_agent.storage.session_history import SessionHistory
 from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 
@@ -85,6 +85,26 @@ class AgnoControlPlane:
     async def stop(self) -> None:
         return None
 
+    async def process(
+        self,
+        user_input: str,
+        db: AsyncSession,
+        session_id: str,
+        **kwargs: Any,
+    ) -> str:
+        """
+        同步执行方法（等待完整结果返回）。
+        """
+        full_response = ""
+        async for chunk in self.process_stream(user_input, db, session_id, **kwargs):
+            if chunk.get("type") == "content":
+                content = chunk.get("content")
+                if isinstance(content, str):
+                    full_response += content
+            elif chunk.get("type") == "error":
+                full_response += f"\n[Error: {chunk.get('content')}]"
+        return full_response
+
     async def process_stream(
         self,
         user_input: str,
@@ -126,15 +146,19 @@ class AgnoControlPlane:
             
             logger.info(f"Routing to {handler.__class__.__name__} for intent {intent_key}")
 
-            async for chunk in normalize_event_stream(
-                handler.process(augmented_input, ctx.intent, db=db, session_id=session_id, **kwargs)
-            ):
-                aggregator.consume(chunk)
-                yield chunk
+            raw_stream = handler.process(augmented_input, ctx.intent, db=db, session_id=session_id, **kwargs)
+            adapter = AgnoStreamAdapter(extract_charts=True)
+            async for chunk in raw_stream:
+                async for event in adapter.to_standard_events(chunk):
+                    aggregator.consume(event)
+                    yield event
+            async for event in adapter.flush():
+                aggregator.consume(event)
+                yield event
 
         except Exception as e:
             logger.error(f"Control Plane Pipeline Failure: {e}", exc_info=True)
-            yield {"type": "error", "content": _("System orchestration error.")}
+            yield {"type": "error", "content": f"System orchestration error: {str(e)}"}
         finally:
             # Step 7: 非阻塞持久化 (Fire and Forget in Background)
             # 响应已经发给用户了，后台慢慢存数据库

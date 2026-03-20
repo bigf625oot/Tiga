@@ -1,0 +1,363 @@
+{
+  "id": "learn_polish_email",
+  "group": "学习与知识消费",
+  "title": "纠错提升（润色执行）",
+  "evaluation": {
+    "pass": true,
+    "score": 100,
+    "results": [
+      {
+        "id": "outputs_polished_text",
+        "pass": true
+      },
+      {
+        "id": "tone_professional",
+        "pass": true
+      }
+    ],
+    "finalText": "以下是一段润色后的版本，更加专业且礼貌：\n\n---\n\n**Subject:** Follow-Up on Urgent Matter  \n\nDear Tom,  \n\nI hope this email finds you well. I wanted to follow up regarding my previous message, as the matter is quite urgent. Could you kindly confirm whether you've had a chance to review it? I would greatly appreciate your response at your earliest convenience, ideally by the end of today.  \n\nThank you for your time and attention. Please don’t hesitate to reach out if you need any further details from my side.  \n\nBest regards,  \n[Your Name]  \n\n---\n\n### 改进点：\n1. **称呼**：使用更正式的问候语（\"Dear Tom\"）。\n2. **语气**：避免指责性语言（\"why you didn't reply\"），改为委婉的询问（\"follow up\"）。\n3. **说明紧急程度**：明确表达需求的紧迫性（\"quite urgent\"），同时礼貌地提出时间要求。\n4. **结尾**：提供帮助的可能性，并保持友好的语气。  \n\n如果需要进"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 727,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:37:57.207Z",
+          "durationMs": 12846,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 2053,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "text": 43,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "帮我润色一下这段英文邮件，要显得专业且礼貌：\n\nHi Tom,\nI want to know why you didn't reply me. It's urgent and I need it today.\nThanks."
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:37:57.207Z",
+            "durationMs": 12846,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 2053,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "text": 43,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "outputs_polished_text",
+          "tone_professional"
+        ],
+        "failedChecks": []
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": []
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": []
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "帮我润色一下这段英文邮件，要显得专业且礼貌：\n\nHi Tom,\nI want to know why you didn't reply me. It's urgent and I need it today.\nThanks."
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "帮我润色一下这段英文邮件，要显得专业且礼貌：\n\nHi Tom,\nI want to know why you didn't reply me. It's urgent and I need it today.\nThanks.",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:37:57.207Z",
+        "durationMs": 12846,
+        "bytesRead": 2053,
+        "eventCounts": {
+          "status": 1,
+          "text": 43,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:37:56 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.10522103309631348",
+          "x-request-id": "57a08ebf-4566-465a-99a9-0290a1378490"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "以下"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "是一段润色后的版本，更加专业且礼貌"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：\n\n---\n\n**Subjec"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "t:** Follow-Up on U"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "rgent Matter  \n\nDear"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " Tom,  \n\nI hope this ema"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "il finds you well. I wanted to"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " follow up regarding "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "my previous message, as"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " the matter is quite urgent. Coul"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "d you kindly confirm whether"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " you've had a ch"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ance to review it? I would gre"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "atly appreciate your response at your "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "earliest conveni"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ence, ideally by the en"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "d of today.  \n\nThank you for you"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "r time and att"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ention. Please don’t hesitate"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " to reach out if you need"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " any further details f"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "rom my side.  \n\nBest r"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "egards,  \n[Your "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Name]  \n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n---\n\n#"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "## 改进点：\n1"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ". **称呼**：使用更正式"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "的问候语（\"Dear"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " Tom\"）"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。\n2. **语气**：避免指"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "责性语言（\"why you"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " didn't rep"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ly\"），改为委婉的询问"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "（\"follow up"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\"）。\n3. **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "说明紧急程度**：明确表达需求的"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "紧迫性（\"qu"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ite urgent\""
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "），同时礼貌地"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "提出时间要求。\n4."
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **结尾**：提供帮助的可"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "能性，并保持友好的语气"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。  \n\n如果需要进"
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "以下是一段润色后的版本，更加专业且礼貌：\n\n---\n\n**Subject:** Follow-Up on Urgent Matter  \n\nDear Tom,  \n\nI hope this email finds you well. I wanted to follow up regarding my previous message, as the matter is quite urgent. Could you kindly confirm whether you've had a chance to review it? I would greatly appreciate your response at your earliest convenience, ideally by the end of today.  \n\nThank you for your time and attention. Please don’t hesitate to reach out if you need any further details from my side.  \n\nBest regards,  \n[Your Name]  \n\n---\n\n### 改进点：\n1. **称呼**：使用更正式的问候语（\"Dear Tom\"）。\n2. **语气**：避免指责性语言（\"why you didn't reply\"），改为委婉的询问（\"follow up\"）。\n3. **说明紧急程度**：明确表达需求的紧迫性（\"quite urgent\"），同时礼貌地提出时间要求。\n4. **结尾**：提供帮助的可能性，并保持友好的语气。  \n\n如果需要进"
+    }
+  ]
+}

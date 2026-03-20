@@ -98,10 +98,7 @@ async def read_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     Get agent by ID.
     """
     from app.services.eah_agent.core.agent_service import agent_service
-    agent = await agent_service.get_agent(db, agent_id)
-    if not agent:
-        raise HTTPException(status_code=404, detail=_("Agent not found"))
-    return agent
+    return await agent_service.get_agent_or_fail(db, agent_id)
 
 
 @router.put("/{agent_id}", response_model=AgentResponse, summary=_("Update agent"), description=_("Update an existing agent."))
@@ -121,10 +118,8 @@ async def clone_agent(*, db: AsyncSession = Depends(get_db), agent_id: str, clon
     """
     Clone an agent.
     """
-    from app.services.eah_agent.core.service import agent_service
+    from app.services.eah_agent.core.agent_service import agent_service
     agent = await agent_service.clone_agent(db, agent_id, clone_in)
-    if not agent:
-        raise HTTPException(status_code=404, detail=_("Agent not found"))
     return agent
 
 
@@ -133,7 +128,7 @@ async def delete_agents_batch(*, db: AsyncSession = Depends(get_db), agent_ids: 
     """
     Batch delete agents.
     """
-    from app.services.eah_agent.core.service import agent_service
+    from app.services.eah_agent.core.agent_service import agent_service
     deleted_ids = await agent_service.delete_agents(db, agent_ids)
     return {"deleted": deleted_ids}
 
@@ -143,8 +138,8 @@ async def delete_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     """
     Delete an agent.
     """
-    from app.services.eah_agent.core.service import agent_service
-    agent = await agent_service.delete_agent(db, agent_id)
-    if not agent:
-        raise HTTPException(status_code=404, detail=_("Agent not found"))
+    from app.services.eah_agent.core.agent_service import agent_service
+    from app.crud.crud_agent import agent as crud_agent
+    agent = await agent_service.get_agent_or_fail(db, agent_id)
+    await crud_agent.delete(db, id=agent_id)
     return agent

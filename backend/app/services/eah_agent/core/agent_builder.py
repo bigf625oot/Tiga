@@ -17,8 +17,12 @@ from agno.agent import Agent as AgnoAgent
 from app.core.exceptions import AgentBuildError, ModelNotFoundError
 from app.models.agent import Agent as AgentModel
 from app.models.llm_model import LLMModel
-from app.services.eah_agent.core.agent_prompt import InstructionBuilder
+from app.services.eah_agent.core.agent_prompt import InstructionComposer, InstructionSegment, InstructionCategory
 from app.services.eah_agent.tools import default_tools
+from app.services.eah_agent.tools.tool_factory import ToolFactory
+from app.services.eah_agent.skills.loaders.local import LocalSkills
+from app.services.eah_agent.skills.manager import Skills
+from app.services.eah_agent.utils.secret_refs import resolve_secret_refs
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -39,7 +43,7 @@ class BuildContext:
     agent_model: Optional[AgentModel] = None
     llm_model: Optional[LLMModel] = None
     tools: List[Any] = field(default_factory=list)
-    instruction_builder: Optional[InstructionBuilder] = None
+    instruction_builder: Optional[InstructionComposer] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 # --- 2. 核心构建策略 (Strategies) ---
@@ -80,6 +84,24 @@ class AgentAssembler:
     职责：解耦配置加载、工具装配、指令合成与实例实例化。
     """
     
+    _skills_manager: Optional[Skills] = None
+    _lock = asyncio.Lock()
+
+    @classmethod
+    async def get_skills_manager(cls) -> Optional[Skills]:
+        """单例模式加载技能管理器"""
+        if cls._skills_manager is None:
+            async with cls._lock:
+                if cls._skills_manager is None:
+                    from pathlib import Path
+                    path = Path(__file__).parent.parent / "skills"
+                    if path.exists():
+                        loader = LocalSkills(str(path), validate=False)
+                        cls._skills_manager = Skills([loader])
+                    else:
+                        logger.warning(f"Skills path missing: {path}")
+        return cls._skills_manager
+
     def __init__(self, db: AsyncSession, agent_id: str):
         self.db = db
         self.ctx = BuildContext(agent_id=agent_id)
@@ -111,11 +133,25 @@ class AgentAssembler:
 
     async def _load_essential_data(self):
         """加载 Agent 和 Model 数据"""
-        # 获取 Agent 配置
-        res = await self.db.execute(select(AgentModel).filter(AgentModel.id == self.ctx.agent_id))
-        self.ctx.agent_model = res.scalars().first()
-        if not self.ctx.agent_model:
-            raise AgentBuildError(f"Agent entity {self.ctx.agent_id} missing")
+        if self.ctx.agent_id:
+            # 获取 Agent 配置
+            res = await self.db.execute(select(AgentModel).filter(AgentModel.id == self.ctx.agent_id))
+            self.ctx.agent_model = res.scalars().first()
+            if not self.ctx.agent_model:
+                raise AgentBuildError(f"Agent entity {self.ctx.agent_id} missing")
+        else:
+            # 无 agent_id 时，创建一个临时的默认 Agent 配置
+            self.ctx.agent_model = AgentModel(
+                id="default_adhoc_agent",
+                name="Assistant",
+                description="Default Chat Assistant",
+                system_prompt="You are a helpful assistant.",
+                instructions=[],
+                model_config={"enable_search": True},
+                tools_config=[],
+                skills_config={},
+                knowledge_config={}
+            )
 
         # 策略性选择模型
         self.ctx.llm_model = await ModelSelector.select(
@@ -124,25 +160,56 @@ class AgentAssembler:
         )
         
         # 初始化指令构建器
-        self.ctx.instruction_builder = InstructionBuilder(self.ctx.agent_model.system_prompt)
+        self.ctx.instruction_builder = InstructionComposer(self.ctx.agent_model.system_prompt)
 
     async def _assemble_toolset(self, session_id: Optional[str], enable_search: Optional[bool]):
         """装配工具并提取其专属指令"""
         model_cfg = self.ctx.agent_model.model_config or {}
         search_flag = enable_search if enable_search is not None else model_cfg.get("enable_search", True)
         
-        # 加载工具
+        # 1. 加载默认工具 (Session/Search 等)
         self.ctx.tools = await default_tools.load_tools(
             self.ctx.agent_model, self.db, session_id, enable_search=search_flag
         )
         
-        # 提取工具指令 (插件化解耦)
+        # 2. 异步加载技能工具 (Skills are semi-static)
+        # TODO: 从 agent_model.skills_config 解析启用的技能，目前暂将所有加载的技能放入
+        skills_cfg = self.ctx.agent_model.skills_config or {}
+        if skills_cfg:  # 如果需要更细粒度的控制，这里可以根据配置过滤
+            sm = await AgentAssembler.get_skills_manager()
+            if sm:
+                self.ctx.tools.extend(sm.get_tools())
+                # 注入技能相关的 prompt
+                snippet = sm.get_system_prompt_snippet()
+                if snippet:
+                    self.ctx.instruction_builder.with_file_skill(snippet)
+
+        # 3. 加载动态工具 (ToolFactory)
+        tools_cfg = getattr(self.ctx.agent_model, "tools_config", [])
+        if tools_cfg:
+            ToolFactory.initialize()
+            for tc in tools_cfg:
+                # 兼容旧配置：这里假设 tc 可以通过 .get() 或者直接作为对象访问
+                if isinstance(tc, dict):
+                    enabled = tc.get("enabled", True)
+                    name = tc.get("name")
+                    config = tc.get("config", {})
+                else:
+                    enabled = getattr(tc, "enabled", True)
+                    name = getattr(tc, "name", None)
+                    config = getattr(tc, "config", {})
+                
+                if not enabled or not name: continue
+                t_inst = ToolFactory.create_tool(name, resolve_secret_refs(config))
+                if t_inst: self.ctx.tools.append(t_inst)
+        
+        # 4. 提取带有契约的工具指令
         for tool in self.ctx.tools:
             if isinstance(tool, ToolWithPrompt):
                 try:
                     snippet = tool.get_system_prompt_snippet()
                     if snippet:
-                        self.ctx.instruction_builder.add_file_skills(snippet)
+                        self.ctx.instruction_builder.with_file_skill(snippet)
                 except Exception as e:
                     logger.warning(f"Metadata extraction failed for tool {type(tool).__name__}: {e}")
 
@@ -153,22 +220,28 @@ class AgentAssembler:
         
         # 1. 注入自定义列表指令
         if isinstance(model.instructions, list):
-            for inst in model.instructions:
-                builder.add_raw_instruction(inst)
+            for i, inst in enumerate(model.instructions):
+                builder.add_segment(InstructionSegment(
+                    key=f"raw_inst_{i}_{hash(inst)}",
+                    content=inst,
+                    category=InstructionCategory.SKILL
+                ))
 
         # 2. 注入能力集 (根据配置动态开启)
-        if settings.OPENCLAW_BASE_URL: builder.add_openclaw_capabilities()
+        if settings.OPENCLAW_BASE_URL: builder.with_openclaw()
         
         skills_cfg = model.skills_config or {}
         if skills_cfg.get("sandbox", {}).get("enabled"): 
-            builder.add_sandbox_capabilities()
+            builder.with_sandbox()
             
         if model.knowledge_config: 
-            builder.add_knowledge_capabilities()
+            builder.with_knowledge()
 
         # 3. 注入思维链逻辑
-        if model.enable_cot: builder.add_cot_prompt()
-        if model.enable_react: builder.add_react_prompt()
+        builder.with_strategies(
+            cot=bool(model.enable_cot),
+            react=bool(model.enable_react)
+        )
             
         return builder.build()
 

@@ -36,8 +36,8 @@ class AgentConfig(BaseNode):
     # 组合模型配置
     llm: LLMSettings = Field(default_factory=LLMSettings)
     
-    # 组合工具配置
-    tools: List[ToolConfig] = Field(default_factory=list)
+    # 组合工具配置 (允许实例化工具或配置字典)
+    tools: List[Any] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
     memory_enabled: bool = True
 

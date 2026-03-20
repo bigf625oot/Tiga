@@ -1,0 +1,178 @@
+{
+  "id": "learn_polish_email",
+  "group": "学习与知识消费",
+  "title": "纠错提升（润色执行）",
+  "evaluation": {
+    "pass": false,
+    "score": 0,
+    "results": [
+      {
+        "id": "outputs_polished_text",
+        "pass": false
+      },
+      {
+        "id": "tone_professional",
+        "pass": false
+      }
+    ],
+    "finalText": ""
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 0,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:22:08.563Z",
+          "durationMs": 3148,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 249,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "error": 1,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "帮我润色一下这段英文邮件，要显得专业且礼貌：\n\nHi Tom,\nI want to know why you didn't reply me. It's urgent and I need it today.\nThanks."
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:22:08.563Z",
+            "durationMs": 3148,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 249,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [],
+        "failedChecks": [
+          "outputs_polished_text",
+          "tone_professional"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "outputs_polished_text",
+            "evidence": "未通过检查项：outputs_polished_text",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "tone_professional",
+            "evidence": "未通过检查项：tone_professional",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "outputs_polished_text",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "tone_professional",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "帮我润色一下这段英文邮件，要显得专业且礼貌：\n\nHi Tom,\nI want to know why you didn't reply me. It's urgent and I need it today.\nThanks."
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "帮我润色一下这段英文邮件，要显得专业且礼貌：\n\nHi Tom,\nI want to know why you didn't reply me. It's urgent and I need it today.\nThanks.",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:22:08.563Z",
+        "durationMs": 3148,
+        "bytesRead": 249,
+        "eventCounts": {
+          "status": 1,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:22:07 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08552694320678711",
+          "x-request-id": "abb5733d-81d4-4787-a6c0-6fcf52ed4f3b"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "System orchestration error: Critical failure in AgentAssembler: Agent entity None missing"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    }
+  ]
+}

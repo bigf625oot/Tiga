@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # 核心架构组件
 from app.services.eah_agent.core.agent_base_handler import BaseHandler, StreamResponse
 from app.services.eah_agent.core.agent_nlu import IntentResult
-from app.services.eah_agent.core.agent_assembler import AgentAssembler
-from app.services.eah_agent.core.agent_workflow import AgentWorkflowEngine
-from app.services.eah_agent.handlers.file_orchestrator import FileOrchestrator
+from app.services.eah_agent.core.agent_builder import AgentAssembler
+from app.services.eah_agent.core.agent_orchestrator import AgentWorkflowEngine
+from app.services.eah_agent.document.file_orchestrator import FileOrchestrator
 from app.services.eah_agent.storage.session_history import SessionHistory
 from app.core.context_compressor import ContextCompressor
 from app.core.i18n import _
@@ -43,8 +43,8 @@ class PlanHandler(BaseHandler):
             asyncio.create_task(self._prepare_history(db, session_id))
         ]
 
-        # 等待初始化完成
-        agent, file_results, (history_msgs, _) = await asyncio.gather(*setup_tasks)
+        # 2. 等待资源就绪
+        agent, file_results, (history_msgs, _was_compressed) = await asyncio.gather(*setup_tasks)
 
         # 2. 动态指令合成 (Instruction Synthesis)
         base_instructions = getattr(agent, "instructions", None)
@@ -90,9 +90,8 @@ class PlanHandler(BaseHandler):
 
     async def _assemble_plan_agent(self, db: AsyncSession, agent_id: str, session_id: str) -> Any:
         """委托 Assembler 处理复杂的资源挂载（MCP, E2B, Tools）"""
-        assembler = AgentAssembler(db)
-        return await assembler.assemble(
-            agent_id=agent_id,
+        assembler = AgentAssembler(db, agent_id)
+        return await assembler.build(
             session_id=session_id,
             reasoning_override=True, # 规划模式强制开启推理
             enable_plan_tools=True,  # 告诉装配器需要 PlanTools

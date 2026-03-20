@@ -1,98 +1,65 @@
 <template>
   <div class="h-full relative min-h-0 min-w-0 flex flex-col group/scrollbar">
+    <!-- Scroll Container: 直接渲染全部消息，避免虚拟列表高度估算错误导致无法滚动到底部 -->
     <div 
-      class="flex-1 overflow-y-auto overscroll-none px-10 pt-8 no-scrollbar h-full" 
-      v-bind="containerProps"
+      ref="scrollContainerRef"
+      class="flex-1 min-h-0 overflow-y-auto overscroll-none px-10 pt-8 pb-16 no-scrollbar" 
       @scroll="handleScroll"
-      @wheel="handleUserInteraction"
-      @touchstart="handleUserInteraction"
-      @mousedown="handleUserInteraction"
-      @keydown="handleUserInteraction"
     >
       <div class="max-w-4xl mx-auto w-full">
-        <div v-bind="wrapperProps">
+        <div class="w-full">
           <div 
-            v-for="item in list" 
-            :key="item.index" 
-            :data-virtual-index="item.index"
-            class="flex flex-col gap-6 scroll-mt-8"
-            :class="{ 'pb-8': !item.data.isSpacer }"
+            v-for="(group, idx) in messageGroups" 
+            :key="group.isLoader ? 'loading' : idx" 
+            :data-virtual-index="idx"
+            class="flex flex-col gap-6 pb-8 scroll-mt-8"
           >
-            <!-- Normal Message Group -->
-            <template v-if="!item.data.isLoader && !item.data.isSpacer">
-                <div v-if="item.data.showTime" class="flex justify-center my-4">
+            <!-- 1. Normal Message Group -->
+            <template v-if="!group.isLoader">
+                <!-- Time Separator -->
+                <div v-if="group.showTime" class="flex justify-center my-4">
                     <span class="text-[10px] text-muted-foreground/40 px-2 py-0.5 rounded-full select-none">
-                    {{ formatGroupTime(item.data.timestamp) }}
+                    {{ formatGroupTime(group.timestamp) }}
                     </span>
                 </div>
         
+                <!-- Messages in Group -->
                 <ChatCard 
-                    v-for="(msg, mIdx) in item.data.messages" 
+                    v-for="(msg, mIdx) in group.messages" 
                     :key="mIdx"
                     class="mb-6 last:mb-0"
                     :message="msg"
                     :type="msg.type || 'knowledge_qa'"
-                    :is-user="item.data.role === 'user'"
-                    :show-avatar="mIdx === 0"
-                    :show-meta="mIdx === 0 && item.data.role !== 'user'"
+                    :is-user="group.role === 'user'"
+                    :show-avatar="group.role === 'user' ? true : (mIdx === 0)"
+                    :show-meta="mIdx === 0 && group.role !== 'user'"
                     :agent="currentAgent"
-                    :is-last="msg === messages[messages.length - 1]"
-                    :is-streaming="isStreaming"
+                    :is-last="idx === messageGroups.length - 1 && mIdx === group.messages.length - 1"
+                    :is-streaming="props.isStreaming"
                     @locate-node="$emit('locate-node', $event)"
                     @open-doc-space="$emit('open-doc-space', $event)"
                     @quote-message="$emit('quote-message', $event)"
                     @excerpt-message="$emit('excerpt-message', $event)"
                     @delete-message="$emit('delete-message', $event)"
-                    @resend-message="$emit('resend-message', $event)"
-                    @edit-message="$emit('edit-message', $event)"
                 />
             </template>
 
-            <!-- Loading Indicator -->
-            <template v-else-if="item.data.isLoader">
-                <div class="flex gap-4 ml-10 mt-2 pb-4 animate-in fade-in duration-300">
+            <!-- 2. Loading Indicator (As a Virtual Item) -->
+            <template v-else>
+                <div class="flex gap-4 mt-2 pb-4 animate-in fade-in duration-300">
+                    <!-- Avatar -->
                     <div class="flex-shrink-0">
-                        <div class="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center shadow-sm">
-                            <div class="relative flex h-3 w-3">
-                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                              <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
-                            </div>
-                        </div>
+                        <Skeleton class="h-8 w-8 rounded-full bg-muted/50" />
                     </div>
                     
+                    <!-- Skeleton Loader -->
                     <div class="flex flex-col gap-2 w-full max-w-[80%]">
-                        <div class="p-4 rounded-2xl rounded-tl-none bg-muted/30 border border-border/60 backdrop-blur-md shadow-sm">
-                           <template v-if="loadingStatus">
-                               <div class="flex items-center gap-3">
-                                   <!-- Animated AI Thinking Icon -->
-                                   <div class="flex space-x-1 h-4 items-center">
-                                       <div class="w-1.5 h-1.5 bg-indigo-500/70 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-                                       <div class="w-1.5 h-1.5 bg-purple-500/70 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-                                       <div class="w-1.5 h-1.5 bg-pink-500/70 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
-                                   </div>
-                                   <span class="text-xs font-medium text-muted-foreground bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 animate-pulse">
-                                       {{ loadingStatus }}
-                                   </span>
-                               </div>
-                           </template>
-                           <template v-else>
-                               <!-- Fallback Loading State -->
-                               <div class="flex items-center gap-3">
-                                   <div class="flex space-x-1 h-4 items-center">
-                                       <div class="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-                                       <div class="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-                                       <div class="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
-                                   </div>
-                                   <span class="text-xs text-muted-foreground/60 font-medium">正在思考...</span>
-                               </div>
-                           </template>
+                        <div class="p-4 rounded-2xl rounded-tl-none bg-muted/20 border border-border/40 backdrop-blur-sm space-y-3">
+                           <Skeleton class="h-4 w-[250px] bg-muted/60" />
+                           <Skeleton class="h-4 w-[200px] bg-muted/60" />
                         </div>
                     </div>
                 </div>
-            </template>
-            <!-- Bottom Spacer -->
-            <template v-else-if="item.data.isSpacer">
-                <div class="h-32 w-full flex-shrink-0 pointer-events-none"></div>
             </template>
           </div>
         </div>
@@ -100,19 +67,23 @@
     </div>
 
     <!-- Custom Scrollbar/Anchor Navigation -->
-    <div class="absolute right-0 top-0 bottom-4 w-8 z-40 pointer-events-none">
+    <div class="absolute right-0 top-0 bottom-0 w-8 z-40 pointer-events-none">
         <MessageAnchor
             :markers="markers"
             :current-visual-progress="currentVisualProgress"
             :accumulated-offsets="accumulatedHeights.offsets"
             :estimated-total-height="accumulatedHeights.totalHeight"
             :viewport-height="viewportHeight"
+            :pulse-end="showScrollToBottomTip"
+            :marker-every-n="anchorDensity.everyN"
+            :marker-min-gap-px="anchorDensity.minGapPx"
             @scroll-to-index="scrollToGroup"
+            @scroll-to-edge="handleScrollToEdge"
             @update:currentVisualProgress="handleVisualProgressUpdate"
         />
     </div>
 
-    <!-- Scroll to Bottom Button -->
+    <!-- New Message Notification / Scroll to Bottom Button -->
     <transition
       enter-active-class="transition-all duration-300 ease-out"
       enter-from-class="opacity-0 translate-y-4"
@@ -135,7 +106,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
-import { useVirtualList, useResizeObserver, useDebounceFn } from '@vueuse/core';
+import { useResizeObserver, useDebounceFn } from '@vueuse/core';
 import { ArrowDown } from 'lucide-vue-next';
 import MessageAnchor from './MessageAnchor.vue';
 import ChatCard from './ChatCard.vue';
@@ -149,11 +120,11 @@ const props = defineProps<{
   currentAgent: Agent | Team | undefined;
   isLoading: boolean;
   isStreaming?: boolean;
-  loadingStatus?: string;
 }>();
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);
 
+// Grouping Logic
 const messageGroups = computed(() => {
   const groups: any[] = [];
   
@@ -195,16 +166,10 @@ const messageGroups = computed(() => {
     if (currentGroup) groups.push(currentGroup);
   }
 
-  groups.push({
-      isSpacer: true,
-      role: 'assistant',
-      messages: [],
-      timestamp: dayjs(),
-      lastTimestamp: dayjs(),
-      showTime: false,
-      index: 'bottom-spacer'
-  });
-
+  // Check if we should append a loader group
+  // Logic: Show loader if isLoading is true AND we don't have an active assistant response yet.
+  // We check if it's currently streaming. If it's streaming, the loader should disappear 
+  // because the actual message is being generated (whether reasoning or text).
   const lastMsg = props.messages[props.messages.length - 1];
   const hasStartedResponse = lastMsg && lastMsg.role !== 'user' && (lastMsg.content || lastMsg.reasoning || props.isStreaming);
 
@@ -216,52 +181,21 @@ const messageGroups = computed(() => {
           timestamp: dayjs(),
           lastTimestamp: dayjs(),
           showTime: false,
-          index: 'loading-placeholder'
+          index: 'loading-placeholder' // Unique identifier
       });
   }
 
   return groups;
 });
 
-const ESTIMATED_ITEM_HEIGHT = 150;
+const scrollContainerRef = ref<HTMLElement | null>(null);
+const containerRef = scrollContainerRef;
 
-const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
-  messageGroups,
-  {
-    itemHeight: ESTIMATED_ITEM_HEIGHT
-  }
-);
-
-const containerRef = containerProps.ref;
-
-watch(messageGroups, (newVal, oldVal) => {
-    const isFirstLoad = !oldVal || oldVal.length === 0;
-    const wasAtBottom = isUserAtBottom.value;
-
-    nextTick(() => {
-        updateScrollMetrics(false);
-        
-        const lastMsg = props.messages[props.messages.length - 1];
-        const isUserMessage = lastMsg && lastMsg.role === 'user';
-        
-        if (isFirstLoad) {
-            scrollToBottom(true);
-            return;
-        }
-
-        if (isUserMessage) {
-            scrollToBottom(true);
-            return;
-        }
-
-        if (wasAtBottom) {
-            scrollToBottom();
-        } else {
-            showScrollToBottomTip.value = true;
-        }
-    });
+watch(messageGroups, () => {
+    nextTick(() => updateScrollMetrics());
 }, { deep: true });
 
+// --- Custom Scrollbar Logic ---
 const scrollTop = ref(0);
 const totalHeight = ref(0);
 const viewportHeight = ref(0);
@@ -270,6 +204,7 @@ const showScrollToBottomTip = ref(false);
 
 const actualScrollRange = computed(() => Math.max(1, totalHeight.value - viewportHeight.value));
 
+// Height Map Logic for Accurate Visual Scrollbar
 const itemHeights = ref<Record<number, number>>({});
 const updateItemHeight = (index: number, el: Element | null) => {
     if (el) {
@@ -278,14 +213,14 @@ const updateItemHeight = (index: number, el: Element | null) => {
 };
 
 const accumulatedHeights = computed(() => {
-    const visibleGroups = messageGroups.value.filter(g => !g.isSpacer);
-    const total = visibleGroups.length;
+    const total = messageGroups.value.length;
     const offsets: number[] = [];
     let current = 0;
     
     for (let i = 0; i < total; i++) {
         offsets.push(current);
-        const h = itemHeights.value[i] || ESTIMATED_ITEM_HEIGHT;
+        // Use recorded height or estimate (100)
+        const h = itemHeights.value[i] || 100;
         current += h;
     }
     
@@ -294,29 +229,42 @@ const accumulatedHeights = computed(() => {
 
 const scrollRange = computed(() => Math.max(1, accumulatedHeights.value.totalHeight - viewportHeight.value));
 
-let isUserInteracting = false;
-let userInteractionTimeout: number | null = null;
+const anchorDensity = computed(() => {
+    // Only count "normal" (non special) markers; specials should always be shown.
+    const normalCount = markers.value.filter((m: any) => !m.isStart && !m.isEnd).length;
 
-const handleUserInteraction = () => {
-    isUserInteracting = true;
-    if (userInteractionTimeout) clearTimeout(userInteractionTimeout);
-    userInteractionTimeout = setTimeout(() => {
-        isUserInteracting = false;
-    }, 1000) as unknown as number;
-};
+    const baseEveryN = 5;
+    const baseMinGapPx = 16;
+
+    // Target how many markers we want visible on the rail, based on viewport height.
+    // Roughly: one marker per ~18px, clamped into a sane range.
+    const targetVisible = Math.min(60, Math.max(12, Math.floor(viewportHeight.value / 18)));
+
+    // Interval sampling factor: show 1 per everyN markers.
+    // Make `everyN` grow in multiples of `baseEveryN`: 5, 10, 15, 20...
+    const rawEveryN = Math.max(1, Math.ceil(normalCount / Math.max(1, targetVisible)));
+    const everyNMultiplier = Math.max(1, Math.ceil(rawEveryN / baseEveryN));
+    const everyN = baseEveryN * everyNMultiplier;
+
+    // Height bucketing / merge gap: keep at least ~one marker per 16-22px.
+    // As the viewport grows, we can afford a larger gap; keep within [12, 24].
+    const minGapPx = Math.min(24, Math.max(baseMinGapPx, Math.round(viewportHeight.value / Math.max(1, targetVisible))));
+
+    return { everyN, minGapPx };
+});
 
 const markers = computed(() => {
-    const visibleGroups = messageGroups.value.filter(g => !g.isSpacer);
-    if (!visibleGroups.length) return [];
+    if (!messageGroups.value.length) return [];
     
     const { offsets, totalHeight: estTotalHeight } = accumulatedHeights.value;
     
-    const userGroups = visibleGroups
+    const userGroups = messageGroups.value
         .map((g, i) => ({ ...g, originalIndex: i }))
         .filter(g => g.role === 'user');
 
-    const lastGroupIndex = visibleGroups.length - 1;
+    const lastGroupIndex = messageGroups.value.length - 1;
     const userMarkers = userGroups.map((g, i) => {
+            // Use visual percentage based on height map
             const offset = offsets[g.originalIndex] || 0;
             const topPercent = Math.min(100, Math.max(0, (offset / scrollRange.value) * 100));
             
@@ -324,7 +272,9 @@ const markers = computed(() => {
             const contentPreview = firstMsg.content ? (firstMsg.content.slice(0, 15) + (firstMsg.content.length > 15 ? '...' : '')) : `第 ${i + 1} 轮`;
             
             return {
+                // markerId must be unique and not collide with special markers
                 index: g.originalIndex,
+                scrollToIndex: g.originalIndex,
                 topPercent,
                 label: contentPreview,
                 isEnd: false
@@ -332,9 +282,17 @@ const markers = computed(() => {
         });
 
     return [
+        {
+            index: -1,
+            scrollToIndex: 0,
+            topPercent: 0,
+            label: '开始',
+            isStart: true
+        },
         ...userMarkers,
         {
-            index: lastGroupIndex,
+            index: -2,
+            scrollToIndex: lastGroupIndex,
             topPercent: 100,
             label: '最新消息',
             isEnd: true
@@ -343,13 +301,12 @@ const markers = computed(() => {
 });
 
 const currentVisualProgress = computed(() => {
-    const visibleGroups = messageGroups.value.filter(g => !g.isSpacer);
-    if (!visibleGroups.length) return 0;
-    
-    return Math.min(1, Math.max(0, scrollTop.value / scrollRange.value));
+    if (!messageGroups.value.length) return 0;
+    if (isUserAtBottom.value) return 1;
+    return Math.min(1, Math.max(0, scrollTop.value / actualScrollRange.value));
 });
 
-const updateScrollMetrics = (isScrollEvent = false) => {
+const updateScrollMetrics = () => {
     if (!containerRef.value) return;
     const { clientHeight, scrollHeight, scrollTop: st } = containerRef.value;
     
@@ -357,56 +314,40 @@ const updateScrollMetrics = (isScrollEvent = false) => {
     totalHeight.value = scrollHeight;
     viewportHeight.value = clientHeight;
 
-    if (list.value.length > 0) {
-        for (const item of list.value) {
-            const el = containerRef.value.querySelector(`[data-virtual-index="${item.index}"]`);
-            updateItemHeight(item.index, el);
+    if (messageGroups.value.length > 0) {
+        for (let i = 0; i < messageGroups.value.length; i++) {
+            const el = containerRef.value.querySelector(`[data-virtual-index="${i}"]`);
+            updateItemHeight(i, el);
         }
     }
 
-    const isBottom = scrollHeight - st - clientHeight <= 150;
+    // Check if user is at bottom (with 100px threshold)
+    const isBottom = scrollHeight - st - clientHeight <= 100;
+    isUserAtBottom.value = isBottom;
 
-    if (isScrollEvent) {
-        if (isUserInteracting) {
-            isUserAtBottom.value = isBottom;
-        } else {
-            if (!isUserAtBottom.value) {
-                isUserAtBottom.value = isBottom;
-            }
-        }
-    } else {
-        if (!isUserAtBottom.value) {
-            isUserAtBottom.value = isBottom;
-        }
-    }
-
-    if (isUserAtBottom.value) {
+    if (isBottom) {
         showScrollToBottomTip.value = false;
     }
 };
 
 const handleScroll = () => {
-    updateScrollMetrics(true);
+    updateScrollMetrics();
 };
 
 const handleScrollUpdate = (val: number) => {
     if (containerRef.value) {
-        containerRef.value.scrollTo({
-            top: val,
-            behavior: 'auto'
-        });
+        containerRef.value.scrollTop = val;
     }
 };
 
+// Debounced resize observer
 const onResize = useDebounceFn(() => {
-    if (isUserAtBottom.value) {
-        pinToBottom();
-    }
-    updateScrollMetrics(false);
+    updateScrollMetrics();
 }, 150);
 
 useResizeObserver(containerRef, onResize);
 
+// Watch for DOM changes in visible items to update height map
 let streamObservedIndex = -1;
 let rafMetricsId: number | null = null;
 
@@ -418,25 +359,12 @@ const scheduleMetricsUpdate = () => {
     });
 };
 
-const pinToBottom = () => {
-    if (!containerRef.value) return;
-    containerRef.value.scrollTo({
-        top: containerRef.value.scrollHeight,
-        behavior: 'auto'
-    });
-};
-
 const mutationObserver = new MutationObserver(() => {
     if (!props.isStreaming) return;
     if (!containerRef.value) return;
     if (streamObservedIndex < 0) return;
     const el = containerRef.value.querySelector(`[data-virtual-index="${streamObservedIndex}"]`);
     updateItemHeight(streamObservedIndex, el);
-    
-    if (isUserAtBottom.value) {
-        pinToBottom();
-    }
-    
     scheduleMetricsUpdate();
 });
 
@@ -462,9 +390,6 @@ const stopStreamingObserver = () => {
 onMounted(() => {
     nextTick(() => {
         updateScrollMetrics();
-        if (props.messages.length > 0) {
-            scrollToBottom(true);
-        }
         startStreamingObserver();
     });
 });
@@ -492,24 +417,22 @@ onUnmounted(() => {
 
 
 const handleVisualProgressUpdate = (progress: number) => {
+    // progress is 0-1
     if (!containerRef.value) return;
 
     const p = Math.min(1, Math.max(0, progress));
-    
-    containerRef.value.scrollTo({
-        top: p * scrollRange.value,
-        behavior: 'auto'
-    });
-    
-    handleUserInteraction();
-    updateScrollMetrics(false);
+    containerRef.value.scrollTop = p * actualScrollRange.value;
+    updateScrollMetrics();
 };
 
 const scrollToGroup = (index: number) => {
-    
     if (!containerRef.value) return;
 
-    handleUserInteraction();
+    if (index <= 0) {
+        containerRef.value.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(updateScrollMetrics, 300);
+        return;
+    }
 
     if (index >= messageGroups.value.length - 1) {
         scrollToBottom(true);
@@ -517,76 +440,47 @@ const scrollToGroup = (index: number) => {
     }
     
     const el = containerRef.value.querySelector(`[data-virtual-index="${index}"]`) as HTMLElement | null;
-    
     if (el) {
         const containerTop = containerRef.value.getBoundingClientRect().top;
         const elTop = el.getBoundingClientRect().top;
-        const scrollOffset = elTop - containerTop + containerRef.value.scrollTop - 20;
-        
-        containerRef.value.scrollTo({
-            top: scrollOffset,
-            behavior: 'smooth'
-        });
+        const scrollOffset = Math.max(0, elTop - containerTop + containerRef.value.scrollTop - 20);
+        containerRef.value.scrollTo({ top: scrollOffset, behavior: 'smooth' });
         setTimeout(updateScrollMetrics, 300);
-    } else {
-        scrollTo(index);
-        
-        nextTick(() => {
-            setTimeout(() => {
-                if (!containerRef.value) return;
-                const targetEl = containerRef.value.querySelector(`[data-virtual-index="${index}"]`) as HTMLElement | null;
-                
-                if (targetEl) {
-                    const containerTop = containerRef.value.getBoundingClientRect().top;
-                    const elTop = targetEl.getBoundingClientRect().top;
-                    const scrollOffset = elTop - containerTop + containerRef.value.scrollTop - 20;
-                    
-                    containerRef.value.scrollTo({
-                        top: scrollOffset,
-                        behavior: 'auto' 
-                    });
-                }
-                updateScrollMetrics();
-            }, 50);
-        });
     }
 };
 
-const scrollToBottom = (force = false) => {
+const handleScrollToEdge = (edge: 'top' | 'bottom') => {
+    if (!containerRef.value) return;
+    if (edge === 'top') {
+        containerRef.value.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(updateScrollMetrics, 300);
+        return;
+    }
+    scrollToBottom(true, true);
+};
+
+const scrollToBottom = (_force = false, smooth = false) => {
     nextTick(() => {
-        if (!containerRef.value) return;
-
-        const lastIndex = messageGroups.value.length - 1;
-        if (lastIndex < 0) return;
-
-        scrollTo(lastIndex);
-
-        setTimeout(() => {
-            if (!containerRef.value) return;
-            containerRef.value.scrollTo({
-                top: containerRef.value.scrollHeight,
-                behavior: 'auto'
-            });
-            updateScrollMetrics(false);
-            
-            setTimeout(() => {
-                if (!containerRef.value) return;
-                containerRef.value.scrollTo({
-                    top: containerRef.value.scrollHeight,
-                    behavior: 'auto'
-                });
-                updateScrollMetrics(false);
-            }, 100);
-        }, 50);
+        if (containerRef.value) {
+            if (smooth) {
+                containerRef.value.scrollTo({ top: containerRef.value.scrollHeight, behavior: 'smooth' });
+                setTimeout(updateScrollMetrics, 350);
+            } else {
+                containerRef.value.scrollTop = containerRef.value.scrollHeight;
+                updateScrollMetrics();
+            }
+        }
     });
 };
 
 const handleScrollToBottomClick = () => {
     scrollToBottom();
     showScrollToBottomTip.value = false;
+    // We assume the user wants to be at the bottom now
     isUserAtBottom.value = true;
 };
 
+// Watchers for State Sync
 watch(() => props.isLoading, (newVal) => {
     if (newVal && isUserAtBottom.value) {
         scrollToBottom();
@@ -594,6 +488,7 @@ watch(() => props.isLoading, (newVal) => {
 });
 
 watch(() => props.messages.length, () => {
+    // Always scroll to bottom if the last message is from user (they just sent it)
     const lastMsg = props.messages[props.messages.length - 1];
     if (lastMsg && lastMsg.role === 'user') {
          scrollToBottom(true);
@@ -607,14 +502,18 @@ watch(() => props.messages.length, () => {
     }
 });
 
+// Watch for reasoning content updates (COE)
 watch(() => {
     const lastMsg = props.messages[props.messages.length - 1];
     return lastMsg ? lastMsg.reasoning : null;
 }, (newVal, oldVal) => {
+    // If reasoning updates (stream outputting thought), scroll to bottom if user was at bottom
     if (newVal && newVal !== oldVal) {
         if (isUserAtBottom.value) {
-            nextTick(() => pinToBottom());
-        } else {
+            scrollToBottom();
+        } 
+        // Optional: show tip if not at bottom? Usually yes.
+        else {
              showScrollToBottomTip.value = true;
         }
     }
@@ -623,8 +522,9 @@ watch(() => {
 watch(() => props.messages[props.messages.length - 1], (newVal) => {
     if (newVal && newVal.content) {
         if (isUserAtBottom.value) {
-            nextTick(() => pinToBottom());
-        } else {
+            scrollToBottom();
+        } 
+        else {
              showScrollToBottomTip.value = true;
         }
     }
@@ -636,14 +536,16 @@ defineExpose({
 </script>
 
 <style>
+/* 隐藏原生滚动条 */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
+/* 使用 :deep 或移除 scoped 以确保滚动条样式生效，这里尝试使用非 scoped 的方式或者更强的选择器 */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;

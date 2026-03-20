@@ -1,0 +1,396 @@
+{
+  "id": "context_structure_mapping_mindmap",
+  "group": "长文本处理",
+  "title": "结构化映射（跨轮次重组）",
+  "evaluation": {
+    "pass": false,
+    "score": 0,
+    "results": [
+      {
+        "id": "outputs_markdown_mindmap",
+        "pass": false
+      },
+      {
+        "id": "covers_multiple_points",
+        "pass": false
+      }
+    ],
+    "finalText": "\n\n\n\n"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 3,
+      "finalTextChars": 4,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:22:37.678Z",
+          "durationMs": 3731,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 337,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 2,
+            "error": 1,
+            "done": 1
+          }
+        },
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:22:41.409Z",
+          "durationMs": 4368,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 337,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 2,
+            "error": 1,
+            "done": 1
+          }
+        },
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+          "startedAt": "2026-03-20T08:22:45.777Z",
+          "durationMs": 3449,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 223,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "error": 1,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "我们聊聊性能优化：我这边先说三个点：1）接口 P95 很高 3s+；2）数据库慢查询多；3）前端首屏慢。你先给我一些可能原因。"
+          },
+          {
+            "step": 2,
+            "message": "补充：还有缓存命中率低，日志里看到大量重复查询。我们也有一些不必要的第三方请求。"
+          },
+          {
+            "step": 3,
+            "message": "把我们刚才聊的所有关于“性能优化”的零散点，整理成一张 Markdown 脑图。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:22:37.678Z",
+            "durationMs": 3731,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 337,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 2,
+              "error": 1,
+              "done": 1
+            }
+          },
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:22:41.409Z",
+            "durationMs": 4368,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 337,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 2,
+              "error": 1,
+              "done": 1
+            }
+          },
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+            "startedAt": "2026-03-20T08:22:45.777Z",
+            "durationMs": 3449,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 223,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [],
+        "failedChecks": [
+          "outputs_markdown_mindmap",
+          "covers_multiple_points"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "outputs_markdown_mindmap",
+            "evidence": "未通过检查项：outputs_markdown_mindmap",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "covers_multiple_points",
+            "evidence": "未通过检查项：covers_multiple_points",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "outputs_markdown_mindmap",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          },
+          {
+            "checkId": "covers_multiple_points",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "我们聊聊性能优化：我这边先说三个点：1）接口 P95 很高 3s+；2）数据库慢查询多；3）前端首屏慢。你先给我一些可能原因。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "我们聊聊性能优化：我这边先说三个点：1）接口 P95 很高 3s+；2）数据库慢查询多；3）前端首屏慢。你先给我一些可能原因。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:22:37.678Z",
+        "durationMs": 3731,
+        "bytesRead": 337,
+        "eventCounts": {
+          "status": 2,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:22:36 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.09418892860412598",
+          "x-request-id": "22c6e66c-6539-448f-a039-3f5fbea3a9e3"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Warming up Data Analyst Engine..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "System orchestration error: Critical failure in AgentAssembler: Agent entity None missing"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    },
+    {
+      "role": "user",
+      "type": "text",
+      "content": "补充：还有缓存命中率低，日志里看到大量重复查询。我们也有一些不必要的第三方请求。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "补充：还有缓存命中率低，日志里看到大量重复查询。我们也有一些不必要的第三方请求。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:22:41.409Z",
+        "durationMs": 4368,
+        "bytesRead": 337,
+        "eventCounts": {
+          "status": 2,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:22:41 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08779144287109375",
+          "x-request-id": "1ddbe944-57bd-466b-99f2-50cae286f515"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Warming up Data Analyst Engine..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "System orchestration error: Critical failure in AgentAssembler: Agent entity None missing"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    },
+    {
+      "role": "user",
+      "type": "text",
+      "content": "把我们刚才聊的所有关于“性能优化”的零散点，整理成一张 Markdown 脑图。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/c51871f3-9dbc-4e41-ae2e-d48c2529d64c/chat",
+        "request": {
+          "message": "把我们刚才聊的所有关于“性能优化”的零散点，整理成一张 Markdown 脑图。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:22:45.777Z",
+        "durationMs": 3449,
+        "bytesRead": 223,
+        "eventCounts": {
+          "status": 1,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:22:45 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.09058165550231934",
+          "x-request-id": "d21831b8-75fd-4cbf-983c-8eb98e220ac8"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "未找到匹配的工作流配置，无法执行拖拽编排。"
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    }
+  ]
+}

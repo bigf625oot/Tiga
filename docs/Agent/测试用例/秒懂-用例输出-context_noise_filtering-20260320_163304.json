@@ -1,0 +1,444 @@
+{
+  "id": "context_noise_filtering",
+  "group": "长文本处理",
+  "title": "噪音过滤（提取真正需求）",
+  "evaluation": {
+    "pass": false,
+    "score": 50,
+    "results": [
+      {
+        "id": "extracts_core_requirements",
+        "pass": false
+      },
+      {
+        "id": "five_bullets_or_less",
+        "pass": true
+      }
+    ],
+    "finalText": "Based on the analysis, the key functional requirements derived from the description of the \"Default Chat Assistant\" are:\n\n1. **Provide accurate and factual information**: Ensure responses are reliable and verified.\n2. **Communicate clearly and concisely**: Use straightforward language and markdown for readability.\n3. **Anticipate user needs proactively**: Identify and address potential user requirements ahead of time.\n4. **Utilize available tools effectively**: Leverage tools like web search to enhance accuracy and efficiency.\n5. **Assist users efficiently**: Deliver timely and relevant help to fulfill user goals. \n\nThese requirements align with the assistant's role and principles as described."
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 2,
+      "finalTextChars": 703,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:38:18.852Z",
+          "durationMs": 10218,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 540,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 3,
+            "error": 1,
+            "done": 1
+          }
+        },
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:38:29.070Z",
+          "durationMs": 28482,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 1667,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 3,
+            "text": 30,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "哎最近真的太热了，办公室空调还坏了，修了两次也不行。\n昨天同事说要去吃火锅，我没去，我在加班。\n对了我们产品要做一个功能：用户上传一个 CSV，然后系统自动识别字段、做校验、把数据入库，并生成一份导入报告（成功/失败条数、失败原因、可下载失败明细）。\n老板还在群里发了个表情包，说要效率。\n另外希望导入过程有进度条，超大文件要分片，后台异步处理，前端能看到任务状态。\n我刚才说的这些可能有点乱，你就抓重点。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气…"
+          },
+          {
+            "step": 2,
+            "message": "刚才这段话里，我真正想要实现的功能需求是什么？请用 5 条以内列出来。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:38:18.852Z",
+            "durationMs": 10218,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 540,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 3,
+              "error": 1,
+              "done": 1
+            }
+          },
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:38:29.070Z",
+            "durationMs": 28482,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 1667,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 3,
+              "text": 30,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "five_bullets_or_less"
+        ],
+        "failedChecks": [
+          "extracts_core_requirements"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "extracts_core_requirements",
+            "evidence": "未通过检查项：extracts_core_requirements",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "extracts_core_requirements",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "哎最近真的太热了，办公室空调还坏了，修了两次也不行。\n昨天同事说要去吃火锅，我没去，我在加班。\n对了我们产品要做一个功能：用户上传一个 CSV，然后系统自动识别字段、做校验、把数据入库，并生成一份导入报告（成功/失败条数、失败原因、可下载失败明细）。\n老板还在群里发了个表情包，说要效率。\n另外希望导入过程有进度条，超大文件要分片，后台异步处理，前端能看到任务状态。\n我刚才说的这些可能有点乱，你就抓重点。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "哎最近真的太热了，办公室空调还坏了，修了两次也不行。\n昨天同事说要去吃火锅，我没去，我在加班。\n对了我们产品要做一个功能：用户上传一个 CSV，然后系统自动识别字段、做校验、把数据入库，并生成一份导入报告（成功/失败条数、失败原因、可下载失败明细）。\n老板还在群里发了个表情包，说要效率。\n另外希望导入过程有进度条，超大文件要分片，后台异步处理，前端能看到任务状态。\n我刚才说的这些可能有点乱，你就抓重点。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。\n随口一提：最近天气、咖啡、周末、以及一些无关的吐槽。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:38:18.852Z",
+        "durationMs": 10218,
+        "bytesRead": 540,
+        "eventCounts": {
+          "status": 3,
+          "error": 1,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:38:18 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.07785296440124512",
+          "x-request-id": "8dd007c0-6062-44af-a416-b5daf5cfd4b8"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating autonomous planning environment..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Initializing Knowledge Base..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "error",
+      "content": {
+        "type": "error",
+        "content": "Workflow execution failed: Error Multiple exceptions: [Errno 10061] Connect call failed ('::1', 6379, 0, 0), [Errno 10061] Connect call failed ('127.0.0.1', 6379) connecting to localhost:6379."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": ""
+    },
+    {
+      "role": "user",
+      "type": "text",
+      "content": "刚才这段话里，我真正想要实现的功能需求是什么？请用 5 条以内列出来。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "刚才这段话里，我真正想要实现的功能需求是什么？请用 5 条以内列出来。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:38:29.070Z",
+        "durationMs": 28482,
+        "bytesRead": 1667,
+        "eventCounts": {
+          "status": 3,
+          "text": 30,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:38:28 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.09165239334106445",
+          "x-request-id": "6c04ceb3-dea9-45b4-aab9-570db2ba2caa"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Warming up Data Analyst Engine..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Analyzing dataset and generating insights..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Ba"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "sed "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "on the analysis, the key functional "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "requirements derived fro"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "m the description of the \"De"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "fault Chat As"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "sistant\" are:\n\n1. **Provide accurate and fa"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ctual information**: Ensure respon"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ses are relia"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ble and verified.\n2. **Communic"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ate clearly "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "and concisely**: Use straightforwa"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "rd language and markdown"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " for readability.\n3. **A"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "nticipate user needs proactively**: Identify a"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "nd address potential user requir"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ements ahead o"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "f time.\n4. **Utilize available tools "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "effectively**: Lev"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "erage tools like web search to "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "enhance accuracy a"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "nd efficiency.\n5. **Assist "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "users efficiently**: Deliver time"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ly and relevant help t"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "o fulfill user goals. "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n\nThese requirements alig"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "n with the assistant's ro"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "le and prin"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ciples as "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "described."
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "Based on the analysis, the key functional requirements derived from the description of the \"Default Chat Assistant\" are:\n\n1. **Provide accurate and factual information**: Ensure responses are reliable and verified.\n2. **Communicate clearly and concisely**: Use straightforward language and markdown for readability.\n3. **Anticipate user needs proactively**: Identify and address potential user requirements ahead of time.\n4. **Utilize available tools effectively**: Leverage tools like web search to enhance accuracy and efficiency.\n5. **Assist users efficiently**: Deliver timely and relevant help to fulfill user goals. \n\nThese requirements align with the assistant's role and principles as described."
+    }
+  ]
+}

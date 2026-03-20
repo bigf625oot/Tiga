@@ -283,7 +283,9 @@ export function useChatSession() {
                               }
                               case 'text':
                                   let textChunk = parsedData;
-                                  if (typeof textChunk !== 'string') textChunk = normalizeThink(textChunk);
+                                  if (typeof textChunk !== 'string') {
+                                      textChunk = textChunk.content || normalizeThink(textChunk);
+                                  }
                                   assistantMsg.content = (assistantMsg.content || '') + textChunk;
                                   if (onEvent) onEvent(eventType, parsedData);
                                   
@@ -291,8 +293,11 @@ export function useChatSession() {
                                   workflowStore.appendOutput?.(textChunk);
                                   break;
                               case 'think':
-                                  const thinking = normalizeThink(parsedData);
-                                  assistantMsg.reasoning = (assistantMsg.reasoning || '') + thinking;
+                                  let thinking = parsedData;
+                                  if (typeof thinking !== 'string') {
+                                      thinking = thinking.content || normalizeThink(thinking);
+                                  }
+                                  assistantMsg.reasoning_content = (assistantMsg.reasoning_content || '') + thinking;
                                   // Also log thoughts to workflow store so they appear in logs
                                   workflowStore.addLog(thinking, 'info', 'thinking');
                                   if (onEvent) onEvent(eventType, parsedData);
@@ -315,7 +320,11 @@ export function useChatSession() {
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               case 'error':
-                                  assistantMsg.content += `\n**System Error**: ${parsedData}`;
+                                  let errorText = parsedData;
+                                  if (typeof errorText !== 'string') {
+                                      errorText = errorText.content || errorText.message || errorText.detail || normalizeThink(errorText);
+                                  }
+                                  assistantMsg.content += `\n**System Error**: ${errorText}`;
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
                           }

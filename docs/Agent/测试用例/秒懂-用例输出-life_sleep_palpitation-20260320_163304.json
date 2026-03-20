@@ -1,0 +1,578 @@
+{
+  "id": "life_sleep_palpitation",
+  "group": "个人生活与规划",
+  "title": "健康科普（科普化表达与风险提示）",
+  "evaluation": {
+    "pass": true,
+    "score": 100,
+    "results": [
+      {
+        "id": "mentions_seek_medical_help_threshold",
+        "pass": true
+      },
+      {
+        "id": "uses_plain_language",
+        "pass": true
+      }
+    ],
+    "finalText": "### 可能原因\n1. **熬夜导致**：长期熬夜会让心脏得不到充分休息，容易心慌。\n2. **压力大或焦虑**：心理紧张会让心跳加快。\n3. **咖啡或茶喝多了**：这些饮料会刺激心脏。\n4. **缺钾或镁**：电解质失衡也可能引发心慌。\n5. **潜在疾病**：比如甲亢、贫血、心脏病等。\n\n---\n\n### 先做这些自查\n1. **数心跳**：安静时数1分钟心跳，正常是60-100次/分钟。太快或太慢都需注意。\n2. **看伴随症状**：\n   - 头晕、眼前发黑？可能是低血压或贫血。\n   - 手抖、瘦得快？可能是甲亢。\n   - 胸痛、呼吸困难？赶紧就医。\n3. **记录生活习惯**：\n   - 最近喝咖啡/茶多吗？\n   - 熬夜到几点？睡眠质量如何？\n\n---\n\n### 什么时候必须就医？\n- **立刻去**：胸痛、呼吸困难、晕倒。\n- **尽快去**：\n  - 心跳持续超过100次/分钟或低于50次/分钟。\n  - 心慌频繁发作，影响生活。\n  - 伴随发烧、体重骤降等。\n\n---\n\n### 一周内的调整建议\n1. **强制早睡**：\n   - 今晚就开始，11点前躺下，睡不着也闭眼休息。\n   - 睡前1小时别玩手机。\n2. **饮食调整**：\n   - 少吃刺激性食物（咖啡、浓茶、辣椒）。\n   - 多吃含钾食物（香蕉、菠菜）。\n3. **放松心情**：\n   - 白天抽10分钟深呼吸或散步。\n   - 避免过度纠结心事。\n4. **观察记录**：\n   - 每天记下心跳次数和症状。\n   - 如果一周后没改善，去医院查血常规、心电图。\n\n---\n\n**简单总结**：先别慌，调整作息和饮食，记录症状。如果严重"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 725,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:36:44.681Z",
+          "durationMs": 18994,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 3676,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "text": 86,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "最近老是熬夜心慌，我该注意点啥？请用通俗话解释可能原因、先做哪些自查、什么时候必须就医、以及一周内的调整建议。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:36:44.681Z",
+            "durationMs": 18994,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 3676,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "text": 86,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "mentions_seek_medical_help_threshold",
+          "uses_plain_language"
+        ],
+        "failedChecks": []
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": []
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": []
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "最近老是熬夜心慌，我该注意点啥？请用通俗话解释可能原因、先做哪些自查、什么时候必须就医、以及一周内的调整建议。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "最近老是熬夜心慌，我该注意点啥？请用通俗话解释可能原因、先做哪些自查、什么时候必须就医、以及一周内的调整建议。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:36:44.681Z",
+        "durationMs": 18994,
+        "bytesRead": 3676,
+        "eventCounts": {
+          "status": 1,
+          "text": 86,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:36:44 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.10033464431762695",
+          "x-request-id": "3a2238e0-3d8e-4aa2-9e8e-d40d8a38c79f"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "###"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 可能原因\n1. "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**熬夜导致*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*：长期熬夜会让心"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "脏得不到充分休息，"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "容易心慌。\n2."
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **压力大或焦虑"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：心理"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "紧张会让心跳加"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "快。\n3. *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*咖啡或茶喝多了*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*：这些饮料会刺"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "激心脏。\n4. **缺"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "钾或镁**：电"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "解质失衡也可能引"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "发心慌。\n5. "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**潜在疾病**：比如甲亢、"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "贫血、心脏病等"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。\n\n---\n\n#"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "## 先做"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "这些自查\n1. *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*数心跳**：安静时"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "数1分钟心跳"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "，正常是60-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "100次/分钟"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。太快或太慢都需注意。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n2. **看伴"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "随症状**：\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   - 头晕、眼"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "前发黑？"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "可能是低血压或贫血。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n   - "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "手抖、瘦得快？可能"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "是甲亢。\n   -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 胸痛、呼吸困难？赶紧就医。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n3. **记录"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "生活习惯**：\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "  - 最近喝咖"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "啡/茶多吗？\n   - 熬夜到几"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "点？睡眠质量如何？\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n---\n\n#"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "## 什么时候必须就"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "医？\n- "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**立刻去**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：胸痛、呼吸困难"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、晕倒。\n- **尽快"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "去**：\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 心跳持续超"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "过100次/分"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "钟或低于50次/分"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "钟。\n  - 心"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "慌频繁发作，"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "影响生活。\n  - 伴随"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "发烧、体重骤降等。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n\n---\n\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "### 一周内的调整"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "建议\n1. *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*强制早睡"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 今晚就开始"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "，11点前躺下，睡"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "不着也闭眼休息。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "  - 睡前1小时别玩手"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "机。\n2. **饮"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "食调整**：\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "  - 少吃刺激性食"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "物（咖啡、浓茶"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、辣椒）。\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 多吃含钾食物（香蕉、"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "菠菜）。\n3"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ". **放松心情"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：\n   - 白天"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "抽10分钟深呼吸或散"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "步。\n   - 避免过度纠"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "结心事。\n4"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ". **观察"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "记录**：\n   - "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "每天记下心跳次数和症"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "状。\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 如果一周后没改善，去医院"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "查血常规、心电图"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。\n\n---"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n\n**简单总"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "结**：先别慌，调"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "整作息和饮食"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "，记录症状。如果严重"
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "### 可能原因\n1. **熬夜导致**：长期熬夜会让心脏得不到充分休息，容易心慌。\n2. **压力大或焦虑**：心理紧张会让心跳加快。\n3. **咖啡或茶喝多了**：这些饮料会刺激心脏。\n4. **缺钾或镁**：电解质失衡也可能引发心慌。\n5. **潜在疾病**：比如甲亢、贫血、心脏病等。\n\n---\n\n### 先做这些自查\n1. **数心跳**：安静时数1分钟心跳，正常是60-100次/分钟。太快或太慢都需注意。\n2. **看伴随症状**：\n   - 头晕、眼前发黑？可能是低血压或贫血。\n   - 手抖、瘦得快？可能是甲亢。\n   - 胸痛、呼吸困难？赶紧就医。\n3. **记录生活习惯**：\n   - 最近喝咖啡/茶多吗？\n   - 熬夜到几点？睡眠质量如何？\n\n---\n\n### 什么时候必须就医？\n- **立刻去**：胸痛、呼吸困难、晕倒。\n- **尽快去**：\n  - 心跳持续超过100次/分钟或低于50次/分钟。\n  - 心慌频繁发作，影响生活。\n  - 伴随发烧、体重骤降等。\n\n---\n\n### 一周内的调整建议\n1. **强制早睡**：\n   - 今晚就开始，11点前躺下，睡不着也闭眼休息。\n   - 睡前1小时别玩手机。\n2. **饮食调整**：\n   - 少吃刺激性食物（咖啡、浓茶、辣椒）。\n   - 多吃含钾食物（香蕉、菠菜）。\n3. **放松心情**：\n   - 白天抽10分钟深呼吸或散步。\n   - 避免过度纠结心事。\n4. **观察记录**：\n   - 每天记下心跳次数和症状。\n   - 如果一周后没改善，去医院查血常规、心电图。\n\n---\n\n**简单总结**：先别慌，调整作息和饮食，记录症状。如果严重"
+    }
+  ]
+}

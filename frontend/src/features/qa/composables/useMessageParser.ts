@@ -5,6 +5,7 @@ export interface ParsedMessage {
     text: string;
     html: string;
     think: {
+        raw: string;
         html: string;
         isPartial: boolean;
     } | null;
@@ -58,7 +59,7 @@ export function useMessageParser(contentRef: Ref<string>) {
                     // Check if this specific block is partial (unclosed)
                     if (!fullMatch.endsWith('</think>')) {
                         // Mark as partial if any block is unclosed (usually the last one)
-                         if (!result.think) result.think = { html: '', isPartial: true };
+                         if (!result.think) result.think = { raw: '', html: '', isPartial: true };
                          else result.think.isPartial = true;
                     }
                 } else if (type === 'sql') {
@@ -89,6 +90,7 @@ export function useMessageParser(contentRef: Ref<string>) {
         const thinkContent = extractBlock(/<think>([\s\S]*?)(?:<\/think>|$)/, 'think');
         if (thinkContent) {
             result.think = {
+                raw: thinkContent.trim() || '正在思考...',
                 html: render(thinkContent.trim() || '正在思考...'),
                 isPartial: result.think?.isPartial || false
             };

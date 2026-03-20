@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import Any, Dict, List, AsyncGenerator
+from typing import Any, Dict, List, AsyncGenerator, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.eah_agent.workflows.base import EAHWorkflow
 from app.services.eah_agent.workflows.schemas.dynamic_flow import DynamicFlowState, WorkflowNode
@@ -20,13 +20,15 @@ class DynamicWorkflow(EAHWorkflow):
     - output: Collects final results
     """
     
-    def __init__(self, db: AsyncSession, session_id: str, config: Dict[str, Any]):
+    def __init__(self, db: AsyncSession, session_id: str, config: Dict[str, Any], history: Optional[List[Dict[str, Any]]] = None):
         """
         Args:
             config: A dict containing 'nodes' list.
+            history: Optional conversation history to inject into agent context.
         """
         super().__init__(session_id)
         self.db = db
+        self.history = history or []
         
         # Parse nodes from config
         nodes_data = config.get("nodes", [])
@@ -156,7 +158,8 @@ class DynamicWorkflow(EAHWorkflow):
                             raise ValueError(f"Agent configuration missing for node {node.id}")
 
                         response_text = ""
-                        async for chunk in agent.run(prompt, stream=True):
+                        # 将历史记录注入工作流节点
+                        async for chunk in agent.arun(prompt, stream=True, messages=self.history):
                             text = None
                             if isinstance(chunk, str):
                                 text = chunk

@@ -18,14 +18,14 @@ from agno.media import Image
 from app.services.eah_agent.core.agent_base_handler import BaseHandler, StreamResponse
 from app.services.eah_agent.core.agent_nlu import IntentResult
 from app.services.eah_agent.core.agent_factory import AgentFactory
-from app.services.eah_agent.domain.config import AgentConfig, TeamConfig, ToolConfig
+from app.services.eah_agent.domain.config import AgentConfig, TeamConfig, ToolConfig, LLMSettings
 from app.core.i18n import _
 from app.models.llm_model import LLMModel
 from app.core.config import settings
 from app.services.eah_agent.storage.session_history import SessionHistory
 from app.core.context_compressor import ContextCompressor
 from app.services.eah_agent.utils.session_kb import SessionKnowledgeManager
-from app.services.eah_agent.handlers.file_processors import FileProcessorFactory
+from app.services.eah_agent.document.file_orchestrator import FileOrchestrator
 from app.services.eah_agent.utils.agno_types import is_run_output
 
 logger = logging.getLogger(__name__)
@@ -54,53 +54,14 @@ class TeamHandler(BaseHandler):
 
     async def _process_files(self, files: list, session_id: str) -> tuple[str, list]:
         """
-        Process uploaded files for multimodal support and context.
+        Process uploaded files for multimodal support and context using unified FileOrchestrator.
         """
-        context_parts = []
-        images = []
-        kb_manager = None
-
-        base_temp_dir = getattr(settings, "TEMP_DIR", "data/temp")
-        temp_dir = Path(base_temp_dir) / session_id
-        temp_dir.mkdir(parents=True, exist_ok=True)
-
-        for file in files:
-            filename = getattr(file, "filename", "unknown")
-            file_ext = filename.split(".")[-1].lower() if "." in filename else ""
-
-            try:
-                file_path = temp_dir / filename
-                file_obj = file.file
-                file_obj.seek(0)
-
-                with open(file_path, "wb") as buffer:
-                    shutil.copyfileobj(file_obj, buffer)
-                file_obj.seek(0)
-
-                if file_ext in ["jpg", "jpeg", "png", "gif", "webp"]:
-                    images.append(Image(filepath=str(file_path)))
-                    context_parts.append(f"[Image: {filename}]")
-                    continue
-
-                if not kb_manager:
-                    kb_manager = SessionKnowledgeManager(session_id)
-
-                processor = FileProcessorFactory.get_processor(file_ext)
-                if processor:
-                    result = processor.process(file_path, file_obj, filename, kb_manager)
-                    if result.get("image"):
-                        images.append(result["image"])
-                    if result.get("context"):
-                        context_parts.append(result["context"])
-                else:
-                    logger.warning(f"No processor found for file extension: {file_ext}")
-                    context_parts.append(f"File: {filename} (Unsupported format)")
-
-            except Exception as e:
-                logger.error(f"Failed to process file {filename}: {e}")
-                context_parts.append(f"File: {filename} (Error: {str(e)})")
-
-        return "\n\n".join(context_parts), images
+        if not files:
+            return "", []
+            
+        kb_manager = SessionKnowledgeManager(session_id)
+        result = await FileOrchestrator.process_batch(files, session_id=session_id, kb_manager=kb_manager)
+        return result.get("context", ""), result.get("media", [])
 
     def _enrich_input_with_intent(self, input_text: str, intent: Optional[IntentResult]) -> str:
         if not intent or not intent.task_params:
@@ -258,12 +219,10 @@ class TeamHandler(BaseHandler):
                         "Be thorough and objective."
                     ],
                     tools=[
-                        ToolConfig(name="duckduckgo", enabled=True, config={}),
+                        ToolConfig(name="duckduckgo", enabled=True, settings={}),
                     ], 
-                    reasoning=True,
-                    model_params={"temperature": 0.3}
+                    llm=LLMSettings(reasoning=True, temperature=0.3)
                 )
-                researcher_config.tools = [t for t in researcher_config.tools if t]
                 members.append(researcher_config)
 
             if team_type == "coding" or "developer" in roles or "code" in str(task_params) or "data" in str(task_params):
@@ -277,8 +236,7 @@ class TeamHandler(BaseHandler):
                             "Analyze data using Python (pandas, numpy, etc.)."
                         ],
                         tools=[],
-                        reasoning=True,
-                        model_params={"temperature": 0.1}
+                        llm=LLMSettings(reasoning=True, temperature=0.1)
                     )
                     members.append(coder_config)
                 else:
@@ -293,8 +251,7 @@ class TeamHandler(BaseHandler):
                     "Ensure clarity and flow."
                 ],
                 tools=[],
-                reasoning=False,
-                model_params={"temperature": 0.7}
+                llm=LLMSettings(reasoning=False, temperature=0.7)
             )
             members.append(writer_config)
             
@@ -309,17 +266,17 @@ class TeamHandler(BaseHandler):
                     "If a member fails, try to rephrase the instruction or assign to another member."
                 ],
                 tools=[],
-                reasoning=True,
-                model_params={"temperature": 0.1}
+                llm=LLMSettings(reasoning=True, temperature=0.1)
             )
             
             team_config = TeamConfig(
+                team_id="dynamic_team",
                 name="DynamicTeam",
-                leader_agent=leader_config,
+                leader=leader_config,
                 members=members
             )
             
-            self.team_agent = await AgentFactory.create_team(team_config, db=db)
+            self.team_agent = await AgentFactory.create_team(team_config, llm_model=self.llm_model)
             
             if self.team_agent and self.team_agent.team:
                 for member in self.team_agent.team:
@@ -336,6 +293,7 @@ class TeamHandler(BaseHandler):
         except Exception as e:
             logger.error(f"Failed to create team agent: {e}")
             self.team_agent = None
+            self._team_init_error = str(e)
 
     async def process(
         self, input_text: str, intent: Optional[IntentResult] = None, **kwargs: Any
@@ -347,7 +305,8 @@ class TeamHandler(BaseHandler):
         await self._ensure_team_initialized(db, intent)
         
         if not self.team_agent:
-            yield {"type": "error", "content": _("Team initialization failed.")}
+            error_msg = getattr(self, "_team_init_error", "Unknown error")
+            yield {"type": "error", "content": f"Team initialization failed: {error_msg}"}
             return
 
         input_text = self._enrich_input_with_intent(input_text, intent)

@@ -1,14 +1,12 @@
 __all__ = [
     "AgentService",
     "agent_service",
-    "ExecutorAgent",
     "PlannerAgent",
     "AgnoControlPlane",
     "NluService",
     "IntentResult",
     "IntentType",
 ]
-
 
 def __getattr__(name: str):
     if name == "AgentService":
@@ -17,9 +15,6 @@ def __getattr__(name: str):
     if name == "agent_service":
         from .agent_service import agent_service
         return agent_service
-    if name == "ExecutorAgent":
-        from .agent_executor import ExecutorAgent
-        return ExecutorAgent
     if name == "PlannerAgent":
         from .agent_planner import PlannerAgent
         return PlannerAgent

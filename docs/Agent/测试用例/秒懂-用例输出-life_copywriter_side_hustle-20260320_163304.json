@@ -1,0 +1,1026 @@
+{
+  "id": "life_copywriter_side_hustle",
+  "group": "个人生活与规划",
+  "title": "副业探索（用户画像匹配）",
+  "evaluation": {
+    "pass": false,
+    "score": 50,
+    "results": [
+      {
+        "id": "has_ranked_options",
+        "pass": false
+      },
+      {
+        "id": "mentions_compliance",
+        "pass": true
+      }
+    ],
+    "finalText": "以下是6条靠谱的赚外快路径，按上手难度从低到高排序，适合文案工作者每周投入6小时。每条路径都包含起步方法、市场验证方式和避坑建议。\n\n---\n\n### **1. 自由职业平台接单（低难度）**\n- **起步**：\n  - 注册自由职业平台（如Upwork、Fiverr、Freelancer、猪八戒）。\n  - 创建个人主页，突出文案能力（如广告文案、产品描述、SEO文章等）。\n  - 从低价小单开始积累评价。\n- **验证市场**：\n  - 观察平台上同类文案服务的需求和竞争情况。\n  - 测试不同文案类型（如社交媒体文案、博客文章）的接单速度。\n- **避坑**：\n  - 避免平台上的低价竞争陷阱，逐步提高报价。\n  - 警惕不付尾款的客户，要求预付部分款项。\n\n---\n\n### **2. 自媒体代写（低难度）**\n- **起步**：\n  - 在小红书、知乎、公众号等平台发布“代写文案”的服务广告。\n  - 提供试写服务（如免费写一条短文案）吸引客户。\n- **验证市场**：\n  - 观察哪些类型的文案需求更高（如品牌故事、短视频脚本）。\n  - 通过客户反馈调整服务方向。\n- **避坑**：\n  - 明确交付标准和修改次数，避免无限返工。\n  - 避免接涉及敏感话题的内容。\n\n---\n\n### **3. 本地企业文案外包（中低难度）**\n- **起步**：\n  - 联系本地中小企业（如餐饮、美容店），提供菜单优化、宣传册文案服务。\n  - 制作案例集（如“文案优化前后对比”）。\n- **验证市场**：\n  - 通过免费或低价服务测试企业需求。\n  - 观察企业是否愿意为后续服务付费。\n- **避坑**：\n  - 避免长期免费服务，明确收费模式。\n  - 签订简单合同，防止拖欠费用。\n\n---\n\n### **4. 电商文案代写（中难度）**\n- **起步**：\n  - 在淘宝、拼多多、独立站等电商平台联系卖家，提供产品详情页优化服务。\n  - 在闲鱼或微信群发布广告。\n- **验证市场**：\n  - 测试不同类目（如家居、美妆）的文案需求。\n  - 通过转化率数据验证文案效果。\n- **避坑**：\n  - 避免接高退货率产品的文案（如保健品）。\n  - 明确版权归属，防止文案被滥用。\n\n---\n\n### **5. 付费专栏或电子书（中高难度）**\n- **起步**：\n  - 在知乎专栏、豆瓣阅读或Gumroad上发布付费内容（如《文案写作技巧》）。\n  - 通过公众号或小红书引流。\n- **验证市场**：\n  - 先发布免费内容测试读者兴趣。\n  - 观察付费转化率和读者反馈。\n- **避坑**：\n  - 避免内容同质化，提供独特视角。\n  - 注意版权保护，防止内容被抄袭。\n\n---\n\n### **6. 品牌文案顾问（高难度）**\n- **起步**：\n  - 在LinkedIn或行业社群中建立专业形象。\n  - 为中小品牌提供长期文案策略服务（如品牌故事、广告语策划）。\n- **验证市场**：\n  - 通过免费咨询或案例分享吸引客户。\n  - 观察客户是否愿意为长期服务付费。\n- **避坑**：\n  - 避免接超出能力的项目（如国际品牌）。\n  - 明确服务范围和交付周期。\n\n---\n\n### **通用建议**\n- **市场验证**：从小规模测试开始，逐步放大成功模式。\n- **避坑**：永远先收定金，避免“熟人白嫖”；保留作品版权。\n- **工具推荐**：用Grammarly检查语法，用Canva制作案例展示。\n\n如果需要更具体的平台或资"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 1499,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:35:22.731Z",
+          "durationMs": 37199,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 7472,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "text": 173,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "我是个文案，想赚点外快，有什么靠谱路子？我每周可投入 6 小时，不想做违规灰产。希望你按上手难度从低到高给 6 条路径，并说明怎么起步、怎么验证市场、怎么避坑。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:35:22.731Z",
+            "durationMs": 37199,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 7472,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "text": 173,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "mentions_compliance"
+        ],
+        "failedChecks": [
+          "has_ranked_options"
+        ]
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": [
+          {
+            "checkId": "has_ranked_options",
+            "evidence": "未通过检查项：has_ranked_options",
+            "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": [
+          {
+            "checkId": "has_ranked_options",
+            "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+          }
+        ]
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "我是个文案，想赚点外快，有什么靠谱路子？我每周可投入 6 小时，不想做违规灰产。希望你按上手难度从低到高给 6 条路径，并说明怎么起步、怎么验证市场、怎么避坑。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "我是个文案，想赚点外快，有什么靠谱路子？我每周可投入 6 小时，不想做违规灰产。希望你按上手难度从低到高给 6 条路径，并说明怎么起步、怎么验证市场、怎么避坑。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:35:22.731Z",
+        "durationMs": 37199,
+        "bytesRead": 7472,
+        "eventCounts": {
+          "status": 1,
+          "text": 173,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:35:21 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.08818268775939941",
+          "x-request-id": "14437202-32ef-4ce0-8a34-6b7036e8297f"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "以下是6条"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "靠谱的赚外快路径"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "，按上手难度从低"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "到高排序，适合文案工作"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "者每周投入6小时"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。每条路径都包"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "含起步方法、市场验证方式和避"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "坑建议。\n\n---"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n\n### *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*1. 自由职业"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "平台接单（低难度"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "）**\n- *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*起步**：\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 注册自由职业平台（如Upwo"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "rk、Five"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "rr、Fre"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "elancer"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、猪八戒）。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 创建个人主页，突"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "出文案能力（如"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "广告文案、产品"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "描述、SEO文"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "章等）。\n  - 从低价"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "小单开始积累评价"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。\n- **验证市场"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：\n  - 观察"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "平台上同类文案服务"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "的需求和竞争情况。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 测试不同"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "文案类型（如社交媒"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "体文案、博客文"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "章）的接单速度"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。\n- **避坑"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：\n  -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 避免平台上的低"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "价竞争陷阱，逐步"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "提高报价。\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 警惕不付尾款的客户，要求预付"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "部分款项。\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n---\n\n##"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "# **2. 自媒体"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "代写（低难度）*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*\n- **起步"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：\n  - 在"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "小红书、知乎、公众号等"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "平台发布“代写"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "文案”的服"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "务广告。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 提供试写服务（"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "如免费写一条短文案）吸"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "引客户。\n- *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*验证市场**：\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 观察哪些类型的文案"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "需求更高（如品"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "牌故事、短视频脚本）。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n  - 通过"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "客户反馈调整服务"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "方向。\n- **避坑**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：\n  - "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "明确交付标准和"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "修改次数，避免无限"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "返工。\n  - 避免接涉及敏感话"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "题的内容。\n\n--"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "-\n\n### **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "3. 本地企业文"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "案外包（中低难度"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "）**\n- **起步"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：\n  - 联系"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "本地中小企业"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "（如餐饮、美容店）"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "，提供菜单优"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "化、宣传册"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "文案服务。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 制作案例集（如“文案"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "优化前后对比”）"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "。\n- **验证市"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "场**：\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 通过免费或"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "低价服务测试企"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "业需求。\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 观察企业是"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "否愿意为后续服务"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "付费。\n- *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*避坑**：\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 避免长期免"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "费服务，明确收"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "费模式。\n  - 签订简单"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "合同，防止拖欠费"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "用。\n\n--"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "-\n\n### **4"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ". 电商文案代"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "写（中难度）**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n- **起步"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：\n  - "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "在淘宝、拼多多、独立"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "站等电商平台联"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "系卖家，提"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "供产品详情页优化服务。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 在闲鱼或微信"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "群发布广告。\n-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **验证"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "市场**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：\n  - 测"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "试不同类目（"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "如家居、美妆）的文"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "案需求。\n  -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 通过转化率数"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "据验证文案效"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "果。\n- **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "避坑**：\n  - 避"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "免接高退货率产品的"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "文案（如保健品）。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 明确版权归属，防止文案"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "被滥用。\n\n-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "--\n\n###"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **5. 付费专栏或"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "电子书（中高难"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "度）**\n- "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**起步**：\n  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 在知乎专栏"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、豆瓣阅读或Gum"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "road上发布付费内"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "容（如《文案写作技巧》"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "）。\n  - 通过公"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "众号或小红书引"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "流。\n- **验"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "证市场**：\n  -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 先发布免费内容"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "测试读者兴趣。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n  - 观察"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "付费转化率和读者"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "反馈。\n- "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**避坑**：\n  -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 避免内容同质"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "化，提供独特视角。\n "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 注意版权保护，防止内容"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "被抄袭。\n\n--"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "-\n\n### **6"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ". 品牌文案顾问（高"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "难度）**\n- **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "起步**：\n  -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 在LinkedI"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "n或行业社群中建"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "立专业形象。\n  -"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 为中小品牌提供"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "长期文案策略服务（如品"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "牌故事、广告语策"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "划）。\n- **验证市"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "场**：\n  - 通"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "过免费咨询或案例分享吸"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "引客户。\n  - 观察"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "客户是否愿意"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "为长期服务付"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "费。\n- **避坑**"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：\n  - 避免接"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "超出能力的项目（如"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "国际品牌）。\n  - 明确服务范"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "围和交付周期。\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n---\n\n### "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**通用建议**\n"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- **市场验证"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "**：从小规模测试开"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "始，逐步放大成"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "功模式。\n-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " **避坑*"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*：永远先收定金，避免“"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "熟人白嫖”；"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "保留作品版权。\n- **工具"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "推荐**：用Gr"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ammarly检查语法，用Ca"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "nva制作案例展示。"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "\n\n如果"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "需要更具体的平台或资"
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "以下是6条靠谱的赚外快路径，按上手难度从低到高排序，适合文案工作者每周投入6小时。每条路径都包含起步方法、市场验证方式和避坑建议。\n\n---\n\n### **1. 自由职业平台接单（低难度）**\n- **起步**：\n  - 注册自由职业平台（如Upwork、Fiverr、Freelancer、猪八戒）。\n  - 创建个人主页，突出文案能力（如广告文案、产品描述、SEO文章等）。\n  - 从低价小单开始积累评价。\n- **验证市场**：\n  - 观察平台上同类文案服务的需求和竞争情况。\n  - 测试不同文案类型（如社交媒体文案、博客文章）的接单速度。\n- **避坑**：\n  - 避免平台上的低价竞争陷阱，逐步提高报价。\n  - 警惕不付尾款的客户，要求预付部分款项。\n\n---\n\n### **2. 自媒体代写（低难度）**\n- **起步**：\n  - 在小红书、知乎、公众号等平台发布“代写文案”的服务广告。\n  - 提供试写服务（如免费写一条短文案）吸引客户。\n- **验证市场**：\n  - 观察哪些类型的文案需求更高（如品牌故事、短视频脚本）。\n  - 通过客户反馈调整服务方向。\n- **避坑**：\n  - 明确交付标准和修改次数，避免无限返工。\n  - 避免接涉及敏感话题的内容。\n\n---\n\n### **3. 本地企业文案外包（中低难度）**\n- **起步**：\n  - 联系本地中小企业（如餐饮、美容店），提供菜单优化、宣传册文案服务。\n  - 制作案例集（如“文案优化前后对比”）。\n- **验证市场**：\n  - 通过免费或低价服务测试企业需求。\n  - 观察企业是否愿意为后续服务付费。\n- **避坑**：\n  - 避免长期免费服务，明确收费模式。\n  - 签订简单合同，防止拖欠费用。\n\n---\n\n### **4. 电商文案代写（中难度）**\n- **起步**：\n  - 在淘宝、拼多多、独立站等电商平台联系卖家，提供产品详情页优化服务。\n  - 在闲鱼或微信群发布广告。\n- **验证市场**：\n  - 测试不同类目（如家居、美妆）的文案需求。\n  - 通过转化率数据验证文案效果。\n- **避坑**：\n  - 避免接高退货率产品的文案（如保健品）。\n  - 明确版权归属，防止文案被滥用。\n\n---\n\n### **5. 付费专栏或电子书（中高难度）**\n- **起步**：\n  - 在知乎专栏、豆瓣阅读或Gumroad上发布付费内容（如《文案写作技巧》）。\n  - 通过公众号或小红书引流。\n- **验证市场**：\n  - 先发布免费内容测试读者兴趣。\n  - 观察付费转化率和读者反馈。\n- **避坑**：\n  - 避免内容同质化，提供独特视角。\n  - 注意版权保护，防止内容被抄袭。\n\n---\n\n### **6. 品牌文案顾问（高难度）**\n- **起步**：\n  - 在LinkedIn或行业社群中建立专业形象。\n  - 为中小品牌提供长期文案策略服务（如品牌故事、广告语策划）。\n- **验证市场**：\n  - 通过免费咨询或案例分享吸引客户。\n  - 观察客户是否愿意为长期服务付费。\n- **避坑**：\n  - 避免接超出能力的项目（如国际品牌）。\n  - 明确服务范围和交付周期。\n\n---\n\n### **通用建议**\n- **市场验证**：从小规模测试开始，逐步放大成功模式。\n- **避坑**：永远先收定金，避免“熟人白嫖”；保留作品版权。\n- **工具推荐**：用Grammarly检查语法，用Canva制作案例展示。\n\n如果需要更具体的平台或资"
+    }
+  ]
+}

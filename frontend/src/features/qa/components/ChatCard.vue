@@ -34,7 +34,7 @@
 
       <!-- Bubble -->
       <div 
-        class="relative px-5 py-4 text-sm leading-relaxed transition-all duration-200 shadow-sm"
+        class="relative px-4 py-3 text-sm leading-normal transition-all duration-200 shadow-sm"
         :class="bubbleClasses"
       >
         <template v-if="isUser">
@@ -55,7 +55,7 @@
         </template>
 
         <!-- Agent Mode: Rich Content -->
-        <div v-else class="agent-content flex flex-col gap-4">
+        <div v-else class="agent-content flex flex-col gap-3">
             
             <!-- 0. Empty State / Initial Loading -->
             <div v-if="!parsed.text && !parsed.html && !parsed.sql && !thinkingContent && !chartOption && !message.steps?.length && isStreaming && isLast" class="flex items-center gap-2 py-1">
@@ -98,21 +98,18 @@
                 </div>
             </div>
 
-            <!-- 1. Thinking Process (Collapsed by default) -->
-            <div v-if="thinkingContent" class="w-full">
-                <details class="bg-primary/5 rounded-lg border border-primary/10 overflow-hidden group transition-all duration-300" :open="thinkingContent.isPartial">
-                    <summary class="p-4 py-2 text-xs font-medium text-primary cursor-pointer flex items-center gap-2 select-none outline-none hover:bg-primary/10 transition-colors">
-                        <div class="flex items-center gap-2 flex-1">
-                             <Activity class="w-3 h-3 text-primary/50" />
-                            <span>思考过程</span>
-                        </div>
-                        <svg class="w-3 h-3 text-primary/50 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </summary>
-                    <div class="p-4 py-2 text-xs text-muted-foreground border-t border-primary/10 bg-card/50 leading-relaxed font-mono" v-html="thinkingContent.html"></div>
-                </details>
-            </div>
+            <!-- 1. Thinking Process -->
+            <ThinkingBlock 
+                v-if="thinkingContent" 
+                :content="thinkingContent.raw" 
+                :is-thinking="thinkingContent.isPartial"
+            />
+
+            <!-- 1.5. Tools Status (新加入的工具流状态) -->
+            <ToolStatus 
+                v-if="message.tools && message.tools.length > 0" 
+                :tools="message.tools" 
+            />
 
             <!-- 2. Chart (Visual Priority) -->
             <div v-if="chartOption" class="w-full bg-card rounded-lg border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow">
@@ -144,7 +141,9 @@
                 </div>
 
                 <!-- Markdown Content (Table, Summary) -->
-                <div v-if="parsed.html" class="markdown-body table-wrapper text-sm text-muted-foreground" v-html="parsed.html"></div>
+                <div v-if="parsed.html" class="w-full mt-2">
+                    <MarkdownRenderer :content="parsed.text" />
+                </div>
                 
                 <!-- Embedded Resources -->
                 <div v-if="parsed.resources.length > 0" class="flex flex-col gap-2" :class="chartOption ? 'm-4' : 'mt-4'">
@@ -207,7 +206,15 @@
                 </div>
             </div>
 
-            <!-- 5. Streaming Cursor -->
+            <!-- 5. Error Alert -->
+            <ErrorCallout 
+                v-if="message.error" 
+                :message="message.error" 
+                :can-retry="true"
+                @retry="$emit('resend-message', message)"
+            />
+
+            <!-- 6. Streaming Cursor -->
             <div v-if="isStreaming && isLast && (parsed.text || parsed.html || thinkingContent)" class="h-4 mt-1">
                  <span class="inline-block w-2 h-4 bg-indigo-500/80 animate-pulse rounded-sm"></span>
             </div>
@@ -268,6 +275,12 @@ import { useMessageParser } from '../composables/useMessageParser';
 import { useChartOptions } from '../composables/useChart';
 import { useMarkdown } from '../composables/useMarkdown';
 
+// 新引入的 UI 组件
+import ThinkingBlock from './SmartQA/ThinkingBlock.vue';
+import ToolStatus from './SmartQA/ToolStatus.vue';
+import MarkdownRenderer from './SmartQA/MarkdownRenderer.vue';
+import ErrorCallout from './SmartQA/ErrorCallout.vue';
+
 const props = defineProps({
   message: { type: Object, required: true },
   type: { type: String, default: 'knowledge_qa' },
@@ -325,7 +338,13 @@ watch(() => props.message.steps, (newVal, oldVal) => {
 }, { deep: true });
 
 // Computed
-const thinkingContent = computed(() => {
+type ThinkingContent = {
+    raw: string;
+    html: string;
+    isPartial: boolean;
+};
+
+const thinkingContent = computed<ThinkingContent | null>(() => {
     // 1. Parsed from content <think> tags (highest priority)
     if (parsed.value.think) {
         return parsed.value.think;
@@ -334,6 +353,7 @@ const thinkingContent = computed(() => {
     // 2. Explicit reasoning field (from stream)
     if (props.message.reasoning) {
         return {
+            raw: props.message.reasoning,
             html: render(props.message.reasoning),
             isPartial: true // Assume active thinking if in this field during stream
         };
@@ -342,6 +362,7 @@ const thinkingContent = computed(() => {
     // 3. Metadata reasoning (from history)
     if (props.message.meta_data && props.message.meta_data.reasoning) {
         return {
+            raw: props.message.meta_data.reasoning,
             html: render(props.message.meta_data.reasoning),
             isPartial: false // History defaults to collapsed
         };

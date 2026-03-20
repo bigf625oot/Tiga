@@ -1,0 +1,480 @@
+{
+  "startedAt": "2026-03-20T09:05:04.355Z",
+  "baseUrl": "http://localhost:5173",
+  "suitePath": "D:\\Tiga\\docs\\Agent\\测试用例\\秒懂-全链路测试套件.json",
+  "sessionId": "02d02be4-dcea-41a9-90d0-bf8b7f689764",
+  "cases": [
+    {
+      "id": "context_dedup_history",
+      "group": "长文本处理",
+      "title": "冗余消除（语义去重）",
+      "evaluation": {
+        "pass": false,
+        "score": 50,
+        "results": [
+          {
+            "id": "is_single_paragraph",
+            "pass": true
+          },
+          {
+            "id": "is_deduplicated",
+            "pass": false
+          }
+        ],
+        "finalText": "\n\n\n\n\n\n"
+      },
+      "diagnostics": {
+        "evidence": {
+          "stepsCount": 4,
+          "finalTextChars": 6,
+          "httpCalls": [
+            {
+              "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+              "startedAt": "2026-03-20T09:05:04.355Z",
+              "durationMs": 5261,
+              "status": 200,
+              "contentType": "text/event-stream; charset=utf-8",
+              "bytesRead": 221,
+              "endedBy": "done_event",
+              "eventCounts": {
+                "status": 1,
+                "error": 1,
+                "done": 1
+              }
+            },
+            {
+              "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+              "startedAt": "2026-03-20T09:05:09.616Z",
+              "durationMs": 3760,
+              "status": 200,
+              "contentType": "text/event-stream; charset=utf-8",
+              "bytesRead": 221,
+              "endedBy": "done_event",
+              "eventCounts": {
+                "status": 1,
+                "error": 1,
+                "done": 1
+              }
+            },
+            {
+              "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+              "startedAt": "2026-03-20T09:05:13.377Z",
+              "durationMs": 3579,
+              "status": 200,
+              "contentType": "text/event-stream; charset=utf-8",
+              "bytesRead": 221,
+              "endedBy": "done_event",
+              "eventCounts": {
+                "status": 1,
+                "error": 1,
+                "done": 1
+              }
+            },
+            {
+              "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+              "startedAt": "2026-03-20T09:05:16.956Z",
+              "durationMs": 4202,
+              "status": 200,
+              "contentType": "text/event-stream; charset=utf-8",
+              "bytesRead": 186,
+              "endedBy": "done_event",
+              "eventCounts": {
+                "status": 1,
+                "error": 1,
+                "done": 1
+              }
+            }
+          ]
+        },
+        "phases": {
+          "phase1": {
+            "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+            "reproduction": [
+              {
+                "step": 1,
+                "message": "我先啰嗦一下现状：我们这个项目进度有点乱，需求老变，大家沟通也不顺畅。昨天我又开了两个会，发现很多人对目标不一致。"
+              },
+              {
+                "step": 2,
+                "message": "再补充：技术债不少，测试覆盖也不够，线上偶尔出故障。老板还希望我们下个月能交付一版可用的 MVP，压力挺大。"
+              },
+              {
+                "step": 3,
+                "message": "还有：我觉得最核心的问题是我们没有清晰的里程碑，也没有明确负责人，很多事情没人跟。"
+              },
+              {
+                "step": 4,
+                "message": "我之前的表达很啰嗦，请把我前三次对话的内容合并成一段简洁的汇报话术。"
+              }
+            ],
+            "boundaries": [
+              {
+                "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+                "startedAt": "2026-03-20T09:05:04.355Z",
+                "durationMs": 5261,
+                "status": 200,
+                "contentType": "text/event-stream; charset=utf-8",
+                "bytesRead": 221,
+                "endedBy": "done_event",
+                "eventCounts": {
+                  "status": 1,
+                  "error": 1,
+                  "done": 1
+                }
+              },
+              {
+                "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+                "startedAt": "2026-03-20T09:05:09.616Z",
+                "durationMs": 3760,
+                "status": 200,
+                "contentType": "text/event-stream; charset=utf-8",
+                "bytesRead": 221,
+                "endedBy": "done_event",
+                "eventCounts": {
+                  "status": 1,
+                  "error": 1,
+                  "done": 1
+                }
+              },
+              {
+                "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+                "startedAt": "2026-03-20T09:05:13.377Z",
+                "durationMs": 3579,
+                "status": 200,
+                "contentType": "text/event-stream; charset=utf-8",
+                "bytesRead": 221,
+                "endedBy": "done_event",
+                "eventCounts": {
+                  "status": 1,
+                  "error": 1,
+                  "done": 1
+                }
+              },
+              {
+                "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+                "startedAt": "2026-03-20T09:05:16.956Z",
+                "durationMs": 4202,
+                "status": 200,
+                "contentType": "text/event-stream; charset=utf-8",
+                "bytesRead": 186,
+                "endedBy": "done_event",
+                "eventCounts": {
+                  "status": 1,
+                  "error": 1,
+                  "done": 1
+                }
+              }
+            ]
+          },
+          "phase2": {
+            "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+            "passedChecks": [
+              "is_single_paragraph"
+            ],
+            "failedChecks": [
+              "is_deduplicated"
+            ]
+          },
+          "phase3": {
+            "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+            "issues": [
+              {
+                "checkId": "is_deduplicated",
+                "evidence": "未通过检查项：is_deduplicated",
+                "hypothesis": "输出特征与启发式判定不匹配，或模型未覆盖该能力点。",
+                "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+              }
+            ]
+          },
+          "phase4": {
+            "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+            "nextActions": [
+              {
+                "checkId": "is_deduplicated",
+                "nextProbe": "查看用例输出 JSON，确认失败是否来自启发式误判还是模型缺失。"
+              }
+            ]
+          }
+        }
+      },
+      "transcript": [
+        {
+          "role": "user",
+          "type": "text",
+          "content": "我先啰嗦一下现状：我们这个项目进度有点乱，需求老变，大家沟通也不顺畅。昨天我又开了两个会，发现很多人对目标不一致。"
+        },
+        {
+          "role": "meta",
+          "type": "http",
+          "content": {
+            "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+            "request": {
+              "message": "我先啰嗦一下现状：我们这个项目进度有点乱，需求老变，大家沟通也不顺畅。昨天我又开了两个会，发现很多人对目标不一致。",
+              "stream": true,
+              "mode": null,
+              "intent": null,
+              "strict_mode": false,
+              "threshold": 0.85,
+              "debug": false,
+              "attachments": [],
+              "enable_search": true
+            },
+            "startedAt": "2026-03-20T09:05:04.355Z",
+            "durationMs": 5261,
+            "bytesRead": 221,
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            },
+            "endedBy": "done_event",
+            "status": 200,
+            "headers": {
+              "connection": "close",
+              "content-type": "text/event-stream; charset=utf-8",
+              "date": "Fri, 20 Mar 2026 09:05:03 GMT",
+              "server": "uvicorn",
+              "transfer-encoding": "chunked",
+              "vary": "Origin",
+              "x-process-time": "0.025247573852539062",
+              "x-request-id": "87584a2c-56cd-4f93-9942-def46c0620b8"
+            }
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "status",
+          "content": {
+            "type": "status",
+            "content": "Orchestrating context..."
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "error",
+          "content": {
+            "type": "error",
+            "content": "Team initialization failed: name 'LLMSettings' is not defined"
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "done",
+          "content": "\"[DONE]\""
+        },
+        {
+          "role": "assistant",
+          "type": "combined_text",
+          "content": ""
+        },
+        {
+          "role": "user",
+          "type": "text",
+          "content": "再补充：技术债不少，测试覆盖也不够，线上偶尔出故障。老板还希望我们下个月能交付一版可用的 MVP，压力挺大。"
+        },
+        {
+          "role": "meta",
+          "type": "http",
+          "content": {
+            "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+            "request": {
+              "message": "再补充：技术债不少，测试覆盖也不够，线上偶尔出故障。老板还希望我们下个月能交付一版可用的 MVP，压力挺大。",
+              "stream": true,
+              "mode": null,
+              "intent": null,
+              "strict_mode": false,
+              "threshold": 0.85,
+              "debug": false,
+              "attachments": [],
+              "enable_search": true
+            },
+            "startedAt": "2026-03-20T09:05:09.616Z",
+            "durationMs": 3760,
+            "bytesRead": 221,
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            },
+            "endedBy": "done_event",
+            "status": 200,
+            "headers": {
+              "connection": "close",
+              "content-type": "text/event-stream; charset=utf-8",
+              "date": "Fri, 20 Mar 2026 09:05:09 GMT",
+              "server": "uvicorn",
+              "transfer-encoding": "chunked",
+              "vary": "Origin",
+              "x-process-time": "0.03708243370056152",
+              "x-request-id": "8537de04-120d-46f3-9ce9-7b7d9c6120d5"
+            }
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "status",
+          "content": {
+            "type": "status",
+            "content": "Orchestrating context..."
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "error",
+          "content": {
+            "type": "error",
+            "content": "Team initialization failed: name 'LLMSettings' is not defined"
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "done",
+          "content": "\"[DONE]\""
+        },
+        {
+          "role": "assistant",
+          "type": "combined_text",
+          "content": ""
+        },
+        {
+          "role": "user",
+          "type": "text",
+          "content": "还有：我觉得最核心的问题是我们没有清晰的里程碑，也没有明确负责人，很多事情没人跟。"
+        },
+        {
+          "role": "meta",
+          "type": "http",
+          "content": {
+            "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+            "request": {
+              "message": "还有：我觉得最核心的问题是我们没有清晰的里程碑，也没有明确负责人，很多事情没人跟。",
+              "stream": true,
+              "mode": null,
+              "intent": null,
+              "strict_mode": false,
+              "threshold": 0.85,
+              "debug": false,
+              "attachments": [],
+              "enable_search": true
+            },
+            "startedAt": "2026-03-20T09:05:13.377Z",
+            "durationMs": 3579,
+            "bytesRead": 221,
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            },
+            "endedBy": "done_event",
+            "status": 200,
+            "headers": {
+              "connection": "close",
+              "content-type": "text/event-stream; charset=utf-8",
+              "date": "Fri, 20 Mar 2026 09:05:12 GMT",
+              "server": "uvicorn",
+              "transfer-encoding": "chunked",
+              "vary": "Origin",
+              "x-process-time": "0.02470874786376953",
+              "x-request-id": "881ae8b6-b77e-4172-8dcb-3d31255006da"
+            }
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "status",
+          "content": {
+            "type": "status",
+            "content": "Orchestrating context..."
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "error",
+          "content": {
+            "type": "error",
+            "content": "Team initialization failed: name 'LLMSettings' is not defined"
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "done",
+          "content": "\"[DONE]\""
+        },
+        {
+          "role": "assistant",
+          "type": "combined_text",
+          "content": ""
+        },
+        {
+          "role": "user",
+          "type": "text",
+          "content": "我之前的表达很啰嗦，请把我前三次对话的内容合并成一段简洁的汇报话术。"
+        },
+        {
+          "role": "meta",
+          "type": "http",
+          "content": {
+            "url": "http://localhost:5173/api/v1/chat/sessions/02d02be4-dcea-41a9-90d0-bf8b7f689764/chat",
+            "request": {
+              "message": "我之前的表达很啰嗦，请把我前三次对话的内容合并成一段简洁的汇报话术。",
+              "stream": true,
+              "mode": null,
+              "intent": null,
+              "strict_mode": false,
+              "threshold": 0.85,
+              "debug": false,
+              "attachments": [],
+              "enable_search": true
+            },
+            "startedAt": "2026-03-20T09:05:16.956Z",
+            "durationMs": 4202,
+            "bytesRead": 186,
+            "eventCounts": {
+              "status": 1,
+              "error": 1,
+              "done": 1
+            },
+            "endedBy": "done_event",
+            "status": 200,
+            "headers": {
+              "connection": "close",
+              "content-type": "text/event-stream; charset=utf-8",
+              "date": "Fri, 20 Mar 2026 09:05:15 GMT",
+              "server": "uvicorn",
+              "transfer-encoding": "chunked",
+              "vary": "Origin",
+              "x-process-time": "0.021930932998657227",
+              "x-request-id": "a96a5784-bef4-4574-9b58-c5c60d42081a"
+            }
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "status",
+          "content": {
+            "type": "status",
+            "content": "Orchestrating context..."
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "error",
+          "content": {
+            "type": "error",
+            "content": "Workflow execution failed."
+          }
+        },
+        {
+          "role": "assistant",
+          "type": "done",
+          "content": "\"[DONE]\""
+        },
+        {
+          "role": "assistant",
+          "type": "combined_text",
+          "content": ""
+        }
+      ]
+    }
+  ]
+}

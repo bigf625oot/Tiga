@@ -94,7 +94,10 @@ class ModelFactory:
         )
 
     @staticmethod
-    def create_model(llm_model: LLMModel) -> Model:
+    def create_model(llm_model: Optional[LLMModel] = None) -> Model:
+        if not llm_model:
+            llm_model = ModelFactory.resolve_default_llm_model(settings)
+            
         api_key = llm_model.api_key or "dummy"
         base_url = llm_model.base_url
         provider = (llm_model.provider or "").lower()

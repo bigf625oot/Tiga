@@ -8,9 +8,9 @@ from agno.agent import Agent
 # 核心依赖
 from app.services.eah_agent.core.agent_base_handler import BaseHandler, StreamResponse
 from app.services.eah_agent.core.agent_nlu import IntentResult
-from app.services.eah_agent.core.agent_assembler import AgentAssembler
+from app.services.eah_agent.core.agent_builder import AgentAssembler
 from app.services.eah_agent.core.agent_stream_adapter import AgnoStreamAdapter  # 抽象出的流适配器
-from app.services.eah_agent.handlers.file_orchestrator import FileOrchestrator # 之前重构的文件处理器
+from app.services.eah_agent.document.file_orchestrator import FileOrchestrator # 之前重构的文件处理器
 from app.services.eah_agent.storage.session_history import SessionHistory
 from app.core.context_compressor import ContextCompressor
 from app.core.shared_state import StateManager
@@ -76,12 +76,13 @@ class QuickHandler(BaseHandler):
         # 4. 执行流输出
         try:
             # 统一流适配器处理复杂的 Agno 事件映射
-            async for chunk in agent.astream(
+            async for chunk in agent.arun(
                 augmented_input,
                 messages=history_msgs,
                 images=media_objs,
                 # 动态覆盖指令
-                instructions=instructions
+                instructions=instructions,
+                stream=True
             ):
                 # 将 Agno 原生块转换为标准的 StreamResponse
                 async for event in self.stream_adapter.to_standard_events(chunk):
@@ -89,7 +90,7 @@ class QuickHandler(BaseHandler):
 
         except Exception as e:
             logger.error(f"QuickHandler execution failed: {e}", exc_info=True)
-            yield {"type": "error", "content": "Internal processing error."}
+            yield {"type": "error", "content": f"Internal processing error: {str(e)}"}
 
     # --- 私有编排方法 ---
 
@@ -99,9 +100,8 @@ class QuickHandler(BaseHandler):
         reasoning = kwargs.get("enable_reasoning", False)
         search = kwargs.get("enable_search", True)
 
-        assembler = AgentAssembler(db)
-        return await assembler.assemble(
-            agent_id=agent_id,
+        assembler = AgentAssembler(db, agent_id)
+        return await assembler.build(
             session_id=session_id,
             reasoning_override=reasoning,
             enable_search=search

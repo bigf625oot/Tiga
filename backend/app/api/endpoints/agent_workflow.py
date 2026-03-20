@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.services.eah_agent.core.agent_executor import get_executor
+from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
 from app.crud.crud_agent_workflow import agent_workflow as crud_agent_workflow
 from app.crud import crud_chat
 from app.schemas.agent_workflow import AgentWorkflowCreate, AgentWorkflowUpdate, AgentWorkflowResponse
@@ -112,10 +112,13 @@ async def run_workflow(request: WorkflowRunRequest, db: AsyncSession = Depends(g
         history_msgs = await crud_chat.get_history(db, request.session_id)
         history = [{"role": m.role, "content": m.content} for m in history_msgs]
         
-        executor = get_executor(request.mode, request.session_id, db)
-        result = await executor.execute(
-            message=request.message,
+        control_plane = AgnoControlPlane()
+        result = await control_plane.process(
+            user_input=request.message,
+            db=db,
+            session_id=request.session_id,
             agent_id=request.agent_id,
+            mode=request.mode,
             history=history,
             **request.params
         )
@@ -138,18 +141,24 @@ async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = De
         history_msgs = await crud_chat.get_history(db, request.session_id)
         history = [{"role": m.role, "content": m.content} for m in history_msgs]
         
-        executor = get_executor(request.mode, request.session_id, db)
+        control_plane = AgnoControlPlane()
         
         # 执行工作流并返回流式事件
         async def event_generator():
-            async for event in executor.stream(
-                message=request.message,
+            async for event in control_plane.process_stream(
+                user_input=request.message,
+                db=db,
+                session_id=request.session_id,
                 agent_id=request.agent_id,
+                mode=request.mode,
                 history=history,
                 **request.params
             ):
                 if event is not None:
-                    yield f"data: {event}\n\n"
+                    # 将字典直接包装为 data 发送，不改变 type，前端靠 type 字段路由
+                    import json
+                    event_data = json.dumps(event, ensure_ascii=False) if isinstance(event, dict) else event
+                    yield f"data: {event_data}\n\n"
             yield "data: [DONE]\n\n"
             
         return StreamingResponse(event_generator(), media_type="text/event-stream")

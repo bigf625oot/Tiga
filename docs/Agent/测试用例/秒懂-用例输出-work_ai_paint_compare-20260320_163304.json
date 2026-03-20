@@ -1,0 +1,933 @@
+{
+  "id": "work_ai_paint_compare",
+  "group": "职场与生产力",
+  "title": "竞品调研（对比表与信息提炼）",
+  "evaluation": {
+    "pass": true,
+    "score": 100,
+    "results": [
+      {
+        "id": "has_markdown_table",
+        "pass": true
+      },
+      {
+        "id": "mentions_multiple_named_items",
+        "pass": true
+      }
+    ],
+    "finalText": "以下是一个关于最近热门的 AI 绘画工具的对比表，涵盖了 6 个主流工具，包括价格、优缺点、适合人群、上手门槛以及商用授权要点：\n\n| 工具名称       | 价格（基础版）                     | 优点                                                                 | 缺点                                                                 | 适合人群                     | 上手门槛 | 商用授权要点                                                                 |\n|----------------|----------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------|----------------------------|----------|------------------------------------------------------------------------------|\n| **MidJourney** | $10-$96/月                       | - 生成质量高，艺术风格多样<br>- 社区活跃，灵感丰富                   | - 必须通过 Discord 使用<br>- 商用需订阅 Pro 计划                     | 艺术家、设计师、创意工作者 | 中等     | 付费订阅用户可商用，需遵守 [MidJourney 服务条款](https://docs.midjourney.com/docs/terms-of-service) |\n| **Stable Diffusion** | 免费（开源）                   | - 完全开源，可本地部署<br>- 高度自定义，模型丰富                     | - 需要一定的技术知识配置<br>- 生成质量依赖模型和参数调整             | 开发者、技术爱好者           | 高       | 开源许可证允许商用，但需遵守 [Stable Diffusion 许可证](https://huggingface.co/spaces/CompVis/stable-diffusion-license) |\n| **DALL·E 3 (OpenAI)** | $20/月（ChatGPT Plus）        | - 与 ChatGPT 集成，易用性强<br>- 生成细节丰富，适合创意内容           | - 生成次数有限（订阅用户）<br>- 商用需额外授权                       | 内容创作者、营销人员         | 低       | 商用需遵守 [OpenAI 使用政策](https://openai.com/policies/usage-policies)     |\n| **DreamUp (DeviantArt)** | 免费（基础版）/$12.99/月      | - 与 DeviantArt 社区结合<br>- 支持艺术家风格训练                     | - 生成质量中等<br>- 商用需订阅 Pro 计划                              | 插画师、艺术爱好者           | 低       | 商用需订阅 Pro 计划，遵守 [DeviantArt 条款](https://www.deviantart.com/terms/) |\n| **Runway ML**  | $12-$76/月                       | - 视频+图像生成一体化<br>- 支持 AI 视频编辑                          | - 高级功能价格较高<br>- 生成速度较慢                                 | 视频创作者、设计师           | 中等     | 付费订阅用户可商用，需遵守 [Runway ML 许可协议](https://runwayml.com/terms/) |\n| **Canva AI**   | 免费（基础版）/$12.99/月        | - 与 Canva 设计工具无缝集成<br>- 简单易用，适合快速设计               | - 功能较基础<br>- 生成风格有限                                       | 非专业人士、小型企业         | 低       | 商用需订阅 Pro 计划，遵守 [Canva 许可条款](https://www.canva.com/policies/license-agreements/) |\n\n如果需要更详细的信息（如最新价格或功能更新），可以告诉我，我会"
+  },
+  "diagnostics": {
+    "evidence": {
+      "stepsCount": 1,
+      "finalTextChars": 2318,
+      "httpCalls": [
+        {
+          "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+          "startedAt": "2026-03-20T08:33:38.601Z",
+          "durationMs": 25872,
+          "status": 200,
+          "contentType": "text/event-stream; charset=utf-8",
+          "bytesRead": 6897,
+          "endedBy": "done_event",
+          "eventCounts": {
+            "status": 1,
+            "text": 157,
+            "done": 1
+          }
+        }
+      ]
+    },
+    "phases": {
+      "phase1": {
+        "summary": "可复现输入与边界证据已采集（请求体/响应头/事件计数/最终输出）。",
+        "reproduction": [
+          {
+            "step": 1,
+            "message": "我想了解最近很火的 AI 绘画工具，帮我拉个对比表。至少列 6 个工具，给出价格/优缺点/适合人群/上手门槛/商用授权要点。"
+          }
+        ],
+        "boundaries": [
+          {
+            "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+            "startedAt": "2026-03-20T08:33:38.601Z",
+            "durationMs": 25872,
+            "status": 200,
+            "contentType": "text/event-stream; charset=utf-8",
+            "bytesRead": 6897,
+            "endedBy": "done_event",
+            "eventCounts": {
+              "status": 1,
+              "text": 157,
+              "done": 1
+            }
+          }
+        ]
+      },
+      "phase2": {
+        "summary": "将失败定位到具体检查项，并保留通过项作为对照。",
+        "passedChecks": [
+          "has_markdown_table",
+          "mentions_multiple_named_items"
+        ],
+        "failedChecks": []
+      },
+      "phase3": {
+        "summary": "针对每个失败检查项生成单一假设与下一步最小验证。",
+        "issues": []
+      },
+      "phase4": {
+        "summary": "当前输出为诊断与证据链，不直接改模型；建议先用最小探针确认假设后再谈修复。",
+        "nextActions": []
+      }
+    }
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "type": "text",
+      "content": "我想了解最近很火的 AI 绘画工具，帮我拉个对比表。至少列 6 个工具，给出价格/优缺点/适合人群/上手门槛/商用授权要点。"
+    },
+    {
+      "role": "meta",
+      "type": "http",
+      "content": {
+        "url": "http://localhost:5173/api/v1/chat/sessions/7f32dc6e-68a2-4b1b-b093-cf7fbe1bfa10/chat",
+        "request": {
+          "message": "我想了解最近很火的 AI 绘画工具，帮我拉个对比表。至少列 6 个工具，给出价格/优缺点/适合人群/上手门槛/商用授权要点。",
+          "stream": true,
+          "mode": null,
+          "intent": null,
+          "strict_mode": false,
+          "threshold": 0.85,
+          "debug": false,
+          "attachments": [],
+          "enable_search": true
+        },
+        "startedAt": "2026-03-20T08:33:38.601Z",
+        "durationMs": 25872,
+        "bytesRead": 6897,
+        "eventCounts": {
+          "status": 1,
+          "text": 157,
+          "done": 1
+        },
+        "endedBy": "done_event",
+        "status": 200,
+        "headers": {
+          "connection": "close",
+          "content-type": "text/event-stream; charset=utf-8",
+          "date": "Fri, 20 Mar 2026 08:33:37 GMT",
+          "server": "uvicorn",
+          "transfer-encoding": "chunked",
+          "vary": "Origin",
+          "x-process-time": "0.12388134002685547",
+          "x-request-id": "a2bcd626-487f-4068-b896-49b17828c26d"
+        }
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "status",
+      "content": {
+        "type": "status",
+        "content": "Orchestrating context..."
+      }
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "以"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "下是一个关于最"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "近热门的 AI "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "绘画工具的对比表，"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "涵盖了 6 个主"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "流工具，包括价格、优"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "缺点、适合人群、上"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "手门槛以及商用授权要点"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "：\n\n| 工具名称       | 价格（基础版）"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "                     | 优点                                               "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "                  | 缺点                                                   "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "              | 适合人群     "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "         "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       | 上手门槛 | 商用授权要点                                                                "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " |\n|----------------|----------------------------------|--------------------------------------------"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "--------------------------|-------------------------------------------------------------------"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "---|----------------------------|----------|----------------------------------------------------"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "------------"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "--------------"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "|\n| **Mi"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "dJourney** | $10-$96/月      "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "          | - 生成"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "质量高，艺术风格多样"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "社区活跃，灵感丰富   "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "             "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | - 必须通过 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Discord 使用"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- 商用"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "需订阅 Pro 计划          "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "        "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | 艺术家、设计师"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、创意工作者 |"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 中等     | 付费订阅用"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "户可商用，需遵守 [Mi"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "dJourney 服务条款]("
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "https://docs.midjourn"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ey.com/docs/terms-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "of-service) |\n| **S"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "table "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Diffusion** | 免费（开源）       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "            | - "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "完全开源，可本地部署"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 高度自定义，模型丰富    "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "            "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "     | - 需"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "要一定的技术知识配置"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- 生成质量依赖"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "模型和参数调整 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "            | 开发者"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、技术爱好者        "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | 高 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "      | 开源许可证允许商用，但需遵"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "守 [Stable Diff"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "usion 许可证](https"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "://huggingfac"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "e.co/spaces/CompV"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "is/stable-diffu"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "sion-li"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "cense) |\n| *"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "*DALL·E"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 3 (OpenAI)** "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "| $20/月（ChatG"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "PT Plus）    "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "    |"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 与 ChatG"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "PT 集成，易用性强"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- 生成细节"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "丰富，适合创"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "意内容    "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       | - 生成"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "次数有限（订阅用户）"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 商用需额外授权     "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "                  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "| 内容创作者、营销人员 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " | 低       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "| 商用需遵守 [OpenAI 使用政策"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "](https://openai."
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "com/policies/usage-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "policies)  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   |\n| **Drea"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "mUp (D"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "eviant"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Art)** | 免"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "费（基础版）"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "/$12.99/月      |"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " - 与 Devia"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ntArt 社区结合"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- 支持艺术家"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "风格训练    "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "          "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "| - 生成质量中等"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- 商用需"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "订阅 Pro 计划         "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "              | 插画师"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "、艺术爱好者      "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "     | 低    "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | 商用需订阅 P"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ro 计划，遵守 [Dev"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "iantArt 条款](https:"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "//www.deviantar"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "t.com/terms/"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ") |\n| **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Runway ML**  | $12-$76/月  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "        "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "      | - "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "视频+图像生成一体化"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- 支持 AI"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 视频编辑     "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "       "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "              | "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "- 高级功能价格较高"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 生成速度较慢            "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "        "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "             | 视频创作"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "者、设计师        "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | 中等  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | 付费订阅用户可"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "商用，需遵守 [Runway "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ML 许可协议](https:"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "//runwaym"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "l.com/terms/"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": ") |\n| **"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "Canva A"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "I**   | 免费（基础版）"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "/$12.99/月  "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "      | - 与 Canv"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "a 设计工具无缝集成"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>-"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " 简单易用，"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "适合快速设计 "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "             "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " | - 功能较基础"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "<br>- 生成"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "风格有限                     "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "        "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "          | 非专"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "业人士、小型企业      "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | 低    "
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "   | 商用需订阅"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " Pro 计划，遵守 [Canva 许"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "可条款](https://www.ca"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "nva.com/policies/lice"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "nse-agreem"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "ents/)"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": " |\n\n如果需要更详细的"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "信息（如最新价"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "格或功能更新"
+    },
+    {
+      "role": "assistant",
+      "type": "text",
+      "content": "），可以告诉我，我会"
+    },
+    {
+      "role": "assistant",
+      "type": "done",
+      "content": "\"[DONE]\""
+    },
+    {
+      "role": "assistant",
+      "type": "combined_text",
+      "content": "以下是一个关于最近热门的 AI 绘画工具的对比表，涵盖了 6 个主流工具，包括价格、优缺点、适合人群、上手门槛以及商用授权要点：\n\n| 工具名称       | 价格（基础版）                     | 优点                                                                 | 缺点                                                                 | 适合人群                     | 上手门槛 | 商用授权要点                                                                 |\n|----------------|----------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------|----------------------------|----------|------------------------------------------------------------------------------|\n| **MidJourney** | $10-$96/月                       | - 生成质量高，艺术风格多样<br>- 社区活跃，灵感丰富                   | - 必须通过 Discord 使用<br>- 商用需订阅 Pro 计划                     | 艺术家、设计师、创意工作者 | 中等     | 付费订阅用户可商用，需遵守 [MidJourney 服务条款](https://docs.midjourney.com/docs/terms-of-service) |\n| **Stable Diffusion** | 免费（开源）                   | - 完全开源，可本地部署<br>- 高度自定义，模型丰富                     | - 需要一定的技术知识配置<br>- 生成质量依赖模型和参数调整             | 开发者、技术爱好者           | 高       | 开源许可证允许商用，但需遵守 [Stable Diffusion 许可证](https://huggingface.co/spaces/CompVis/stable-diffusion-license) |\n| **DALL·E 3 (OpenAI)** | $20/月（ChatGPT Plus）        | - 与 ChatGPT 集成，易用性强<br>- 生成细节丰富，适合创意内容           | - 生成次数有限（订阅用户）<br>- 商用需额外授权                       | 内容创作者、营销人员         | 低       | 商用需遵守 [OpenAI 使用政策](https://openai.com/policies/usage-policies)     |\n| **DreamUp (DeviantArt)** | 免费（基础版）/$12.99/月      | - 与 DeviantArt 社区结合<br>- 支持艺术家风格训练                     | - 生成质量中等<br>- 商用需订阅 Pro 计划                              | 插画师、艺术爱好者           | 低       | 商用需订阅 Pro 计划，遵守 [DeviantArt 条款](https://www.deviantart.com/terms/) |\n| **Runway ML**  | $12-$76/月                       | - 视频+图像生成一体化<br>- 支持 AI 视频编辑                          | - 高级功能价格较高<br>- 生成速度较慢                                 | 视频创作者、设计师           | 中等     | 付费订阅用户可商用，需遵守 [Runway ML 许可协议](https://runwayml.com/terms/) |\n| **Canva AI**   | 免费（基础版）/$12.99/月        | - 与 Canva 设计工具无缝集成<br>- 简单易用，适合快速设计               | - 功能较基础<br>- 生成风格有限                                       | 非专业人士、小型企业         | 低       | 商用需订阅 Pro 计划，遵守 [Canva 许可条款](https://www.canva.com/policies/license-agreements/) |\n\n如果需要更详细的信息（如最新价格或功能更新），可以告诉我，我会"
+    }
+  ]
+}

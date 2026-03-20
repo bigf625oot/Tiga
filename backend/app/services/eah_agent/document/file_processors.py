@@ -171,29 +171,3 @@ class FileProcessorFactory:
 # 初始化
 FileProcessorFactory.initialize()
 
-# --- 5. 门面编排器 (Orchestrator) ---
-
-class FileOrchestrator:
-    """
-    统一门面：Agent 直接调用的入口
-    """
-    @staticmethod
-    async def process_file(
-        file_source: Union[str, bytes, Path, io.BytesIO], 
-        filename: str,
-        kb_manager: Any = None
-    ) -> ProcessedResult:
-        
-        # 1. 统一转换为 bytes 流
-        if isinstance(file_source, (str, Path)):
-            file_bytes = Path(file_source).read_bytes()
-        elif isinstance(file_source, io.BytesIO):
-            file_bytes = file_source.getvalue()
-        else:
-            file_bytes = file_source
-
-        # 2. 获取处理器
-        processor = FileProcessorFactory.get_processor(filename)
-        
-        # 3. 异步处理
-        return await processor.process(file_bytes, filename, kb_manager)
