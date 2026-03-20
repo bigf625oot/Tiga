@@ -1,6 +1,6 @@
 from agno.agent import Agent as AgnoAgent
 from .base_team import BaseTeam
-from app.services.eah_agent.agent.builder import AgentBuilder
+from app.services.eah_agent.core.agent_builder import AgentAssembler
 from app.services.llm.factory import ModelFactory
 
 class DynamicTeam(BaseTeam):
@@ -38,7 +38,7 @@ class DynamicTeam(BaseTeam):
             self.members.append(member)
 
         # 2. 准备领导者 (Leader) 配置
-        builder = AgentBuilder(self.db, leader_id)
+        builder = AgentAssembler(self.db, leader_id)
         await builder._fetch_agent_config()
         await builder._fetch_model_config()
         await builder._load_tools()

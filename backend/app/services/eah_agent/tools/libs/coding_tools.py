@@ -35,12 +35,22 @@ class CsvTools(AgnoCsvTools):
     _label = "CSV 工具"
     _description = "读取、写入和分析 CSV 文件"
     
-    def __init__(self, csv_url: Optional[str] = None, csv_path: Optional[str] = None):
-        super().__init__(csv_url=csv_url, csv_path=csv_path)
+    def __init__(self, csvs: Optional[list] = None, **kwargs):
+        if csvs is None:
+            # support legacy arguments
+            csv_url = kwargs.pop("csv_url", None)
+            csv_path = kwargs.pop("csv_path", None)
+            csvs = []
+            if csv_path:
+                csvs.append(csv_path)
+            if csv_url:
+                csvs.append(csv_url)
+        super().__init__(csvs=csvs, **kwargs)
 
     class Config(BaseModel):
-        csv_url: Optional[str] = Field(None, description="URL of CSV file")
-        csv_path: Optional[str] = Field(None, description="Path to CSV file")
+        csvs: Optional[list] = Field(None, description="List of CSV files or URLs")
+        csv_url: Optional[str] = Field(None, description="URL of CSV file (legacy)")
+        csv_path: Optional[str] = Field(None, description="Path to CSV file (legacy)")
 
 # Pandas Tools
 try:

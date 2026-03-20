@@ -36,6 +36,10 @@ class DbConnectionConfig(BaseModel):
     ssl_mode: Optional[str] = Field("disable", description="SSL mode")
     pool_size: Optional[int] = Field(5, description="Connection pool size")
 
+    # Security & Permissions
+    allowed_tables: Optional[List[str]] = Field(None, description="List of allowed tables for queries")
+    sensitive_fields: Optional[List[str]] = Field(None, description="List of sensitive fields to mask in results")
+
     # SSH Tunnel Options
     ssh: Optional[bool] = Field(False, description="Enable SSH Tunnel")
     ssh_host: Optional[str] = None

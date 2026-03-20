@@ -3,7 +3,7 @@
     <!-- Categories Sidebar -->
     <div 
       class="bg-card border-r flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out z-20"
-      :class="isSidebarCollapsed ? 'w-[60px]' : 'w-64'"
+      :class="isSidebarCollapsed ? 'w-[60px]' : 'w-96'"
     >
       <!-- Sidebar Header -->
       <div class="p-4 flex items-center justify-between border-b h-16">
@@ -27,56 +27,90 @@
       </div>
 
       <!-- Categories List -->
-      <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-        <Button
-          v-for="item in providerCategories" 
-          :key="item.id"
-          :variant="activeCategory === item.id ? 'secondary' : 'ghost'"
-          class="w-full justify-start gap-3 px-3 relative"
-          :class="{'justify-center px-0': isSidebarCollapsed}"
-          @click="activeCategory = item.id"
-          :title="isSidebarCollapsed ? item.label : ''"
-        >
-          <div v-if="item.initials" class="relative w-6 h-6 flex-shrink-0">
-            <!-- Initials Avatar -->
-            <div 
-              class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border shadow-sm transition-all"
-              :class="activeCategory === item.id 
-                ? 'bg-primary text-primary-foreground border-primary' 
-                : 'bg-muted/50 text-muted-foreground border-border group-hover:border-primary/50 group-hover:text-foreground'"
-            >
-              {{ item.initials }}
-            </div>
+      <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+        <!-- 全部模型卡片单独占一行 -->
+        <div class="mb-4">
+          <Button
+            v-if="providerCategories.length > 0"
+            :variant="activeCategory === providerCategories[0].id ? 'secondary' : 'outline'"
+            class="w-full justify-start gap-3 px-4 relative h-14 border rounded-xl shadow-sm transition-all hover:shadow-md"
+            :class="[
+              isSidebarCollapsed ? 'justify-center px-0' : '',
+              activeCategory === providerCategories[0].id ? 'border-primary/50 bg-primary/10 ring-1 ring-primary/20' : 'border-border/60 hover:border-primary/30 bg-muted/10'
+            ]"
+            @click="activeCategory = providerCategories[0].id"
+            :title="isSidebarCollapsed ? providerCategories[0].label : ''"
+          >
+            <component :is="providerCategories[0].icon" class="w-4 h-4 flex-shrink-0 text-primary" />
             
-            <!-- Flag Badge -->
-            <div 
-              v-if="item.country" 
-              class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full overflow-hidden border border-background shadow-sm"
+            <span 
+              class="truncate transition-all duration-300 capitalize text-sm font-semibold"
+              :class="isSidebarCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'"
             >
+              {{ providerCategories[0].label }}
+            </span>
+            
+            <Badge 
+              v-if="providerCategories[0].count !== undefined && !isSidebarCollapsed" 
+              variant="secondary" 
+              class="ml-auto text-xs h-6 px-2 min-w-[24px] flex items-center justify-center bg-background border shadow-sm"
+            >
+              {{ providerCategories[0].count }}
+            </Badge>
+          </Button>
+        </div>
+
+        <!-- 其他提供商网格 -->
+        <div class="grid grid-cols-2 gap-4" :class="{'grid-cols-1': isSidebarCollapsed}">
+          <Button
+            v-for="item in providerCategories.slice(1)" 
+            :key="item.id"
+            :variant="activeCategory === item.id ? 'secondary' : 'outline'"
+            class="w-full justify-start gap-3 px-3 relative h-14 border rounded-xl transition-all hover:shadow-md bg-card"
+            :class="[
+              isSidebarCollapsed ? 'justify-center px-0' : '',
+              activeCategory === item.id ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20' : 'border-border/60 hover:border-primary/30'
+            ]"
+            @click="activeCategory = item.id"
+            :title="isSidebarCollapsed ? item.label : ''"
+          >
+            <div v-if="item.initials" class="relative w-6 h-6 flex-shrink-0 flex items-center justify-center">
               <img 
-                :src="`/flags/${item.country}.svg`" 
-                class="w-full h-full object-cover" 
-                :alt="item.country"
+                v-if="!logoErrors[item.id]"
+                :src="getProviderLogo(item.id)" 
+                class="w-5 h-5 object-contain"
+                alt="logo"
+                @error="handleLogoError(item.id)"
               />
+              <!-- Initials Avatar Fallback -->
+              <div 
+                v-else
+                class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border shadow-sm transition-all"
+                :class="activeCategory === item.id 
+                  ? 'bg-primary text-primary-foreground border-primary' 
+                  : 'bg-muted/50 text-muted-foreground border-border group-hover:border-primary/50 group-hover:text-foreground'"
+              >
+                {{ item.initials }}
+              </div>
             </div>
-          </div>
-          <component v-else :is="item.icon" class="w-4 h-4 flex-shrink-0" />
-          
-          <span 
-            class="truncate transition-all duration-300 capitalize"
-            :class="isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
-          >
-            {{ item.label }}
-          </span>
-          
-          <Badge 
-            v-if="item.count !== undefined && !isSidebarCollapsed" 
-            variant="secondary" 
-            class="ml-auto text-[10px] h-5 px-1.5"
-          >
-            {{ item.count }}
-          </Badge>
-        </Button>
+            <component v-else :is="item.icon" class="w-4 h-4 flex-shrink-0" />
+            
+            <span 
+              class="truncate transition-all duration-300 capitalize text-sm font-medium"
+              :class="isSidebarCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'"
+            >
+              {{ item.label }}
+            </span>
+            
+            <Badge 
+              v-if="item.count !== undefined && !isSidebarCollapsed" 
+              variant="secondary" 
+              class="ml-auto text-xs h-6 px-2 min-w-[24px] flex items-center justify-center bg-muted/60"
+            >
+              {{ item.count }}
+            </Badge>
+          </Button>
+        </div>
       </div>
     </div>
 
@@ -216,11 +250,30 @@
               <Label for="provider">提供商 <span class="text-destructive">*</span></Label>
               <Select v-model="formState.provider" @update:modelValue="handleProviderChange">
                 <SelectTrigger>
-                  <SelectValue placeholder="选择提供商" />
+                  <div v-if="formState.provider && providerConfig[formState.provider]" class="flex items-center gap-2">
+                    <img 
+                      v-if="!logoErrors[formState.provider]"
+                      :src="getProviderLogo(formState.provider)" 
+                      class="w-4 h-4 object-contain"
+                      alt="logo"
+                      @error="handleLogoError(formState.provider)"
+                    />
+                    <span>{{ providerConfig[formState.provider].label || formState.provider }}</span>
+                  </div>
+                  <SelectValue v-else placeholder="选择提供商" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="(config, key) in providerConfig" :key="key" :value="key">
-                    {{ config.label || key }}
+                    <div class="flex items-center gap-2">
+                      <img 
+                        v-if="!logoErrors[key]"
+                        :src="getProviderLogo(key)" 
+                        class="w-4 h-4 object-contain"
+                        alt="logo"
+                        @error="handleLogoError(key)"
+                      />
+                      <span>{{ config.label || key }}</span>
+                    </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -305,6 +358,79 @@
             <p class="text-[10px] text-muted-foreground">如果不填写，将使用提供商的默认地址。</p>
           </div>
 
+          <!-- Advanced Settings -->
+          <Accordion type="single" collapsible class="w-full border rounded-lg bg-muted/20">
+            <AccordionItem value="advanced" class="border-0">
+              <AccordionTrigger class="px-4 py-2 text-sm hover:no-underline hover:bg-muted/40 rounded-t-lg">
+                <div class="flex items-center gap-2">
+                   <Sliders class="w-4 h-4 text-muted-foreground" />
+                   高级配置 (Advanced)
+                </div>
+              </AccordionTrigger>
+              <AccordionContent class="px-4 py-4 space-y-4 border-t bg-card/50 rounded-b-lg">
+                  
+                  <!-- Token Limits -->
+                  <div class="grid grid-cols-2 gap-4">
+                      <div class="grid gap-2">
+                          <Label class="text-xs">上下文长度 (Context Length)</Label>
+                          <Input type="number" v-model.number="formState.context_length" placeholder="4096" />
+                      </div>
+                      <div class="grid gap-2">
+                          <Label class="text-xs">最大输出 (Max Output)</Label>
+                          <Input type="number" v-model.number="formState.max_output_tokens" placeholder="2048" />
+                      </div>
+                  </div>
+
+                  <!-- Capabilities -->
+                  <div class="space-y-2">
+                      <Label class="text-xs font-medium">模型能力</Label>
+                      <div class="grid grid-cols-2 gap-3">
+                          <div class="flex items-center space-x-2 border p-2 rounded bg-background">
+                              <Switch id="vision" v-model:checked="formState.supports_vision" />
+                              <Label for="vision" class="text-xs cursor-pointer">视觉识别 (Vision)</Label>
+                          </div>
+                          <div class="flex items-center space-x-2 border p-2 rounded bg-background">
+                              <Switch id="tools" v-model:checked="formState.supports_tools" />
+                              <Label for="tools" class="text-xs cursor-pointer">函数调用 (Tools)</Label>
+                          </div>
+                          <div class="flex items-center space-x-2 border p-2 rounded bg-background">
+                              <Switch id="json" v-model:checked="formState.supports_json_mode" />
+                              <Label for="json" class="text-xs cursor-pointer">JSON 模式</Label>
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- Inference Params -->
+                  <div class="grid grid-cols-2 gap-4 pt-2">
+                      <div class="grid gap-2">
+                          <Label class="text-xs">温度 (Temperature)</Label>
+                          <Input type="number" step="0.1" min="0" max="2" v-model.number="formState.temperature" />
+                      </div>
+                      <div class="grid gap-2">
+                          <Label class="text-xs">Top P</Label>
+                          <Input type="number" step="0.1" min="0" max="1" v-model.number="formState.top_p" />
+                      </div>
+                  </div>
+                  
+                  <!-- Pricing -->
+                  <div class="space-y-2 pt-2 border-t border-dashed">
+                      <Label class="text-xs font-medium">成本定价 (每 1k Tokens)</Label>
+                      <div class="grid grid-cols-2 gap-4">
+                        <div class="grid gap-2">
+                            <Label class="text-[10px] text-muted-foreground">输入价格 ($)</Label>
+                            <Input type="number" step="0.000001" v-model.number="formState.input_token_price" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label class="text-[10px] text-muted-foreground">输出价格 ($)</Label>
+                            <Input type="number" step="0.000001" v-model.number="formState.output_token_price" />
+                        </div>
+                      </div>
+                  </div>
+
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
           <div class="flex items-center justify-between rounded-lg border p-4">
             <div class="space-y-0.5">
               <Label class="text-base">启用状态</Label>
@@ -368,8 +494,15 @@ import {
   Loader2, Plus, Bot, MoreHorizontal, Edit2, Trash2, 
   Eye, EyeOff, Network, CheckCircle2, XCircle, X,
   LayoutGrid, ChevronLeft, ChevronRight, RefreshCw, Search,
-  Zap, Box, Brain, Globe, Cpu
+  Zap, Box, Brain, Globe, Cpu, Sliders
 } from 'lucide-vue-next';
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 
 // Shadcn Components
 import { Button } from '@/components/ui/button';
@@ -419,14 +552,66 @@ const activeCategory = ref('all');
 const activeType = ref('all');
 const searchQuery = ref('');
 
+const logoErrors = ref({});
+const handleLogoError = (id) => {
+    logoErrors.value[id] = true;
+};
+
+const getProviderLogo = (provider) => {
+    if (!provider) return '';
+    const providerMap = {
+        'openai': 'openai',
+        'anthropic': 'anthropic',
+        'google': 'google',
+        'gemini': 'gemini',
+        'aliyun': 'qwen',
+        'dashscope': 'qwen',
+        'deepseek': 'deepseek',
+        'claude': 'claude',
+        'aws': 'aws',
+        'bedrock': 'bedrock',
+        'azure': 'azureai',
+        'mistral': 'mistral',
+        'groq': 'groq',
+        'xai': 'xai',
+        'cohere': 'cohere',
+        'perplexity': 'perplexity',
+        'together': 'together',
+        'openrouter': 'openrouter',
+        'nvidia': 'nvidia',
+        'ollama': 'ollama',
+        'fireworks': 'fireworks',
+        'nebius': 'nebius',
+        'vertexai': 'vertexai'
+    };
+    const key = provider.toLowerCase();
+    const logoName = providerMap[key] || key;
+    return `/flags/llm/${logoName}.svg`;
+};
+
+const isAdvancedMode = ref(false);
+
 const formState = reactive({
     id: null,
     name: '',
-    provider: 'openai',
+    provider: '',
     model_id: '',
     model_type: 'text',
     api_key: '',
     base_url: '',
+    
+    // Advanced Params
+    context_length: 4096,
+    max_output_tokens: 2048,
+    temperature: 0.7,
+    top_p: 1.0,
+    supports_vision: false,
+    supports_tools: true,
+    supports_json_mode: true,
+    
+    input_token_price: 0.0,
+    output_token_price: 0.0,
+    
     is_active: true
 });
 
@@ -449,17 +634,13 @@ const providerCategories = computed(() => {
     Object.keys(providerConfig.value).forEach(key => {
         const config = providerConfig.value[key];
   
-        const isMajor = ['openai', 'aliyun', 'deepseek', 'anthropic', 'google', 'ollama', 'local'].includes(key);
-        
-        if (isMajor || counts[key] > 0) {
-             categories.push({
-                id: key,
-                label: config.label || key,
-                initials: (config.label || key).substring(0, 1).toUpperCase(),
-                // country: config.country, // Backend doesn't provide country yet, maybe map it locally or skip
-                count: counts[key] || 0
-            });
-        }
+        categories.push({
+            id: key,
+            label: config.label || key,
+            initials: (config.label || key).substring(0, 1).toUpperCase(),
+            // country: config.country, // Backend doesn't provide country yet, maybe map it locally or skip
+            count: counts[key] || 0
+        });
     });
     
     // Always add "Other" if there are models with unknown providers
@@ -502,24 +683,6 @@ const fetchProviders = async () => {
     try {
         const res = await api.get('/llm/providers');
         providerConfig.value = res.data;
-        
-        // Ensure 'local' and 'other' exist if not returned by backend
-        if (!providerConfig.value['local']) {
-             providerConfig.value['local'] = {
-                label: 'Local',
-                value: 'local',
-                baseUrl: 'http://localhost:11434/v1',
-                models: ['llama3', 'mistral', 'qwen2']
-             };
-        }
-        if (!providerConfig.value['other']) {
-             providerConfig.value['other'] = {
-                label: 'Other',
-                value: 'other',
-                baseUrl: '',
-                models: []
-             };
-        }
     } catch (e) {
         console.error("Failed to fetch providers", e);
     }
@@ -565,10 +728,6 @@ const handleProviderChange = (val) => {
             isCustomModel.value = true;
             if (!formState.model_id) formState.model_id = '';
         }
-        
-        if (val === 'local' || val === 'other') {
-            isCustomModel.value = true;
-        }
     } else {
         currentModelOptions.value = [];
         isCustomModel.value = true;
@@ -586,23 +745,35 @@ const toggleCustomModel = () => {
 
 const openCreateModal = () => {
     isEdit.value = false;
+    isAdvancedMode.value = false;
     testResult.value = null;
+    const defaultProvider = Object.keys(providerConfig.value)[0] || '';
     Object.assign(formState, {
         id: null,
         name: '',
-        provider: 'openai',
+        provider: defaultProvider,
         model_id: '',
         model_type: 'text',
         api_key: '',
         base_url: '',
+        context_length: 4096,
+        max_output_tokens: 2048,
+        temperature: 0.7,
+        top_p: 1.0,
+        supports_vision: false,
+        supports_tools: true,
+        supports_json_mode: true,
+        input_token_price: 0.0,
+        output_token_price: 0.0,
         is_active: true
     });
-    handleProviderChange('openai');
+    handleProviderChange(defaultProvider);
     sheetOpen.value = true;
 };
 
 const openEditModal = (record) => {
     isEdit.value = true;
+    isAdvancedMode.value = false; // Reset unless user expands it
     testResult.value = null;
     
     const config = providerConfig.value[record.provider];
@@ -610,7 +781,6 @@ const openEditModal = (record) => {
         currentModelOptions.value = (config.models || []).map(m => ({ value: m, label: m }));
         const isInList = config.models && config.models.includes(record.model_id);
         isCustomModel.value = !isInList;
-        if (record.provider === 'local' || record.provider === 'other') isCustomModel.value = true;
     } else {
         currentModelOptions.value = [];
         isCustomModel.value = true;
@@ -624,6 +794,18 @@ const openEditModal = (record) => {
         model_type: record.model_type || 'text',
         api_key: record.api_key,
         base_url: record.base_url,
+        
+        // Map new fields
+        context_length: record.context_length ?? 4096,
+        max_output_tokens: record.max_output_tokens ?? 2048,
+        temperature: record.temperature ?? 0.7,
+        top_p: record.top_p ?? 1.0,
+        supports_vision: record.supports_vision ?? false,
+        supports_tools: record.supports_tools ?? true,
+        supports_json_mode: record.supports_json_mode ?? true,
+        input_token_price: record.input_token_price ?? 0.0,
+        output_token_price: record.output_token_price ?? 0.0,
+        
         is_active: record.is_active
     });
     sheetOpen.value = true;

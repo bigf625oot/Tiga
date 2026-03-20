@@ -22,10 +22,10 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, desc
+from sqlalchemy import select, or_, desc, func
 
 from app.db.session import get_db
-from app.models.mcp import MCPServer
+from app.models.mcp import MCPServer, MCPTransportType
 from app.schemas.mcp import MCPServer as MCPServerSchema, MCPServerCreate, MCPServerUpdate
 
 router = APIRouter()
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class MCPServerConfig(BaseModel):
-    type: str  # "stdio" or "sse"
+    transport_type: MCPTransportType  # "stdio" or "sse"
     command: Optional[str] = None
     args: Optional[List[str]] = []
     url: Optional[str] = None
@@ -61,7 +61,7 @@ async def fetch_mcp_tools(config: MCPServerConfig):
         # For demonstration purposes in this environment:
         await asyncio.sleep(1)  # Simulate network delay
 
-        if config.type == "stdio":
+        if config.transport_type == MCPTransportType.STDIO:
             return [
                 MCPTool(
                     name="read_file",
@@ -83,7 +83,7 @@ async def fetch_mcp_tools(config: MCPServerConfig):
                 ),
                 MCPTool(name="list_directory", description="List files in a directory"),
             ]
-        elif config.type == "sse":
+        elif config.transport_type == MCPTransportType.SSE:
             return [
                 MCPTool(name="weather_current", description="Get current weather"),
                 MCPTool(name="weather_forecast", description="Get weather forecast"),
@@ -155,6 +155,31 @@ async def list_mcp_servers(
     result = await db.execute(stmt)
     servers = result.scalars().all()
     return servers
+
+@router.get("/count")
+async def count_mcp_servers(
+    q: Optional[str] = Query(None, description="Search query"),
+    category: Optional[str] = Query(None, description="Filter by category slug"),
+    filter: Optional[str] = Query("all", description="Filter type: all, hot, new, official"),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(func.count()).select_from(MCPServer)
+
+    if q:
+        search_filter = or_(
+            MCPServer.name.ilike(f"%{q}%"),
+            MCPServer.description.ilike(f"%{q}%"),
+        )
+        stmt = stmt.where(search_filter)
+
+    if category and category != "all":
+        stmt = stmt.where(MCPServer.category == category)
+
+    if filter == "official":
+        stmt = stmt.where(MCPServer.is_official)
+
+    result = await db.execute(stmt)
+    return {"count": int(result.scalar_one())}
 
 @router.get("/{server_id}", response_model=MCPServerSchema)
 async def get_mcp_server(

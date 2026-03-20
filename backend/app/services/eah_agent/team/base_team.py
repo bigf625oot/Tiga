@@ -6,7 +6,7 @@ from typing import List, Optional, Any
 from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 from agno.agent import Agent as AgnoAgent
-from app.services.eah_agent.agent.builder import AgentBuilder
+from app.services.eah_agent.core.agent_builder import AgentAssembler
 
 class BaseTeam(ABC):
     """
@@ -20,9 +20,9 @@ class BaseTeam(ABC):
 
     async def _build_member_agent(self, agent_id: str) -> AgnoAgent:
         """
-        Build a member agent using the standard AgentBuilder.
+        Build a member agent using the standard AgentAssembler.
         """
-        builder = AgentBuilder(self.db, agent_id)
+        builder = AgentAssembler(self.db, agent_id)
         # Member agents usually don't need independent session history for the team context,
         # but if needed, session_id can be passed.
         # Here we build them as stateless workers initially.

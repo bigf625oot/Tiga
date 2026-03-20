@@ -6,7 +6,8 @@ import {
   Bell, 
   Settings, 
   RotateCcw, 
-  X 
+  X,
+  BookOpen
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -41,6 +42,13 @@ const menuItems = [
     subLabel: '系统监控告警',
     icon: Bell 
   },
+  {
+    id: 'manual',
+    label: '用户操作手册',
+    subLabel: 'User Manual',
+    icon: BookOpen,
+    isExternal: true
+  }
 ];
 
 const currentTabLabel = computed(() => {
@@ -52,6 +60,10 @@ const handleReset = () => {
     title: '重置配置',
     description: '配置已重置为默认值',
   });
+};
+
+const openDocs = () => {
+  window.open('/docs/', '_blank');
 };
 </script>
 
@@ -82,13 +94,13 @@ const handleReset = () => {
             variant="ghost"
             class="w-full justify-start h-auto py-3 px-4 relative overflow-hidden transition-all duration-200"
             :class="{ 
-              'bg-primary/10 text-primary hover:bg-primary/15': activeTab === item.id,
-              'text-muted-foreground hover:bg-muted': activeTab !== item.id
+              'bg-primary/10 text-primary hover:bg-primary/15': activeTab === item.id && !item.isExternal,
+              'text-muted-foreground hover:bg-muted': activeTab !== item.id || item.isExternal
             }"
-            @click="activeTab = item.id"
+            @click="item.isExternal ? openDocs() : activeTab = item.id"
           >
             <!-- Active Indicator -->
-            <div v-if="activeTab === item.id" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-primary"></div>
+            <div v-if="activeTab === item.id && !item.isExternal" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-primary"></div>
             
             <component :is="item.icon" class="w-5 h-5 mr-3 shrink-0" />
             

@@ -147,15 +147,9 @@ async def create_llm_model(model_in: LLMModelCreate, db: AsyncSession = Depends(
     # if result.scalars().first():
     #     raise HTTPException(status_code=400, detail="Model with this name already exists")
 
-    new_model = LLMModel(
-        name=model_in.name,
-        provider=model_in.provider,
-        model_id=model_in.model_id,
-        model_type=model_in.model_type,
-        api_key=model_in.api_key,
-        base_url=model_in.base_url,
-        is_active=model_in.is_active,
-    )
+    # Use dict unpacking to automatically map all fields from schema to model
+    new_model = LLMModel(**model_in.dict())
+    
     db.add(new_model)
     await db.commit()
     await db.refresh(new_model)

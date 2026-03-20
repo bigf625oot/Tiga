@@ -176,18 +176,30 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-[1fr,auto] gap-5 pl-1">
-                      <div class="flex flex-col space-y-2">
-                        <Label class="text-xs font-medium flex items-center gap-1">
-                          团队名称 <span class="text-destructive">*</span>
-                        </Label>
-                        <Input 
-                          v-model="formData.name" 
-                          placeholder="例如：市场情报分析组" 
-                          class="h-9 transition-colors focus-visible:ring-primary/20" 
-                          :class="{'border-destructive focus-visible:ring-destructive/20': errors.name}"
-                          @input="errors.name = ''"
-                        />
-                        <span v-if="errors.name" class="text-xs text-destructive animate-in slide-in-from-top-1 block">{{ errors.name }}</span>
+                      <div class="flex flex-col gap-4">
+                        <div class="flex gap-4">
+                            <div class="flex-1 space-y-2">
+                                <Label class="text-xs font-medium flex items-center gap-1">
+                                团队名称 <span class="text-destructive">*</span>
+                                </Label>
+                                <Input 
+                                v-model="formData.name" 
+                                placeholder="例如：市场情报分析组" 
+                                class="h-9 transition-colors focus-visible:ring-primary/20" 
+                                :class="{'border-destructive focus-visible:ring-destructive/20': errors.name}"
+                                @input="errors.name = ''"
+                                />
+                                <span v-if="errors.name" class="text-xs text-destructive animate-in slide-in-from-top-1 block">{{ errors.name }}</span>
+                            </div>
+                            <div class="w-32 space-y-2">
+                                <Label class="text-xs font-medium">版本号</Label>
+                                <Input 
+                                v-model="formData.version" 
+                                placeholder="1.0.0" 
+                                class="h-9 font-mono text-xs" 
+                                />
+                            </div>
+                        </div>
                       </div>
                       
                       <div class="flex flex-col space-y-2">
@@ -657,15 +669,34 @@ const selectedCategory = ref('all');
 
 const currentTab = ref('instances'); // instances | templates
 
-const formData = ref({
-  id: null as number | null,
+type TeamFormData = {
+  id: number | null;
+  name: string;
+  description: string;
+  version: string;
+  icon: string;
+  mode: string;
+  leader_id: string | null;
+  members: string[];
+  team_config: Record<string, any>;
+  extra_metadata: Record<string, any>;
+  is_template: boolean;
+  is_active: boolean;
+};
+
+const formData = ref<TeamFormData>({
+  id: null,
   name: '',
   description: '',
+  version: '1.0.0',
   icon: '',
   mode: 'coordinate',
-  leader_id: null as string | null,
-  members: [] as string[],
-  is_template: false
+  leader_id: null,
+  members: [],
+  team_config: {},
+  extra_metadata: {},
+  is_template: false,
+  is_active: true
 });
 
 const errors = ref({
@@ -871,11 +902,15 @@ const startCreate = () => {
     id: null,
     name: '',
     description: '',
+    version: '1.0.0',
     icon: '',
     mode: 'coordinate',
     leader_id: null,
     members: [],
-    is_template: currentTab.value === 'templates'
+    team_config: {},
+    extra_metadata: {},
+    is_template: currentTab.value === 'templates',
+    is_active: true
   };
   errors.value = { name: '', leader: '', members: '' };
   // Wait for DOM update before capturing original state
@@ -890,11 +925,15 @@ const editTeam = (team: any) => {
     id: team.id,
     name: team.name,
     description: team.description,
+    version: team.version || '1.0.0',
     icon: team.icon || '',
     mode: team.mode,
     leader_id: team.leader_id,
     members: [...team.members],
-    is_template: team.is_template || false
+    team_config: team.team_config || {},
+    extra_metadata: team.extra_metadata || {},
+    is_template: team.is_template || false,
+    is_active: team.is_active !== false
   };
   errors.value = { name: '', leader: '', members: '' };
   originalFormData.value = JSON.stringify(formData.value);
@@ -1019,11 +1058,15 @@ const createFromTemplate = (team: any) => {
     id: null,
     name: `${team.name} (副本)`,
     description: team.description,
+    version: '1.0.0',
     icon: team.icon || '',
     mode: team.mode,
     leader_id: team.leader_id,
     members: [...team.members],
-    is_template: false
+    team_config: team.team_config || {},
+    extra_metadata: team.extra_metadata || {},
+    is_template: false,
+    is_active: true
   };
   errors.value = { name: '', leader: '', members: '' };
   originalFormData.value = JSON.stringify(formData.value);

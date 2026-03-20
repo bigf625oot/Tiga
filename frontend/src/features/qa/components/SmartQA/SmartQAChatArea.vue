@@ -133,6 +133,8 @@
             @quote-message="handleQuoteMessage"
             @excerpt-message="handleExcerptMessage"
             @delete-message="$emit('delete-message', $event)"
+            @resend-message="$emit('resend-message', $event)"
+            @edit-message="$emit('edit-message', $event)"
           />
         </div>
 
@@ -262,7 +264,9 @@ const emit = defineEmits([
   'remove-attachment',
   'add-attachment',
   'excerpt-message',
-  'delete-message'
+  'delete-message',
+  'resend-message',
+  'edit-message'
 ]);
 
 const handleQuoteMessage = (content: string) => {
@@ -312,6 +316,13 @@ const handleSelectEntrance = (next: 'auto' | 'manual') => {
     emit('update:selectedAgentId', ''); // 清空选中的智能体，交由大模型意图识别
   } else {
     modeEntrance.value = next;
+    // 切换到手动（极客）模式时，如果当前没有具体模式，默认选中 quick 模式
+    if (!props.currentModeId) {
+      const quickMode = props.modes.find(m => m.id === 'quick') || props.modes[0];
+      if (quickMode) {
+        emit('select-mode', quickMode);
+      }
+    }
   }
 };
 

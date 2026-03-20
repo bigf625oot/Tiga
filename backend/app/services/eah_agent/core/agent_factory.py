@@ -1,203 +1,205 @@
-"""
-Agent Factory
-核心功能：
-- 根据配置创建 Agno 智能体
-- 支持自定义模型、工具和技能
-- 集成数据库会话管理
-"""
+import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union, List, Dict, Any, Type
+from dataclasses import dataclass, field
+
 from agno.agent import Agent
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.eah_agent.domain.config import AgentConfig, TeamConfig
+# 内部模块依赖
+from app.core.config import settings
+from app.models.llm_model import LLMModel
 from app.services.llm.factory import ModelFactory
 from app.services.llm.resolver import resolve_chat_llm_model
-from app.models.llm_model import LLMModel
+from app.services.eah_agent.domain.config import AgentConfig, TeamConfig
 from app.services.eah_agent.tools.tool_factory import ToolFactory
 from app.services.eah_agent.skills.loaders.local import LocalSkills
 from app.services.eah_agent.skills.manager import Skills
-from app.core.config import settings
+from app.services.eah_agent.utils.secret_refs import resolve_secret_refs
+from app.services.eah_agent.utils.agno_compat import filter_init_kwargs
 
 logger = logging.getLogger(__name__)
 
+# --- 1. 指令编排器 (Instruction Orchestrator) ---
+
+class InstructionManager:
+    """处理复杂指令的聚合、去重与格式化"""
+    def __init__(self, base: Optional[Union[str, List[str]]] = None):
+        self._items: List[str] = []
+        if base:
+            self.extend(base)
+
+    def append(self, item: Optional[str]):
+        if item and item.strip() and item not in self._items:
+            self._items.append(item.strip())
+
+    def extend(self, items: Union[str, List[str]]):
+        if isinstance(items, str):
+            self.append(items)
+        else:
+            for i in items: self.append(i)
+
+    def compile(self) -> List[str]:
+        return self._items
+
+# --- 2. 模型适配器 (Model Provider Adapter) ---
+
+class ModelProviderAdapter:
+    """解耦厂商特定的逻辑 (DeepSeek, OpenAI o1, etc.)"""
+    @staticmethod
+    def apply_custom_logic(model: Any, llm_record: LLMModel, config: AgentConfig):
+        provider = (llm_record.provider or "").lower()
+        
+        # DeepSeek R1/V3 推理增强逻辑
+        if provider == "deepseek" and config.reasoning:
+            # 动态设置厂商特有参数，避免硬编码在工厂主流程
+            attrs = {
+                "extra_body": {"thinking": {"type": "enabled"}},
+                "reasoning_effort": "high",
+                "verbosity": "high"
+            }
+            for attr, val in attrs.items():
+                if hasattr(model, attr):
+                    setattr(model, attr, val)
+        
+        # 未来可在此扩展 OpenAI o1-preview 或 Claude 3.5 Sonnet 的特殊处理
+
+# --- 3. 核心 Agent 工厂 (The Grand Factory) ---
+
 class AgentFactory:
     """
-    Factory class to create Agno Agents based on configuration.
+    P10 级 Agent 工厂：支持高并发构建、多态模型适配与指令深度编排。
     """
     
+    _skills_manager: Optional[Skills] = None
+    _lock = asyncio.Lock()
+
+    @classmethod
+    async def get_skills_manager(cls) -> Optional[Skills]:
+        """单例模式加载技能管理器"""
+        if cls._skills_manager is None:
+            async with cls._lock:
+                if cls._skills_manager is None:
+                    path = Path(__file__).parent.parent / "skills"
+                    if path.exists():
+                        loader = LocalSkills(str(path), validate=False)
+                        cls._skills_manager = Skills([loader])
+                    else:
+                        logger.warning(f"Skills path missing: {path}")
+        return cls._skills_manager
+
     @staticmethod
-    async def create_agent(config: AgentConfig, db: Optional[AsyncSession] = None, llm_model: Optional[LLMModel] = None) -> Agent:
+    async def create_agent(
+        config: AgentConfig, 
+        db: Optional[AsyncSession] = None, 
+        llm_model: Optional[LLMModel] = None,
+        tools: Optional[list] = None,
+        instructions: Optional[Union[list, str]] = None,
+        **kwargs
+    ) -> Agent:
         """
-        Creates a single Agno Agent from config.
+        构建单个 Agno Agent。
         """
         try:
-            # 1. Resolve Model
-            model = None
+            # 1. 模型资源解析 (Resource Resolution)
             if not llm_model and db:
                 llm_model = await resolve_chat_llm_model(db, model_id=config.model_id)
-
-            if llm_model:
-                model = ModelFactory.create_model(llm_model)
-                # Apply model parameters if provided
-                if config.model_params:
-                    for key, value in config.model_params.items():
-                        if hasattr(model, key):
-                            setattr(model, key, value)
-                if config.reasoning and llm_model and (llm_model.provider or "").lower() == "deepseek":
-                    if hasattr(model, "extra_body") and getattr(model, "extra_body", None) is None:
-                        setattr(model, "extra_body", {"thinking": {"type": "enabled"}})
-                    if hasattr(model, "reasoning_effort") and getattr(model, "reasoning_effort", None) is None:
-                        setattr(model, "reasoning_effort", "high")
-                    if hasattr(model, "verbosity") and getattr(model, "verbosity", None) is None:
-                        setattr(model, "verbosity", "high")
-            else:
-                # Fallback to default model if not provided
-                # We construct a default LLMModel to use ModelFactory's logic (which includes role_map)
-                
-                # Determine provider and key from settings
-                provider = "openai"
-                api_key = settings.OPENAI_API_KEY
-                model_id = "gpt-3.5-turbo"
-                
-                # Check for DeepSeek config
-                if settings.DEEPSEEK_API_KEY:
-                    provider = "deepseek"
-                    api_key = settings.DEEPSEEK_API_KEY
-                    model_id = "deepseek-chat"
-                elif not api_key:
-                    # If no keys, use dummy
-                    api_key = "dummy"
-
-                # Check if specific model config exists in kwargs or other sources?
-                # Actually, if the user selected a model in the UI, 'llm_model' argument should NOT be None.
-                # If 'llm_model' is None, it means the caller didn't pass a model.
-                # For QuickHandler (Miaodong), it might be using default.
-                
-                # If config object has model_id but we are here (llm_model is None), 
-                # we should try to use config.model_id if available.
-                if config.model_id:
-                    model_id = config.model_id
-                    # If model_id implies a provider, we might need to guess it or fetch it from DB.
-                    # But here we don't have DB access easily to lookup model_id -> provider.
-                    # So we rely on defaults or what's in settings.
-                    
-                    # Simple heuristic for provider based on model_id
-                    if "deepseek" in model_id.lower():
-                        provider = "deepseek"
-                        api_key = settings.DEEPSEEK_API_KEY or api_key
-                    elif "gpt" in model_id.lower():
-                        provider = "openai"
-                        api_key = settings.OPENAI_API_KEY or api_key
-                    elif "claude" in model_id.lower():
-                        provider = "anthropic"
-                        # api_key = settings.ANTHROPIC_API_KEY # if we had it
-
-                default_llm = LLMModel(
-                    model_id=model_id,
-                    provider=provider,
-                    api_key=api_key,
-                )
-                # If config has model_id, use it
-                model = ModelFactory.create_model(default_llm)
-                if config.model_params:
-                     for key, value in config.model_params.items():
-                        if hasattr(model, key):
-                            setattr(model, key, value)
-                if config.reasoning and (default_llm.provider or "").lower() == "deepseek":
-                    if hasattr(model, "extra_body") and getattr(model, "extra_body", None) is None:
-                        setattr(model, "extra_body", {"thinking": {"type": "enabled"}})
-                    if hasattr(model, "reasoning_effort") and getattr(model, "reasoning_effort", None) is None:
-                        setattr(model, "reasoning_effort", "high")
-                    if hasattr(model, "verbosity") and getattr(model, "verbosity", None) is None:
-                        setattr(model, "verbosity", "high")
-
-            # 2. Load Tools
-            tools = []
-            # Initialize ToolFactory once
-            ToolFactory.initialize()
             
-            for tool_cfg in config.tools:
-                if tool_cfg.enabled:
-                    tool_instance = ToolFactory.create_tool(tool_cfg.name, tool_cfg.config)
-                    if tool_instance:
-                        tools.append(tool_instance)
-                    else:
-                        logger.warning(f"Skipping tool '{tool_cfg.name}' for agent '{config.name}' due to creation failure.")
+            if not llm_model:
+                llm_model = ModelFactory.resolve_default_llm_model(settings)
 
-            # 3. Load Skills
-            if config.skills:
-                try:
-                    # Assuming skills directory is at backend/app/services/eah_agent/skills
-                    # We need to find the absolute path. Current file is in core/
-                    skills_path = Path(__file__).parent.parent / "skills"
-                    if skills_path.exists():
-                        # We load all skills from the directory
-                        # TODO: Filter skills based on config.skills list if needed
-                        loader = LocalSkills(str(skills_path), validate=False)
-                        skills_manager = Skills([loader])
-                        
-                        # Get tools and prompt
-                        skill_tools = skills_manager.get_tools()
-                        tools.extend(skill_tools)
-                        
-                        skill_prompt = skills_manager.get_system_prompt_snippet()
-                        if skill_prompt:
-                            config.instructions.append(skill_prompt)
-                    else:
-                        logger.warning(f"Skills directory not found at {skills_path}")
-                except Exception as e:
-                    logger.error(f"Failed to load skills: {e}")
+            # 2. 模型实例化与适配 (Model Instantiation & Adaptation)
+            model_instance = ModelFactory.create_model(llm_model)
+            # 注入配置参数
+            if config.model_params:
+                for k, v in config.model_params.items():
+                    if hasattr(model_instance, k): setattr(model_instance, k, v)
+            
+            # 应用厂商特定策略
+            ModelProviderAdapter.apply_custom_logic(model_instance, llm_model, config)
 
-            # 4. Create Agent
-            agent = Agent(
-                model=model,
-                description=config.role,
-                instructions=config.instructions,
-                tools=tools,
-                # show_tool_calls=True,  # 中文注释：是否展示工具调用，已被弃用或不支持
-                markdown=True,
-                reasoning=config.reasoning
-            )
+            # 3. 工具与技能装配 (Tooling & Skills)
+            final_tools = tools or []
+            im = InstructionManager(instructions or config.instructions)
+
+            # 异步加载技能 (Skills are semi-static)
+            sm = await AgentFactory.get_skills_manager()
+            if config.skills and sm:
+                final_tools.extend(sm.get_tools())
+                im.append(sm.get_system_prompt_snippet())
+
+            # 加载动态工具 (ToolFactory)
+            if config.tools:
+                ToolFactory.initialize()
+                for tc in config.tools:
+                    if not tc.enabled: continue
+                    t_inst = ToolFactory.create_tool(tc.name, resolve_secret_refs(tc.config or {}))
+                    if t_inst: final_tools.append(t_inst)
+
+            # 4. 实例封装 (Final Assembly)
+            agent_payload = {
+                "name": config.name,
+                "model": model_instance,
+                "description": config.role,
+                "instructions": im.compile(),
+                "tools": final_tools,
+                "show_tool_calls": config.model_params.get("show_tool_calls", True),
+                "markdown": kwargs.pop("markdown", True),
+                "reasoning": config.reasoning,
+                "monitoring": True,
+                "debug_mode": settings.DEBUG,
+                **kwargs,
+            }
+
+            # 过滤 Agno 构造函数参数，防止 SDK 升级崩溃
+            agent = Agent(**filter_init_kwargs(Agent.__init__, agent_payload))
+            
+            # 注入元数据用于 Trace
+            agent.extra_metadata = {"model_id": llm_model.model_id, "provider": llm_model.provider}
+            
             return agent
-            
+
         except Exception as e:
-            logger.error(f"Failed to create agent {config.name}: {e}")
-            raise e
+            logger.error(f"Failed to create agent [{config.name}]: {e}", exc_info=True)
+            raise
 
     @staticmethod
     async def create_team(config: TeamConfig, db: Optional[AsyncSession] = None) -> Agent:
         """
-        Creates a Team Agent based on TeamConfig.
+        P10 级团队构建：支持成员并行实例化，自动生成协作提示词。
         """
         try:
-            # 1. Create Member Agents
-            members = []
-            for member_config in config.members:
-                # Create member agent
-                member_agent = await AgentFactory.create_agent(member_config, db=db)
-                members.append(member_agent)
+            # 1. 并行构建所有成员 (Concurrency Optimization)
+            # 相比于 for 循环，并行构建能显著降低复杂团队的启动延迟
+            member_tasks = [
+                AgentFactory.create_agent(m_cfg, db=db) 
+                for m_cfg in config.members
+            ]
+            members = await asyncio.gather(*member_tasks)
 
-            # 2. Create Leader Agent
+            # 2. 构建 Leader
             leader_agent = await AgentFactory.create_agent(config.leader_agent, db=db)
             
-            # 3. Assign Team
-            # Inject team members into the leader agent
+            # 3. 编排团队逻辑
             leader_agent.team = members
             
-            # 4. Update Instructions for Coordination
-            member_desc = "\n".join([f"- {m.name}: {m.description}" for m in members])
-            coordination_prompt = f"\n\n## Team Structure\nYou are the leader of a team consisting of:\n{member_desc}\n\nCoordinate these members to answer the user's request."
+            # 4. 自动生成增强型团队指令 (Team Orchestration Prompt)
+            member_context = "\n".join([f"- {m.name}: {m.description}" for m in members])
+            team_prompt = (
+                f"\n\n## Team Collaboration\n"
+                f"You are the Leader. Coordinate the following specialists:\n{member_context}\n"
+                f"Delegate tasks by calling their respective names when needed."
+            )
             
-            # Ensure instructions is a list
+            # 注入指令
             if isinstance(leader_agent.instructions, list):
-                leader_agent.instructions.append(coordination_prompt)
-            elif isinstance(leader_agent.instructions, str):
-                leader_agent.instructions += coordination_prompt
-            
+                leader_agent.instructions.append(team_prompt)
+            else:
+                leader_agent.instructions = f"{leader_agent.instructions or ''}\n{team_prompt}"
+
             return leader_agent
 
         except Exception as e:
-            logger.error(f"Failed to create team {config.name}: {e}")
-            raise e
+            logger.error(f"Team construction failed [{config.name}]: {e}", exc_info=True)
+            raise

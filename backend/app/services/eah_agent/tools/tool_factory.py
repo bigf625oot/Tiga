@@ -19,6 +19,7 @@ class ToolFactory:
     Factory to create and configure tool instances.
     """
     _tool_classes: Dict[str, Type[Toolkit]] = {}
+    _availability_cache: Dict[str, bool] = {}
     _initialized = False
 
     @classmethod
@@ -32,6 +33,8 @@ class ToolFactory:
         try:
             cls._tool_classes = discover_tools(include_metadata=False)
             logger.info(f"Discovered {len(cls._tool_classes)} tools.")
+            # Reset cache when re-initialized
+            cls._availability_cache.clear()
             cls._initialized = True
         except Exception as e:
             logger.error(f"Failed to discover tools: {e}")
@@ -58,9 +61,18 @@ class ToolFactory:
             logger.warning(f"Tool '{name}' not found.")
             return None
             
-        if not check_tool_availability(tool_cls):
-            logger.warning(f"Tool '{name}' is not available (missing dependencies or keys).")
-            return None
+        # Check cache first
+        if name in cls._availability_cache:
+            if not cls._availability_cache[name]:
+                logger.warning(f"Tool '{name}' is not available (cached).")
+                return None
+        else:
+            # Check availability and cache it
+            is_available = check_tool_availability(tool_cls)
+            cls._availability_cache[name] = is_available
+            if not is_available:
+                logger.warning(f"Tool '{name}' is not available (missing dependencies or keys).")
+                return None
             
         config = config or {}
         try:

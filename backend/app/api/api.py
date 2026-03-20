@@ -20,6 +20,7 @@ from app.api.endpoints import (
     agent_workflow,
     skills,
     service_categories,
+    service_market,
     tools,
     task_mode,
     relation_fix,
@@ -65,4 +66,5 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(rag.router, prefix="/rag", tags=["rag"])
 api_router.include_router(skills.router, prefix="/skills", tags=["skills"])
 api_router.include_router(service_categories.router, prefix="/service-categories", tags=["service-categories"])
+api_router.include_router(service_market.router, prefix="/service-market", tags=["service-market"])
 api_router.include_router(task_mode.router, prefix="/task-mode", tags=["task-mode"])

@@ -33,6 +33,8 @@ interface DBConfig {
   password: string;
   ssl: boolean;
   timeout: number;
+  allowed_tables?: string;
+  sensitive_fields?: string;
 }
 
 const graphDB = reactive<DBConfig>({
@@ -44,6 +46,8 @@ const graphDB = reactive<DBConfig>({
   password: '',
   ssl: false,
   timeout: 30,
+  allowed_tables: '',
+  sensitive_fields: ''
 });
 
 const vectorDB = reactive<DBConfig>({
@@ -55,6 +59,8 @@ const vectorDB = reactive<DBConfig>({
   password: '',
   ssl: false,
   timeout: 30,
+  allowed_tables: '',
+  sensitive_fields: ''
 });
 
 const isGraphTesting = ref(false);
@@ -206,6 +212,20 @@ const testConnection = async (type: 'graph' | 'vector') => {
             </div>
         </div>
 
+        <div class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <h4 class="text-sm font-medium dark:text-slate-200">安全与权限设置</h4>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <Label class="dark:text-slate-200">允许访问的集合/图 (Allowed Collections)</Label>
+                    <Input v-model="graphDB.allowed_tables" placeholder="用逗号分隔，留空允许所有" class="dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200" />
+                </div>
+                <div class="space-y-2">
+                    <Label class="dark:text-slate-200">敏感属性脱敏 (Sensitive Fields)</Label>
+                    <Input v-model="graphDB.sensitive_fields" placeholder="用逗号分隔" class="dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200" />
+                </div>
+            </div>
+        </div>
+
         <div class="pt-4 flex justify-end">
           <Button @click="testConnection('graph')" :disabled="isGraphTesting">
             <Loader2 v-if="isGraphTesting" class="mr-2 h-4 w-4 animate-spin" />
@@ -303,6 +323,20 @@ const testConnection = async (type: 'graph' | 'vector') => {
             <div class="space-y-2 w-1/2">
                <Label class="dark:text-slate-200">数据库名称 / Collection</Label>
                <Input v-model="vectorDB.dbName" placeholder="default" class="dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200" />
+            </div>
+        </div>
+
+        <div class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <h4 class="text-sm font-medium dark:text-slate-200">安全与权限设置</h4>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <Label class="dark:text-slate-200">允许访问的集合/图 (Allowed Collections)</Label>
+                    <Input v-model="vectorDB.allowed_tables" placeholder="用逗号分隔，留空允许所有" class="dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200" />
+                </div>
+                <div class="space-y-2">
+                    <Label class="dark:text-slate-200">敏感属性脱敏 (Sensitive Fields)</Label>
+                    <Input v-model="vectorDB.sensitive_fields" placeholder="用逗号分隔" class="dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200" />
+                </div>
             </div>
         </div>
 

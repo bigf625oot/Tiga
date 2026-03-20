@@ -37,7 +37,22 @@
         class="relative px-5 py-4 text-sm leading-relaxed transition-all duration-200 shadow-sm"
         :class="bubbleClasses"
       >
-        <div v-if="isUser" class="user-markdown" v-html="userHtml"></div>
+        <template v-if="isUser">
+            <div v-if="isEditing" class="flex flex-col gap-2 min-w-[200px]">
+                <textarea 
+                    v-model="editContent" 
+                    class="w-full bg-transparent text-primary-foreground placeholder:text-primary-foreground/50 resize-none outline-none border border-primary-foreground/20 rounded p-2 focus:border-primary-foreground/50 transition-colors custom-scrollbar"
+                    rows="3"
+                    @keydown.ctrl.enter="saveEdit"
+                    @keydown.esc="cancelEdit"
+                ></textarea>
+                <div class="flex justify-end gap-2 text-xs">
+                    <button @click="cancelEdit" class="px-2 py-1 rounded bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">取消</button>
+                    <button @click="saveEdit" class="px-2 py-1 rounded bg-primary-foreground text-primary hover:bg-primary-foreground/90 transition-colors">发送</button>
+                </div>
+            </div>
+            <div v-else class="user-markdown" v-html="userHtml"></div>
+        </template>
 
         <!-- Agent Mode: Rich Content -->
         <div v-else class="agent-content flex flex-col gap-4">
@@ -203,8 +218,14 @@
       <!-- Actions (Outside Bubble) -->
       <div class="flex items-center gap-2 mt-2" :class="isUser ? 'mr-1 justify-end' : 'ml-1'">
           <template v-if="isUser">
+              <button v-if="!isEditing" class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="编辑" @click="startEdit">
+                  <Pencil class="w-3.5 h-3.5" />
+              </button>
               <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
                   <Copy class="w-3.5 h-3.5" />
+              </button>
+              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="重新发送" @click="$emit('resend-message', message)">
+                  <RotateCcw class="w-3.5 h-3.5" />
               </button>
               <button class="p-1 text-muted-foreground/60 hover:text-destructive transition-colors" title="删除" @click="$emit('delete-message', message)">
                   <Trash2 class="w-3.5 h-3.5" />
@@ -238,9 +259,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, ref, watch } from 'vue';
+import { computed, toRef, ref, watch, nextTick } from 'vue';
 import dayjs from 'dayjs';
-import { Activity, Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2 } from 'lucide-vue-next';
+import { Activity, Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2, Pencil, RotateCcw } from 'lucide-vue-next';
 import ChartFrame from '../../analytics/components/ChartFrame.vue';
 import GenericResourceCard from './GenericResourceCard.vue';
 import { useMessageParser } from '../composables/useMessageParser';
@@ -258,10 +279,29 @@ const props = defineProps({
   isStreaming: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
 
 const isExcerptionAnimating = ref(false);
 const isStepsExpanded = ref(true);
+
+const isEditing = ref(false);
+const editContent = ref('');
+
+const startEdit = () => {
+    editContent.value = props.message.content;
+    isEditing.value = true;
+};
+
+const cancelEdit = () => {
+    isEditing.value = false;
+    editContent.value = '';
+};
+
+const saveEdit = () => {
+    if (!editContent.value.trim()) return;
+    emit('edit-message', { originalMessage: props.message, newContent: editContent.value });
+    isEditing.value = false;
+};
 
 const handleExcerpt = () => {
     isExcerptionAnimating.value = true;
@@ -356,6 +396,7 @@ const handleResourceClick = (id: string) => {
 .markdown-body :deep(h3) { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: hsl(var(--foreground)); display: flex; align-items: center; gap: 8px; }
 .markdown-body :deep(h3)::before { content: ''; display: inline-block; width: 4px; height: 16px; background: hsl(var(--primary)); border-radius: 2px; }
 .markdown-body :deep(strong) { font-weight: 600; color: hsl(var(--foreground)); }
+.markdown-body :deep(img) { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; border: 1px solid hsl(var(--border)); }
 
 .user-markdown :deep(p) { margin: 0; }
 .user-markdown :deep(p + p) { margin-top: 0.75rem; }

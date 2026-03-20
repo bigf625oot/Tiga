@@ -128,6 +128,32 @@
                   </div>
                 </div>
 
+                <!-- Security & Permissions -->
+                <div class="space-y-4 pt-4 border-t border-border">
+                  <div class="space-y-2">
+                    <h3 class="font-medium text-sm flex items-center gap-2"><Shield class="h-4 w-4" /> 安全与权限设置</h3>
+                    <p class="text-xs text-muted-foreground">配置当前问数会话允许访问的表和需要脱敏的敏感字段。</p>
+                  </div>
+
+                  <div class="space-y-2">
+                    <Label>允许访问的表 (Allowed Tables)</Label>
+                    <Input v-model="permissionConfig.allowed_tables" placeholder="如: users, orders (用逗号分隔，留空表示允许所有)" />
+                  </div>
+
+                  <div class="space-y-2">
+                    <Label>敏感字段脱敏 (Sensitive Fields)</Label>
+                    <Input v-model="permissionConfig.sensitive_fields" placeholder="如: phone, email, id_card (用逗号分隔)" />
+                  </div>
+                  
+                  <div class="pt-2 flex justify-end">
+                    <Button :disabled="savingPermissions" @click="handleSavePermissions" variant="outline" size="sm">
+                      <Save v-if="!savingPermissions" class="mr-2 h-3 w-3" />
+                      <RotateCw v-else class="mr-2 h-3 w-3 animate-spin" />
+                      保存权限配置
+                    </Button>
+                  </div>
+                </div>
+
                 <!-- Legacy Config -->
                 <Collapsible v-model:open="showAdvanced" class="space-y-4 pt-4 border-t border-border">
                   <CollapsibleTrigger
@@ -605,7 +631,7 @@ import {
   Search, Plus, MoreVertical, Star, Archive, Trash2, Edit2, Settings,
   Database, ChevronRight, ChevronDown, Play, Save, Info,
   Send, BarChart2, Table as TableIcon, Code,
-  Loader2, FileText, CheckCircle2, XCircle, LayoutPanelLeft
+  Loader2, FileText, CheckCircle2, XCircle, LayoutPanelLeft, Shield
 } from 'lucide-vue-next';
 
 const { toast } = useToast();
@@ -638,6 +664,12 @@ const config = ref({
   charset: 'utf8mb4',
   ssl_mode: 'disable'
 });
+
+const permissionConfig = ref({
+  allowed_tables: '',
+  sensitive_fields: ''
+});
+const savingPermissions = ref(false);
 
 const showAdvanced = ref(false);
 const testing = ref(false);
@@ -789,10 +821,42 @@ const fetchConfig = async () => {
     const res = await fetch('/api/v1/data_query/config');
     if (res.ok) {
       const data = await res.json();
-      if (Object.keys(data).length > 0) config.value = { ...config.value, ...data };
+      if (Object.keys(data).length > 0) {
+        config.value = { ...config.value, ...data };
+        permissionConfig.value.allowed_tables = (data.allowed_tables || []).join(', ');
+        permissionConfig.value.sensitive_fields = (data.sensitive_fields || []).join(', ');
+      }
     }
   } catch (e) {
     console.error("Failed to load config", e);
+  }
+};
+
+const handleSavePermissions = async () => {
+  savingPermissions.value = true;
+  try {
+    const payload = {
+      ...config.value,
+      allowed_tables: permissionConfig.value.allowed_tables ? permissionConfig.value.allowed_tables.split(',').map(s => s.trim()).filter(Boolean) : [],
+      sensitive_fields: permissionConfig.value.sensitive_fields ? permissionConfig.value.sensitive_fields.split(',').map(s => s.trim()).filter(Boolean) : []
+    };
+    
+    const res = await fetch('/api/v1/data_query/config/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (res.ok) {
+      toast({ title: '保存成功', description: '权限与安全配置已生效' });
+    } else {
+      const err = await res.json();
+      throw new Error(err.detail || '保存失败');
+    }
+  } catch (e) {
+    toast({ title: '保存失败', description: e.message, variant: 'destructive' });
+  } finally {
+    savingPermissions.value = false;
   }
 };
 

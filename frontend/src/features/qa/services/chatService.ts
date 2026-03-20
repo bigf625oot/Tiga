@@ -50,6 +50,10 @@ export const chatService = {
     await api.put(`/chat/sessions/${sessionId}`, data);
   },
 
+  async deleteMessage(sessionId: string, messageId: number): Promise<void> {
+    await api.delete(`/chat/sessions/${sessionId}/messages/${messageId}`);
+  },
+
   async sendChatMessage(sessionId: string, payload: SendChatMessagePayload, signal?: AbortSignal): Promise<Response> {
     const res = await fetch(`/api/v1/chat/sessions/${sessionId}/chat`, {
       method: 'POST',

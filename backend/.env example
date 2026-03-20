@@ -1,5 +1,6 @@
 # Database
 USE_SQLITE=True
+DEBUG=False
 
 # Storage Configuration
 STORAGE_TYPE=aliyun_oss 

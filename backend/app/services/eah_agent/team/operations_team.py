@@ -35,9 +35,9 @@ class OperationsTeam(BaseTeam):
         self.members = team_members
 
         # 2. Build Manager
-        from app.services.eah_agent.agent.builder import AgentBuilder
+        from app.services.eah_agent.core.agent_builder import AgentAssembler
         
-        builder = AgentBuilder(self.db, manager_id)
+        builder = AgentAssembler(self.db, manager_id)
         await builder._fetch_agent_config()
         await builder._fetch_model_config()
         await builder._load_tools()

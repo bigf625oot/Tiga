@@ -47,7 +47,7 @@
           </span>
           
           <Badge 
-            v-if="item.count && !isSidebarCollapsed" 
+            v-if="item.count !== undefined && !isSidebarCollapsed" 
             variant="secondary" 
             class="ml-auto text-[10px] h-5 px-1.5"
           >
@@ -247,25 +247,17 @@
               <Input v-model="newToolForm.name" placeholder="例如：codemap" class="bg-background" />
             </div>
             <div class="space-y-2.5">
-              <Label>版本 <span class="text-destructive">*</span></Label>
-              <Input v-model="newToolForm.version" placeholder="1.0.0" class="bg-background" />
+              <Label>标识符 (Slug)</Label>
+              <Input v-model="newToolForm.slug" placeholder="例如：codemap-tool" class="bg-background" />
             </div>
           </div>
 
-          <!-- Category or MCP Type -->
-          <div class="grid gap-6" :class="newToolForm.type === 'mcp' ? 'grid-cols-2' : 'grid-cols-1'">
-            <div v-if="newToolForm.type === 'mcp'" class="space-y-2.5">
-              <Label>MCP 类型</Label>
-              <Select v-model="newToolForm.mcp_type">
-                <SelectTrigger class="bg-background">
-                  <SelectValue placeholder="选择类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="stdio">STDIO (Standard Input/Output)</SelectItem>
-                  <SelectItem value="sse">SSE (Server-Sent Events)</SelectItem>
-                </SelectContent>
-              </Select>
+          <div class="grid grid-cols-2 gap-6">
+            <div class="space-y-2.5">
+              <Label>版本 <span class="text-destructive">*</span></Label>
+              <Input v-model="newToolForm.version" placeholder="1.0.0" class="bg-background" />
             </div>
+            <!-- Category or MCP Type -->
             <div class="space-y-2.5">
               <Label>分类</Label>
               <Select v-model="newToolForm.category">
@@ -281,51 +273,82 @@
             </div>
           </div>
 
+          <div v-if="newToolForm.type === 'mcp'" class="space-y-2.5">
+              <Label>MCP 类型</Label>
+              <Select v-model="newToolForm.mcp_type">
+                <SelectTrigger class="bg-background">
+                  <SelectValue placeholder="选择类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stdio">STDIO (Standard Input/Output)</SelectItem>
+                  <SelectItem value="sse">SSE (Server-Sent Events)</SelectItem>
+                </SelectContent>
+              </Select>
+          </div>
+
           <!-- Description -->
           <div class="space-y-2.5">
             <Label>描述</Label>
             <textarea 
               v-model="newToolForm.description" 
-              rows="3" 
+              rows="2" 
               placeholder="简要描述该工具的功能、用途及特点..." 
-              class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              class="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
             ></textarea>
           </div>
 
-          <!-- Skill Specific: File Upload & Instructions -->
-          <div v-if="newToolForm.type === 'skill'" class="space-y-6">
-            <div class="space-y-2.5">
-              <Label>导入配置 (可选)</Label>
-              <div class="group bg-muted/30 border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer relative">
-                <input type="file" @change="handleFileUpload" accept=".zip,.skill" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                <div class="space-y-3 pointer-events-none">
-                  <div class="w-12 h-12 mx-auto rounded-full bg-muted group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center transition-colors text-muted-foreground">
-                    <Upload class="w-6 h-6" />
+          <!-- Skill Specific: Tabs -->
+          <Tabs v-if="newToolForm.type === 'skill'" defaultValue="content" class="w-full pt-2">
+            <TabsList class="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-6">
+              <TabsTrigger value="content" class="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 py-2 text-xs">指令内容</TabsTrigger>
+              <TabsTrigger value="schema" class="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 py-2 text-xs">参数定义</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="content" class="pt-4 space-y-6">
+              <div class="space-y-2.5">
+                <Label>导入配置 (可选)</Label>
+                <div class="group bg-muted/30 border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer relative">
+                  <input type="file" @change="handleFileUpload" accept=".zip,.skill" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                  <div class="space-y-2 pointer-events-none">
+                    <div class="w-10 h-10 mx-auto rounded-full bg-muted group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center transition-colors text-muted-foreground">
+                      <Upload class="w-5 h-5" />
+                    </div>
+                    <div class="text-xs text-foreground">
+                      <span class="font-semibold text-primary">点击上传</span> 或拖拽 .zip/.skill 文件
+                    </div>
                   </div>
-                  <div class="text-sm text-foreground">
-                    <span class="font-semibold text-primary">点击上传</span> 或将文件拖拽到此处
-                  </div>
-                  <p class="text-xs text-muted-foreground">支持 .zip 或 .skill 格式文件</p>
                 </div>
               </div>
-            </div>
 
-            <div class="space-y-2.5">
-              <Label>指令内容 <span class="text-destructive">*</span></Label>
-              <div class="relative">
-                <textarea 
-                  v-model="newToolForm.content" 
-                  rows="8" 
-                  placeholder="当这个 Skill 被触发时，你希望模型遵循哪些规则或信息..." 
-                  class="flex min-h-[200px] w-full rounded-md border border-input bg-muted/30 px-4 py-3 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-                ></textarea>
-                <Badge variant="outline" class="absolute right-3 top-3 text-[10px] bg-background/80 backdrop-blur">Markdown</Badge>
+              <div class="space-y-2.5">
+                <div class="relative">
+                  <textarea 
+                    v-model="newToolForm.content" 
+                    rows="10" 
+                    placeholder="当这个 Skill 被触发时，你希望模型遵循哪些规则或信息..." 
+                    class="flex min-h-[240px] w-full rounded-md border border-input bg-muted/30 px-4 py-3 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                  ></textarea>
+                  <Badge variant="outline" class="absolute right-3 top-3 text-[10px] bg-background/80 backdrop-blur">Markdown</Badge>
+                </div>
               </div>
-            </div>
-          </div>
+            </TabsContent>
+            
+            <TabsContent value="schema" class="pt-4 space-y-6">
+               <div class="space-y-2">
+                  <Label class="text-xs font-semibold">输入参数 (Input Schema)</Label>
+                  <p class="text-[10px] text-muted-foreground mb-2">定义模型调用此技能时需要提供的参数结构。</p>
+                  <SchemaBuilder v-model="newToolForm.input_schema" />
+               </div>
+               <div class="space-y-2 pt-4 border-t">
+                  <Label class="text-xs font-semibold">输出格式 (Output Schema)</Label>
+                  <p class="text-[10px] text-muted-foreground mb-2">定义此技能执行后返回的数据结构（可选）。</p>
+                  <SchemaBuilder v-model="newToolForm.output_schema" />
+               </div>
+            </TabsContent>
+          </Tabs>
 
           <!-- MCP Specific: Config -->
-          <div v-else class="space-y-2.5">
+          <div v-else class="space-y-2.5 pt-4">
             <Label>MCP 配置 <span class="text-destructive">*</span></Label>
             <div class="relative">
               <textarea 
@@ -351,10 +374,11 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue';
 import JSZip from 'jszip';
 import ToolCard from './ToolCard.vue';
+import SchemaBuilder from '@/components/SchemaBuilder.vue';
 import { 
   Search, 
   LayoutGrid, 
@@ -377,6 +401,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/toast/use-toast';
+import { api } from '@/core/api/client';
 import {
   Dialog,
   DialogContent,
@@ -399,8 +424,57 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
+type MenuItem = {
+  id: string;
+  label: string;
+  count?: number;
+};
+
+type MarketItemBase = {
+  id: string;
+  name: string;
+  type: 'mcp' | 'skill';
+  version: string;
+  installed: boolean;
+  isInstalling?: boolean;
+  [key: string]: any;
+};
+
+type McpMarketItem = MarketItemBase & {
+  type: 'mcp';
+  mcp_type?: string;
+};
+
+type SkillMarketItem = MarketItemBase & {
+  type: 'skill';
+  meta_data?: { scope?: string };
+  input_schema?: Record<string, any>;
+  output_schema?: Record<string, any>;
+};
+
+type MarketItem = McpMarketItem | SkillMarketItem;
+
+type NewToolForm = {
+  name: string;
+  slug: string;
+  type: 'skill' | 'mcp';
+  scope: string;
+  version: string;
+  description: string;
+  content: string;
+  input_schema: Record<string, any>;
+  output_schema: Record<string, any>;
+  mcp_type: string;
+  mcp_config: string;
+  category: string;
+};
+
 const { toast } = useToast();
-const menuItems = ref([]);
+const menuItems = ref<MenuItem[]>([
+  { id: 'all', label: '全部推荐' },
+  { id: 'mcp', label: 'MCP' },
+  { id: 'skills', label: '技能' }
+]);
 const activeCategory = ref('all');
 const isSidebarCollapsed = ref(false);
 const searchQuery = ref('');
@@ -409,13 +483,14 @@ const installStatus = ref('all');
 const isLoading = ref(false);
 const showCreateToolModal = ref(false);
 const isEditing = ref(false);
-const editingId = ref(null);
-const installedTools = ref(new Set());
-const mcpItems = ref([]);
-const skills = ref([]);
+const editingId = ref<string | number | null>(null);
+const installedTools = ref(new Set<string>());
+const mcpItems = ref<McpMarketItem[]>([]);
+const skills = ref<SkillMarketItem[]>([]);
 const isSubmitting = ref(false);
+const counts = ref({ mcp: 0, skills: 0 });
 
-const getCategoryIcon = (id) => {
+const getCategoryIcon = (id: string) => {
   switch (id) {
     case 'all': return LayoutGrid;
     case 'mcp': return Layers;
@@ -426,34 +501,65 @@ const getCategoryIcon = (id) => {
 
 // ... (Logic remains mostly the same, just removing activeMenuId)
 
-const getStoredInstalled = () => {
+const getStoredInstalled = (): Set<string> => {
   try {
-    return new Set(JSON.parse(localStorage.getItem('installed_tools') || '[]'));
+    const parsed = JSON.parse(localStorage.getItem('installed_tools') || '[]');
+    if (!Array.isArray(parsed)) return new Set<string>();
+    return new Set<string>(parsed.filter((x): x is string => typeof x === 'string'));
   } catch {
-    return new Set();
+    return new Set<string>();
   }
 };
 
-installedTools.value = getStoredInstalled();
+const hasAuthToken = () => !!localStorage.getItem('token');
 
-const handleInstall = async (item) => {
-  if (item.installed || item.isInstalling) return;
-  item.isInstalling = true;
-  await new Promise(resolve => setTimeout(resolve, 800));
-  item.installed = true;
-  item.isInstalling = false;
-  installedTools.value.add(item.id);
-  localStorage.setItem('installed_tools', JSON.stringify([...installedTools.value]));
-  toast({ title: "安装成功", description: `${item.name} 已成功添加到您的工具库。` });
+const loadInstalled = async () => {
+  if (!hasAuthToken()) {
+    installedTools.value = getStoredInstalled();
+    return;
+  }
+
+  try {
+    const res = await api.get('/service-market/installed');
+    const mcp = Array.isArray(res.data?.mcp) ? res.data.mcp : [];
+    const skill = Array.isArray(res.data?.skill) ? res.data.skill : [];
+    installedTools.value = new Set([...mcp, ...skill]);
+  } catch {
+    installedTools.value = getStoredInstalled();
+  }
 };
 
-const newToolForm = reactive({
+const handleInstall = async (item: MarketItem) => {
+  if (item.installed || item.isInstalling) return;
+  item.isInstalling = true;
+  try {
+    if (hasAuthToken()) {
+      await api.post('/service-market/installed', { type: item.type, id: item.id });
+    } else {
+      installedTools.value.add(item.id);
+      localStorage.setItem('installed_tools', JSON.stringify([...installedTools.value]));
+    }
+
+    item.installed = true;
+    installedTools.value.add(item.id);
+    toast({ title: "安装成功", description: `${item.name} 已成功添加到您的工具库。` });
+  } catch (e) {
+    toast({ variant: "destructive", title: "安装失败", description: "无法保存安装状态，请稍后重试" });
+  } finally {
+    item.isInstalling = false;
+  }
+};
+
+const newToolForm = reactive<NewToolForm>({
   name: '',
+  slug: '',
   type: 'skill',
   scope: 'global',
   version: '1.0.0',
   description: '',
   content: '',
+  input_schema: {},
+  output_schema: {},
   mcp_type: 'stdio',
   mcp_config: '{\n  "command": "python",\n  "args": ["server.py"]\n}',
   category: ''
@@ -468,26 +574,32 @@ const resetForm = () => {
   isEditing.value = false;
   editingId.value = null;
   newToolForm.name = '';
+  newToolForm.slug = '';
   newToolForm.type = 'skill';
   newToolForm.version = '1.0.0';
   newToolForm.description = '';
   newToolForm.content = '';
+  newToolForm.input_schema = {};
+  newToolForm.output_schema = {};
   newToolForm.mcp_type = 'stdio';
   newToolForm.mcp_config = '{\n  "command": "python",\n  "args": ["server.py"]\n}';
   newToolForm.category = '';
 };
 
-const openEditModal = (item) => {
+const openEditModal = (item: MarketItem) => {
   isEditing.value = true;
   editingId.value = item.id;
   newToolForm.type = item.type;
   newToolForm.name = item.name;
+  newToolForm.slug = item.slug || '';
   newToolForm.version = item.version || '1.0.0';
   newToolForm.description = item.description || '';
   newToolForm.category = item.category || '';
   
   if (item.type === 'skill') {
     newToolForm.content = item.content || '';
+    newToolForm.input_schema = item.input_schema || {};
+    newToolForm.output_schema = item.output_schema || {};
     newToolForm.scope = item.meta_data?.scope || 'global';
   } else {
     newToolForm.mcp_type = item.mcp_type || 'stdio';
@@ -496,10 +608,11 @@ const openEditModal = (item) => {
   showCreateToolModal.value = true;
 };
 
-const handleFileUpload = async (event) => {
-  const file = event.target.files[0];
+const handleFileUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
   if (!file) return;
-  event.target.value = '';
+  if (input) input.value = '';
 
   if (!file.name.endsWith('.zip') && !file.name.endsWith('.skill')) {
     toast({ variant: "destructive", title: "格式错误", description: "不支持的文件格式，请上传 .zip 或 .skill 文件" });
@@ -509,7 +622,7 @@ const handleFileUpload = async (event) => {
   try {
     const zip = await JSZip.loadAsync(file);
     const files = Object.keys(zip.files);
-    const findFile = (pattern) => {
+    const findFile = (pattern: RegExp) => {
       const matches = files.filter(path => pattern.test(path) && !zip.files[path].dir);
       if (matches.length === 0) return null;
       matches.sort((a, b) => {
@@ -523,9 +636,14 @@ const handleFileUpload = async (event) => {
 
     const skillMdPath = findFile(/(^|\/)skill\.md$/i);
     if (skillMdPath) {
-      const content = await zip.file(skillMdPath).async("string");
-      newToolForm.content = content;
-      toast({ title: "导入成功", description: `已加载 ${skillMdPath}` });
+      const skillFile = zip.file(skillMdPath);
+      if (skillFile) {
+        const content = await skillFile.async("string");
+        newToolForm.content = content;
+        toast({ title: "导入成功", description: `已加载 ${skillMdPath}` });
+      } else {
+        toast({ variant: "destructive", title: "导入失败", description: "在压缩包中未找到 SKILL.md 文件。" });
+      }
     } else {
       toast({ variant: "destructive", title: "导入失败", description: "在压缩包中未找到 SKILL.md 文件。" });
     }
@@ -533,7 +651,9 @@ const handleFileUpload = async (event) => {
     const manifestPath = findFile(/(^|\/)(manifest\.json|package\.json)$/i);
     if (manifestPath) {
       try {
-        const manifestStr = await zip.file(manifestPath).async("string");
+        const manifestFile = zip.file(manifestPath);
+        if (!manifestFile) return;
+        const manifestStr = await manifestFile.async("string");
         const manifest = JSON.parse(manifestStr);
         if (manifest.name) newToolForm.name = manifest.name;
         if (manifest.version) newToolForm.version = manifest.version;
@@ -551,7 +671,13 @@ const fetchCategories = async () => {
     const res = await fetch('/api/v1/service-categories/');
     if (res.ok) {
       const data = await res.json();
-      menuItems.value = [{ id: 'all', label: '全部推荐' }, ...data.map(d => ({ id: d.slug, label: d.label }))];
+      const categories: Array<{ slug: string; label: string }> = Array.isArray(data) ? data : [];
+      menuItems.value = [
+        { id: 'all', label: '全部推荐' },
+        ...categories
+          .filter((d) => typeof d?.slug === 'string' && typeof d?.label === 'string')
+          .map((d) => ({ id: d.slug, label: d.label })),
+      ];
       if (!activeCategory.value) activeCategory.value = 'all';
     }
   } catch (e) { console.error("Failed to fetch categories", e); }
@@ -572,6 +698,45 @@ const buildQueryParams = (forceRefresh = false) => {
   return params.toString();
 };
 
+const buildCountQueryParams = (forceRefresh = false) => {
+  const params = new URLSearchParams();
+  if (searchQuery.value) params.append('q', searchQuery.value);
+  if (activeFilter.value !== 'all') params.append('filter', activeFilter.value);
+  if (forceRefresh) params.append('_t', Date.now().toString());
+  return params.toString();
+};
+
+const applyMenuCounts = () => {
+  const allCount = (counts.value.mcp || 0) + (counts.value.skills || 0);
+  menuItems.value = menuItems.value.map((item) => {
+    if (item.id === 'all') return { ...item, count: allCount };
+    if (item.id === 'mcp') return { ...item, count: counts.value.mcp || 0 };
+    if (item.id === 'skills') return { ...item, count: counts.value.skills || 0 };
+    return item;
+  });
+};
+
+const fetchCounts = async (forceRefresh = false) => {
+  try {
+    const query = buildCountQueryParams(forceRefresh);
+    const mcpUrl = query ? `/api/v1/mcp/count?${query}` : `/api/v1/mcp/count`;
+    const skillsUrl = query ? `/api/v1/skills/count?${query}` : `/api/v1/skills/count`;
+
+    const [mcpRes, skillsRes] = await Promise.all([fetch(mcpUrl), fetch(skillsUrl)]);
+
+    const mcpData = mcpRes.ok ? await mcpRes.json() : { count: 0 };
+    const skillsData = skillsRes.ok ? await skillsRes.json() : { count: 0 };
+
+    counts.value = {
+      mcp: Number(mcpData?.count ?? 0),
+      skills: Number(skillsData?.count ?? 0),
+    };
+    applyMenuCounts();
+  } catch (e) {
+    console.error("Failed to fetch counts", e);
+  }
+};
+
 const fetchMcpServers = async (forceRefresh = false) => {
   if (activeCategory.value === 'skills') {
     mcpItems.value = [];
@@ -582,10 +747,12 @@ const fetchMcpServers = async (forceRefresh = false) => {
     const res = await fetch(`/api/v1/mcp/?${query}`);
     if (res.ok) {
       const data = await res.json();
-      mcpItems.value = data.map(item => ({
-        ...item,
+      const list: any[] = Array.isArray(data) ? data : [];
+      mcpItems.value = list.map((item) => ({
+        ...(item || {}),
         type: 'mcp',
-        mcp_type: item.type,
+        version: item?.version || '1.0.0',
+        mcp_type: item.transport_type,
         author: item.author || 'User Configured',
         // iconUrl: '/tools/mcp.svg', // Removed to use Lucide icons in ToolCard
         installed: installedTools.value.has(item.id),
@@ -606,9 +773,11 @@ const fetchSkills = async (forceRefresh = false) => {
     const res = await fetch(`/api/v1/skills/?${query}`);
     if (res.ok) {
       const data = await res.json();
-      skills.value = data.map(s => ({
-        ...s,
+      const list: any[] = Array.isArray(data) ? data : [];
+      skills.value = list.map((s) => ({
+        ...(s || {}),
         type: 'skill',
+        version: s?.version || '1.0.0',
         author: s.author || 'System', 
         // iconUrl: '/tools/skill.svg', // Removed to use Lucide icons in ToolCard
         installed: installedTools.value.has(s.id),
@@ -621,7 +790,7 @@ const fetchSkills = async (forceRefresh = false) => {
 
 const refreshData = async (forceRefresh = false) => {
   isLoading.value = true;
-  await Promise.all([fetchSkills(forceRefresh), fetchMcpServers(forceRefresh)]);
+  await Promise.all([fetchSkills(forceRefresh), fetchMcpServers(forceRefresh), fetchCounts(forceRefresh)]);
   isLoading.value = false;
 };
 
@@ -636,9 +805,9 @@ const handleRefresh = async () => {
 
 watch([activeCategory, activeFilter], () => refreshData());
 
-let searchTimeout;
+let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 watch(searchQuery, () => {
-  clearTimeout(searchTimeout);
+  if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => refreshData(), 500);
 });
 
@@ -658,13 +827,22 @@ const createTool = async () => {
     let body = {};
     const common = {
       name: newToolForm.name,
+      slug: newToolForm.slug || newToolForm.name.toLowerCase().replace(/\s+/g, '-'), // Auto-gen if empty
       description: newToolForm.description,
       category: newToolForm.category
     };
     
     if (newToolForm.type === 'skill') {
       url = isEditing.value ? `/api/v1/skills/${editingId.value}` : '/api/v1/skills/';
-      body = { ...common, version: newToolForm.version, content: newToolForm.content, is_active: true, meta_data: { scope: newToolForm.scope } };
+      body = { 
+        ...common, 
+        version: newToolForm.version, 
+        content: newToolForm.content,
+        input_schema: newToolForm.input_schema,
+        output_schema: newToolForm.output_schema, 
+        is_active: true, 
+        meta_data: { scope: newToolForm.scope } 
+      };
     } else {
       url = isEditing.value ? `/api/v1/mcp/${editingId.value}` : '/api/v1/mcp/';
       let config = {};
@@ -673,7 +851,7 @@ const createTool = async () => {
         isSubmitting.value = false; 
         return; 
       }
-      body = { ...common, type: newToolForm.mcp_type, config: config, version: newToolForm.version, is_active: true };
+      body = { ...common, transport_type: newToolForm.mcp_type, config: config, version: newToolForm.version, is_active: true };
     }
     
     const res = await fetch(url, {
@@ -697,7 +875,7 @@ const createTool = async () => {
   finally { isSubmitting.value = false; }
 };
 
-const deleteTool = async (item) => {
+const deleteTool = async (item: MarketItem) => {
   if (!confirm(`Are you sure you want to delete ${item.name}?`)) return;
   try {
     const url = item.type === 'skill' ? `/api/v1/skills/${item.id}` : `/api/v1/mcp/${item.id}`;
@@ -715,8 +893,8 @@ const deleteTool = async (item) => {
   }
 };
 
-const filteredItems = computed(() => {
-  let items = [...mcpItems.value, ...skills.value];
+const filteredItems = computed<MarketItem[]>(() => {
+  let items: MarketItem[] = [...mcpItems.value, ...skills.value];
   
   if (installStatus.value === 'installed') {
     items = items.filter(item => item.installed);
@@ -729,6 +907,7 @@ const filteredItems = computed(() => {
 
 onMounted(async () => {
   await fetchCategories();
+  await loadInstalled();
   refreshData();
 });
 </script>

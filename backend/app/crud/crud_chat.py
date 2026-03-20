@@ -9,6 +9,9 @@ from app.schemas.chat import ChatSessionCreate, ChatSessionUpdate
 
 
 class CRUDChat:
+    """
+    聊天会话的 CRUD 操作
+    """
     async def get_multi(self, db: AsyncSession, skip: int = 0, limit: int = 20) -> List[ChatSession]:
         query = (
             select(ChatSession)
@@ -33,7 +36,10 @@ class CRUDChat:
         result = await db.execute(
             select(ChatSession).options(selectinload(ChatSession.messages)).filter(ChatSession.id == id)
         )
-        return result.scalars().first()
+        session = result.scalars().first()
+        if session and session.messages:
+            session.messages.sort(key=lambda m: m.created_at)
+        return session
 
     async def update(self, db: AsyncSession, db_obj: ChatSession, obj_in: ChatSessionUpdate) -> ChatSession:
         if obj_in.title is not None:
@@ -56,9 +62,23 @@ class CRUDChat:
         return obj
 
     async def create_message(
-        self, db: AsyncSession, session_id: str, role: str, content: str, meta_data: Optional[Dict] = None
+        self, 
+        db: AsyncSession, 
+        session_id: str, 
+        role: str, 
+        content: str, 
+        meta_data: Optional[Dict] = None,
+        reasoning_content: Optional[str] = None,
+        tool_calls: Optional[List[Dict]] = None
     ) -> ChatMessage:
-        msg = ChatMessage(session_id=session_id, role=role, content=content, meta_data=meta_data)
+        msg = ChatMessage(
+            session_id=session_id, 
+            role=role, 
+            content=content, 
+            meta_data=meta_data,
+            reasoning_content=reasoning_content,
+            tool_calls=tool_calls
+        )
         db.add(msg)
         await db.commit()
         return msg
@@ -68,6 +88,17 @@ class CRUDChat:
             select(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at.asc())
         )
         return result.scalars().all()
+
+    async def delete_message(self, db: AsyncSession, session_id: str, message_id: int) -> bool:
+        result = await db.execute(
+            select(ChatMessage).filter(ChatMessage.session_id == session_id, ChatMessage.id == message_id)
+        )
+        msg = result.scalars().first()
+        if msg:
+            await db.delete(msg)
+            await db.commit()
+            return True
+        return False
 
     async def update_message_meta(self, db: AsyncSession, session_id: str, meta: dict, message_id: Optional[str] = None):
         if message_id:

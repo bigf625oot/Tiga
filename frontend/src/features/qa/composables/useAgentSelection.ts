@@ -79,6 +79,11 @@ export function useAgentSelection(currentModeId: import('vue').Ref<string | null
     let saved = '';
     try { saved = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENT_ID) || ''; } catch { }
     if (saved && list.some(a => a.id === saved)) return saved;
+    
+    // 优先匹配"快问快答"，其次匹配"通用"
+    const quick = list.find(a => a.name && (a.name === '快问快答' || a.name.includes('快问快答')));
+    if (quick) return quick.id;
+    
     const generic = list.find(a => a.name && (a.name === '通用' || a.name.includes('通用')));
     return generic ? generic.id : (list.length ? list[0].id : '');
   };

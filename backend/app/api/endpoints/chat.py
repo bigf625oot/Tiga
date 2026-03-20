@@ -39,7 +39,7 @@ from app.db.session import get_db
 from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatSessionUpdate
 from app.core.sse import format_sse_json
 from app.services.media.chat_attachments import ingest_chat_file, normalize_doc_ids
-from app.services.eah_agent.core.title_generator import TitleGenerator
+from app.services.eah_agent.core.agent_title_generator import TitleGenerator
 from app.models.knowledge import KnowledgeDocument
 
 router = APIRouter()
@@ -81,6 +81,12 @@ async def update_session(session_id: str, session_in: ChatSessionUpdate, db: Asy
     return await crud_chat.update(db, session, session_in)
 
 
+@router.delete("/sessions/{session_id}/messages/{message_id}")
+async def delete_message(session_id: str, message_id: int, db: AsyncSession = Depends(get_db)):
+    await crud_chat.delete_message(db, session_id, message_id)
+    return {"status": "deleted"}
+
+
 # --- Chat Endpoint ---
 
 
@@ -106,7 +112,7 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
     支持: Chat, Task, Team, Workflow, Data Query, KG QA.
     """
     # New Control Plane
-    from app.services.eah_agent.core.control_plane import AgnoControlPlane
+    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
     from app.services.llm.resolver import resolve_chat_llm_model
     
     # Get active model for ControlPlane
@@ -157,6 +163,7 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
             user_input=request.message, 
             db=db, 
             session_id=session_id,
+            agent_id=effective_agent_id,
             mode=effective_mode,
             intent_override=request.intent,
             doc_ids=doc_ids,
@@ -216,7 +223,7 @@ async def chat_session_multipart(
     files: Optional[List[UploadFile]] = File(None),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.services.eah_agent.core.control_plane import AgnoControlPlane
+    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
     from app.services.llm.resolver import resolve_chat_llm_model
 
     llm_model = await resolve_chat_llm_model(db)
@@ -307,6 +314,7 @@ async def chat_session_multipart(
             user_input=message,
             db=db,
             session_id=session_id,
+            agent_id=effective_agent_id,
             mode=effective_mode,
             intent_override=intent,
             doc_ids=doc_ids,

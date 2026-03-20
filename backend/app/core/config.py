@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     # Logging / 日志
     LOG_LEVEL: str = "INFO"
+    DEBUG: bool = False
 
     # Database / 数据库
     # Use SQLite for easier local setup if Postgres is not available
@@ -74,6 +75,66 @@ class Settings(BaseSettings):
 
     # LLM Defaults (can be overridden per request or via DB) / LLM 默认配置
     OPENAI_API_KEY: Optional[str] = None
+    DEFAULT_LLM_PROVIDER: str = "openai"
+    DEFAULT_LLM_MODEL_ID: str = "gpt-3.5-turbo"
+
+    # LLM Provider Configurations / LLM 提供商配置
+    LLM_PROVIDERS_CONFIG: dict = {
+        "class_map": {
+            "openai": ("agno.models.openai", "OpenAIChat"),
+            "aliyun": ("agno.models.dashscope", "DashScope"),
+            "dashscope": ("agno.models.dashscope", "DashScope"),
+            "deepseek": ("agno.models.deepseek", "DeepSeek"),
+            "anthropic": ("agno.models.anthropic", "Claude"),
+            "claude": ("agno.models.anthropic", "Claude"),
+            "google": ("agno.models.google", "Gemini"),
+            "gemini": ("agno.models.google", "Gemini"),
+            "ollama": ("agno.models.ollama", "Ollama"),
+            "aws": ("agno.models.aws", "AwsBedrock"),
+            "bedrock": ("agno.models.aws", "AwsBedrock"),
+            "azure": ("agno.models.azure", "AzureOpenAI"),
+            "mistral": ("agno.models.mistral", "Mistral"),
+            "groq": ("agno.models.groq", "Groq"),
+            "xai": ("agno.models.xai", "xAI"),
+            "cohere": ("agno.models.cohere", "Cohere"),
+            "perplexity": ("agno.models.perplexity", "Perplexity"),
+            "together": ("agno.models.together", "Together"),
+            "openrouter": ("agno.models.openrouter", "OpenRouter"),
+            "nvidia": ("agno.models.nvidia", "Nvidia"),
+            "fireworks": ("agno.models.fireworks", "Fireworks"),
+            "vertexai": ("agno.models.vertexai", "VertexAI"),
+            "siliconflow": ("agno.models.siliconflow", "Siliconflow"),
+            "nebius": ("agno.models.nebius", "Nebius"),
+        },
+        "default_base_urls": {
+            "openai": "https://api.openai.com/v1",
+            "aliyun": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "deepseek": "https://api.deepseek.com",
+            "anthropic": "https://api.anthropic.com/v1",
+            "google": "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "ollama": "http://localhost:11434/v1",
+            "nebius": "https://api.studio.nebius.ai/v1/",
+        },
+        "default_models": {
+            "openai": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+            "aliyun": ["qwen-max", "qwen-plus", "qwen-turbo", "qwen-vl-max"],
+            "deepseek": ["deepseek-chat", "deepseek-reasoner"],
+            "anthropic": ["claude-3-5-sonnet-20240620", "claude-3-opus-20240229"],
+            "google": ["gemini-1.5-pro", "gemini-1.5-flash"],
+            "ollama": ["llama3", "mistral", "llava"],
+            "azure": ["gpt-4"],
+            "aws": ["anthropic.claude-3-sonnet-20240229-v1:0"],
+            "nebius": ["black-forest-labs/flux-schnell", "stability-ai/sdxl"],
+        },
+        "role_map": {
+            "system": "system",
+            "developer": "system",
+            "user": "user",
+            "assistant": "assistant",
+            "tool": "tool",
+            "function": "function",
+        }
+    }
 
     # Aliyun ASR / 阿里云语音识别
     ALIYUN_ACCESS_KEY_ID: Optional[str] = None
@@ -120,6 +181,9 @@ class Settings(BaseSettings):
     # Graphiti Service / 知识图谱服务
     GRAPHITI_URL: str = "http://localhost:8000"
 
+    # Temp Directory / 临时目录
+    TEMP_DIR: str = "data/temp"
+
     # Security / 安全配置
     SECRET_KEY: str = "your-secret-key-here"  # Change this in production! / 生产环境请修改！
     MASTER_KEY: Optional[str] = None  # 32-byte base64 key for data source encryption / 数据源加密密钥
@@ -146,7 +210,7 @@ class Settings(BaseSettings):
     OCR_ENABLED: bool = False
     DOC_PARSE_PDF_BACKENDS: str = "docling,pymupdf,pdfplumber,pypdf,ocr"
     QA_SYSTEM_PROMPT: str = ""
-    QA_SYSTEM_PROMPT_FILE: str = "backend/prompts/qa_system.md"
+    QA_SYSTEM_PROMPT_FILE: str = "backend/app/services/rag/prompts/qa_system.md"
     # Qdrant / 向量数据库
     QDRANT_URL: Optional[str] = None
     QDRANT_API_KEY: Optional[str] = None

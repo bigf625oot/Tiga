@@ -213,6 +213,21 @@ async def save_config(config: DbConnectionConfig):
     try:
         with open(CONFIG_FILE, "w") as f:
             json.dump(config.model_dump(), f)
+            
+        # If this is the current config, update the permission validator immediately
+        if data_query_service.current_db_config:
+            # We can update current config's permissions or update validator directly
+            data_query_service.current_db_config.allowed_tables = config.allowed_tables
+            data_query_service.current_db_config.sensitive_fields = config.sensitive_fields
+            
+            from app.services.chatbi.vanna.permission import SQLPermissionValidator
+            allowed_tables = set(config.allowed_tables) if config.allowed_tables else set()
+            sensitive_fields = set(config.sensitive_fields) if config.sensitive_fields else set()
+            data_query_service.permission_validator = SQLPermissionValidator(
+                allowed_tables=allowed_tables,
+                sensitive_fields=sensitive_fields
+            )
+            
         return {"message": "Config saved successfully"}
     except Exception as e:
         logger.error(f"Failed to save config: {e}")

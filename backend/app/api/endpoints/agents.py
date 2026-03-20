@@ -77,7 +77,7 @@ async def read_agents(
     """
     Retrieve agents.
     """
-    from app.services.eah_agent.core.service import agent_service
+    from app.services.eah_agent.core.agent_service import agent_service
     agents = await agent_service.get_agents(db, skip=skip, limit=limit, query=q, is_template=is_template, is_active=is_active)
     return agents
 
@@ -87,7 +87,7 @@ async def create_agent(*, db: AsyncSession = Depends(get_db), agent_in: AgentCre
     """
     Create new agent.
     """
-    from app.services.eah_agent.core.service import agent_service
+    from app.services.eah_agent.core.agent_service import agent_service
     agent = await agent_service.create_agent(db, agent_in)
     return agent
 
@@ -97,7 +97,7 @@ async def read_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     """
     Get agent by ID.
     """
-    from app.services.eah_agent.core.service import agent_service
+    from app.services.eah_agent.core.agent_service import agent_service
     agent = await agent_service.get_agent(db, agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail=_("Agent not found"))
@@ -109,7 +109,7 @@ async def update_agent(*, db: AsyncSession = Depends(get_db), agent_id: str, age
     """
     Update an agent.
     """
-    from app.services.eah_agent.core.service import agent_service
+    from app.services.eah_agent.core.agent_service import agent_service
     agent = await agent_service.update_agent(db, agent_id, agent_in)
     if not agent:
         raise HTTPException(status_code=404, detail=_("Agent not found"))

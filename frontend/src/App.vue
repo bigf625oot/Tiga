@@ -15,7 +15,7 @@
         <SheetContent side="bottom" class="h-[85vh] rounded-t-[20px] p-0 flex flex-col">
            <div class="p-6 pb-2">
               <Button @click="createNewChat(); mobileMenuOpen = false" class="w-full h-12 text-lg font-medium shadow-md">
-                <Plus class="mr-2 h-5 w-5" /> 新建对话
+                <Plus class="mr-2 h-5 w-5" /> {{ t('app.newChat') }}
               </Button>
            </div>
            
@@ -46,7 +46,6 @@
                     { name: '智能爬取', icon: Search, action: 'search', color: 'text-blue-500', bg: 'bg-blue-500/10' },
                     { name: '录音纪要', icon: Mic, action: 'list', color: 'text-orange-500', bg: 'bg-orange-500/10' },
                     { name: '指标提取', icon: BarChart, action: 'metrics', color: 'text-green-500', bg: 'bg-green-500/10' },
-                    { name: '批量提取', icon: Box, action: 'batch_metrics', color: 'text-purple-500', bg: 'bg-purple-500/10' },
                     { name: '指标管理', icon: Calculator, action: 'indicators', color: 'text-pink-500', bg: 'bg-pink-500/10' },
                     { name: '智能问数', icon: LayoutGrid, action: 'data_query', color: 'text-cyan-500', bg: 'bg-cyan-500/10' }
                  ]" :key="index" @click="mobileMenuClick(item.action)" class="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/50 active:scale-[0.98] transition-all cursor-pointer">
@@ -121,10 +120,10 @@
                  :class="isSidebarCollapsed ? 'h-10 w-10 justify-center p-0' : ''"
                >
                  <Plus class="h-5 w-5" />
-                <span v-if="!isSidebarCollapsed">新建对话</span>
+                <span v-if="!isSidebarCollapsed">{{ t('app.newChat') }}</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right" v-if="isSidebarCollapsed">新建对话</TooltipContent>
+            <TooltipContent side="right" v-if="isSidebarCollapsed">{{ t('app.newChat') }}</TooltipContent>
            </Tooltip>
          </TooltipProvider>
       </div>
@@ -140,14 +139,14 @@
           class="flex-1 capitalize text-xs font-medium text-muted-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground transition-all"
           :data-active="sidebarTab === tab"
         >
-          {{ tab === 'task' ? '任务' : tab === 'agent' ? '智能体' : '知识中心' }}
+          {{ tab === 'task' ? t('app.nav.task') : tab === 'agent' ? t('app.nav.agent') : t('app.nav.knowledge') }}
         </Button>
       </div>
       <div v-else class="flex flex-col items-center gap-2 px-2">
          <TooltipProvider v-for="tab in [
-             { id: 'task', icon: MessageSquare, label: '任务' },
-             { id: 'agent', icon: Box, label: '智能体' },
-             { id: 'knowledge', icon: Database, label: '知识中心' }
+             { id: 'task', icon: MessageSquare, label: t('app.nav.task') },
+             { id: 'agent', icon: Box, label: t('app.nav.agent') },
+             { id: 'knowledge', icon: Database, label: t('app.nav.knowledge') }
          ]" :key="tab.id" :delay-duration="0">
            <Tooltip>
              <TooltipTrigger as-child>
@@ -205,7 +204,7 @@
                                   class="h-3 w-3 text-muted-foreground/50 transition-transform duration-200 group-hover/trigger:text-muted-foreground" 
                                />
                                <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate flex-1">
-                                   {{ group.agent.name || '默认助手' }}
+                                   {{ group.agent.name || t('app.defaultAssistant') }}
                                </h4>
                            </CollapsibleTrigger>
                            <span class="text-[10px] text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded-md opacity-0 group-hover/header:opacity-100 transition-opacity">
@@ -235,7 +234,7 @@
                                       <!-- Content -->
                                       <div v-if="!isSidebarCollapsed" class="flex-1 min-w-0">
                                          <div class="flex items-center justify-between gap-1">
-                                            <span class="text-sm font-medium truncate text-foreground/90 leading-tight">{{ session.title || '新对话' }}</span>
+                                            <span class="text-sm font-medium truncate text-foreground/90 leading-tight">{{ session.title || t('app.newConversation') }}</span>
                                             
                                             <!-- Delete Button (Only visible on hover) -->
                                              <button 
@@ -246,7 +245,7 @@
                                              </button>
                                          </div>
                                          <div class="flex items-center justify-between mt-0.5">
-                                             <span class="text-[10px] text-muted-foreground/60 leading-none">{{ formatDate(session.updated_at).split(' ')[0] }}</span>
+                                             <span class="text-[10px] text-muted-foreground/60 leading-none">{{ dayjs(session.created_at || session.updated_at).format('YYYY-MM-DD HH:mm') }}</span>
                                              <span v-if="session.mode === 'workflow' || session.mode === 'auto_task'" class="text-[10px] text-muted-foreground/60 leading-none">{{ getSessionProgress(session) }}%</span>
                                          </div>
                                       </div>
@@ -333,19 +332,10 @@
                                  <Settings class="h-4 w-4" />
                              </Button>
                          </TooltipTrigger>
-                         <TooltipContent>系统设置</TooltipContent>
+                         <TooltipContent>{{ t('app.systemSettings') }}</TooltipContent>
                      </Tooltip>
                  </TooltipProvider>
-                 <TooltipProvider :delay-duration="0">
-                     <Tooltip>
-                         <TooltipTrigger as-child>
-                            <Button variant="ghost" size="icon" @click="openDocs" class="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                <BookOpen class="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>用户操作手册</TooltipContent>
-                     </Tooltip>
-                 </TooltipProvider>
+                 <LanguageToggle />
                  <ThemeToggle />
              </div>
          </div>
@@ -357,19 +347,10 @@
                              <Settings class="h-4 w-4" />
                          </Button>
                      </TooltipTrigger>
-                     <TooltipContent side="right">系统设置</TooltipContent>
+                     <TooltipContent side="right">{{ t('app.systemSettings') }}</TooltipContent>
                  </Tooltip>
              </TooltipProvider>
-             <TooltipProvider :delay-duration="0">
-                 <Tooltip>
-                     <TooltipTrigger as-child>
-                            <Button variant="ghost" size="icon" @click="openDocs" class="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                <BookOpen class="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">用户操作手册</TooltipContent>
-                 </Tooltip>
-             </TooltipProvider>
+             <LanguageToggle />
              <ThemeToggle />
          </div>
       </SidebarFooter>
@@ -411,17 +392,17 @@
     <Dialog v-model:open="allSessionsModalVisible">
       <DialogContent class="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>全部任务记录</DialogTitle>
-          <DialogDescription>查看并管理您的历史对话任务。</DialogDescription>
+          <DialogTitle>{{ t('app.allSessions') }}</DialogTitle>
+          <DialogDescription>{{ t('app.allSessionsDesc') }}</DialogDescription>
         </DialogHeader>
         <div class="py-4 space-y-4">
           <div class="relative">
             <Search class="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input v-model="sessionSearchKeyword" placeholder="搜索任务名称..." class="pl-9" />
+            <Input v-model="sessionSearchKeyword" :placeholder="t('app.searchTaskName')" class="pl-9" />
           </div>
           <div class="h-[300px] overflow-y-auto custom-scrollbar space-y-1 pr-2">
             <div v-if="filteredSessions.length === 0" class="flex flex-col items-center justify-center h-full text-muted-foreground text-sm">
-               未找到相关任务
+               {{ t('app.noTasksFound') }}
             </div>
             <div 
               v-for="session in filteredSessions" 
@@ -435,8 +416,8 @@
                      <img src="/message/message.svg" :alt="session.title" class="h-4 w-4" />
                   </div>
                   <div class="min-w-0">
-                     <p class="text-sm font-medium truncate">{{ session.title || '新对话' }}</p>
-                     <p class="text-xs text-muted-foreground">{{ formatDate(session.updated_at) }}</p>
+                     <p class="text-sm font-medium truncate">{{ session.title || t('app.newConversation') }}</p>
+                     <p class="text-xs text-muted-foreground">{{ dayjs(session.created_at || session.updated_at).format('YYYY-MM-DD HH:mm') }}</p>
                   </div>
                </div>
                <Button 
@@ -479,6 +460,7 @@ import dayjs from 'dayjs';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import { MODE_LABELS } from '@/features/qa/constants';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useI18n } from '@/locales';
 import { useTheme } from '@/composables/useTheme';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Toaster } from '@/components/ui/toast';
@@ -493,6 +475,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SmartQA from '@/features/qa/components/SmartQA.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import LanguageToggle from '@/components/LanguageToggle.vue';
 import AgentIcon from '@/shared/components/atoms/AgentIcon/AgentIcon.vue';
 import TaskCenter from '@/components/TaskCenter.vue';
 
@@ -501,7 +484,7 @@ import {
   Menu, X, Plus, MessageSquare, Clock, Search, Mic, BarChart, Calculator,
   LayoutGrid, Database, Film, Box, Workflow, Network, Share2,
   Trash2, Settings, Cpu, MoreHorizontal, ChevronRight, ChevronDown, Users,
-  GitBranch, BookOpen, Upload
+  GitBranch, Upload
 } from 'lucide-vue-next';
 import {
   Collapsible,
@@ -516,6 +499,7 @@ import SidebarFooter from '@/components/ui/sidebar/SidebarFooter.vue';
 // Initialize Theme
 const { isLightMode } = useTheme();
 const { toast } = useToast();
+const { t } = useI18n();
 
 // Async Components
 const RecordingList = defineAsyncComponent(() => import('@/features/recording/components/RecordingList.vue'));
@@ -673,10 +657,10 @@ const deleteSession = async (id: any) => {
             currentSessionId.value = undefined;
         }
         
-        toast({ title: "删除成功" });
+        toast({ title: t('app.deleteSuccess') });
     } catch (e) {
         console.error("Delete session error:", e);
-        toast({ variant: "destructive", title: "删除失败" });
+        toast({ variant: "destructive", title: t('app.deleteFailed') });
         fetchSessions();
     }
 };
@@ -718,14 +702,15 @@ const topSessions = computed(() => sessions.value.slice(0, 5));
 const filteredSessions = computed(() => {
     if (!sessionSearchKeyword.value) return sessions.value;
     const kw = sessionSearchKeyword.value.toLowerCase();
-    return sessions.value.filter(s => (s.title || '新对话').toLowerCase().includes(kw));
+    return sessions.value.filter(s => (s.title || t('app.newConversation')).toLowerCase().includes(kw));
 });
 
 const createNewChat = async () => {
     try {
+        const defaultAgentId = localStorage.getItem('defaultAgentId');
         const res = await api.post('/chat/sessions', { 
             title: '新任务',
-            agent_id: null 
+            agent_id: defaultAgentId || null 
         });
         const newSession = res.data;
         sessions.value.unshift(newSession);
@@ -782,10 +767,6 @@ const handleCreatePipeline = () => {
     currentView.value = 'etl_pipeline';
 };
 
-const openDocs = () => {
-    window.open('/docs/', '_blank');
-};
-
 interface SidebarItem {
     id?: string;
     label?: string;
@@ -803,11 +784,9 @@ const agentSidebarItems: SidebarItem[] = [
     { type: 'separator' },
     { id: 'search', label: '智能爬取', icon: Search },
     { id: 'metrics', label: '指标提取', icon: BarChart },
-    { id: 'batch_metrics', label: '批量提取', icon: Box },
     { id: 'indicators', label: '指标管理', icon: Calculator },
     { id: 'list', label: '录音纪要', icon: Mic },
-    { id: 'data_query', label: '智能问数', icon: Database },
-    { id: 'workflow', label: '工作流', icon: Workflow }
+    { id: 'data_query', label: '智能问数', icon: Database }
 ];
 
 const knowledgeSidebarItems: SidebarItem[] = [
@@ -826,8 +805,13 @@ const knowledgeSidebarItems: SidebarItem[] = [
 ];
 
 const currentSidebarItems = computed<SidebarItem[]>(() => {
-    return sidebarTab.value === 'agent' ? agentSidebarItems : knowledgeSidebarItems;
+    const base = sidebarTab.value === 'agent' ? agentSidebarItems : knowledgeSidebarItems
+    return base.map((item) => {
+        if (item.id === 'etl_settings') return { ...item, label: t('app.systemSettings') }
+        return item
+    })
 });
+
 
 const handleBack = () => {
     if (currentView.value === 'detail') {

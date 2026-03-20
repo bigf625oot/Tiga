@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 
 from app.services.eah_agent.workflows.base import EAHWorkflow, EAHWorkflowState
 from app.services.eah_agent.utils.session_kb import SessionKnowledgeManager
-from app.services.eah_agent.core.agent_manager import agent_manager
+from app.services.eah_agent.core.agent_planner import PlannerAgent
 from app.models.agent_plan import AgentPlan, AgentTask, TaskStatus
 from app.core.context_compressor import ContextCompressor
 from app.core.shared_state import StateManager, SharedState
@@ -87,9 +87,10 @@ class UnifiedAgentWorkflow(EAHWorkflow):
             await self.state_manager.update_mode(self.session_id, "workflow")
             
             # 4. Planning Phase
-            planner = await agent_manager.get_planner_agent(self.db)
+            planner = PlannerAgent(self.db)
             
             yield {"type": "status", "content": _("Planning tasks...")}
+            
             # Assuming planner.create_plan returns plan_id
             plan_id = await planner.create_plan(self.session_id, self.user_goal)
             self.state.plan_id = plan_id

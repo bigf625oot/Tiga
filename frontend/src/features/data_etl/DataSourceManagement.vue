@@ -840,7 +840,7 @@
                       </div>
 
                       <!-- 4. Charset -->
-                      <div class="space-y-2">
+                      <div class="space-y-2 border-b pb-4">
                          <Label>字符集 (Charset)</Label>
                          <Select v-model="form.dbCharset">
                             <SelectTrigger>
@@ -853,6 +853,21 @@
                               <SelectItem value="gbk">gbk</SelectItem>
                             </SelectContent>
                          </Select>
+                      </div>
+
+                      <!-- 5. Security & Permissions -->
+                      <div class="space-y-3 pt-2">
+                          <Label class="text-base flex items-center gap-2">安全与权限设置</Label>
+                          <div class="space-y-4 px-1">
+                              <div class="space-y-2">
+                                  <Label>允许访问的表 (Allowed Tables)</Label>
+                                  <Input v-model="form.dbAllowedTables" placeholder="如: users, orders (用逗号分隔)" />
+                              </div>
+                              <div class="space-y-2">
+                                  <Label>敏感字段脱敏 (Sensitive Fields)</Label>
+                                  <Input v-model="form.dbSensitiveFields" placeholder="如: phone, email (用逗号分隔)" />
+                              </div>
+                          </div>
                       </div>
 
                     </AccordionContent>
@@ -1368,6 +1383,8 @@ const defaultFormState = {
   dbMaxConnections: [10],
   dbTimeout: 30,
   dbCharset: 'utf8mb4',
+  dbAllowedTables: '',
+  dbSensitiveFields: '',
   
   // API fields
   apiProvider: 'custom', // 'custom' | 'feishu' | 'dingtalk' | 'seeyon'
@@ -1719,7 +1736,9 @@ const mapFormToPayload = (formData: typeof form.value): DataSourceCreate => {
         ssh_key: formData.dbSshKey,
         max_connections: formData.dbMaxConnections[0],
         timeout: formData.dbTimeout,
-        charset: formData.dbCharset
+        charset: formData.dbCharset,
+        allowed_tables: formData.dbAllowedTables ? formData.dbAllowedTables.split(',').map(s => s.trim()).filter(Boolean) : [],
+        sensitive_fields: formData.dbSensitiveFields ? formData.dbSensitiveFields.split(',').map(s => s.trim()).filter(Boolean) : []
       }
     };
   }
@@ -1815,6 +1834,8 @@ const mapItemToForm = (item: any) => {
     formState.dbMaxConnections = [cfg.max_connections || 10];
     formState.dbTimeout = cfg.timeout || 30;
     formState.dbCharset = cfg.charset || 'utf8mb4';
+    formState.dbAllowedTables = (cfg.allowed_tables || []).join(', ');
+    formState.dbSensitiveFields = (cfg.sensitive_fields || []).join(', ');
   } else if (item.type === 'api') {
     formState.apiUrl = item.url;
     formState.apiProvider = cfg.provider || 'custom';

@@ -44,7 +44,22 @@ export interface Agent {
   icon?: string;
   icon_url?: string;
   description?: string;
-  knowledge_config?: string | { document_ids?: string[]; knowledge_base_ids?: string[] };
+  category?: string;
+  provider?: string;
+  model_id?: string;
+  system_prompt?: string;
+  instructions?: string[];
+  enable_react?: boolean;
+  enable_cot?: boolean;
+  show_tool_calls?: boolean;
+  enable_markdown?: boolean;
+  role?: string;
+  is_template?: boolean;
+  model_config?: Record<string, any>;
+  tools_config?: any[];
+  mcp_config?: any[];
+  skills_config?: Record<string, any>;
+  knowledge_config?: Record<string, any>;
 }
 
 export interface Team {

@@ -1,7 +1,7 @@
 import asyncio
 
 from app.db.session import AsyncSessionLocal
-from app.services.eah_agent.core.service import agent_service
+from app.services.eah_agent.core.agent_service import agent_service
 from app.schemas.agent import AgentCreate
 
 # ---------------------------------------------------------------------------

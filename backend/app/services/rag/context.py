@@ -39,9 +39,9 @@ class ContextLoader:
         selected_skill_ids = skills_config.get("selected_skills", [])
         if selected_skill_ids:
             try:
-                # Assuming 'db' is an AsyncSession based on AgentManager usage
+                # Assuming 'db' is an AsyncSession based on db parameter usage
                 # If it's sync, we use db.execute directly.
-                # AgentManager passes AsyncSession.
+                # Builder/Manager passes AsyncSession.
 
                 stmt = select(Skill).where(Skill.id.in_(selected_skill_ids)).where(Skill.is_active)
                 result = await db.execute(stmt)

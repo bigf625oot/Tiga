@@ -34,7 +34,7 @@ class Skill:
     allowed_tools: Optional[List[str]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert the Skill to a dictionary representation."""
+        """将技能转换为字典表示形式。"""
         return {
             "name": self.name,
             "description": self.description,

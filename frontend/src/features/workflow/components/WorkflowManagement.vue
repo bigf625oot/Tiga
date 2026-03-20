@@ -152,7 +152,12 @@ const fetchWorkflows = async () => {
     try {
         const res = await fetch('/api/v1/workflows/');
         if (res.ok) {
-            workflows.value = await res.json();
+            const data = await res.json();
+            // Adapt old frontend model to new backend response
+            workflows.value = data.map(wf => ({
+                ...wf,
+                webhook_url: wf.webhook_url || (wf.definition && wf.definition.webhook_url) || ''
+            }));
         }
     } catch (e) {
         console.error(e);
@@ -179,6 +184,12 @@ const handleSubmit = async () => {
         return;
     }
     
+    // Prepare payload
+    const payload = {
+        ...form.value,
+        definition: { webhook_url: form.value.webhook_url } // Store webhook in definition
+    };
+
     try {
         const url = editingId.value 
             ? `/api/v1/workflows/${editingId.value}`
@@ -188,7 +199,7 @@ const handleSubmit = async () => {
         const res = await fetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form.value)
+            body: JSON.stringify(payload)
         });
         
         if (res.ok) {

@@ -4,7 +4,11 @@ import inspect
 from typing import AsyncGenerator, Any, List, Dict
 from app.workflow.context import AgentContext
 from app.workflow.exceptions import WorkflowStepError
-from app.services.eah_agent.core.agent_manager import agent_manager, has_global_api_key
+from app.services.eah_agent.core.agent_builder import AgentAssembler
+from app.core.config import settings
+
+def has_global_api_key():
+    return bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("sk-"))
 from app.db.session import AsyncSessionLocal
 from sqlalchemy import select
 from app.models.agent import Agent
@@ -36,7 +40,8 @@ async def agent_execute_step(context: AgentContext) -> AgentContext:
         async with AsyncSessionLocal() as db:
             if agent_id:
                 try:
-                    agent = await agent_manager.create_agno_agent(db, agent_id, session_id)
+                    builder = AgentAssembler(db, agent_id)
+                    agent = await builder.build(session_id=session_id)
                     res = await db.execute(select(Agent).filter(Agent.id == agent_id))
                     agent_obj = res.scalars().first()
                 except Exception as e:
@@ -276,7 +281,7 @@ async def _run_agent_generator(agent, user_msg, history, is_deepseek):
                 # Inject Knowledge Base Tools (Global or Agent-specific)
                 # [Refactor] Using MCP Tools from Agent configuration
                 # We no longer check for 'agent.knowledge' or 'kb_service.knowledge' here directly.
-                # Instead, we rely on the tools already injected by AgentManager (which includes MCP tools).
+                # Instead, we rely on the tools already injected by AgentAssembler (which includes MCP tools).
                 
                 # However, for Default Agent (fallback), we might still need to inject them manually if not present.
                 # AND we need to handle the case where we want to use the MCP functions directly in the runner loop.

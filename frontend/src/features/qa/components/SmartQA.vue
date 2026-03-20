@@ -54,6 +54,8 @@
             @add-attachment="addLocalAttachments"
             @excerpt-message="handleExcerptMessage"
             @delete-message="handleDeleteMessage"
+            @resend-message="handleResendMessage"
+            @edit-message="handleEditMessage"
           />
         </div>
 
@@ -141,6 +143,8 @@
             @add-attachment="addLocalAttachments"
             @excerpt-message="handleExcerptMessage"
             @delete-message="handleDeleteMessage"
+            @resend-message="handleResendMessage"
+            @edit-message="handleEditMessage"
           />
         </div>
       </div>
@@ -681,9 +685,32 @@ const handleExcerptMessage = (content: string) => {
   isMemoDrawerOpen.value = true;
 };
 
-const handleDeleteMessage = (msg: Message) => {
+const handleDeleteMessage = async (msg: Message) => {
   const idx = messages.value.indexOf(msg);
-  if (idx >= 0) messages.value.splice(idx, 1);
+  if (idx >= 0) {
+      messages.value.splice(idx, 1);
+      if (currentSessionId.value && msg.id) {
+          try {
+              await chatService.deleteMessage(currentSessionId.value, Number(msg.id));
+          } catch (e) {
+              console.error('Failed to delete message', e);
+              toast({ variant: "destructive", title: "消息删除失败" });
+          }
+      }
+  }
+};
+
+const handleResendMessage = async (msg: Message) => {
+    // 重新发送该消息
+    input.value = msg.content;
+    await onSendMessage();
+};
+
+const handleEditMessage = async ({ originalMessage, newContent }: { originalMessage: Message, newContent: string }) => {
+    // 1. 将输入框的内容替换为新内容
+    input.value = newContent;
+    // 2. 发送新消息
+    await onSendMessage();
 };
 
 const removeMemo = (id: string) => {

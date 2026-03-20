@@ -38,13 +38,14 @@ async def lifespan(app: FastAPI):
     from app.db.session import engine
 
     # Import models to ensure they are registered
-    import app.models.user  # Add this to resolve the users table reference
-    import app.models.openclaw_task
-    import app.models.task_mode
-    import app.models.agent
+    from app.models.loader import import_all_models
+    import_all_models()
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if "sqlite" in str(settings.database_url or ""):
+            from app.db.schema_compat import ensure_sqlite_schema_compat
+            await ensure_sqlite_schema_compat(conn)
 
     from app.db.session import AsyncSessionLocal
 

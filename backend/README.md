@@ -157,10 +157,8 @@ MIT License
 
 现在的 app/services/ 结构清晰，按业务领域划分：
 
-- agent/ : 智能体相关服务
-  - manager.py : 统一的 AgentManager 。
-  - search/ : 搜索与新闻服务 ( NewsQueryExecutor )。
-  - tools/ : 工具运行器 ( run_reasoning_tool_loop ) 和具体工具 ( duckduckgo )。
+- eah_agent/ : 核心智能体编排服务
+  - core/ : 核心框架逻辑，包括 builder.py 等。
 - rag/ : RAG（检索增强生成）核心模块
   - engines/lightrag.py : 封装 LightRAG 引擎 ( LightRAGEngine )，处理底层向量/图谱操作。
   - knowledge_base.py : 知识库管理服务 ( KnowledgeBaseService )。

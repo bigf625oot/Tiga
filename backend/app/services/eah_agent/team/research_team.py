@@ -43,10 +43,10 @@ class ResearchTeam(BaseTeam):
 
         # 2. Build Coordinator (Leader)
         # We reuse the builder for the leader, but we need to inject the team members
-        from app.services.eah_agent.agent.builder import AgentBuilder
+        from app.services.eah_agent.core.agent_builder import AgentAssembler
         
         # We load the leader's base config
-        builder = AgentBuilder(self.db, coordinator_id)
+        builder = AgentAssembler(self.db, coordinator_id)
         await builder._fetch_agent_config()
         await builder._fetch_model_config()
         # Note: Tools for leader are usually just delegation tools, but we load configured ones too

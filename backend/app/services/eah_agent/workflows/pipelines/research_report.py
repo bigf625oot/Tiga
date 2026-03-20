@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.eah_agent.workflows.base import EAHWorkflow
 from app.services.eah_agent.workflows.schemas.research_flow import ResearchFlowState
 from app.services.eah_agent.workflows.helpers import format_workflow_event, persist_workflow_state
-from app.services.eah_agent.core.agent_manager import agent_manager
+from app.services.eah_agent.team.research_team import ResearchTeam
 
 class ResearchReportWorkflow(EAHWorkflow):
     def __init__(self, db: AsyncSession, session_id: str, query: str, team_config: Dict):
@@ -25,7 +25,8 @@ class ResearchReportWorkflow(EAHWorkflow):
         # 1. Initialize Research Team
         yield format_workflow_event("init", "running", "Initializing Research Team...")
         try:
-            team_agent = await agent_manager.create_team(self.db, "research", self.team_config)
+            team = ResearchTeam(self.db)
+            team_agent = await team.initialize(**self.team_config)
         except Exception as e:
             yield format_workflow_event("init", "failed", f"Failed to initialize team: {str(e)}")
             return

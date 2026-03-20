@@ -57,6 +57,19 @@ export function useMarkdown() {
         return defaultLink.call(this, { ...token, href: safeHref });
     };
 
+    const defaultRenderer = new Renderer();
+    defaultRenderer.image = (token: Tokens.Image) => {
+        let href = token.href || '';
+        // Fallback for LLM generated local filenames
+        if (!href.startsWith('http') && !href.startsWith('/') && !href.startsWith('data:')) {
+            if (href.startsWith('chart_') || href.startsWith('image_') || href.endsWith('.png') || href.endsWith('.jpg')) {
+                href = `/uploads/${href}`;
+            }
+        }
+        const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
+        return `<img src="${href}" alt="${escapeHtml(token.text || '')}"${title} />`;
+    };
+
     /**
      * Render markdown string to HTML
      * @param {string} text Raw markdown text
@@ -66,6 +79,12 @@ export function useMarkdown() {
         if (!text) return '';
         const allowHtml = options?.allowHtml ?? true;
         let inputText = text.trim();
+
+        // Fix bare sandbox image paths (chart_*.png, image_*.jpg)
+        // Ensure they point to /uploads/ if they don't already
+        inputText = inputText.replace(/(\(|src=['"]?)(chart_[a-zA-Z0-9_]+\.png|image_[a-zA-Z0-9_]+\.jpg)/g, (match, prefix, filename) => {
+            return `${prefix}/uploads/${filename}`;
+        });
 
         // Katex Pre-processing
         // Display mode $$...$$ or \[...\]
@@ -88,7 +107,7 @@ export function useMarkdown() {
 
         // Parse markdown
         const markedOptions = allowHtml
-            ? baseMarkedOptions
+            ? { ...baseMarkedOptions, renderer: defaultRenderer }
             : { ...baseMarkedOptions, renderer: safeRenderer };
         let html = marked.parse(inputText, markedOptions) as string;
 

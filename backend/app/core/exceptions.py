@@ -4,6 +4,14 @@ from fastapi.responses import JSONResponse
 from app.core.logger import logger
 
 
+class AgentBuildError(Exception):
+    pass
+
+
+class ModelNotFoundError(Exception):
+    pass
+
+
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global exception: {exc}", exc_info=True)
     return JSONResponse(

@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 
-const locale = ref<'zh-CN' | 'en-US' | 'ja-JP' | 'ko-KR'>('zh-CN');
+const savedLocale = localStorage.getItem('tiga_locale') as 'zh-CN' | 'en-US' | 'ja-JP' | 'ko-KR';
+const locale = ref<'zh-CN' | 'en-US' | 'ja-JP' | 'ko-KR'>(savedLocale || 'zh-CN');
 
 const messages = {
   'zh-CN': {
@@ -13,6 +14,24 @@ const messages = {
     aiBadge: 'AI 自动生成',
     zeroHuman: '零人工参与',
     autoMode: '全自动模式',
+    app: {
+      nav: {
+        task: '任务',
+        agent: '智能体',
+        knowledge: '知识中心',
+      },
+      newChat: '新建对话',
+      systemSettings: '系统设置',
+      userManual: '用户操作手册',
+      allSessions: '全部任务记录',
+      allSessionsDesc: '查看并管理您的历史对话任务。',
+      searchTaskName: '搜索任务名称...',
+      noTasksFound: '未找到相关任务',
+      defaultAssistant: '默认助手',
+      newConversation: '新对话',
+      deleteSuccess: '删除成功',
+      deleteFailed: '删除失败',
+    },
     // Agent Status Dashboard
     agentStatus: {
       progress: '进度',
@@ -82,6 +101,24 @@ const messages = {
     aiBadge: 'AI Generated',
     zeroHuman: 'Zero Human Intervention',
     autoMode: 'Fully Autonomous',
+    app: {
+      nav: {
+        task: 'Tasks',
+        agent: 'Agents',
+        knowledge: 'Knowledge',
+      },
+      newChat: 'New Chat',
+      systemSettings: 'System Settings',
+      userManual: 'User Manual',
+      allSessions: 'All Sessions',
+      allSessionsDesc: 'View and manage your chat sessions.',
+      searchTaskName: 'Search session name...',
+      noTasksFound: 'No sessions found',
+      defaultAssistant: 'Default Assistant',
+      newConversation: 'New Chat',
+      deleteSuccess: 'Deleted',
+      deleteFailed: 'Delete failed',
+    },
     // Agent Status Dashboard
     agentStatus: {
       progress: 'Progress',
@@ -150,7 +187,25 @@ const messages = {
     aiGenerating: 'AIが自律的に起動し、リアルタイムで生成中です...',
     aiBadge: 'AI自動生成',
     zeroHuman: '人工介入なし',
-    autoMode: '全自動モード'
+    autoMode: '全自動モード',
+    app: {
+      nav: {
+        task: 'タスク',
+        agent: 'エージェント',
+        knowledge: 'ナレッジ',
+      },
+      newChat: '新規チャット',
+      systemSettings: 'システム設定',
+      userManual: 'ユーザーマニュアル',
+      allSessions: '全セッション',
+      allSessionsDesc: '会話履歴を確認・管理します。',
+      searchTaskName: 'セッション名を検索...',
+      noTasksFound: '該当するセッションがありません',
+      defaultAssistant: 'デフォルトアシスタント',
+      newConversation: '新規チャット',
+      deleteSuccess: '削除しました',
+      deleteFailed: '削除に失敗しました',
+    }
   },
   'ko-KR': {
     taskView: 'AI 태스크 플로우',
@@ -161,7 +216,25 @@ const messages = {
     aiGenerating: 'AI가 자율적으로 시작되어 실시간으로 생성 중입니다...',
     aiBadge: 'AI 자동 생성',
     zeroHuman: '인간 개입 없음',
-    autoMode: '완전 자동 모드'
+    autoMode: '완전 자동 모드',
+    app: {
+      nav: {
+        task: '작업',
+        agent: '에이전트',
+        knowledge: '지식',
+      },
+      newChat: '새 채팅',
+      systemSettings: '시스템 설정',
+      userManual: '사용자 매뉴얼',
+      allSessions: '전체 세션',
+      allSessionsDesc: '대화 세션을 보고 관리합니다.',
+      searchTaskName: '세션 이름 검색...',
+      noTasksFound: '관련 세션이 없습니다',
+      defaultAssistant: '기본 어시스턴트',
+      newConversation: '새 채팅',
+      deleteSuccess: '삭제됨',
+      deleteFailed: '삭제 실패',
+    }
   }
 };
 
@@ -181,6 +254,7 @@ export function useI18n() {
 
   const setLocale = (lang: 'zh-CN' | 'en-US' | 'ja-JP' | 'ko-KR') => {
     locale.value = lang;
+    localStorage.setItem('tiga_locale', lang);
   };
 
   return {

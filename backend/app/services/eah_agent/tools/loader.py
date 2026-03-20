@@ -7,6 +7,7 @@ from agno.tools import Toolkit
 from .libs.duckduckgo import DuckDuckGoTools
 from .libs.sandbox_tools import SandboxTools
 from .registry import discover_tools
+from app.services.eah_agent.utils.secret_refs import resolve_secret_refs
 
 # Import special tools (wrapped to avoid import errors if dependencies missing)
 try:
@@ -46,7 +47,6 @@ class ToolsManager:
     async def load_tools(self, agent_model: Any, db: AsyncSession = None, session_id: str = None, enable_search: bool = False) -> List[Any]:
         """
         Load all tools based on agent configuration and defaults.
-        This replaces the hardcoded logic in AgentManager.
         """
         tools = []
         
@@ -69,7 +69,7 @@ class ToolsManager:
                     if entry.get("type") == "skill":
                         continue
                     tool_name = entry.get("name", "").lower()
-                    tool_config = entry.get("config", {})
+                    tool_config = resolve_secret_refs(entry.get("config", {}) or {})
                 
                 if tool_name in self._available_tools_map:
                     try:

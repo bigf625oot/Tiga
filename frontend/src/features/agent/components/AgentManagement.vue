@@ -218,6 +218,7 @@
             :availableModels="availableModels"
             @close="closeDrawer" 
             @saved="handleAgentSaved" 
+            @navigate="view => emit('navigate', view)"
         />
 
         <AlertDialog :open="isDeleteDialogOpen" @update:open="val => isDeleteDialogOpen = val">
@@ -268,6 +269,7 @@ import {
 } from 'lucide-vue-next';
 
 const { toast } = useToast();
+const emit = defineEmits(['navigate']);
 
 // Icons
 const activeTab = ref('my-agents');
@@ -450,6 +452,14 @@ const groupedAgents = computed(() => {
 
 const searchSuggestions = ref([]);
 
+const normalizeAgentsResponse = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (payload && Array.isArray(payload.data)) return payload.data;
+    if (payload && Array.isArray(payload.items)) return payload.items;
+    if (payload && payload.data && Array.isArray(payload.data.items)) return payload.data.items;
+    return [];
+};
+
 const fetchSuggestions = async () => {
     // If suggestions are not shown, no need to fetch (e.g. after selection or blur)
     if (!inputValue.value || !showSuggestions.value) {
@@ -465,7 +475,8 @@ const fetchSuggestions = async () => {
         }
         const res = await fetch(url);
         if (res.ok) {
-            const agents = await res.json();
+            const payload = await res.json();
+            const agents = normalizeAgentsResponse(payload);
             // Dedup names
             const names = new Set(agents.map(a => a.name));
             searchSuggestions.value = Array.from(names).slice(0, 5);
@@ -573,7 +584,8 @@ const fetchAgents = async (forceRefresh = false) => {
 
         const res = await fetch(url);
         if (res.ok) {
-            const agents = await res.json();
+            const payload = await res.json();
+            const agents = normalizeAgentsResponse(payload);
             
             // Process agents (categories, icons)
             const processedAgents = agents.map(agent => {
@@ -613,9 +625,11 @@ const fetchAgents = async (forceRefresh = false) => {
         }
     } catch (e) {
         console.error("Failed to fetch agents", e);
-        // Error handling: Clear lists on error
-         myAgents.value = [];
-         discoverAgents.value = [];
+        if (activeTab.value === 'my-agents') {
+            myAgents.value = [];
+        } else if (activeTab.value === 'discover') {
+            discoverAgents.value = [];
+        }
          toast({
             description: "获取智能体列表失败",
             variant: "destructive"
@@ -636,7 +650,14 @@ const fetchAgents = async (forceRefresh = false) => {
 
 
 watch(activeTab, () => {
+    selectedCategory.value = '全部';
     fetchAgents();
+});
+
+watch(discoverCategories, (cats) => {
+    if (!cats.includes(selectedCategory.value)) {
+        selectedCategory.value = '全部';
+    }
 });
 
 const fetchKnowledgeBases = async () => {

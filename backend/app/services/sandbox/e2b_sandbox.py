@@ -41,7 +41,7 @@ class E2BSandboxService:
         if settings.E2B_TEMPLATE_ID:
             sandbox_kwargs["template"] = settings.E2B_TEMPLATE_ID
             
-        sandbox = Sandbox(**sandbox_kwargs)
+        sandbox = Sandbox.create(**sandbox_kwargs)
         
         # Register if session_id provided
         if session_id:

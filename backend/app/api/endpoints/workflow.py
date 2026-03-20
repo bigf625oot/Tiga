@@ -34,7 +34,18 @@ async def read_workflows(skip: int = 0, limit: int = 100, db: AsyncSession = Dep
 
 @router.post("/", response_model=WorkflowResponse)
 async def create_workflow(workflow_in: WorkflowCreate, db: AsyncSession = Depends(get_db)):
-    workflow = Workflow(**workflow_in.model_dump())
+    data = workflow_in.model_dump()
+    if not data.get("original_id"):
+         # New workflow series
+         import uuid
+         data["original_id"] = str(uuid.uuid4())
+         # Ensure definition is set if webhook_url is used as a proxy for definition in legacy mode
+         if not data.get("definition") and data.get("webhook_url"):
+             data["definition"] = {"webhook_url": data["webhook_url"]}
+         elif not data.get("definition"):
+             data["definition"] = {}
+
+    workflow = Workflow(**data)
     db.add(workflow)
     await db.commit()
     await db.refresh(workflow)

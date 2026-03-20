@@ -4,7 +4,8 @@ from typing import Any, Dict, List, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.eah_agent.workflows.base import EAHWorkflow
 from app.services.eah_agent.workflows.schemas.dynamic_flow import DynamicFlowState, WorkflowNode
-from app.services.eah_agent.core.agent_manager import agent_manager
+from app.services.eah_agent.core.agent_builder import AgentAssembler
+from app.services.eah_agent.core.agent_factory import AgentFactory
 from app.services.eah_agent.workflows.helpers import format_workflow_event, persist_workflow_state
 
 logger = logging.getLogger(__name__)
@@ -100,34 +101,6 @@ class DynamicWorkflow(EAHWorkflow):
             return [self._resolve_params(v) for v in params]
         return params
 
-    async def _execute_agent_node(self, node: WorkflowNode, params: Dict) -> Any:
-        """Execute an Agent node."""
-        agent_id = params.get("agent_id")
-        team_type = params.get("team_type")
-        prompt = params.get("prompt", "")
-        
-        agent = None
-        if team_type:
-            # Create a team on the fly
-            # Team config should be in params, e.g. {"coordinator_id": "...", ...}
-            agent = await agent_manager.create_team(self.db, team_type, params)
-        elif agent_id:
-            # Create a standard agent
-            agent = await agent_manager.create_agno_agent(self.db, agent_id, self.session_id)
-        
-        if not agent:
-            raise ValueError(f"Agent configuration missing for node {node.id}")
-
-        # Run the agent
-        # We collect the full response string for now
-        response_text = ""
-        async for chunk in agent.run(prompt, stream=True):
-            if isinstance(chunk, str):
-                response_text += chunk
-                # Ideally we could yield partials here too, but it complicates the generator structure
-        
-        return response_text
-
     async def run_stream(self) -> AsyncGenerator[str, None]:
         """
         Execute the dynamic workflow.
@@ -154,7 +127,49 @@ class DynamicWorkflow(EAHWorkflow):
                         output = resolved_params
                         
                     elif node.type == "agent":
-                        output = await self._execute_agent_node(node, resolved_params)
+                        agent_id = resolved_params.get("agent_id")
+                        team_type = resolved_params.get("team_type")
+                        prompt = resolved_params.get("prompt", "")
+
+                        agent = None
+                        if team_type:
+                            from app.services.eah_agent.domain.config import TeamConfig
+                            # Needs to be implemented properly, fallback to AgentManager logic manually if needed
+                            # For now we recreate what agent_manager.create_team did
+                            if team_type == "research":
+                                from app.services.eah_agent.team.research_team import ResearchTeam
+                                team = ResearchTeam(self.db)
+                                agent = await team.initialize(**resolved_params)
+                            elif team_type == "operations":
+                                from app.services.eah_agent.team.operations_team import OperationsTeam
+                                team = OperationsTeam(self.db)
+                                agent = await team.initialize(**resolved_params)
+                            else:
+                                from app.services.eah_agent.team.dynamic_team import DynamicTeam
+                                team = DynamicTeam(self.db)
+                                agent = await team.initialize(**resolved_params)
+                        elif agent_id:
+                            builder = AgentAssembler(self.db, agent_id)
+                            agent = await builder.build(session_id=self.session_id)
+
+                        if not agent:
+                            raise ValueError(f"Agent configuration missing for node {node.id}")
+
+                        response_text = ""
+                        async for chunk in agent.run(prompt, stream=True):
+                            text = None
+                            if isinstance(chunk, str):
+                                text = chunk
+                            elif hasattr(chunk, "content"):
+                                content = getattr(chunk, "content", None)
+                                if content is not None:
+                                    text = str(content)
+
+                            if text:
+                                response_text += text
+                                yield format_workflow_event(node.id, "processing", text)
+
+                        output = response_text
                         
                     elif node.type == "tool":
                         # TODO: Implement generic tool execution

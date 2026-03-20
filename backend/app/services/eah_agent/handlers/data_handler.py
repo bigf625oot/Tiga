@@ -1,261 +1,234 @@
 import logging
+import asyncio
 import json
 import re
-from typing import AsyncGenerator, Dict, Any, Optional
+import time
+from typing import AsyncGenerator, Dict, Any, Optional, List, Tuple
 
-from app.services.eah_agent.core.base_handler import BaseHandler
-from app.services.eah_agent.core.nlu import IntentResult
-from app.services.eah_agent.core.agent_factory import AgentFactory
-from app.services.eah_agent.domain.config import AgentConfig
-from app.models.llm_model import LLMModel
-from app.core.i18n import _
-from app.core.config import settings
-from app.core.shared_state import StateManager, SharedState
-from app.core.context_compressor import ContextCompressor
-from app.services.eah_agent.storage.session_history import SessionHistory
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from agno.agent import Agent
-# Import DataToolkit
-from app.services.eah_agent.tools.libs.data_toolkit import DataToolkit
-# Import E2BTools
-try:
-    from agno.tools.e2b import E2BTools
-except ImportError:
-    E2BTools = None
 
-logger = logging.getLogger(__name__)
+# 核心架构组件
+from app.services.eah_agent.core.agent_base_handler import BaseHandler, StreamResponse
+from app.services.eah_agent.core.agent_nlu import IntentResult
+from app.services.eah_agent.core.agent_assembler import AgentAssembler
+from app.services.eah_agent.handlers.file_orchestrator import FileOrchestrator
+from app.services.eah_agent.storage.session_history import SessionHistory
+from app.core.context_compressor import ContextCompressor
+from app.core.i18n import _
+
+logger = logging.getLogger("eah.handler.data")
+
+# =================================================================
+# AgnoStreamAdapter: 流式协议编排引擎
+# =================================================================
+
+class AgnoStreamAdapter:
+    """
+    P10 级流式内容转换器。
+    职责：
+    1. 增量缓冲：处理跨 Chunk 的 Delimiter (:::) 识别。
+    2. 块提取：从文本流中剥离 JSON 图表块，防止 UI 渲染原始 JSON。
+    3. 协议标准化：将 Agno 内部对象统一为前端可识别的事件字典。
+    """
+
+    def __init__(self, extract_charts: bool = True):
+        self.extract_charts = extract_charts
+        self._text_buffer = ""
+        self._in_block = False
+        self._block_type: Optional[str] = None
+        
+        # 识别协议：::: echarts {json} :::
+        self.BLOCK_START_PATTERN = re.compile(r":::\s*(\w+)")
+        self.BLOCK_END_TAG = ":::"
+
+    async def to_standard_events(self, chunk: Any) -> AsyncGenerator[Dict[str, Any], None]:
+        """将 Agno 原生 Chunk 转换为标准化事件流"""
+        
+        # 1. 处理 RunOutput 元数据（包含最终统计、消耗等）
+        if type(chunk).__name__ == "RunOutput":
+            yield {"type": "run_output", "data": self._safe_to_dict(chunk)}
+            return
+
+        # 2. 处理工具调用状态 (Tool Calling)
+        if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+            names = [tc.function.name for tc in chunk.tool_calls if tc.function]
+            if names:
+                yield {"type": "status", "content": _("Running tools: {}...").format(', '.join(names))}
+
+        # 3. 处理思考流 (Reasoning/Think)
+        # 适配不同模型的思维链字段名
+        reasoning = getattr(chunk, "reasoning", None) or getattr(chunk, "reasoning_content", None)
+        if reasoning:
+            yield {"type": "think", "content": reasoning}
+
+        # 4. 核心：处理文本增量与块提取
+        content = getattr(chunk, "content", None)
+        if content:
+            async for event in self._process_content_delta(content):
+                yield event
+
+    async def _process_content_delta(self, new_text: str) -> AsyncGenerator[Dict[str, Any], None]:
+        """增量文本处理逻辑：实现状态机提取"""
+        self._text_buffer += new_text
+
+        while True:
+            if not self._in_block:
+                # 寻找块开始标志 :::
+                match = self.BLOCK_START_PATTERN.search(self._text_buffer)
+                if match:
+                    # 吐出块之前的文本
+                    pre_text = self._text_buffer[:match.start()]
+                    if pre_text:
+                        yield {"type": "content", "content": pre_text}
+                    
+                    self._in_block = True
+                    self._block_type = match.group(1)
+                    self._text_buffer = self._text_buffer[match.end():]
+                    continue
+                else:
+                    # 没找到开始标志，但要保留末尾几个字符（防止 ::: 被切割在两个包里）
+                    safe_len = max(0, len(self._text_buffer) - 10)
+                    to_send = self._text_buffer[:safe_len]
+                    if to_send:
+                        yield {"type": "content", "content": to_send}
+                        self._text_buffer = self._text_buffer[safe_len:]
+                    break
+            else:
+                # 寻找块结束标志 :::
+                end_idx = self._text_buffer.find(self.BLOCK_END_TAG)
+                if end_idx != -1:
+                    raw_block = self._text_buffer[:end_idx].strip()
+                    # 提取并解析
+                    yield self._handle_block(self._block_type, raw_block)
+                    
+                    self._in_block = False
+                    self._block_type = None
+                    self._text_buffer = self._text_buffer[end_idx + len(self.BLOCK_END_TAG):]
+                    continue
+                else:
+                    # 块还没结束，继续在 buffer 中堆积，不 yield content
+                    break
+
+    def _handle_block(self, btype: str, raw_content: str) -> Dict[str, Any]:
+        """处理提取出来的块内容"""
+        if btype == "echarts" and self.extract_charts:
+            try:
+                data = json.loads(raw_content)
+                return {"type": "chart", "content": data, "sub_type": "echarts"}
+            except Exception as e:
+                logger.warning(f"Echarts JSON parse failed: {e}")
+                return {"type": "content", "content": f"\n```json\n{raw_content}\n```\n"}
+        
+        # 默认作为代码块回退
+        return {"type": "content", "content": f"\n```{btype}\n{raw_content}\n```\n"}
+
+    async def flush(self) -> AsyncGenerator[Dict[str, Any], None]:
+        """流结束时强制清空缓冲区"""
+        if self._text_buffer:
+            if self._in_block:
+                yield self._handle_block(self._block_type, self._text_buffer)
+            else:
+                yield {"type": "content", "content": self._text_buffer}
+        self._text_buffer = ""
+
+    def _safe_to_dict(self, obj: Any) -> Dict[str, Any]:
+        try:
+            return obj.to_dict() if hasattr(obj, "to_dict") else str(obj)
+        except:
+            return {}
+
+# =================================================================
+# DataHandler: 数据分析专家处理器
+# =================================================================
 
 class DataHandler(BaseHandler):
     """
-    Handles 'data_query' (SQL) and 'kg_qa' (Knowledge Graph) intents.
-    Wraps existing specialized services using Agno Agent with DataToolkit.
+    数据分析专家处理器：负责 SQL 生成、可视化及 CSV/Excel 分析。
     """
-    
-    def __init__(self, llm_model: Optional[LLMModel] = None):
+
+    def __init__(self, llm_model: Optional[Any] = None):
         super().__init__(llm_model)
-        self.agent: Optional[Agent] = None
-        # Shared State Management
-        self.state_manager = StateManager.get_instance()
+        self.stream_adapter = AgnoStreamAdapter(extract_charts=True)
 
-    async def _ensure_agent_initialized(self, session_id: str = None, **kwargs):
-        """
-        Initializes the DataAgent.
-        """
-        if self.agent and self.llm_model:
-            return
+    async def process(
+        self, 
+        input_text: str, 
+        intent: Optional[IntentResult] = None, 
+        **kwargs: Any
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        
+        db: AsyncSession = kwargs.get("db")
+        session_id: str = kwargs.get("session_id")
+        files: List[Any] = kwargs.get("files", [])
+        agent_id: str = kwargs.get("agent_id")
 
+        yield {"type": "status", "content": _("Warming up Data Analyst Engine...")}
+
+        # 1. 并行资源准备 (并行加载 Agent、文件、历史记录)
+        setup_tasks = [
+            asyncio.create_task(self._assemble_data_agent(db, agent_id, session_id)),
+            asyncio.create_task(FileOrchestrator.process_batch(files, session_id)),
+            asyncio.create_task(self._prepare_history(db, session_id))
+        ]
+
+        # 等待所有前置任务完成
+        agent, file_results, (history_msgs, _) = await asyncio.gather(*setup_tasks)
+
+        # 2. 指令编排
+        base_instructions = getattr(agent, "instructions", None)
+        if isinstance(base_instructions, str):
+            instructions = [base_instructions] if base_instructions.strip() else []
+        elif isinstance(base_instructions, list):
+            instructions = [str(x) for x in base_instructions if str(x).strip()]
+        else:
+            instructions = []
+        if file_results.get("context"):
+            instructions.append(f"Available Local Data Context:\n{file_results['context']}")
+            yield {"type": "status", "content": _("Connected to {} local data sources.").format(len(files))}
+
+        # 3. 执行分析流
         try:
-            # 1. Config
-            tools = []
+            yield {"type": "status", "content": _("Analyzing dataset and generating insights...")}
             
-            # Add DataToolkit
-            tools.append(DataToolkit())
-            
-            # Add E2BTools if configured
-            if E2BTools and settings.E2B_API_KEY:
-                try:
-                    e2b_tool = E2BTools(api_key=settings.E2B_API_KEY)
-                    tools.append(e2b_tool)
-                except Exception as e:
-                    logger.warning(f"Failed to init E2BTools: {e}")
-            
-            # Add Python/Pandas/CSV tools for local fallback or additional analysis
-            # We can use our wrapper tools or Agno's directly. 
-            # Let's use generic Python capability if E2B is missing, or just rely on DataToolkit.
-            # User requested "Multimodal ability: allow user to upload Excel/CSV".
-            # Agno's CsvTools/PandasTools are good for this.
-            from app.services.eah_agent.tools.libs.coding_tools import CsvTools, PandasTools
-            tools.append(CsvTools())
-            tools.append(PandasTools())
-
-            instructions = [
-                "You are a Data Analyst Agent.",
-                "Your goal is to answer user questions by querying the database or knowledge graph, and analyzing the results.",
-                "1. For general data questions, use `query_database` to get SQL, data, and charts.",
-                "2. For relationship questions, use `generate_kg_chart`.",
-                "3. If the user provides files (CSV/Excel), use pandas/csv tools to analyze them.",
-                "4. You can use Python (via E2B or local) to perform advanced analysis or plotting if the database tools are insufficient.",
-                "IMPORTANT: If you generate or receive a chart configuration (JSON), you MUST output it in your response wrapped in a special block like this:",
-                "::: echarts",
-                "{ ... chart json ... }",
-                ":::",
-                "Do not modify the chart JSON structure."
-            ]
-            
-            config = AgentConfig(
-                name="DataAgent",
-                role="Data Analyst",
+            async for chunk in agent.astream(
+                input_text,
+                messages=history_msgs,
                 instructions=instructions,
-                tools=[], # We pass instances directly to factory or agent
-                reasoning=True, # Enable reasoning as requested
-                model_params={"temperature": 0.1} # Low temp for code/data
-            )
-
-            # Create Agent
-            # Note: AgentFactory usually takes ToolConfig (dicts) or we can instantiate Agent directly.
-            # Since we have custom Tool instances (DataToolkit), it's easier to instantiate Agent directly 
-            # or extend Factory. BaseHandler doesn't mandate Factory.
-            # QuickHandler uses Factory but also appends tools manually.
+                file_paths=file_results.get("paths", []) 
+            ):
+                # 通过适配器转换 Chunk
+                async for event in self.stream_adapter.to_standard_events(chunk):
+                    yield event
             
-            # Let's use Factory for basic setup then append our tools
-            self.agent = await AgentFactory.create_agent(config, llm_model=self.llm_model)
-            
-            # Inject our instances
-            if self.agent:
-                self.agent.tools.extend(tools)
-                self.agent.monitoring = True
-
-            # Save State
-            if session_id:
-                state = await self.state_manager.get_state(session_id)
-                if not state:
-                    state = SharedState(session_id=session_id, mode="data")
-                state.agent_config = config
-                await self.state_manager.save_state(session_id, state)
+            # 最后冲刷缓冲区
+            async for event in self.stream_adapter.flush():
+                yield event
 
         except Exception as e:
-            logger.error(f"Failed to init DataAgent: {e}")
-            self.agent = None
+            logger.error(f"Data analysis critical failure: {e}", exc_info=True)
+            yield {"type": "error", "content": _("I encountered an issue while processing the data.")}
 
-    async def _process_files(self, files: list, session_id: str) -> str:
-        """
-        Process uploaded files for analysis.
-        Returns context string describing the files.
-        """
-        from pathlib import Path
-        import shutil
-        
-        context_parts = []
-        temp_dir = Path("data/temp") / session_id
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        
-        for file in files:
-            filename = getattr(file, "filename", "unknown")
-            try:
-                file_path = temp_dir / filename
-                with open(file_path, "wb") as buffer:
-                    file.file.seek(0)
-                    shutil.copyfileobj(file.file, buffer)
-                
-                context_parts.append(f"Uploaded file: {filename} (Path: {file_path})")
-                # We could load into Pandas here or just tell the agent the path
-            except Exception as e:
-                logger.error(f"File upload failed: {e}")
-        
-        return "\n".join(context_parts)
+    # --- 私有逻辑 ---
 
-    async def process(self, input_text: str, intent: IntentResult, **kwargs) -> AsyncGenerator[Dict[str, Any], None]:
-        db = kwargs.get("db")
-        session_id = kwargs.get("session_id")
-        files = kwargs.get("files")
-        
-        await self._ensure_agent_initialized(session_id=session_id)
-        
-        if not self.agent:
-            yield {"type": "error", "content": _("DataAgent initialization failed.")}
-            return
+    async def _assemble_data_agent(self, db: AsyncSession, agent_id: str, session_id: str) -> Agent:
+        assembler = AgentAssembler(db)
+        return await assembler.assemble(
+            agent_id=agent_id,
+            session_id=session_id,
+            enable_data_tools=True,
+            enable_coding_tools=True,
+            enable_sandbox=True,
+            reasoning_override=True
+        )
 
-        # 1. Handle Files
-        if files and session_id:
-            yield {"type": "status", "content": _("Processing uploaded files...")}
-            file_context = await self._process_files(files, session_id)
-            if file_context:
-                input_text += f"\n\n[Context]\n{file_context}\nYou can access these files using pandas at the provided paths."
-
-        # 2. Context Compression & History
-        history_messages = []
-        if db and session_id:
-            try:
-                history = SessionHistory(db)
-                msgs = await history.get_messages(session_id, limit=10) # Data queries are heavy, keep limit low
-                raw_history = [{"role": m.role, "content": m.content} for m in msgs]
-                
-                compressor = ContextCompressor(model=self.llm_model)
-                history_messages = await compressor.compress_context(raw_history, max_tokens=3000)
-            except Exception as e:
-                logger.warning(f"History load/compress failed: {e}")
-
-        # 3. Run Agent
-        try:
-            yield {"type": "status", "content": _("Analyzing data request...")}
-            
-            # Using run_kwargs to pass history
-            run_kwargs = {"messages": history_messages, "stream": True, "yield_run_output": True}
-            
-            response_stream = await self.agent.arun(input_text, **run_kwargs)
-            
-            buffer = ""
-            
-            async for chunk in response_stream:
-                # 提取最终 RunOutput 对象
-                if type(chunk).__name__ == "RunOutput":
-                    try:
-                        run_output_dict = chunk.to_dict()
-                    except Exception:
-                        run_output_dict = {
-                            "content": getattr(chunk, "content", None),
-                            "tools": getattr(chunk, "tools", []),
-                            "messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in getattr(chunk, "messages", [])],
-                            "reasoning_content": getattr(chunk, "reasoning_content", None),
-                            "metrics": getattr(chunk, "metrics", None)
-                        }
-                    yield {
-                        "type": "run_output",
-                        "data": run_output_dict
-                    }
-                    continue
-
-                # Tool Status
-                if hasattr(chunk, "tool_calls") and chunk.tool_calls:
-                    tool_names = [tc.function.name for tc in chunk.tool_calls if tc.function]
-                    if tool_names:
-                        yield {"type": "status", "content": f"Running tools: {', '.join(tool_names)}..."}
-
-                # Reasoning (Think)
-                reasoning = getattr(chunk, "reasoning", None) or getattr(chunk, "reasoning_content", None)
-                if reasoning:
-                    yield {"type": "think", "content": reasoning}
-
-                # Content & Chart Detection
-                content = getattr(chunk, "content", None)
-                if content:
-                    # Accumulate for pattern matching if needed, but for streaming we usually just yield
-                    # However, to detect the chart block reliably, we might need to parse the buffer.
-                    # Simple approach: Yield content as is, but also look for the pattern.
-                    # Since we are yielding to frontend, frontend handles markdown.
-                    # BUT the requirement says: yield {"type": "chart", "content": ...}
-                    # So we MUST intercept the chart JSON.
-                    
-                    buffer += content
-                    
-                    # Regex for ::: echarts { ... } :::
-                    # Note: This is tricky in streaming. We might process it line by line or use a state machine.
-                    # For simplicity, we check if the buffer contains the full block, extract it, yield 'chart', 
-                    # and remove it from the 'content' yield? 
-                    # Or just yield it as content and ALSO as chart? 
-                    # Usually 'chart' type triggers a specific UI widget.
-                    # Let's try to extract it.
-                    
-                    chart_pattern = re.compile(r":::\s*echarts\s*(\{[\s\S]*?\})\s*:::", re.MULTILINE)
-                    match = chart_pattern.search(buffer)
-                    if match:
-                        chart_json_str = match.group(1)
-                        try:
-                            chart_data = json.loads(chart_json_str)
-                            yield {"type": "chart", "content": chart_data}
-                            # Remove the chart block from buffer/output to avoid duplication? 
-                            # Or keep it for history?
-                            # Usually we keep it.
-                            # We reset buffer after match to avoid re-matching
-                            buffer = buffer.replace(match.group(0), "") 
-                        except json.JSONDecodeError:
-                            pass
-                    
-                    yield {"type": "content", "content": content}
-                    
-                elif isinstance(chunk, str):
-                    yield {"type": "content", "content": chunk}
-
-        except Exception as e:
-            logger.error(f"DataAgent run failed: {e}")
-            yield {"type": "error", "content": _("An error occurred during data analysis.")}
+    async def _prepare_history(self, db: AsyncSession, session_id: str) -> Tuple[List[Dict], bool]:
+        if not session_id or not db: return [], False
+        history = SessionHistory(db)
+        msgs = await history.get_messages(session_id, limit=10)
+        compressor = ContextCompressor(model=self.llm_model)
+        compressed = await compressor.compress_context(
+            [{"role": m.role, "content": m.content} for m in msgs], 
+            max_tokens=2000
+        )
+        return compressed, len(compressed) < len(msgs)

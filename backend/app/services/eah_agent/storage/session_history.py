@@ -40,16 +40,29 @@ class SessionHistory:
         result = await self.db.execute(stmt)
         return result.scalars().first()
 
-    async def add_message(self, session_id: str, role: str, content: str, message_type: str = "text", meta_data: Optional[Dict] = None) -> ChatMessage:
+    async def add_message(
+        self, 
+        session_id: str, 
+        role: str, 
+        content: str, 
+        message_type: str = "text", 
+        meta_data: Optional[Dict] = None,
+        reasoning_content: Optional[str] = None,
+        tool_calls: Optional[List[Dict]] = None,
+        tool_call_id: Optional[str] = None
+    ) -> ChatMessage:
         """
-        Adds a message to the session history.
+        Adds a message to the session history with full Agno support.
         """
         message = ChatMessage(
             session_id=session_id,
             role=role,
             content=content,
             message_type=message_type,
-            meta_data=meta_data
+            meta_data=meta_data,
+            reasoning_content=reasoning_content,
+            tool_calls=tool_calls,
+            tool_call_id=tool_call_id
         )
         self.db.add(message)
         await self.db.commit()

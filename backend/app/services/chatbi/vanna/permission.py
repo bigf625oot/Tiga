@@ -50,12 +50,37 @@ class SQLPermissionValidator:
         for row in data:
             new_row = row.copy()
             for field in self.sensitive_fields:
-                if field in new_row and new_row[field]:
+                if field in new_row and new_row[field] is not None:
                     # Simple masking: keep first 1, last 1, mask middle
                     val = str(new_row[field])
                     if len(val) > 2:
                         new_row[field] = val[0] + "*" * (len(val) - 2) + val[-1]
-                    else:
+                    elif len(val) > 0:
                         new_row[field] = "*" * len(val)
             masked_data.append(new_row)
         return masked_data
+
+    def mask_dataframe(self, df):
+        """
+        Masks sensitive fields in a pandas DataFrame.
+        """
+        if not self.sensitive_fields or df.empty:
+            return df
+        
+        # Check if any sensitive fields are actually in the DataFrame columns
+        fields_to_mask = [f for f in self.sensitive_fields if f in df.columns]
+        if not fields_to_mask:
+            return df
+            
+        # Make a copy to avoid SettingWithCopyWarning
+        df_masked = df.copy()
+        for field in fields_to_mask:
+            # Apply masking to non-null values
+            mask_func = lambda val: (
+                str(val)[0] + "*" * (len(str(val)) - 2) + str(val)[-1] if len(str(val)) > 2 
+                else "*" * len(str(val))
+            ) if val is not None and str(val).strip() else val
+            
+            df_masked[field] = df_masked[field].apply(mask_func)
+            
+        return df_masked

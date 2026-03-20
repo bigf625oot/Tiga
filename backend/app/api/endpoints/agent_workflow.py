@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.services.eah_agent.core.executor import get_executor
+from app.services.eah_agent.core.agent_executor import get_executor
 from app.crud.crud_agent_workflow import agent_workflow as crud_agent_workflow
 from app.crud import crud_chat
 from app.schemas.agent_workflow import AgentWorkflowCreate, AgentWorkflowUpdate, AgentWorkflowResponse

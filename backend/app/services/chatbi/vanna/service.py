@@ -312,6 +312,14 @@ class SmartDataQueryService:
             self.vanna_core.set_sql_runner(sql_runner)
             self.current_db_config = config
             
+            # Update permission validator with config
+            allowed_tables = set(config.allowed_tables) if config.allowed_tables else set()
+            sensitive_fields = set(config.sensitive_fields) if config.sensitive_fields else set()
+            self.permission_validator = SQLPermissionValidator(
+                allowed_tables=allowed_tables,
+                sensitive_fields=sensitive_fields
+            )
+            
             # Verify connection immediately
             # SQLAlchemy creates engine lazily, so we must force a connection to check validity
             try:
@@ -457,6 +465,9 @@ class SmartDataQueryService:
             # 3. 执行 SQL
             logger.info(f"审计：用户问题 '{question}' 执行的 SQL：{sql}")
             df = self.vanna_core.run_sql(sql)
+            
+            # 敏感字段脱敏
+            df = self.permission_validator.mask_dataframe(df)
             
             if df.empty:
                 msg = "查询已执行，但未返回结果。"
@@ -700,9 +711,7 @@ class SmartDataQueryService:
             df = self.vanna_core.run_sql(sql)
             
             # 敏感字段脱敏 (Data Masking)
-            # Convert to dict, mask, then back to df if needed, or just mask display
-            # For simplicity, we assume result is display-only for now or we mask the DF
-            # df = self.permission_validator.mask_dataframe(df) # Hypothetical method
+            df = self.permission_validator.mask_dataframe(df)
             
             if df.empty:
                 msg = "查询已执行，但未返回结果。"

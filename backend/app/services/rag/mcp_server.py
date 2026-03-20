@@ -1,10 +1,4 @@
 from typing import List, Optional
-# [Fix] Import mcp directly to avoid pywintypes error on Windows
-# 'FastMCP' uses 'mcp' under the hood which might trigger windows specific imports
-# But if 'mcp' package is installed and 'pywin32' is installed, it should work.
-# The error "No module named 'pywintypes'" suggests pywin32 is not installed or environment issue.
-# However, user says it is installed.
-# Let's try to wrap the import to be safe or debug.
 
 try:
     from mcp.server.fastmcp import FastMCP

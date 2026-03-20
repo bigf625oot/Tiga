@@ -118,7 +118,7 @@ export function useChatSession() {
     try {
       if (!currentSessionId.value) {
         // Auto create session if not exists
-        await createNewSession(userMsg.slice(0, 20), agentId, mode);
+        await createNewSession(userMsg.slice(0, 20), agentId || null, mode);
       }
       
       if (!currentSessionId.value) throw new Error("Failed to create session");
@@ -128,7 +128,8 @@ export function useChatSession() {
         attachments: attachments.map(a => a.id).filter((id): id is string => id !== undefined),
         enable_search: enableSearch,
         mode: mode,
-        intent: 'chat'
+        intent: 'chat',
+        agent_id: agentId || undefined,
       };
 
       const response = await chatService.sendChatMessage(

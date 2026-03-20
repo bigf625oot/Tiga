@@ -1,10 +1,13 @@
 <template>
   <div class="h-full relative min-h-0 min-w-0 flex flex-col group/scrollbar">
-    <!-- Original Scroll Container -->
     <div 
       class="flex-1 overflow-y-auto overscroll-none px-10 pt-8 no-scrollbar h-full" 
       v-bind="containerProps"
       @scroll="handleScroll"
+      @wheel="handleUserInteraction"
+      @touchstart="handleUserInteraction"
+      @mousedown="handleUserInteraction"
+      @keydown="handleUserInteraction"
     >
       <div class="max-w-4xl mx-auto w-full">
         <div v-bind="wrapperProps">
@@ -15,16 +18,14 @@
             class="flex flex-col gap-6 scroll-mt-8"
             :class="{ 'pb-8': !item.data.isSpacer }"
           >
-            <!-- 1. Normal Message Group -->
+            <!-- Normal Message Group -->
             <template v-if="!item.data.isLoader && !item.data.isSpacer">
-                <!-- Time Separator -->
                 <div v-if="item.data.showTime" class="flex justify-center my-4">
                     <span class="text-[10px] text-muted-foreground/40 px-2 py-0.5 rounded-full select-none">
                     {{ formatGroupTime(item.data.timestamp) }}
                     </span>
                 </div>
         
-                <!-- Messages in Group -->
                 <ChatCard 
                     v-for="(msg, mIdx) in item.data.messages" 
                     :key="mIdx"
@@ -42,13 +43,14 @@
                     @quote-message="$emit('quote-message', $event)"
                     @excerpt-message="$emit('excerpt-message', $event)"
                     @delete-message="$emit('delete-message', $event)"
+                    @resend-message="$emit('resend-message', $event)"
+                    @edit-message="$emit('edit-message', $event)"
                 />
             </template>
 
-            <!-- 2. Loading Indicator (As a Virtual Item) -->
+            <!-- Loading Indicator -->
             <template v-else-if="item.data.isLoader">
                 <div class="flex gap-4 ml-10 mt-2 pb-4 animate-in fade-in duration-300">
-                    <!-- Avatar -->
                     <div class="flex-shrink-0">
                         <div class="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center shadow-sm">
                             <div class="relative flex h-3 w-3">
@@ -58,7 +60,6 @@
                         </div>
                     </div>
                     
-                    <!-- Loading Content -->
                     <div class="flex flex-col gap-2 w-full max-w-[80%]">
                         <div class="p-4 rounded-2xl rounded-tl-none bg-muted/30 border border-border/60 backdrop-blur-md shadow-sm">
                            <template v-if="loadingStatus">
@@ -89,7 +90,7 @@
                     </div>
                 </div>
             </template>
-            <!-- 3. Bottom Spacer -->
+            <!-- Bottom Spacer -->
             <template v-else-if="item.data.isSpacer">
                 <div class="h-32 w-full flex-shrink-0 pointer-events-none"></div>
             </template>
@@ -111,7 +112,7 @@
         />
     </div>
 
-    <!-- New Message Notification / Scroll to Bottom Button -->
+    <!-- Scroll to Bottom Button -->
     <transition
       enter-active-class="transition-all duration-300 ease-out"
       enter-from-class="opacity-0 translate-y-4"
@@ -151,9 +152,8 @@ const props = defineProps<{
   loadingStatus?: string;
 }>();
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
 
-// Grouping Logic
 const messageGroups = computed(() => {
   const groups: any[] = [];
   
@@ -195,7 +195,6 @@ const messageGroups = computed(() => {
     if (currentGroup) groups.push(currentGroup);
   }
 
-  // Add a bottom spacer group to ensure content is not obscured by the input area
   groups.push({
       isSpacer: true,
       role: 'assistant',
@@ -206,10 +205,6 @@ const messageGroups = computed(() => {
       index: 'bottom-spacer'
   });
 
-  // Check if we should append a loader group
-  // Logic: Show loader if isLoading is true AND we don't have an active assistant response yet.
-  // We check if it's currently streaming. If it's streaming, the loader should disappear 
-  // because the actual message is being generated (whether reasoning or text).
   const lastMsg = props.messages[props.messages.length - 1];
   const hasStartedResponse = lastMsg && lastMsg.role !== 'user' && (lastMsg.content || lastMsg.reasoning || props.isStreaming);
 
@@ -221,66 +216,52 @@ const messageGroups = computed(() => {
           timestamp: dayjs(),
           lastTimestamp: dayjs(),
           showTime: false,
-          index: 'loading-placeholder' // Unique identifier
+          index: 'loading-placeholder'
       });
   }
 
   return groups;
 });
 
-// Virtual List
 const ESTIMATED_ITEM_HEIGHT = 150;
 
 const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(
   messageGroups,
   {
-    itemHeight: ESTIMATED_ITEM_HEIGHT // Estimate height
+    itemHeight: ESTIMATED_ITEM_HEIGHT
   }
 );
 
-// We need to access containerRef here because containerProps.ref is reactive
-// and might be set after mount.
 const containerRef = containerProps.ref;
 
 watch(messageGroups, (newVal, oldVal) => {
-    // If we were at bottom, or if this is the first load (oldVal empty), scroll to bottom
-    // We check length to determine if it's first load or appended
     const isFirstLoad = !oldVal || oldVal.length === 0;
-    
-    // We should capture the "at bottom" state BEFORE updates
-    // But since we are inside watch, the prop has changed, but DOM not updated yet.
-    // However, isUserAtBottom is updated on scroll events.
     const wasAtBottom = isUserAtBottom.value;
 
     nextTick(() => {
-        updateScrollMetrics();
+        updateScrollMetrics(false);
         
         const lastMsg = props.messages[props.messages.length - 1];
         const isUserMessage = lastMsg && lastMsg.role === 'user';
         
-        // Always scroll to bottom on first load
         if (isFirstLoad) {
             scrollToBottom(true);
             return;
         }
 
-        // If user sent a message, scroll to bottom
         if (isUserMessage) {
             scrollToBottom(true);
             return;
         }
 
-        // If user was already at bottom, keep them there
         if (wasAtBottom) {
             scrollToBottom();
         } else {
-            // Otherwise show tip
             showScrollToBottomTip.value = true;
         }
     });
 }, { deep: true });
 
-// --- Custom Scrollbar Logic ---
 const scrollTop = ref(0);
 const totalHeight = ref(0);
 const viewportHeight = ref(0);
@@ -289,7 +270,6 @@ const showScrollToBottomTip = ref(false);
 
 const actualScrollRange = computed(() => Math.max(1, totalHeight.value - viewportHeight.value));
 
-// Height Map Logic for Accurate Visual Scrollbar
 const itemHeights = ref<Record<number, number>>({});
 const updateItemHeight = (index: number, el: Element | null) => {
     if (el) {
@@ -298,7 +278,6 @@ const updateItemHeight = (index: number, el: Element | null) => {
 };
 
 const accumulatedHeights = computed(() => {
-    // Filter out the spacer when calculating heights for the anchor/markers
     const visibleGroups = messageGroups.value.filter(g => !g.isSpacer);
     const total = visibleGroups.length;
     const offsets: number[] = [];
@@ -306,7 +285,6 @@ const accumulatedHeights = computed(() => {
     
     for (let i = 0; i < total; i++) {
         offsets.push(current);
-        // Use recorded height or estimate
         const h = itemHeights.value[i] || ESTIMATED_ITEM_HEIGHT;
         current += h;
     }
@@ -316,8 +294,18 @@ const accumulatedHeights = computed(() => {
 
 const scrollRange = computed(() => Math.max(1, accumulatedHeights.value.totalHeight - viewportHeight.value));
 
+let isUserInteracting = false;
+let userInteractionTimeout: number | null = null;
+
+const handleUserInteraction = () => {
+    isUserInteracting = true;
+    if (userInteractionTimeout) clearTimeout(userInteractionTimeout);
+    userInteractionTimeout = setTimeout(() => {
+        isUserInteracting = false;
+    }, 1000) as unknown as number;
+};
+
 const markers = computed(() => {
-    // Filter out spacer for markers
     const visibleGroups = messageGroups.value.filter(g => !g.isSpacer);
     if (!visibleGroups.length) return [];
     
@@ -329,7 +317,6 @@ const markers = computed(() => {
 
     const lastGroupIndex = visibleGroups.length - 1;
     const userMarkers = userGroups.map((g, i) => {
-            // Use visual percentage based on height map
             const offset = offsets[g.originalIndex] || 0;
             const topPercent = Math.min(100, Math.max(0, (offset / scrollRange.value) * 100));
             
@@ -359,13 +346,10 @@ const currentVisualProgress = computed(() => {
     const visibleGroups = messageGroups.value.filter(g => !g.isSpacer);
     if (!visibleGroups.length) return 0;
     
-    // Use scrollRange (content only) instead of actualScrollRange (includes spacer)
-    // This ensures the thumb reaches the bottom when the content ends, 
-    // and stays there while scrolling through the spacer.
     return Math.min(1, Math.max(0, scrollTop.value / scrollRange.value));
 });
 
-const updateScrollMetrics = () => {
+const updateScrollMetrics = (isScrollEvent = false) => {
     if (!containerRef.value) return;
     const { clientHeight, scrollHeight, scrollTop: st } = containerRef.value;
     
@@ -380,17 +364,29 @@ const updateScrollMetrics = () => {
         }
     }
 
-    // Check if user is at bottom (with 100px threshold)
-    const isBottom = scrollHeight - st - clientHeight <= 100;
-    isUserAtBottom.value = isBottom;
+    const isBottom = scrollHeight - st - clientHeight <= 150;
 
-    if (isBottom) {
+    if (isScrollEvent) {
+        if (isUserInteracting) {
+            isUserAtBottom.value = isBottom;
+        } else {
+            if (!isUserAtBottom.value) {
+                isUserAtBottom.value = isBottom;
+            }
+        }
+    } else {
+        if (!isUserAtBottom.value) {
+            isUserAtBottom.value = isBottom;
+        }
+    }
+
+    if (isUserAtBottom.value) {
         showScrollToBottomTip.value = false;
     }
 };
 
 const handleScroll = () => {
-    updateScrollMetrics();
+    updateScrollMetrics(true);
 };
 
 const handleScrollUpdate = (val: number) => {
@@ -402,14 +398,15 @@ const handleScrollUpdate = (val: number) => {
     }
 };
 
-// Debounced resize observer
 const onResize = useDebounceFn(() => {
-    updateScrollMetrics();
+    if (isUserAtBottom.value) {
+        pinToBottom();
+    }
+    updateScrollMetrics(false);
 }, 150);
 
 useResizeObserver(containerRef, onResize);
 
-// Watch for DOM changes in visible items to update height map
 let streamObservedIndex = -1;
 let rafMetricsId: number | null = null;
 
@@ -421,12 +418,25 @@ const scheduleMetricsUpdate = () => {
     });
 };
 
+const pinToBottom = () => {
+    if (!containerRef.value) return;
+    containerRef.value.scrollTo({
+        top: containerRef.value.scrollHeight,
+        behavior: 'auto'
+    });
+};
+
 const mutationObserver = new MutationObserver(() => {
     if (!props.isStreaming) return;
     if (!containerRef.value) return;
     if (streamObservedIndex < 0) return;
     const el = containerRef.value.querySelector(`[data-virtual-index="${streamObservedIndex}"]`);
     updateItemHeight(streamObservedIndex, el);
+    
+    if (isUserAtBottom.value) {
+        pinToBottom();
+    }
+    
     scheduleMetricsUpdate();
 });
 
@@ -482,24 +492,24 @@ onUnmounted(() => {
 
 
 const handleVisualProgressUpdate = (progress: number) => {
-    // progress is 0-1
     if (!containerRef.value) return;
 
     const p = Math.min(1, Math.max(0, progress));
     
-    // 使用 scrollRange (基于 HeightMap) 
-    // 这提供了更稳定的滚动目标，避免基于 DOM scrollHeight 带来的抖动
     containerRef.value.scrollTo({
         top: p * scrollRange.value,
         behavior: 'auto'
     });
     
-    updateScrollMetrics();
+    handleUserInteraction();
+    updateScrollMetrics(false);
 };
 
 const scrollToGroup = (index: number) => {
     
     if (!containerRef.value) return;
+
+    handleUserInteraction();
 
     if (index >= messageGroups.value.length - 1) {
         scrollToBottom(true);
@@ -509,10 +519,9 @@ const scrollToGroup = (index: number) => {
     const el = containerRef.value.querySelector(`[data-virtual-index="${index}"]`) as HTMLElement | null;
     
     if (el) {
-        // 元素已经渲染在 DOM 中了，直接平滑滚动
         const containerTop = containerRef.value.getBoundingClientRect().top;
         const elTop = el.getBoundingClientRect().top;
-        const scrollOffset = elTop - containerTop + containerRef.value.scrollTop - 20; // 留 20px padding
+        const scrollOffset = elTop - containerTop + containerRef.value.scrollTop - 20;
         
         containerRef.value.scrollTo({
             top: scrollOffset,
@@ -520,12 +529,9 @@ const scrollToGroup = (index: number) => {
         });
         setTimeout(updateScrollMetrics, 300);
     } else {
-        // 元素还没渲染，需要先跳过去
         scrollTo(index);
         
-        // 等待 Vue 渲染完成新的 DOM
         nextTick(() => {
-            // 使用 setTimeout 确保浏览器完成了绘制
             setTimeout(() => {
                 if (!containerRef.value) return;
                 const targetEl = containerRef.value.querySelector(`[data-virtual-index="${index}"]`) as HTMLElement | null;
@@ -535,7 +541,6 @@ const scrollToGroup = (index: number) => {
                     const elTop = targetEl.getBoundingClientRect().top;
                     const scrollOffset = elTop - containerTop + containerRef.value.scrollTop - 20;
                     
-                    // 这里不用 smooth，因为刚刚已经瞬间跳过来了，如果用 smooth 会有来回拉扯的感觉
                     containerRef.value.scrollTo({
                         top: scrollOffset,
                         behavior: 'auto' 
@@ -548,35 +553,29 @@ const scrollToGroup = (index: number) => {
 };
 
 const scrollToBottom = (force = false) => {
-    // Force scroll logic
     nextTick(() => {
         if (!containerRef.value) return;
 
-        // We want to scroll to the absolute bottom, including the spacer
         const lastIndex = messageGroups.value.length - 1;
         if (lastIndex < 0) return;
 
-        // Use virtual list scrollTo
         scrollTo(lastIndex);
 
-        // Wait for rendering
         setTimeout(() => {
             if (!containerRef.value) return;
-            // Force scrollTop to scrollHeight
             containerRef.value.scrollTo({
                 top: containerRef.value.scrollHeight,
                 behavior: 'auto'
             });
-            updateScrollMetrics();
+            updateScrollMetrics(false);
             
-            // Double check after another delay (sometimes layout takes longer)
             setTimeout(() => {
                 if (!containerRef.value) return;
                 containerRef.value.scrollTo({
                     top: containerRef.value.scrollHeight,
                     behavior: 'auto'
                 });
-                updateScrollMetrics();
+                updateScrollMetrics(false);
             }, 100);
         }, 50);
     });
@@ -585,11 +584,9 @@ const scrollToBottom = (force = false) => {
 const handleScrollToBottomClick = () => {
     scrollToBottom();
     showScrollToBottomTip.value = false;
-    // We assume the user wants to be at the bottom now
     isUserAtBottom.value = true;
 };
 
-// Watchers for State Sync
 watch(() => props.isLoading, (newVal) => {
     if (newVal && isUserAtBottom.value) {
         scrollToBottom();
@@ -597,7 +594,6 @@ watch(() => props.isLoading, (newVal) => {
 });
 
 watch(() => props.messages.length, () => {
-    // Always scroll to bottom if the last message is from user (they just sent it)
     const lastMsg = props.messages[props.messages.length - 1];
     if (lastMsg && lastMsg.role === 'user') {
          scrollToBottom(true);
@@ -611,18 +607,14 @@ watch(() => props.messages.length, () => {
     }
 });
 
-// Watch for reasoning content updates (COE)
 watch(() => {
     const lastMsg = props.messages[props.messages.length - 1];
     return lastMsg ? lastMsg.reasoning : null;
 }, (newVal, oldVal) => {
-    // If reasoning updates (stream outputting thought), scroll to bottom if user was at bottom
     if (newVal && newVal !== oldVal) {
         if (isUserAtBottom.value) {
-            scrollToBottom();
-        } 
-        // Optional: show tip if not at bottom? Usually yes.
-        else {
+            nextTick(() => pinToBottom());
+        } else {
              showScrollToBottomTip.value = true;
         }
     }
@@ -631,9 +623,8 @@ watch(() => {
 watch(() => props.messages[props.messages.length - 1], (newVal) => {
     if (newVal && newVal.content) {
         if (isUserAtBottom.value) {
-            scrollToBottom();
-        } 
-        else {
+            nextTick(() => pinToBottom());
+        } else {
              showScrollToBottomTip.value = true;
         }
     }
@@ -645,16 +636,14 @@ defineExpose({
 </script>
 
 <style>
-/* 隐藏原生滚动条 */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* 使用 :deep 或移除 scoped 以确保滚动条样式生效，这里尝试使用非 scoped 的方式或者更强的选择器 */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;

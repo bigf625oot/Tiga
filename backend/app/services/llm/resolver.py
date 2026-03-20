@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.llm_model import LLMModel
@@ -36,21 +36,22 @@ async def resolve_active_llm_model(
     if prefer_types_norm:
         base_filters.append(LLMModel.model_type.in_(prefer_types_norm))
 
+    stmt = select(LLMModel).where(*base_filters)
+    
     if require_api_key:
-        with_key_stmt = (
-            select(LLMModel)
-            .where(
-                *base_filters,
-                LLMModel.filter_has_api_key(),
-            )
-            .order_by(LLMModel.updated_at.desc())
+        # Strictly require API key
+        stmt = stmt.where(LLMModel.filter_has_api_key())
+    else:
+        # Prefer API key but not required
+        stmt = stmt.order_by(
+            case((LLMModel.filter_has_api_key(), 1), else_=0).desc()
         )
-        res = await db.execute(with_key_stmt)
-        m = res.scalars().first()
-        if m:
-            return m
-
-    stmt = select(LLMModel).where(*base_filters).order_by(LLMModel.updated_at.desc())
+        
+    stmt = stmt.order_by(
+        LLMModel.priority.desc(),
+        LLMModel.updated_at.desc()
+    )
+    
     res = await db.execute(stmt)
     return res.scalars().first()
 
@@ -61,15 +62,11 @@ async def resolve_chat_llm_model(
     model_id: Optional[str] = None,
     allow_multimodal: bool = True,
 ) -> Optional[LLMModel]:
+    """
+    聊天模型解析器。
+    默认返回最合适的活跃模型，优先带 API Key 的，其次是高优先级的。
+    """
     prefer_types = ["multimodal", "text"] if allow_multimodal else ["text"]
-    m = await resolve_active_llm_model(
-        db,
-        model_id=model_id,
-        prefer_types=prefer_types,
-        require_api_key=True,
-    )
-    if m:
-        return m
     return await resolve_active_llm_model(
         db,
         model_id=model_id,
@@ -85,29 +82,18 @@ async def resolve_fast_llm_model(
     全局快慢型 LLM 模型解析器
     优先返回非 reasoning 模型，且带 api_key 的
     """
-    # 查找非 reasoning 的活跃模型，优先带 api_key 的
-    stmt = (
-        select(LLMModel)
-        .where(
-            LLMModel.filter_active(),
-            LLMModel.filter_has_api_key(),
-            LLMModel.filter_fast_models()
-        )
-        .order_by(LLMModel.updated_at.desc())
-    )
-    res = await db.execute(stmt)
-    m = res.scalars().first()
-    if m:
-        return m
-        
-    # 如果没有带 api_key 的，查找不带的
+    # 查找非 reasoning 的活跃模型
     stmt = (
         select(LLMModel)
         .where(
             LLMModel.filter_active(),
             LLMModel.filter_fast_models()
         )
-        .order_by(LLMModel.updated_at.desc())
+        .order_by(
+            case((LLMModel.filter_has_api_key(), 1), else_=0).desc(),
+            LLMModel.priority.desc(),
+            LLMModel.updated_at.desc()
+        )
     )
     res = await db.execute(stmt)
     m = res.scalars().first()

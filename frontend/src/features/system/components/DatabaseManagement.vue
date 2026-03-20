@@ -429,8 +429,8 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- 4. Charset -->
-                                    <div v-if="configForm.type === 'mysql'" class="space-y-2">
+                                        <!-- 4. Charset -->
+                                    <div v-if="configForm.type === 'mysql'" class="space-y-2 pb-4 border-b">
                                         <Label class="text-xs">字符集</Label>
                                         <Select v-model="configForm.charset">
                                             <SelectTrigger class="h-8 text-xs">
@@ -442,6 +442,24 @@
                                                 <SelectItem value="latin1">latin1</SelectItem>
                                             </SelectContent>
                                         </Select>
+                                    </div>
+
+                                    <!-- 5. Security & Permissions -->
+                                    <div class="space-y-3 pt-2">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <Shield class="w-4 h-4 text-muted-foreground" />
+                                            <Label class="text-base">安全与权限设置</Label>
+                                        </div>
+                                        <div class="space-y-4 px-1">
+                                            <div class="space-y-2">
+                                                <Label>允许访问的表 (Allowed Tables)</Label>
+                                                <Input v-model="configForm.allowed_tables_str" placeholder="如: users, orders (用逗号分隔，留空表示允许所有)" />
+                                            </div>
+                                            <div class="space-y-2">
+                                                <Label>敏感字段脱敏 (Sensitive Fields)</Label>
+                                                <Input v-model="configForm.sensitive_fields_str" placeholder="如: phone, email, id_card (用逗号分隔)" />
+                                            </div>
+                                        </div>
                                     </div>
 
                                 </AccordionContent>
@@ -495,7 +513,8 @@ import {
     Share2,
     ArrowRight,
     Settings2,
-    Pencil
+    Pencil,
+    Shield
 } from 'lucide-vue-next';
 
 // Components
@@ -646,7 +665,9 @@ const openCreateModal = () => {
         ssh_user: '',
         ssh_auth_type: 'password',
         ssh_password: '',
-        ssh_key: ''
+        ssh_key: '',
+        allowed_tables_str: '',
+        sensitive_fields_str: ''
     };
     testResult.value = null;
     showCreateModal.value = true;
@@ -662,7 +683,9 @@ const editConfig = (config) => {
         ssl: cfg.ssl || false,
         ssh: cfg.ssh || false,
         ssh_port: cfg.ssh_port || 22,
-        ssh_auth_type: cfg.ssh_auth_type || 'password'
+        ssh_auth_type: cfg.ssh_auth_type || 'password',
+        allowed_tables_str: (cfg.allowed_tables || []).join(', '),
+        sensitive_fields_str: (cfg.sensitive_fields || []).join(', ')
     };
     testResult.value = null;
     showCreateModal.value = true;
@@ -787,11 +810,18 @@ const testConnection = async () => {
     }
     
     testing.value = true;
+    
+    const payload = {
+        ...configForm.value,
+        allowed_tables: configForm.value.allowed_tables_str ? configForm.value.allowed_tables_str.split(',').map(s => s.trim()).filter(Boolean) : [],
+        sensitive_fields: configForm.value.sensitive_fields_str ? configForm.value.sensitive_fields_str.split(',').map(s => s.trim()).filter(Boolean) : []
+    };
+    
     try {
         const res = await fetch('/api/v1/data_query/connect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(configForm.value)
+            body: JSON.stringify(payload)
         });
         
         if (res.ok) {
@@ -817,12 +847,19 @@ const saveAndConnect = async () => {
     connecting.value = true;
     testResult.value = null;
     
+    // Parse arrays
+    const payload = {
+        ...configForm.value,
+        allowed_tables: configForm.value.allowed_tables_str ? configForm.value.allowed_tables_str.split(',').map(s => s.trim()).filter(Boolean) : [],
+        sensitive_fields: configForm.value.sensitive_fields_str ? configForm.value.sensitive_fields_str.split(',').map(s => s.trim()).filter(Boolean) : []
+    };
+    
     try {
         // 1. Connect
         const connRes = await fetch('/api/v1/data_query/connect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(configForm.value)
+            body: JSON.stringify(payload)
         });
         
         if (!connRes.ok) {
@@ -834,7 +871,7 @@ const saveAndConnect = async () => {
         const saveRes = await fetch('/api/v1/data_query/config/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(configForm.value)
+            body: JSON.stringify(payload)
         });
         
         if (!saveRes.ok) {

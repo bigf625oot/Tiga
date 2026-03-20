@@ -15,10 +15,11 @@ Skills Endpoint
 - 技能管理
 """
 
+from uuid import UUID
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, or_, desc
+from sqlalchemy import select, or_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -53,7 +54,8 @@ async def read_skills(
     if q:
         search_filter = or_(
             Skill.name.ilike(f"%{q}%"),
-            Skill.description.ilike(f"%{q}%")
+            Skill.description.ilike(f"%{q}%"),
+            Skill.slug.ilike(f"%{q}%")
         )
         stmt = stmt.where(search_filter)
         
@@ -81,9 +83,37 @@ async def read_skills(
     return skills
 
 
+@router.get("/count")
+async def count_skills(
+    q: Optional[str] = Query(None, description="Search query"),
+    category: Optional[str] = Query(None, description="Filter by category slug"),
+    filter: Optional[str] = Query("all", description="Filter type: all, hot, new, official"),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(func.count()).select_from(Skill)
+
+    if q:
+        search_filter = or_(
+            Skill.name.ilike(f"%{q}%"),
+            Skill.description.ilike(f"%{q}%"),
+            Skill.slug.ilike(f"%{q}%"),
+        )
+        stmt = stmt.where(search_filter)
+
+    if category and category != "all":
+        stmt = stmt.where(Skill.category == category)
+
+    if filter == "official":
+        stmt = stmt.where(Skill.is_official)
+
+    result = await db.execute(stmt)
+    return {"count": int(result.scalar_one())}
+
+
 @router.get("/{skill_id}", response_model=SkillSchema)
-async def read_skill(skill_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Skill).where(Skill.id == skill_id))
+async def read_skill(skill_id: UUID, db: AsyncSession = Depends(get_db)):
+    skill_id_str = str(skill_id)
+    result = await db.execute(select(Skill).where(Skill.id == skill_id_str))
     skill = result.scalar_one_or_none()
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
@@ -91,8 +121,9 @@ async def read_skill(skill_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{skill_id}", response_model=SkillSchema)
-async def update_skill(skill_id: str, skill_update: SkillUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Skill).where(Skill.id == skill_id))
+async def update_skill(skill_id: UUID, skill_update: SkillUpdate, db: AsyncSession = Depends(get_db)):
+    skill_id_str = str(skill_id)
+    result = await db.execute(select(Skill).where(Skill.id == skill_id_str))
     skill = result.scalar_one_or_none()
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
@@ -107,8 +138,9 @@ async def update_skill(skill_id: str, skill_update: SkillUpdate, db: AsyncSessio
 
 
 @router.delete("/{skill_id}")
-async def delete_skill(skill_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Skill).where(Skill.id == skill_id))
+async def delete_skill(skill_id: UUID, db: AsyncSession = Depends(get_db)):
+    skill_id_str = str(skill_id)
+    result = await db.execute(select(Skill).where(Skill.id == skill_id_str))
     skill = result.scalar_one_or_none()
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")

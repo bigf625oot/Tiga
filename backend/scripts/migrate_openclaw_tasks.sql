@@ -6,15 +6,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 创建任务表
 CREATE TABLE IF NOT EXISTS openclaw_tasks (
-    task_id CHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
-    status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING','DISPATCHED','FAILED')),
+    task_id CHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::text,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING','DISPATCHED','RUNNING','COMPLETED','FAILED')),
     original_prompt TEXT NOT NULL,
     parsed_command JSONB NOT NULL,
     schedule TIMESTAMP WITH TIME ZONE,
     target_node_id VARCHAR(64),
+    session_id CHAR(36),
+    keep_alive BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     error_log TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     
     -- 幂等性唯一键
     CONSTRAINT uq_openclaw_task UNIQUE (original_prompt, target_node_id, schedule)
@@ -26,6 +29,9 @@ CREATE INDEX IF NOT EXISTS idx_openclaw_tasks_status_created
 
 CREATE INDEX IF NOT EXISTS idx_openclaw_tasks_created_at 
     ON openclaw_tasks(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_openclaw_tasks_session
+    ON openclaw_tasks(session_id);
 
 -- 创建更新触发器
 CREATE OR REPLACE FUNCTION update_openclaw_tasks_updated_at()

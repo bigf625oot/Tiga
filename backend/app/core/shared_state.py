@@ -12,7 +12,9 @@ class AgentConfig(BaseModel):
 class SharedState(BaseModel):
     session_id: str
     mode: str
-    agent_config: Optional[AgentConfig] = None
+    # Changed from custom AgentConfig to Dict[str, Any] to avoid Pydantic conflicts
+    # with the actual AgentConfig used by Handlers.
+    agent_config: Optional[Dict[str, Any]] = None
     temp_doc_ids: List[str] = []
     ui_state: Dict[str, Any] = {}
     updated_at: float = 0.0

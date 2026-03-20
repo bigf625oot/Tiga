@@ -142,16 +142,35 @@
                                     <Label class="text-xs font-medium text-muted-foreground">基座模型</Label>
                                     <Select v-model="form.model_config.model_id" :disabled="isReadOnly">
                                         <SelectTrigger class="h-9 text-sm bg-background border-border shadow-sm hover:border-primary/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all">
-                                            <SelectValue placeholder="选择模型..." />
+                                            <SelectValue placeholder="选择模型...">
+                                                <div class="flex items-center gap-2 min-w-0">
+                                                    <img v-if="canShowProviderLogo(selectedModelProvider)"
+                                                        :src="getProviderLogo(selectedModelProvider)"
+                                                        class="w-4 h-4 shrink-0 rounded-sm"
+                                                        @error="markProviderLogoError(selectedModelProvider)" />
+                                                    <span class="truncate">
+                                                        {{ selectedModelDisplay || '选择模型...' }}
+                                                    </span>
+                                                </div>
+                                            </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="default_no_selection">
                                                 <span class="text-muted-foreground">不指定 (默认)</span>
                                             </SelectItem>
                                             <SelectItem v-for="m in availableModels" :key="m.model_id" :value="m.model_id">
-                                                <div class="flex items-center justify-between w-full gap-2">
-                                                    <span class="truncate">{{ m.name }}</span>
-                                                    <Badge variant="outline" class="text-xs h-3.5 px-1 text-muted-foreground font-normal border-border/50">
+                                                <div class="flex items-center justify-between w-full gap-4 py-0.5">
+                                                    <div class="flex items-center gap-2 min-w-0 overflow-hidden">
+                                                        <img v-if="canShowProviderLogo(m.provider)"
+                                                            :src="getProviderLogo(m.provider)"
+                                                            class="w-4 h-4 shrink-0 rounded-sm"
+                                                            @error="markProviderLogoError(m.provider)" />
+                                                        <div class="flex flex-col items-start overflow-hidden min-w-0">
+                                                            <span class="truncate font-medium">{{ m.name }}</span>
+                                                            <span class="text-[10px] text-muted-foreground truncate" :title="m.model_id">{{ m.model_id }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <Badge variant="outline" class="text-[10px] h-4 px-1 text-muted-foreground font-normal border-border/50 shrink-0">
                                                         {{ m.provider }}
                                                     </Badge>
                                                 </div>
@@ -200,6 +219,46 @@
                                         <Switch id="reasoning" :disabled="isReadOnly" :checked="form.model_config.reasoning" @update:checked="(val) => form.model_config.reasoning = val" 
                                             class="data-[state=checked]:bg-blue-500 ml-2" />
                                     </div>
+                                    
+                                    <!-- Reasoning Prompt (Visible only when reasoning is enabled) -->
+                                    <div v-if="form.model_config.reasoning" class="grid gap-1.5 pl-2 border-l-2 border-blue-500/20 ml-2 animate-fade-in">
+                                        <Label for="reasoning-prompt" class="text-xs font-medium text-muted-foreground">推理引导词</Label>
+                                        <Textarea id="reasoning-prompt" v-model="form.model_config.reasoning_prompt" :readonly="isReadOnly" 
+                                            placeholder="Write your private reasoning inside <think>...</think>..." 
+                                            class="min-h-[60px] text-xs bg-background border-border shadow-sm focus:border-blue-500 transition-all resize-y" />
+                                    </div>
+
+                                    <!-- Search Capability -->
+                                    <div class="flex items-start justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-background transition-all">
+                                        <div class="flex gap-3">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2">
+                                                    <Label class="text-sm font-medium cursor-pointer text-foreground" for="enable-search">联网搜索能力</Label>
+                                                </div>
+                                                <p class="text-[11px] text-muted-foreground leading-snug max-w-[320px]">
+                                                    允许智能体使用搜索引擎获取最新信息。
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Switch id="enable-search" :disabled="isReadOnly" 
+                                            :checked="form.model_config.enable_search !== false" 
+                                            @update:checked="(val) => form.model_config.enable_search = val" 
+                                            class="data-[state=checked]:bg-blue-500 ml-2" />
+                                    </div>
+
+                                    <!-- Context Management -->
+                                    <div class="grid grid-cols-2 gap-4 pt-2">
+                                        <div class="grid gap-1.5">
+                                            <Label for="history-limit" class="text-xs font-medium text-muted-foreground">历史对话轮数</Label>
+                                            <Input id="history-limit" type="number" v-model.number="form.model_config.history_limit" :readonly="isReadOnly" min="1" max="100" placeholder="20"
+                                                class="h-8 text-sm bg-background border-border shadow-sm focus:border-primary transition-all" />
+                                        </div>
+                                        <div class="grid gap-1.5">
+                                            <Label for="compression-threshold" class="text-xs font-medium text-muted-foreground">压缩阈值 (Tokens)</Label>
+                                            <Input id="compression-threshold" type="number" v-model.number="form.model_config.compression_threshold" :readonly="isReadOnly" min="500" max="128000" placeholder="3000"
+                                                class="h-8 text-sm bg-background border-border shadow-sm focus:border-primary transition-all" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </Card>
@@ -228,8 +287,11 @@
                                     :readonly="isReadOnly"
                                     class="h-full min-h-[400px] w-full font-mono text-sm resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none bg-transparent p-4 pb-10 leading-relaxed selection:bg-primary/20"
                                     placeholder="你是一个专业的助手，请遵循以下规则：&#10;1. 始终保持礼貌&#10;2. 回答要简洁明了..." />
-                                <div class="absolute bottom-2 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                    <Badge variant="secondary" class="text-xs h-4 bg-muted/50 backdrop-blur-sm border-border/50">支持Markdown</Badge>
+                                <div class="absolute bottom-2 right-4 flex items-center gap-2 transition-opacity">
+                                    <div class="flex items-center gap-1.5 mr-2">
+                                        <Switch id="enable-markdown" :checked="form.enable_markdown" @update:checked="(val) => form.enable_markdown = val" class="scale-50 origin-right" />
+                                        <Label for="enable-markdown" class="text-xs text-muted-foreground cursor-pointer">Markdown渲染</Label>
+                                    </div>
                                     <span class="text-xs text-muted-foreground">{{ form.system_prompt.length }} chars</span>
                                 </div>
                             </div>
@@ -275,7 +337,7 @@
                                 <div v-if="knowledgeBases.length === 0" class="flex flex-col items-center justify-center h-32 text-center border-2 border-dashed border-border/40 rounded-xl bg-muted/5 text-muted-foreground">
                                     <Database class="w-8 h-8 mb-2 opacity-20" />
                                     <p class="text-sm">暂无可用知识库</p>
-                                    <Button variant="link" size="sm" class="text-xs h-6 text-primary">去创建</Button>
+                                    <Button variant="link" size="sm" class="text-xs h-6 text-primary" @click="goToKnowledge">去创建</Button>
                                 </div>
                                 <div v-else class="grid grid-cols-2 gap-3">
                                     <div v-for="kb in knowledgeBases" :key="kb.id"
@@ -313,7 +375,7 @@
                                         <div class="flex items-center gap-1.5 bg-background px-2 py-1 rounded-full border border-border/40" title="开启后，终端会显示模型思考和调用工具的过程">
                                             <Terminal class="w-3 h-3 text-muted-foreground" />
                                             <Label for="show-tools" class="text-[10px] text-muted-foreground cursor-pointer whitespace-nowrap">监控</Label>
-                                            <Switch id="show-tools" :checked="form.model_config.show_tool_calls" @update:checked="(val) => form.model_config.show_tool_calls = val" class="scale-75 origin-right" />
+                                            <Switch id="show-tools" :checked="form.show_tool_calls" @update:checked="(val) => form.show_tool_calls = val" class="scale-75 origin-right" />
                                         </div>
                                         <Button variant="outline" size="sm" class="h-7 text-xs border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50" @click="openToolSelector('skill')">
                                             <Plus class="w-3.5 h-3.5 mr-1" /> 添加技能
@@ -845,7 +907,11 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['close', 'saved']);
+const emit = defineEmits(['close', 'saved', 'navigate']);
+
+const goToKnowledge = () => {
+    emit('navigate', 'knowledge');
+};
 
 // --- Icons Helper ---
 const createIcon = (d) => ({
@@ -897,6 +963,52 @@ const toolSearchQuery = ref('');
 const iconInput = ref(null);
 const importInput = ref(null);
 const scriptsEditorRef = ref(null);
+
+const providerLogoErrors = ref({});
+
+const getProviderLogo = (provider) => {
+    if (!provider) return '';
+    const providerMap = {
+        'openai': 'openai',
+        'anthropic': 'anthropic',
+        'google': 'google',
+        'gemini': 'gemini',
+        'aliyun': 'qwen',
+        'dashscope': 'qwen',
+        'deepseek': 'deepseek',
+        'claude': 'claude',
+        'aws': 'aws',
+        'bedrock': 'bedrock',
+        'azure': 'azureai',
+        'mistral': 'mistral',
+        'groq': 'groq',
+        'xai': 'xai',
+        'cohere': 'cohere',
+        'perplexity': 'perplexity',
+        'together': 'together',
+        'openrouter': 'openrouter',
+        'nvidia': 'nvidia',
+        'ollama': 'ollama',
+        'fireworks': 'fireworks',
+        'nebius': 'nebius',
+        'vertexai': 'vertexai'
+    };
+    const key = provider.toLowerCase();
+    const logoName = providerMap[key] || key;
+    return `/flags/llm/${logoName}.svg`;
+};
+
+const markProviderLogoError = (provider) => {
+    if (!provider) return;
+    providerLogoErrors.value[provider.toLowerCase()] = true;
+};
+
+const canShowProviderLogo = (provider) => {
+    if (!provider) return false;
+    const key = provider.toLowerCase();
+    if (providerLogoErrors.value[key]) return false;
+    return !!getProviderLogo(provider);
+};
 
 const defaultSkillsConfig = {
     environment: { type: 'local', image: 'python:3.9-slim' },
@@ -1016,15 +1128,32 @@ const form = ref({
     system_prompt: '',
     is_template: false, // Default not a template
     enable_react: true, // Default ReAct
-    model_config: { model_id: '', reasoning: false, show_tool_calls: false },
+    model_config: { model_id: '', reasoning: false, enable_search: true, reasoning_prompt: '', history_limit: 20, compression_threshold: 3000 },
     tools_config: [],
     mcp_config: [],
     skills_config: defaultSkillsConfig,
-    knowledge_config: { document_ids: [], strict_only: false }
+    knowledge_config: { document_ids: [], strict_only: false },
+    enable_cot: true,
+    enable_markdown: true,
+    show_tool_calls: true,
+    provider: 'openai',
+    instructions: [],
+    role: 'general'
 });
 const initialIsTemplate = ref(false);
 
 const activeAgentId = computed(() => form.value.id || '');
+const selectedModel = computed(() => {
+    const modelId = form.value?.model_config?.model_id;
+    if (!modelId || modelId === 'default_no_selection') return null;
+    return props.availableModels?.find(m => m.model_id === modelId) || null;
+});
+const selectedModelProvider = computed(() => selectedModel.value?.provider || '');
+const selectedModelDisplay = computed(() => {
+    const modelId = form.value?.model_config?.model_id;
+    if (modelId === 'default_no_selection') return '不指定 (默认)';
+    return selectedModel.value?.name || '';
+});
 const selectedCategory = ref('全部');
 const selectedToolboxCategory = ref('全部');
 
@@ -1807,11 +1936,17 @@ function resetForm() {
         system_prompt: '',
         is_template: false,
         enable_react: true, // Default ReAct
-        model_config: { model_id: '', reasoning: false, show_tool_calls: false },
+        model_config: { model_id: '', reasoning: false, enable_search: true, reasoning_prompt: '', history_limit: 20, compression_threshold: 3000 },
         tools_config: [],
         mcp_config: [],
         skills_config: defaultSkillsConfig,
-        knowledge_config: { document_ids: [], strict_only: false }
+        knowledge_config: { document_ids: [], strict_only: false },
+        enable_cot: true,
+        enable_markdown: true,
+        show_tool_calls: true,
+        provider: 'openai',
+        instructions: [],
+        role: 'general'
     };
 }
 
@@ -1823,10 +1958,20 @@ function buildAgentPayload(agentLike) {
         category: agentLike?.category || '其他',
         system_prompt: agentLike?.system_prompt || '',
         enable_react: agentLike?.enable_react ?? true, // ReAct support
+        enable_cot: agentLike?.enable_cot ?? true,
+        enable_markdown: agentLike?.enable_markdown ?? true,
+        show_tool_calls: agentLike?.show_tool_calls ?? true,
+        provider: agentLike?.provider || 'openai',
+        model_id: agentLike?.model_id || agentLike?.model_config?.model_id || '',
+        instructions: agentLike?.instructions || [],
+        role: agentLike?.role || 'general',
         model_config: { 
-            model_id: agentLike?.model_config?.model_id || '', 
+            model_id: agentLike?.model_id || agentLike?.model_config?.model_id || '', 
             reasoning: agentLike?.model_config?.reasoning || false,
-            show_tool_calls: agentLike?.model_config?.show_tool_calls || false
+            enable_search: agentLike?.model_config?.enable_search ?? true,
+            reasoning_prompt: agentLike?.model_config?.reasoning_prompt || '',
+            history_limit: agentLike?.model_config?.history_limit || 20,
+            compression_threshold: agentLike?.model_config?.compression_threshold || 3000
         },
         tools_config: Array.isArray(agentLike?.tools_config) ? agentLike.tools_config : [],
         mcp_config: Array.isArray(agentLike?.mcp_config) ? agentLike.mcp_config : [],
@@ -1840,6 +1985,16 @@ function buildAgentPayload(agentLike) {
     if (typeof form.value.is_template === 'boolean') payload.is_template = form.value.is_template;
     
     if (typeof agentLike?.is_active === 'boolean') payload.is_active = agentLike.is_active;
+
+    // Build model provider dynamically based on selected model
+    if (payload.model_config.model_id) {
+        const selectedModel = props.availableModels?.find(m => m.model_id === payload.model_config.model_id);
+        if (selectedModel && selectedModel.provider) {
+            payload.provider = selectedModel.provider;
+        } else if (form.value.provider) {
+            payload.provider = form.value.provider;
+        }
+    }
 
     return payload;
 }
@@ -1922,7 +2077,7 @@ const viewMcpTools = async (mcp) => {
     try {
         let parsedArgs = [];
         try { parsedArgs = JSON.parse(mcp.args || '[]'); } catch (e) { console.warn(e); parsedArgs = []; }
-        const config = { type: mcp.type, command: mcp.command, args: parsedArgs, env: {} };
+        const config = { transport_type: mcp.type, command: mcp.command, args: parsedArgs, env: {} };
         const res = await fetch('/api/v1/mcp/fetch_tools', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1995,7 +2150,7 @@ const selectToolFromMarket = (tool) => {
     if (tool.type === 'mcp') {
         let config = {
             name: tool.name,
-            type: tool.mcp_type || 'stdio',
+            type: tool.transport_type || 'stdio',
             command: 'python',
             args: '[]'
         };

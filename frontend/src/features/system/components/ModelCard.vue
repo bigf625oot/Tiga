@@ -10,14 +10,23 @@
         class="relative flex-shrink-0 w-12 h-12 rounded-xl border flex items-center justify-center transition-all shadow-sm group-hover:scale-105"
         :class="item.is_active ? 'bg-primary/5 border-primary/10 text-primary' : 'bg-muted/30 border-muted text-muted-foreground'"
       >
-        <div v-if="getProviderCountry(item.provider)" class="w-full h-full rounded-xl overflow-hidden">
+        <div v-if="!imageError" class="w-full h-full rounded-xl overflow-hidden bg-white flex items-center justify-center p-1">
             <img 
-                :src="`/flags/${getProviderCountry(item.provider)}.svg`" 
-                class="w-full h-full object-cover opacity-90"
-                alt="country flag"
+                :src="getProviderLogo(item.provider)" 
+                class="w-full h-full object-contain"
+                alt="provider logo"
+                @error="imageError = true"
             />
         </div>
         <Bot v-else class="w-6 h-6" />
+        
+        <!-- Country Flag -->
+        <img 
+            v-if="getProviderCountry(item.provider)"
+            :src="`/flags/${getProviderCountry(item.provider)}.svg`" 
+            class="absolute -bottom-1 -right-1 w-[18px] h-[13px] rounded-[2px] shadow-sm border border-muted/50 object-cover"
+            :alt="getProviderCountry(item.provider)"
+        />
       </div>
 
       <!-- Title & Info -->
@@ -102,6 +111,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import { 
   MoreVertical, 
   Edit2, 
@@ -146,22 +156,66 @@ const props = defineProps<{
 
 defineEmits(['edit', 'delete', 'toggle-status', 'test']);
 
+const imageError = ref(false);
+
 const formatDate = (date: string) => {
     return dayjs(date).format('YYYY-MM-DD');
 };
 
+const getProviderLogo = (provider: string) => {
+    const providerMap: Record<string, string> = {
+        'openai': 'openai',
+        'anthropic': 'anthropic',
+        'google': 'google',
+        'gemini': 'gemini',
+        'aliyun': 'qwen',
+        'dashscope': 'qwen',
+        'deepseek': 'deepseek',
+        'claude': 'claude',
+        'aws': 'aws',
+        'bedrock': 'bedrock',
+        'azure': 'azureai',
+        'mistral': 'mistral',
+        'groq': 'groq',
+        'xai': 'xai',
+        'cohere': 'cohere',
+        'perplexity': 'perplexity',
+        'together': 'together',
+        'openrouter': 'openrouter',
+        'nvidia': 'nvidia',
+        'ollama': 'ollama',
+        'fireworks': 'fireworks',
+        'nebius': 'nebius',
+        'vertexai': 'vertexai'
+    };
+    const key = provider?.toLowerCase() || '';
+    const logoName = providerMap[key] || key;
+    return `/flags/llm/${logoName}.svg`;
+};
+
 const getProviderCountry = (provider: string) => {
-    switch (provider) {
-        case 'openai':
-        case 'anthropic':
-        case 'google':
-            return 'us';
-        case 'aliyun':
-        case 'deepseek':
-        case 'minimax':
-            return 'cn';
-        default:
-            return null;
-    }
+    const countryMap: Record<string, string> = {
+        'openai': 'us',
+        'anthropic': 'us',
+        'google': 'us',
+        'gemini': 'us',
+        'claude': 'us',
+        'aws': 'us',
+        'bedrock': 'us',
+        'azure': 'us',
+        'groq': 'us',
+        'xai': 'us',
+        'perplexity': 'us',
+        'together': 'us',
+        'openrouter': 'us',
+        'nvidia': 'us',
+        'fireworks': 'us',
+        'vertexai': 'us',
+        'aliyun': 'cn',
+        'dashscope': 'cn',
+        'deepseek': 'cn'
+    };
+    const key = provider?.toLowerCase() || '';
+    return countryMap[key] || '';
 };
 </script>
