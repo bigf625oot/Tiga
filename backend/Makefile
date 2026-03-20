@@ -16,6 +16,9 @@ format:
 test:
 	pytest tests/
 
+migrate:
+	python scripts/db_migrate.py -m "auto migration"
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
