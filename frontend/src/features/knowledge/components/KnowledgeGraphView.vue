@@ -48,26 +48,28 @@
              <!-- Right Content (Graph) -->
              <div class="flex-1 relative bg-background overflow-hidden flex flex-row min-w-0 min-h-0 isolate" style="contain: paint; transform: translateZ(0); clip-path: inset(0);">
                  <!-- Graph Container -->
-                 <div class="flex-1 relative h-full min-w-0 min-h-0 overflow-hidden isolate" style="contain: paint; transform: translateZ(0); clip-path: inset(0);">
+                 <div class="flex-1 relative w-full h-full min-w-0 min-h-0 overflow-hidden isolate" style="contain: paint; transform: translateZ(0); clip-path: inset(0);">
                      <!-- Graph Reason (Error/Warning) -->
                      <div v-if="graphReason" class="absolute top-4 left-4 z-20 px-3 py-2 bg-amber-50/90 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg text-xs shadow-sm border border-amber-200/50 backdrop-blur-sm">
                         {{ graphReason }}
                      </div>
 
                      <!-- Graph Viewer -->
-                     <GraphViewer 
-                        ref="graphViewerRef"
-                        :nodes="filteredNodes"
-                        :edges="filteredEdges"
-                        :colorMap="colorMap"
-                        :loading="loading"
-                        :scope="scope" 
-                        @switchScope="handleSwitchScope" 
-                        @search="(q) => searchQuery = q"
-                        :showScopeToggle="!!docId"
-                        class="w-full h-full bg-background"
-                        @node-click="handleNodeClick"
-                     />
+                     <div class="absolute inset-0">
+                         <GraphViewer 
+                            ref="graphViewerRef"
+                            :nodes="filteredNodes"
+                            :edges="filteredEdges"
+                            :colorMap="colorMap"
+                            :loading="loading"
+                            :scope="scope" 
+                            @switchScope="handleSwitchScope" 
+                            @search="(q) => searchQuery = q"
+                            :showScopeToggle="!!docId"
+                            class="w-full h-full bg-background"
+                            @node-click="handleNodeClick"
+                         />
+                     </div>
                  </div>
                  
                  <!-- Chat Panel (Right Sidebar Style) -->

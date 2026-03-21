@@ -259,6 +259,24 @@
                                                 class="h-8 text-sm bg-background border-border shadow-sm focus:border-primary transition-all" />
                                         </div>
                                     </div>
+
+                                    <!-- Long-term Graph Memory -->
+                                    <div class="flex items-start justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-background transition-all mt-2">
+                                        <div class="flex gap-3">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2">
+                                                    <Label class="text-sm font-medium cursor-pointer text-foreground" for="enable-graph-memory">长期图谱记忆</Label>
+                                                </div>
+                                                <p class="text-[11px] text-muted-foreground leading-snug max-w-[320px]">
+                                                    启用后，智能体将使用 Agno 自带的历史对话轮数及压缩阈值进行上下文管理。
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Switch id="enable-graph-memory" :disabled="isReadOnly"
+                                            :checked="form.model_config.enable_graph_memory !== false"
+                                            @update:checked="(val) => form.model_config.enable_graph_memory = val"
+                                            class="data-[state=checked]:bg-blue-500 ml-2" />
+                                    </div>
                                 </div>
                             </div>
                         </Card>
@@ -1128,7 +1146,7 @@ const form = ref({
     system_prompt: '',
     is_template: false, // Default not a template
     enable_react: true, // Default ReAct
-    model_config: { model_id: '', reasoning: false, enable_search: true, reasoning_prompt: '', history_limit: 20, compression_threshold: 3000 },
+    model_config: { model_id: '', reasoning: false, enable_search: true, reasoning_prompt: '', history_limit: 20, compression_threshold: 3000, enable_graph_memory: true },
     tools_config: [],
     mcp_config: [],
     skills_config: defaultSkillsConfig,
@@ -1936,7 +1954,7 @@ function resetForm() {
         system_prompt: '',
         is_template: false,
         enable_react: true, // Default ReAct
-        model_config: { model_id: '', reasoning: false, enable_search: true, reasoning_prompt: '', history_limit: 20, compression_threshold: 3000 },
+        model_config: { model_id: '', reasoning: false, enable_search: true, reasoning_prompt: '', history_limit: 20, compression_threshold: 3000, enable_graph_memory: true },
         tools_config: [],
         mcp_config: [],
         skills_config: defaultSkillsConfig,
@@ -1971,7 +1989,8 @@ function buildAgentPayload(agentLike) {
             enable_search: agentLike?.model_config?.enable_search ?? true,
             reasoning_prompt: agentLike?.model_config?.reasoning_prompt || '',
             history_limit: agentLike?.model_config?.history_limit || 20,
-            compression_threshold: agentLike?.model_config?.compression_threshold || 3000
+            compression_threshold: agentLike?.model_config?.compression_threshold || 3000,
+            enable_graph_memory: agentLike?.model_config?.enable_graph_memory ?? true
         },
         tools_config: Array.isArray(agentLike?.tools_config) ? agentLike.tools_config : [],
         mcp_config: Array.isArray(agentLike?.mcp_config) ? agentLike.mcp_config : [],

@@ -41,7 +41,7 @@ class QuickHandler(BaseHandler):
         # P10 技巧：在等待 Agent 初始化的同时，并发处理 IO 密集型任务
         setup_tasks = [
             asyncio.create_task(self._prepare_agent(db, session_id, kwargs)),
-            asyncio.create_task(self._prepare_history(db, session_id)),
+            asyncio.create_task(self._prepare_history(db, session_id, current_query=input_text)),
             asyncio.create_task(self._handle_incoming_files(session_id, files))
         ]
         
@@ -107,18 +107,9 @@ class QuickHandler(BaseHandler):
             enable_search=search
         )
 
-    async def _prepare_history(self, db: AsyncSession, session_id: str) -> Tuple[List[Dict], bool]:
-        """加载并压缩历史消息"""
-        if not session_id or not db:
-            return [], False
-            
-        history = SessionHistory(db)
-        msgs = await history.get_messages(session_id, limit=20)
-        raw_msgs = [{"role": m.role, "content": m.content} for m in msgs]
-        
-        compressor = ContextCompressor(model=self.llm_model)
-        compressed = await compressor.compress_context(raw_msgs, max_tokens=3000)
-        return compressed, len(compressed) < len(raw_msgs)
+    async def _prepare_history(self, db: AsyncSession, session_id: str, current_query: str = "") -> Tuple[List[Dict], bool]:
+        """加载并压缩历史消息，融入图谱记忆"""
+        return await self._get_history_messages_with_graph(db, session_id, current_query)
 
     async def _handle_incoming_files(self, session_id: str, files: List[Any]) -> Tuple[str, List[Any]]:
         """并行处理上传文件"""

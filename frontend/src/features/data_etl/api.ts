@@ -40,6 +40,25 @@ export interface DataSourceTestResult {
   error_type?: string;
 }
 
+export interface ContextManagementConfig {
+  history_limit: number;
+  compression_threshold: number;
+  enable_graph_memory: boolean;
+  graph_hop_depth: number;
+}
+
+export interface MemoryManagementConfig {
+  enable_session_kb: boolean;
+  embedding_model_id: string;
+  memory_extraction_interval: number;
+}
+
+export interface ContextMemoryConfig {
+  version: number;
+  context: ContextManagementConfig;
+  memory: MemoryManagementConfig;
+}
+
 export const dataSourceApi = {
   // List all data sources
   list: async (params?: { skip?: number; limit?: number }) => {
@@ -98,4 +117,19 @@ export const dataSourceApi = {
     const response = await api.post<any[]>(`/data-sources/${id}/query/preview`, { query }, { params: { limit } });
     return response.data;
   }
+};
+
+export const systemConfigApi = {
+  getContextMemory: async () => {
+    const response = await api.get<ContextMemoryConfig>('/system-config/context-memory');
+    return response.data;
+  },
+  updateContextMemory: async (payload: ContextMemoryConfig) => {
+    const response = await api.put<ContextMemoryConfig>('/system-config/context-memory', payload);
+    return response.data;
+  },
+  resetContextMemory: async () => {
+    const response = await api.delete<ContextMemoryConfig>('/system-config/context-memory');
+    return response.data;
+  },
 };

@@ -22,19 +22,26 @@
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem v-if="item?.is_folder" class="cursor-pointer" @click="$emit('openFolder')">
-            <Folder class="mr-2 h-4 w-4" /> 打开
-          </DropdownMenuItem>
-          <DropdownMenuItem v-else-if="canViewGraph" class="cursor-pointer" @click="$emit('viewGraph')">
-            <Share2 class="mr-2 h-4 w-4" /> 查看图谱
-          </DropdownMenuItem>
-          <DropdownMenuSeparator v-if="!readonly" />
-          <DropdownMenuItem v-if="!readonly" class="cursor-pointer" @click="$emit('move')">
-            <FolderInput class="mr-2 h-4 w-4" /> 移动
-          </DropdownMenuItem>
-          <DropdownMenuItem v-if="!readonly" class="text-destructive focus:text-destructive cursor-pointer" @click="$emit('delete')">
-            <Trash2 class="mr-2 h-4 w-4" /> 删除
-          </DropdownMenuItem>
+          <template v-if="item?.is_folder || canViewGraph">
+            <DropdownMenuItem v-if="item?.is_folder" class="cursor-pointer" @click="$emit('openFolder', item)">
+              <Folder class="mr-2 h-4 w-4" /> 打开
+            </DropdownMenuItem>
+            <DropdownMenuItem v-else-if="canViewGraph" class="cursor-pointer" @click="$emit('viewGraph', item)">
+              <Share2 class="mr-2 h-4 w-4" /> 查看图谱
+            </DropdownMenuItem>
+            <DropdownMenuSeparator v-if="!readonly" />
+          </template>
+          <template v-if="!readonly">
+            <DropdownMenuItem v-if="item?.status_text === '失败'" class="cursor-pointer" @click="$emit('retry', item)">
+              <RotateCcw class="mr-2 h-4 w-4" /> 重新处理
+            </DropdownMenuItem>
+            <DropdownMenuItem class="cursor-pointer" @click="$emit('move', item)">
+              <FolderInput class="mr-2 h-4 w-4" /> 移动
+            </DropdownMenuItem>
+            <DropdownMenuItem class="text-destructive focus:text-destructive cursor-pointer" @click="$emit('delete', item)">
+              <Trash2 class="mr-2 h-4 w-4" /> 删除
+            </DropdownMenuItem>
+          </template>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -100,7 +107,7 @@
         variant="outline"
         size="sm"
         class="h-8 px-3 text-xs"
-        @click="$emit('openFolder')"
+        @click="$emit('openFolder', item)"
       >
         打开
       </Button>
@@ -109,7 +116,7 @@
         variant="outline"
         size="sm"
         class="h-8 px-3 text-xs"
-        @click="$emit('viewGraph')"
+        @click="$emit('viewGraph', item)"
       >
         <Share2 class="w-3.5 h-3.5 mr-2" />
         查看图谱
@@ -131,7 +138,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { Folder, MoreVertical, Share2, Trash2, FolderInput } from 'lucide-vue-next'
+import { Folder, MoreVertical, Share2, Trash2, FolderInput, RotateCcw } from 'lucide-vue-next'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -142,18 +149,18 @@ const props = defineProps({
   createdAtText: { type: String, default: '-' }
 })
 
-const emit = defineEmits(['toggleSelect', 'openFolder', 'viewGraph', 'move', 'delete'])
+const emit = defineEmits(['toggleSelect', 'openFolder', 'viewGraph', 'move', 'delete', 'retry'])
 
-const showProgress = computed(() => ['上传中', '解析中'].includes(props.item?.status_text))
+const showProgress = computed(() => ['上传中', '解析中', '分块中'].includes(props.item?.status_text))
 const canViewGraph = computed(() => !props.item?.is_folder && props.item?.status_text === '已完成')
 const primaryAction = computed(() => !!props.item?.is_folder || canViewGraph.value)
 
 const handlePrimaryClick = () => {
   if (!primaryAction.value) return
   if (props.item?.is_folder) {
-    return emit('openFolder')
+    return emit('openFolder', props.item)
   }
-  if (canViewGraph.value) return emit('viewGraph')
+  if (canViewGraph.value) return emit('viewGraph', props.item)
 }
 
 const statusBadgeClass = computed(() => {

@@ -178,6 +178,7 @@
                   @openFolder="openFolder(file)"
                   @viewGraph="viewGraph(file)"
                   @move="openMoveForItem(file)"
+                  @retry="retryFile(file)"
                   @delete="confirmDelete(file.id)"
                 />
                 <template v-if="loadingMore">
@@ -579,6 +580,18 @@ const toggleSelect = (id) => {
         selectedFiles.value.splice(index, 1);
     } else {
         selectedFiles.value.push(id);
+    }
+};
+
+const retryFile = async (file) => {
+    try {
+        message.loading({ content: '正在提交重试请求...', key: 'retry' });
+        await api.post(`/knowledge/${file.id}/retry`);
+        message.success({ content: '重试已触发', key: 'retry' });
+        fetchFiles(true);
+    } catch (e) {
+        console.error("Retry failed:", e);
+        message.error({ content: '重试失败: ' + (e.response?.data?.detail || e.message), key: 'retry' });
     }
 };
 

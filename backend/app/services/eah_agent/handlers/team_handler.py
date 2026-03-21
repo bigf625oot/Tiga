@@ -27,6 +27,8 @@ from app.core.context_compressor import ContextCompressor
 from app.services.eah_agent.utils.session_kb import SessionKnowledgeManager
 from app.services.eah_agent.document.file_orchestrator import FileOrchestrator
 from app.services.eah_agent.utils.agno_types import is_run_output
+from app.crud.crud_system_config import system_config as crud_system_config
+from app.schemas.system_config import ContextMemoryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +38,7 @@ try:
 except ImportError:
     HAS_E2B = False
 
-TEAM_AGENT_CONFIG = {
-    "temperature": 0.3,
-    "show_tool_calls": True,
-    "history_limit": 30,
-    "compression_threshold": 3000
-}
+CONTEXT_MEMORY_KEY = "context-memory"
 
 class TeamHandler(BaseHandler):
     """
@@ -51,6 +48,28 @@ class TeamHandler(BaseHandler):
     def __init__(self, llm_model: Optional[LLMModel] = None):
         super().__init__(llm_model)
         self.team_agent: Optional[Agent] = None
+        self._system_context_memory: Optional[ContextMemoryConfig] = None
+
+    async def _get_system_context_memory(self, db: Optional[AsyncSession]) -> ContextMemoryConfig:
+        if self._system_context_memory is not None:
+            return self._system_context_memory
+
+        if not db:
+            self._system_context_memory = ContextMemoryConfig()
+            return self._system_context_memory
+
+        row = await crud_system_config.get_by_key(db, CONTEXT_MEMORY_KEY)
+        if not row or not row.value:
+            self._system_context_memory = ContextMemoryConfig()
+            return self._system_context_memory
+
+        try:
+            self._system_context_memory = ContextMemoryConfig.model_validate(row.value)
+        except Exception as e:
+            logger.warning(f"Invalid system config {CONTEXT_MEMORY_KEY}: {e}")
+            self._system_context_memory = ContextMemoryConfig()
+
+        return self._system_context_memory
 
     async def _process_files(self, files: list, session_id: str) -> tuple[str, list]:
         """
@@ -59,7 +78,9 @@ class TeamHandler(BaseHandler):
         if not files:
             return "", []
             
-        kb_manager = SessionKnowledgeManager(session_id)
+        db = getattr(self, "_db_for_system_config", None)
+        cfg = await self._get_system_context_memory(db)
+        kb_manager = SessionKnowledgeManager(session_id) if cfg.memory.enable_session_kb else None
         result = await FileOrchestrator.process_batch(files, session_id=session_id, kb_manager=kb_manager)
         return result.get("context", ""), result.get("media", [])
 
@@ -98,49 +119,35 @@ class TeamHandler(BaseHandler):
                 context_text += f"[User Uploaded Files Context]\n{file_context}"
             images.extend(file_images)
 
+        cfg = await self._get_system_context_memory(self._db_for_system_config)
         try:
-            kb_manager = SessionKnowledgeManager(session_id)
-            kb = kb_manager.get_knowledge_base(
-                api_key=self.llm_model.api_key if self.llm_model else None,
-                base_url=self.llm_model.base_url if self.llm_model else None,
-            )
-            if kb and self.team_agent:
-                self.team_agent.knowledge = kb
-                self.team_agent.search_knowledge = True
-                if "search_knowledge_base" not in str(self.team_agent.instructions):
-                    self.team_agent.instructions.append("Use 'search_knowledge_base' to access user documents.")
-                
-                if self.team_agent.team:
-                    for member in self.team_agent.team:
-                        member.knowledge = kb
-                        member.search_knowledge = True
-                        if "search_knowledge_base" not in str(member.instructions):
-                            member.instructions.append("Use 'search_knowledge_base' to access user documents.")
+            if cfg.memory.enable_session_kb:
+                kb_manager = SessionKnowledgeManager(session_id)
+                kb = kb_manager.get_knowledge_base(
+                    api_key=self.llm_model.api_key if self.llm_model else None,
+                    base_url=self.llm_model.base_url if self.llm_model else None,
+                    embedding_model_id=cfg.memory.embedding_model_id,
+                )
+                if kb and self.team_agent:
+                    self.team_agent.knowledge = kb
+                    self.team_agent.search_knowledge = True
+                    if "search_knowledge_base" not in str(self.team_agent.instructions):
+                        self.team_agent.instructions.append("Use 'search_knowledge_base' to access user documents.")
+                    
+                    if self.team_agent.team:
+                        for member in self.team_agent.team:
+                            member.knowledge = kb
+                            member.search_knowledge = True
+                            if "search_knowledge_base" not in str(member.instructions):
+                                member.instructions.append("Use 'search_knowledge_base' to access user documents.")
         except Exception as e:
             logger.error(f"Failed to attach KB to team: {e}")
 
         return context_text, images
 
-    async def _get_history_messages(self, db: Optional[AsyncSession], session_id: Optional[str]) -> tuple[list[Dict], bool]:
-        """获取并压缩历史消息。"""
-        if not db or not session_id:
-            return [], False
-        
-        try:
-            history = SessionHistory(db)
-            limit = TEAM_AGENT_CONFIG["history_limit"]
-            threshold = TEAM_AGENT_CONFIG["compression_threshold"]
-
-            msgs = await history.get_messages(session_id, limit=limit)
-            raw_history = [{"role": m.role, "content": m.content} for m in msgs]
-
-            compressor = ContextCompressor(model=self.llm_model)
-            compressed = await compressor.compress_context(raw_history, max_tokens=threshold)
-            
-            return compressed, len(compressed) < len(raw_history)
-        except Exception as e:
-            logger.error(f"Failed to load history: {e}")
-            return [], False
+    async def _get_history_messages(self, db: Optional[AsyncSession], session_id: Optional[str], current_query: str = "") -> tuple[list[Dict], bool]:
+        """获取并压缩历史消息，融入图谱记忆。"""
+        return await self._get_history_messages_with_graph(db, session_id, current_query)
 
     async def _handle_chunk(self, chunk: Any) -> AsyncGenerator[StreamResponse, None]:
         """统一处理 Agno 的流式输出块。"""
@@ -299,6 +306,7 @@ class TeamHandler(BaseHandler):
         self, input_text: str, intent: Optional[IntentResult] = None, **kwargs: Any
     ) -> AsyncGenerator[StreamResponse, None]:
         db = kwargs.get("db")
+        self._db_for_system_config = db
         session_id = kwargs.get("session_id")
         files = kwargs.get("files")
         
@@ -329,7 +337,7 @@ class TeamHandler(BaseHandler):
                 if "search_knowledge_base" in str(getattr(self.team_agent, "instructions", "")):
                     yield {"type": "status", "content": _("团队知识库已更新。")}
 
-            history_messages, was_compressed = await self._get_history_messages(db, session_id)
+            history_messages, was_compressed = await self._get_history_messages(db, session_id, current_query=input_text)
             if was_compressed:
                 yield {"type": "status", "content": _("历史对话过长，已自动压缩上下文。")}
 

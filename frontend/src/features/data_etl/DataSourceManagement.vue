@@ -99,8 +99,7 @@
 
     <!-- Content Grid -->
     <ScrollArea class="flex-1">
-      <div class="px-8 pb-8 space-y-8">
-      
+      <div class="px-8 pb-8 space-y-8 pt-8">
       <!-- Loading Skeleton -->
       <div v-if="isLoading">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

@@ -552,6 +552,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                     embedding_func=EmbeddingFunc(embedding_dim=embed_dim, max_token_size=8192, func=embedding_func),
                     chunk_token_size=1200,
                     chunk_overlap_token_size=100,
+                    tiktoken_model_name="gpt-4",
                     addon_params={
                         "language": "Chinese",
                         "entity_types": ["人物", "组织", "地点", "事件", "概念", "方法", "技术", "物品", "其他"],
@@ -566,6 +567,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                         embedding_func=EmbeddingFunc(embedding_dim=embed_dim, max_token_size=8192, func=embedding_func),
                         chunk_token_size=1200,
                         chunk_overlap_token_size=100,
+                        tiktoken_model_name="gpt-4",
                         addon_params={
                             "language": "Chinese",
                             "entity_types": ["人物", "组织", "地点", "事件", "概念", "方法", "技术", "物品", "其他"],

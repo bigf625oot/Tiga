@@ -43,7 +43,12 @@ class SessionKnowledgeManager:
         
         self.kb: Optional[VectorKnowledgeBase] = None
 
-    def get_knowledge_base(self, api_key: Optional[str] = None, base_url: Optional[str] = None) -> Optional[VectorKnowledgeBase]:
+    def get_knowledge_base(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        embedding_model_id: Optional[str] = None,
+    ) -> Optional[VectorKnowledgeBase]:
         """
         Returns the configured Knowledge Base instance.
         """
@@ -60,7 +65,7 @@ class SessionKnowledgeManager:
             embedder = OpenAIEmbedder(
                 api_key=api_key or os.getenv("OPENAI_API_KEY"),
                 base_url=base_url or os.getenv("OPENAI_BASE_URL"),
-                id="text-embedding-3-small" # Efficient default
+                id=embedding_model_id or "text-embedding-3-small",
             )
 
             # Initialize LanceDB

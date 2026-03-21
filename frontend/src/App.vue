@@ -333,26 +333,24 @@
                              </Button>
                          </TooltipTrigger>
                          <TooltipContent>{{ t('app.systemSettings') }}</TooltipContent>
-                     </Tooltip>
-                 </TooltipProvider>
-                 <LanguageToggle />
-                 <ThemeToggle />
-             </div>
-         </div>
-         <div v-if="isSidebarCollapsed" class="mt-2 flex flex-col gap-2 items-center">
-             <TooltipProvider :delay-duration="0">
-                 <Tooltip>
-                     <TooltipTrigger as-child>
-                         <Button variant="ghost" size="icon" @click="currentView = 'etl_settings'" class="h-8 w-8 text-muted-foreground hover:text-foreground">
-                             <Settings class="h-4 w-4" />
-                         </Button>
-                     </TooltipTrigger>
-                     <TooltipContent side="right">{{ t('app.systemSettings') }}</TooltipContent>
-                 </Tooltip>
-             </TooltipProvider>
-             <LanguageToggle />
-             <ThemeToggle />
-         </div>
+                    </Tooltip>
+                </TooltipProvider>
+                <ThemeToggle />
+            </div>
+        </div>
+        <div v-if="isSidebarCollapsed" class="mt-2 flex flex-col gap-2 items-center">
+            <TooltipProvider :delay-duration="0">
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button variant="ghost" size="icon" @click="currentView = 'etl_settings'" class="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <Settings class="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{{ t('app.systemSettings') }}</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            <ThemeToggle />
+        </div>
       </SidebarFooter>
     </Sidebar>
 
@@ -801,6 +799,7 @@ const knowledgeSidebarItems: SidebarItem[] = [
     { id: 'data_dashboard', label: '数据大屏', icon: BarChart },
     { id: 'data_source', label: '数据源', icon: Database },
     { id: 'etl_list', label: 'ETL流水线', icon: Workflow },
+    { type: 'group', label: '系统' },
     { id: 'etl_settings', label: '系统设置', icon: Settings }
 ];
 

@@ -201,7 +201,7 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             return
 
         # --- Step 2: Indexing via LightRAG ---
-        await safe_update_status(doc_id, DocumentStatus.INDEXING)
+        await safe_update_status(doc_id, DocumentStatus.PARSING)
         try:
             async with AsyncSessionLocal() as db:
                 await lightrag_engine.ensure_initialized(db)
@@ -339,6 +339,46 @@ async def upload_document(
             os.remove(temp_file_path)
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/{doc_id}/retry")
+async def retry_document(
+    doc_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
+    doc = result.scalars().first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.is_folder:
+        raise HTTPException(status_code=400, detail="Cannot retry a folder")
+    
+    # Check if temp file exists, if not try to download from OSS
+    temp_file_path = None
+    if doc.oss_key:
+        unique_filename = doc.oss_key.split("/")[-1]
+        temp_file_path = str(UPLOAD_DIR / unique_filename)
+        if not os.path.exists(temp_file_path):
+            try:
+                storage_service.download_file(doc.oss_key, temp_file_path)
+            except Exception as e:
+                logger.error(f"Failed to download from OSS for retry: {e}")
+                raise HTTPException(status_code=500, detail="文件不存在本地且从存储恢复失败，请重新上传")
+    else:
+        # 尝试通过名字找
+        unique_filename = doc.filename
+        temp_file_path = str(UPLOAD_DIR / unique_filename)
+        if not os.path.exists(temp_file_path):
+             raise HTTPException(status_code=400, detail="文件未正确上传或已丢失，请重新上传")
+        
+    doc.status = DocumentStatus.PARSING
+    doc.error_message = None
+    await db.commit()
+    
+    # Trigger background task
+    background_tasks.add_task(background_upload_and_index, doc.id, temp_file_path, unique_filename)
+    
+    return {"status": "success", "message": "Retrying..."}
+
 
 @router.get("/list")
 async def list_documents(
@@ -400,8 +440,10 @@ async def list_documents(
                 return "上传中"
             if s == DocumentStatus.UPLOADED:
                 return "已上传"
-            if s == DocumentStatus.INDEXING:
+            if s == DocumentStatus.PARSING:
                 return "解析中"
+            if s == DocumentStatus.INDEXING:
+                return "分块中"
             if s == DocumentStatus.INDEXED:
                 return "已完成"
             if s == DocumentStatus.FAILED:

@@ -19,5 +19,13 @@ export const knowledgeService = {
     });
     if (!res.ok) throw new Error(`Failed to upload file: ${file.name}`);
     return res.json();
+  },
+
+  async retryProcess(docId: number): Promise<any> {
+    const res = await fetch(`/api/v1/knowledge/${docId}/retry`, {
+      method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to retry processing');
+    return res.json();
   }
 };

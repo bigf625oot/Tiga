@@ -79,11 +79,17 @@ async def lifespan(app: FastAPI):
     await task_stream.ensure_infrastructure()
     logger.info(_("Redis Task Stream infrastructure initialized."))
 
+    # Start Task Lifecycle Scheduler
+    from app.services.task.scheduler import scheduler
+    await scheduler.start()
+    logger.info(_("Task lifecycle scheduler started."))
+
     yield
     # Shutdown: Close connections
     logger.info(_("Shutting down..."))
     await task_worker.stop()
     await node_monitor.stop()
+    await scheduler.stop()
 
 
 class TraceIDMiddleware(BaseHTTPMiddleware):

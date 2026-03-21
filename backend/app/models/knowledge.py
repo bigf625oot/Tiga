@@ -9,6 +9,7 @@ from app.db.base import Base
 class DocumentStatus(str, enum.Enum):
     UPLOADING = "uploading"
     UPLOADED = "uploaded"
+    PARSING = "parsing"
     INDEXING = "indexing"
     INDEXED = "indexed"
     FAILED = "failed"

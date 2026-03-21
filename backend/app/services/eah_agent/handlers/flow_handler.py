@@ -127,19 +127,11 @@ class FlowHandler(BaseHandler):
                     yield {"type": "status", "content": _("正在执行工作流: {} (v{})").format(wf.name, wf.version)}
                     
                     # 加载历史记录，注入工作流上下文，防止“记忆盲区”
-                    from app.services.eah_agent.storage.session_history import SessionHistory
-                    from app.core.context_compressor import ContextCompressor
-                    
-                    history = SessionHistory(db)
-                    msgs = await history.get_messages(session_id, limit=10)
-                    raw_history = [{"role": m.role, "content": m.content} for m in msgs]
-                    
-                    compressor = ContextCompressor(model=self.llm_model)
-                    compressed_history = await compressor.compress_context(raw_history, max_tokens=2000)
+                    history_messages, _was_compressed = await self._get_history_messages_with_graph(db, session_id, current_query=input_text)
                     
                     # 替换旧的 DynamicWorkflow，使用统一引擎的静态编排解析
                     engine = AgentWorkflowEngine(db=db)
-                    async for chunk in engine.execute_from_definition(session_id, definition, history=compressed_history):
+                    async for chunk in engine.execute_from_definition(session_id, definition, history=history_messages):
                         yield chunk
                     return
 

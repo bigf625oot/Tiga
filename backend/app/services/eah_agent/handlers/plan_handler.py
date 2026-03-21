@@ -40,7 +40,7 @@ class PlanHandler(BaseHandler):
         setup_tasks = [
             asyncio.create_task(self._assemble_plan_agent(db, agent_id, session_id)),
             asyncio.create_task(FileOrchestrator.process_batch(files, session_id)), # 假设支持批量处理
-            asyncio.create_task(self._prepare_history(db, session_id))
+            asyncio.create_task(self._prepare_history(db, session_id, current_query=input_text))
         ]
 
         # 2. 等待资源就绪
@@ -98,16 +98,9 @@ class PlanHandler(BaseHandler):
             enable_file_tools=True   # 告诉装配器需要 FileTools
         )
 
-    async def _prepare_history(self, db: AsyncSession, session_id: str) -> Tuple[List[Dict], bool]:
-        if not session_id or not db: return [], False
-        history = SessionHistory(db)
-        msgs = await history.get_messages(session_id, limit=20)
-        compressor = ContextCompressor(model=self.llm_model)
-        compressed = await compressor.compress_context(
-            [{"role": m.role, "content": m.content} for m in msgs], 
-            max_tokens=3000
-        )
-        return compressed, len(compressed) < len(msgs)
+    async def _prepare_history(self, db: AsyncSession, session_id: str, current_query: str = "") -> Tuple[List[Dict], bool]:
+        """加载并压缩历史消息，融入图谱记忆"""
+        return await self._get_history_messages_with_graph(db, session_id, current_query)
 
     def _enrich_goal(self, text: str, full_instructions: str) -> str:
         """封装最终发给引擎的任务描述"""
