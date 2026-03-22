@@ -374,7 +374,7 @@ if (props.autoRun) {
 .markdown-body :deep(h1) { font-size: 1.5em; font-weight: 600; margin-bottom: 1em; }
 .markdown-body :deep(h2) { font-size: 1.25em; font-weight: 600; margin-bottom: 0.8em; }
 .markdown-body :deep(pre) { background: #1e293b; color: #e2e8f0; padding: 1em; border-radius: 0.5em; overflow-x: auto; }
-.markdown-body :deep(code) { background: #f1f5f9; padding: 0.2em 0.4em; border-radius: 0.25em; font-family: monospace; font-size: 0.9em; }
+.markdown-body :deep(code) { background: #f1f5f9; padding: 0.2em 0.4em; border-radius: 0.25em; font-family: "Hack", monospace; font-size: 0.9em; }
 .markdown-body :deep(pre code) { background: transparent; padding: 0; color: inherit; }
 .markdown-body :deep(ul) { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
 .markdown-body :deep(ol) { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; }

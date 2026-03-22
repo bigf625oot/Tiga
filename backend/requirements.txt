@@ -84,6 +84,7 @@ pytest-asyncio
 pytest-cov
 
 # --- Added by Agent ---
+fastapi-mail
 pyjwt
 numba==0.60.0
 pydub

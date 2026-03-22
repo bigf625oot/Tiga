@@ -20,6 +20,8 @@ export const useTaskStore = defineStore('taskStore', {
     ws: null as WebSocket | null,
     wsUserId: '',
     pollingInterval: null as number | null,
+    reconnectTimer: null as number | null,
+    isConnecting: false,
   }),
   actions: {
     async fetchTasks(userId?: string) {
@@ -96,10 +98,12 @@ export const useTaskStore = defineStore('taskStore', {
     },
 
     connectWebSocket(userId: string) {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
         return;
       }
+      if (this.isConnecting) return;
 
+      this.isConnecting = true;
       this.wsUserId = userId;
       const wsUrl = `${WS_BASE}?user_id=${encodeURIComponent(userId)}`;
 
@@ -108,6 +112,11 @@ export const useTaskStore = defineStore('taskStore', {
 
         this.ws.onopen = () => {
           console.log('WebSocket connected');
+          this.isConnecting = false;
+          if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+          }
         };
 
         this.ws.onmessage = (event) => {
@@ -120,19 +129,27 @@ export const useTaskStore = defineStore('taskStore', {
         };
 
         this.ws.onclose = () => {
-          console.log('WebSocket disconnected, reconnecting in 3s...');
-          setTimeout(() => {
-            if (this.wsUserId) {
-              this.connectWebSocket(this.wsUserId);
-            }
-          }, 3000);
+          console.log('WebSocket disconnected, reconnecting in 5s...');
+          this.isConnecting = false;
+          this.ws = null;
+          if (!this.reconnectTimer && this.wsUserId) {
+             this.reconnectTimer = window.setTimeout(() => {
+               this.reconnectTimer = null;
+               if (this.wsUserId) {
+                 this.connectWebSocket(this.wsUserId);
+               }
+             }, 5000);
+          }
         };
 
         this.ws.onerror = (error) => {
           console.error('WebSocket error:', error);
+          this.isConnecting = false;
+          // The onclose event will typically fire after onerror, triggering the reconnect logic there.
         };
       } catch (error) {
         console.error('Failed to connect WebSocket:', error);
+        this.isConnecting = false;
         this.startPolling(userId);
       }
     },
@@ -184,6 +201,11 @@ export const useTaskStore = defineStore('taskStore', {
         clearInterval(this.pollingInterval);
         this.pollingInterval = null;
       }
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      this.isConnecting = false;
       this.wsUserId = '';
     },
 

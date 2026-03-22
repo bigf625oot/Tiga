@@ -1,0 +1,61 @@
+{
+  "base": "http://127.0.0.1:8000/api/v1",
+  "cases": {
+    "TC-PL-01": {
+      "run": {
+        "session_id": "f659beb4-84bb-4800-8dc7-ea26214ec2ef",
+        "event_counts": {
+          "total": 166,
+          "plan_step": 0,
+          "think": 0,
+          "status": 10,
+          "error": 0
+        }
+      },
+      "analysis": {
+        "step_granularity": {
+          "ok": false,
+          "steps_len": 0
+        },
+        "matrix_ref_in_step2": {
+          "ok": false
+        },
+        "reasoning_path_correctness": {
+          "ok": false,
+          "think_snippet": ""
+        },
+        "plan_steps": [],
+        "tool_mentions": [],
+        "errors": []
+      }
+    },
+    "TC-PL-02": {
+      "run": {
+        "session_id": "309b8c0e-4c9e-4ca5-8962-76e4942c7e11",
+        "event_counts": {
+          "total": 241,
+          "plan_step": 0,
+          "think": 0,
+          "status": 10,
+          "error": 0
+        }
+      },
+      "analysis": {
+        "tool_selection": {
+          "ok": false,
+          "tool_mentions": []
+        },
+        "dynamic_expansion": {
+          "ok": false,
+          "steps_len": 0,
+          "has_weather": false,
+          "has_shanghai": false,
+          "has_modeling_hint": false
+        },
+        "think_snippet": "",
+        "plan_steps": [],
+        "errors": []
+      }
+    }
+  }
+}

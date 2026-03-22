@@ -28,41 +28,17 @@ import {
   RefreshCw, AlertTriangle, ArrowRightLeft, Undo2, HelpCircle, Loader2,
   CheckCircle, XCircle, Home, ArrowLeft, Info, List, AlertCircle
 } from 'lucide-vue-next';
-import ListBody from 'ant-design-vue/es/transfer/ListBody';
-
-interface Department {
-  id: number;
-  name: string;
-  code: string;
-  parent_id: number | null;
-  parent?: Department;
-  children?: Department[];
-  description?: string;
-  leader?: string;
-  phone?: string;
-  userCount: number;
-  created_at: string;
-  updated_at: string;
-  _level?: number;
-  _path?: string[];
-}
+import { departmentApi, type Department, type DepartmentCreate, type DepartmentUpdate } from '../api';
+import type { User } from '../api';
 
 interface DeptFormData {
-  id?: number;
+  id?: string;
   name: string;
   code: string;
-  parent_id: number | undefined;
+  parent_id: string | undefined;
   description: string;
   leader: string;
   phone: string;
-}
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  department_id?: number;
-  department_name?: string;
 }
 
 interface OperationLog {
@@ -77,31 +53,11 @@ interface OperationLog {
 
 const { toast } = useToast();
 
-const mockDepartments: Department[] = [
-  { id: 1, name: '技术研发部', code: 'TECH', parent_id: null, description: '负责产品技术研发', leader: '张技术', phone: '13800138001', userCount: 15, created_at: '2025-01-15 08:00:00', updated_at: '2026-03-15 10:20:00' },
-  { id: 2, name: '产品设计部', code: 'PROD', parent_id: null, description: '负责产品设计与规划', leader: '李产品', phone: '13800138002', userCount: 8, created_at: '2025-01-15 08:00:00', updated_at: '2026-02-20 14:30:00' },
-  { id: 3, name: '市场营销部', code: 'MKT', parent_id: null, description: '负责市场推广与销售', leader: '王市场', phone: '13800138003', userCount: 12, created_at: '2025-02-01 09:00:00', updated_at: '2026-03-10 11:00:00' },
-  { id: 4, name: '人力资源部', code: 'HR', parent_id: null, description: '负责人才招聘与管理', leader: '赵人力', phone: '13800138004', userCount: 6, created_at: '2025-02-15 10:00:00', updated_at: '2026-01-20 16:00:00' },
-  { id: 5, name: '前端开发组', code: 'TECH-FE', parent_id: 1, description: '前端技术开发', leader: '孙前端', phone: '13800138005', userCount: 5, created_at: '2025-03-01 08:30:00', updated_at: '2026-03-18 09:00:00' },
-  { id: 6, name: '后端开发组', code: 'TECH-BE', parent_id: 1, description: '后端技术开发', leader: '周后端', phone: '13800138006', userCount: 7, created_at: '2025-03-01 08:30:00', updated_at: '2026-03-19 10:00:00' },
-  { id: 7, name: 'UI设计组', code: 'PROD-UI', parent_id: 2, description: '界面视觉设计', leader: '吴UI', phone: '13800138007', userCount: 3, created_at: '2025-04-10 09:00:00', updated_at: '2026-02-28 15:00:00' },
-];
-
-const mockUsers: User[] = [
-  { id: 1, username: 'admin', email: 'admin@example.com', department_id: 1, department_name: '技术研发部' },
-  { id: 2, username: 'zhang_san', email: 'zhangsan@example.com', department_id: 1, department_name: '技术研发部' },
-  { id: 3, username: 'li_si', email: 'lisi@example.com', department_id: 2, department_name: '产品设计部' },
-  { id: 4, username: 'wang_wu', email: 'wangwu@example.com', department_id: 5, department_name: '前端开发组' },
-  { id: 5, username: 'zhao_liu', email: 'zhaoliu@example.com', department_id: 6, department_name: '后端开发组' },
-  { id: 6, username: 'qian_qi', email: 'qianqi@example.com', department_id: 3, department_name: '市场营销部' },
-  { id: 7, username: 'sun_ba', email: 'sunba@example.com', department_id: undefined, department_name: undefined },
-];
-
-const departments = ref<Department[]>([...mockDepartments]);
-const users = ref<User[]>([...mockUsers]);
+const departments = ref<Department[]>([]);
+const users = ref<User[]>([]);
 
 const selectedDepartment = ref<Department | null>(null);
-const expandedDepts = ref<Set<number>>(new Set([1]));
+const expandedDepts = ref<Set<string>>(new Set());
 const searchQuery = ref('');
 const activeTab = ref('tree');
 const isLoading = ref(false);
@@ -113,7 +69,7 @@ const isDialogOpen = ref(false);
 const isDeleteDialogOpen = ref(false);
 const isTransferDialogOpen = ref(false);
 const currentDept = ref<Department | null>(null);
-const selectedUserIds = ref<number[]>([]);
+const selectedUserIds = ref<string[]>([]);
 const parentSelectValue = ref<string>('none');
 const operationInProgress = ref(false);
 
@@ -160,7 +116,7 @@ const deptForm = reactive<DeptFormData>({
 const formErrors = reactive<Partial<Record<keyof DeptFormData, string>>>({});
 
 const buildTree = (depts: Department[]): Department[] => {
-  const map = new Map<number, Department>();
+  const map = new Map<string, Department>();
   const roots: Department[] = [];
 
   depts.forEach(d => {
@@ -261,7 +217,12 @@ const currentBreadcrumb = computed(() => {
   return selectedDepartment.value._path || getDepartmentPath(selectedDepartment.value);
 });
 
-function toggleExpand(deptId: number) {
+const selectedDepartmentParent = computed(() => {
+  if (!selectedDepartment.value?.parent_id) return null;
+  return departments.value.find(d => d.id === selectedDepartment.value?.parent_id) || null;
+});
+
+function toggleExpand(deptId: string) {
   if (expandedDepts.value.has(deptId)) {
     expandedDepts.value.delete(deptId);
   } else {
@@ -357,42 +318,33 @@ async function handleSaveDept() {
 
   operationInProgress.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     if (deptForm.id) {
+      const updateData: DepartmentUpdate = {
+        name: deptForm.name,
+        code: deptForm.code,
+        parent_id: deptForm.parent_id || undefined,
+        description: deptForm.description,
+        leader: deptForm.leader,
+        phone: deptForm.phone,
+      };
+      const updated = await departmentApi.update(deptForm.id, updateData);
       const index = departments.value.findIndex(d => d.id === deptForm.id);
       if (index !== -1) {
-        const parent = departments.value.find(d => d.id === deptForm.parent_id);
         const oldData = { ...departments.value[index] };
-        departments.value[index] = {
-          ...departments.value[index],
-          name: deptForm.name,
-          code: deptForm.code,
-          parent_id: deptForm.parent_id || null,
-          parent: parent,
-          description: deptForm.description,
-          leader: deptForm.leader,
-          phone: deptForm.phone,
-          updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        };
+        departments.value[index] = { ...updated };
         addOperationLog('update', deptForm.name, `更新了部门"${deptForm.name}"的信息`, true, oldData);
       }
       showSuccessToast('更新成功', `部门 "${deptForm.name}" 信息已更新`);
     } else {
-      const parent = departments.value.find(d => d.id === deptForm.parent_id);
-      const newDept: Department = {
-        id: Math.max(...departments.value.map(d => d.id)) + 1,
+      const createData: DepartmentCreate = {
         name: deptForm.name,
         code: deptForm.code,
-        parent_id: deptForm.parent_id || null,
-        parent: parent,
+        parent_id: deptForm.parent_id,
         description: deptForm.description,
         leader: deptForm.leader,
         phone: deptForm.phone,
-        userCount: 0,
-        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
       };
+      const newDept = await departmentApi.create(createData);
       departments.value.push(newDept);
       addOperationLog('create', deptForm.name, `创建了新部门"${deptForm.name}"`, true, newDept);
       showSuccessToast('创建成功', `部门 "${deptForm.name}" 已创建`);
@@ -400,8 +352,9 @@ async function handleSaveDept() {
 
     isDialogOpen.value = false;
     resetForm();
-  } catch {
-    showErrorToast('操作失败', '请稍后重试');
+    await fetchDepartments();
+  } catch (error: any) {
+    showErrorToast('操作失败', error.response?.data?.detail || '请稍后重试');
   } finally {
     operationInProgress.value = false;
   }
@@ -412,20 +365,7 @@ async function handleDeleteDept() {
 
   operationInProgress.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const childDepts = departments.value.filter(d => d.parent_id === currentDept.value!.id);
-    if (childDepts.length > 0) {
-      showErrorToast('删除失败', `请先删除 "${currentDept.value.name}" 的 ${childDepts.length} 个子部门`);
-      isDeleteDialogOpen.value = false;
-      return;
-    }
-
-    if (usersInDepartment.value.length > 0) {
-      showErrorToast('删除失败', `该部门仍有 ${usersInDepartment.value.length} 名用户，请先转移`);
-      isDeleteDialogOpen.value = false;
-      return;
-    }
+    await departmentApi.delete(currentDept.value.id);
 
     const deletedData = { ...currentDept.value };
     departments.value = departments.value.filter(d => d.id !== currentDept.value!.id);
@@ -438,8 +378,9 @@ async function handleDeleteDept() {
     showSuccessToast('删除成功', `部门 "${currentDept.value.name}" 已删除`);
     isDeleteDialogOpen.value = false;
     currentDept.value = null;
-  } catch {
-    showErrorToast('操作失败', '请稍后重试');
+    await fetchDepartments();
+  } catch (error: any) {
+    showErrorToast('删除失败', error.response?.data?.detail || '请稍后重试');
   } finally {
     operationInProgress.value = false;
   }
@@ -450,25 +391,20 @@ async function handleTransferUsers() {
 
   operationInProgress.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
     const oldAssignments = selectedUserIds.value.map(id => {
       const user = users.value.find(u => u.id === id);
-      return { userId: id, oldDeptId: user?.department_id, oldDeptName: user?.department_name };
+      return { userId: id, oldDeptId: user?.department_id, oldDeptName: user?.department?.name };
     });
+
+    await departmentApi.transferUsers(selectedDepartment.value.id, selectedUserIds.value);
 
     selectedUserIds.value.forEach(userId => {
       const user = users.value.find(u => u.id === userId);
       if (user) {
         user.department_id = selectedDepartment.value!.id;
-        user.department_name = selectedDepartment.value!.name;
+        user.department = selectedDepartment.value || undefined;
       }
     });
-
-    const newDept = departments.value.find(d => d.id === selectedDepartment.value!.id);
-    if (newDept) {
-      newDept.userCount = usersInDepartment.value.length;
-    }
 
     addOperationLog('transfer', selectedDepartment.value.name,
       `将 ${selectedUserIds.value.length} 名用户转移至 "${selectedDepartment.value.name}"`,
@@ -478,8 +414,10 @@ async function handleTransferUsers() {
 
     selectedUserIds.value = [];
     isTransferDialogOpen.value = false;
-  } catch {
-    showErrorToast('操作失败', '请稍后重试');
+    await fetchDepartments();
+    await fetchUsers();
+  } catch (error: any) {
+    showErrorToast('操作失败', error.response?.data?.detail || '请稍后重试');
   } finally {
     operationInProgress.value = false;
   }
@@ -492,36 +430,33 @@ async function handleUndo() {
   operationInProgress.value = true;
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
     switch (op.type) {
       case 'create':
-        if (op.undoData) {
-          departments.value = departments.value.filter(d => d.id !== op.undoData.id);
+        if (op.undoData?.id) {
+          await departmentApi.delete(op.undoData.id);
         }
         break;
       case 'update':
-        if (op.undoData) {
-          const index = departments.value.findIndex(d => d.id === op.undoData.id);
-          if (index !== -1) {
-            departments.value[index] = { ...op.undoData };
-          }
+        if (op.undoData?.id) {
+          await departmentApi.update(op.undoData.id, op.undoData);
         }
         break;
       case 'delete':
         if (op.undoData) {
-          departments.value.push({ ...op.undoData });
+          await departmentApi.create(op.undoData);
         }
         break;
       case 'transfer':
         if (op.undoData && Array.isArray(op.undoData)) {
-          op.undoData.forEach((item: any) => {
-            const user = users.value.find(u => u.id === item.userId);
-            if (user) {
-              user.department_id = item.oldDeptId;
-              user.department_name = item.oldDeptName;
+          const revertDeptId = op.undoData[0]?.oldDeptId;
+          for (const item of op.undoData) {
+            if (item.userId) {
+              await departmentApi.transferUsers(
+                revertDeptId || '',
+                [item.userId]
+              );
             }
-          });
+          }
         }
         break;
     }
@@ -529,8 +464,10 @@ async function handleUndo() {
     operationLogs.value = operationLogs.value.filter(log => log.id !== op.id);
     lastOperation.value = operationLogs.value[0] || null;
     showUndoSuccessToast('已撤销', op.description.replace('已', '撤销了'));
-  } catch {
-    showErrorToast('撤销失败', '请稍后重试');
+    await fetchDepartments();
+    await fetchUsers();
+  } catch (error: any) {
+    showErrorToast('撤销失败', error.response?.data?.detail || '请稍后重试');
   } finally {
     operationInProgress.value = false;
   }
@@ -568,9 +505,46 @@ function showUndoSuccessToast(title: string, description: string) {
 
 async function refreshData() {
   isLoading.value = true;
-  await new Promise(resolve => setTimeout(resolve, 800));
-  isLoading.value = false;
-  toast({ title: '刷新成功', description: '部门数据已更新', variant: 'default' });
+  try {
+    await Promise.all([fetchDepartments(), fetchUsers()]);
+    toast({ title: '刷新成功', description: '部门数据已更新', variant: 'default' });
+  } catch {
+    toast({ title: '刷新失败', description: '请稍后重试', variant: 'destructive' });
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function fetchDepartments() {
+  try {
+    const data = await departmentApi.list({ limit: 1000 });
+    departments.value = data;
+  } catch (error: any) {
+    showErrorToast('获取部门失败', error.response?.data?.detail || '请稍后重试');
+  }
+}
+
+async function fetchUsers() {
+  try {
+    let allUsers: User[] = [];
+    let currentPage = 1;
+    const pageSize = 100; // 遵循后端 le=100 的限制
+    
+    while (true) {
+      const result = await departmentApi.listUsers({ page: currentPage, page_size: pageSize });
+      allUsers = [...allUsers, ...result.items];
+      
+      // 如果获取到的数量少于页大小，或者总数已经达到，说明已经获取完所有数据
+      if (result.items.length < pageSize || allUsers.length >= result.total) {
+        break;
+      }
+      currentPage++;
+    }
+    
+    users.value = allUsers;
+  } catch (error: any) {
+    showErrorToast('获取用户失败', error.response?.data?.detail || '请稍后重试');
+  }
 }
 
 function handleSearch() {
@@ -581,8 +555,8 @@ function handleTabChange(value: string | number) {
   selectedDepartment.value = null;
 }
 
-onMounted(() => {
-  expandedDepts.value.add(1);
+onMounted(async () => {
+  await Promise.all([fetchDepartments(), fetchUsers()]);
 });
 </script>
 
@@ -681,10 +655,10 @@ onMounted(() => {
             <TabsContent value="tree" class="space-y-4 mt-0">
               <div class="flex gap-1 relative">
                 <div 
-                  class="h-[calc(100vh-16rem)] flex-shrink-0 border rounded-lg p-4 dark:bg-slate-900/50 max overflow-y-auto"
+                  class="h-[calc(100vh-16rem)] flex-shrink-0 border rounded-lg p-4 dark:bg-slate-900/50 flex flex-col"
                   :style="{ width: `${treeWidth}px` }"
                 >
-                  <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center justify-between mb-4 flex-shrink-0">
                     <div class="relative flex-1">
                       <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
@@ -699,65 +673,54 @@ onMounted(() => {
                     </div>
                   </div>
 
-                  <div class="space-y-1">
+                  <div class="space-y-0.5 flex-1 overflow-y-auto min-h-0 px-2 pt-2">
                     <div
                       v-for="dept in filteredDepartments"
                       :key="dept.id"
                       :class="cn(
-                        'flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all duration-200',
-                        'hover:bg-muted/50 dark:hover:bg-slate-800/50',
-                        selectedDepartment?.id === dept.id && 'bg-muted dark:bg-slate-800 ring-2 ring-primary/50'
+                        'group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-sm transition-all duration-200 select-none',
+                        selectedDepartment?.id === dept.id 
+                          ? 'bg-primary/10 text-primary font-medium dark:bg-primary/20' 
+                          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground dark:hover:bg-slate-800/50'
                       )"
-                      :style="{ paddingLeft: `${(dept._level || 0) * 20 + 8}px` }"
+                      :style="{ paddingLeft: `${(dept._level || 0) * 16 + 8}px` }"
                       @click="selectDepartment(dept)"
                     >
-                      <Button
+                      <button
                         v-if="getChildrenCount(dept) > 0"
-                        variant="ghost"
-                        size="icon"
-                        class="h-5 w-5 p-0 hover:bg-muted"
+                        class="flex items-center justify-center w-4 h-4 rounded-sm hover:bg-muted-foreground/20 text-muted-foreground transition-colors"
                         @click.stop="toggleExpand(dept.id)"
                       >
-                        <ChevronDown v-if="expandedDepts.has(dept.id)" class="w-4 h-4 transition-transform" />
-                        <ChevronRight v-else class="w-4 h-4 transition-transform" />
-                      </Button>
-                      <span v-else class="w-5"></span>
+                        <ChevronDown v-if="expandedDepts.has(dept.id)" class="w-3.5 h-3.5 transition-transform" />
+                        <ChevronRight v-else class="w-3.5 h-3.5 transition-transform" />
+                      </button>
+                      <span v-else class="w-4"></span>
 
-                      <Building2 class="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <span class="flex-1 text-sm dark:text-slate-200 truncate">{{ dept.name }}</span>
+                      <Building2 class="w-4 h-4 flex-shrink-0" :class="selectedDepartment?.id === dept.id ? 'text-primary' : 'text-muted-foreground/70'" />
+                      
+                      <span class="flex-1 truncate">{{ dept.name }}</span>
 
-                      <Badge variant="secondary" class="text-xs flex-shrink-0">{{ dept.code }}</Badge>
-
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <span class="text-xs text-muted-foreground hover:text-primary cursor-help">
-                            {{ dept.userCount }}人
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>该部门有 {{ dept.userCount }} 名成员</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            class="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-primary/10"
-                            @click.stop="openCreateDialog(dept)"
-                          >
-                            <Plus class="w-3 h-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>添加子部门</TooltipContent>
-                      </Tooltip>
+                      <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{{ dept.userCount }}人</span>
+                        
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <button
+                              class="flex items-center justify-center w-5 h-5 rounded-md hover:bg-primary hover:text-primary-foreground text-muted-foreground transition-colors"
+                              @click.stop="openCreateDialog(dept)"
+                            >
+                              <Plus class="w-3 h-3" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>添加子部门</TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
 
-                    <div v-if="filteredDepartments.length === 0" class="text-center py-8 text-muted-foreground">
-                      <Building2 class="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>未找到匹配的部门</p>
-                      <p class="text-sm">请尝试其他搜索词</p>
+                    <div v-if="filteredDepartments.length === 0" class="h-full flex flex-col items-center justify-center text-muted-foreground">
+                      <img src="/public/Placeholder/null.svg" alt="暂无数据" class="w-12 h-12 mb-2 opacity-50" />
+                      <p class="text-base font-medium mb-1">未找到匹配的部门</p>
+                      <p class="text-sm text-muted-foreground">请尝试其他搜索词</p>
                     </div>
                   </div>
                 </div>
@@ -857,7 +820,7 @@ onMounted(() => {
                       </div>
                       <div class="p-2 bg-muted/30 dark:bg-slate-800/50 rounded-lg">
                         <p class="text-[10px] text-muted-foreground mb-0.5">上级部门</p>
-                        <p class="dark:text-slate-200 text-xs">{{ selectedDepartment.parent?.name || '无' }}</p>
+                        <p class="dark:text-slate-200 text-xs">{{ selectedDepartmentParent?.name || '无' }}</p>
                       </div>
                     </div>
 
@@ -925,7 +888,7 @@ onMounted(() => {
 
                 <div v-else class="flex-1 border rounded-lg p-8 dark:bg-slate-900/50 flex items-center justify-center min-w-0">
                   <div class="text-center text-muted-foreground">
-                    <Building2 class="w-16 h-16 mx-auto mb-3 opacity-30" />
+                    <img src="/public/Placeholder/null.svg" alt="暂无数据" class="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p class="text-base font-medium mb-1">选择一个部门</p>
                     <p class="text-sm">点击左侧部门树查看详情</p>
                     <Button variant="outline" size="sm" class="mt-4" @click="openCreateDialog()">
@@ -964,7 +927,7 @@ onMounted(() => {
                         <TableCell class="dark:text-slate-300">{{ dept.leader || '-' }}</TableCell>
                         <TableCell class="dark:text-slate-300">
                           <div class="flex items-center gap-1">
-                            <span v-if="dept.parent">{{ dept.parent.name }}</span>
+                            <span v-if="dept.parent_id">{{ departments.find(d => d.id === dept.parent_id)?.name }}</span>
                             <Badge v-else variant="outline" class="text-xs">顶级部门</Badge>
                           </div>
                         </TableCell>
@@ -1044,7 +1007,7 @@ onMounted(() => {
           </SheetHeader>
 
           <ScrollArea class="flex-1 mt-4">
-            <div class="space-y-4 pr-4">
+            <div class="space-y-4 pr-4 px-2">
               <div class="grid gap-2">
                 <Label for="deptName" class="flex items-center gap-1">
                   部门名称
@@ -1084,7 +1047,7 @@ onMounted(() => {
               </div>
               <div class="grid gap-2">
                 <Label for="parentDept">上级部门</Label>
-                <Select v-model="parentSelectValue" @update:modelValue="(v: string) => { deptForm.parent_id = v === 'none' ? undefined : Number(v); }">
+                <Select v-model="parentSelectValue" @update:modelValue="(v: string) => { deptForm.parent_id = v === 'none' ? undefined : v; }">
                   <SelectTrigger id="parentDept" :class="cn(parentSelectValue === 'none' && 'text-muted-foreground')">
                     <SelectValue placeholder="选择上级部门（可选）" />
                   </SelectTrigger>
@@ -1227,7 +1190,7 @@ onMounted(() => {
                     <p class="text-xs text-muted-foreground truncate">{{ user.email }}</p>
                   </div>
                   <Badge v-if="user.department_id" variant="secondary" class="text-xs">
-                    {{ user.department_name }}
+                    {{ user.department?.name }}
                   </Badge>
                   <Badge v-else variant="outline" class="text-xs text-muted-foreground">未分配</Badge>
                 </div>

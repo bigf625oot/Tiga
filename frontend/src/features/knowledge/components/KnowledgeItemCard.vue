@@ -49,7 +49,7 @@
     <CardHeader class="p-5 pb-3 space-y-0 relative z-10">
       <div class="flex items-start gap-4 w-full overflow-hidden">
         <div class="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden">
-          <Folder v-if="item?.is_folder" class="h-9 w-9 text-blue-600" />
+          <img v-if="item?.is_folder" src="/file.svg" class="h-9 w-9 object-contain opacity-80" alt="icon" />
           <img v-else :src="iconSrc" class="h-9 w-9 object-contain opacity-80" alt="icon" />
         </div>
 

@@ -168,10 +168,29 @@ class AgentAssembler:
         search_flag = enable_search if enable_search is not None else model_cfg.get("enable_search", True)
         
         # 1. 加载默认工具 (Session/Search 等)
+        # Force enable search for Quick/Chat mode if the user requests it or by default
         self.ctx.tools = await default_tools.load_tools(
             self.ctx.agent_model, self.db, session_id, enable_search=search_flag
         )
         
+        # Explicitly ensure DuckDuckGo is added if search_flag is True and not already in tools
+        if search_flag:
+            has_ddg = False
+            for t in self.ctx.tools:
+                if hasattr(t, '_name') and 'duckduckgo' in t._name.lower():
+                    has_ddg = True
+                    break
+                elif hasattr(t, '__name__') and 'duckduckgo' in t.__name__.lower():
+                    has_ddg = True
+                    break
+                    
+            if not has_ddg:
+                try:
+                    from app.services.eah_agent.tools.libs.duckduckgo import DuckDuckGoTools
+                    self.ctx.tools.append(DuckDuckGoTools())
+                except ImportError:
+                    pass
+
         # 2. 异步加载技能工具 (Skills are semi-static)
         # TODO: 从 agent_model.skills_config 解析启用的技能，目前暂将所有加载的技能放入
         skills_cfg = self.ctx.agent_model.skills_config or {}

@@ -2,7 +2,7 @@ import { ref, nextTick } from 'vue';
 import { chatService } from '../services/chatService';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import { useToast } from '@/components/ui/toast/use-toast';
-import type { Session, Message, Attachment, ModeType } from '../types';
+import type { Session, Message, Attachment, ModeType, StreamEventItem } from '../types';
 
 /**
  * Manages chat session state, message streaming, and workflow integration.
@@ -94,6 +94,64 @@ export function useChatSession() {
     try { return JSON.stringify(data, null, 2); } catch { return String(data); }
   };
 
+  const toEventContent = (eventType: string, data: any) => {
+    const normalize = (v: any) => normalizeThink(v).trim();
+    const truncate = (s: string, max = 180) => (s.length > max ? `${s.slice(0, max)}…` : s);
+
+    if (data == null) return '';
+    if (typeof data === 'string') return truncate(data.trim());
+
+    const obj = data as any;
+
+    if (typeof obj.content === 'string' && obj.content.trim()) return truncate(obj.content.trim());
+    if (typeof obj.message === 'string' && obj.message.trim()) return truncate(obj.message.trim());
+    if (typeof obj.desc === 'string' && obj.desc.trim()) return truncate(obj.desc.trim());
+
+    if (eventType === 'tool_start' || eventType === 'tool_end' || eventType === 'tool_call') {
+      const tool = obj?.tool ? String(obj.tool) : 'tool';
+      return truncate(`${tool}${obj?.status ? ` (${String(obj.status)})` : ''}`);
+    }
+
+    if (eventType === 'sources' && Array.isArray(obj)) return `${obj.length} sources`;
+    if (eventType === 'plan_step' && Array.isArray(obj)) return `${obj.length} steps`;
+    if (eventType === 'done') return 'done';
+
+    return truncate(normalize(obj));
+  };
+
+  const appendStreamEvent = (msg: Message, eventType: string, data: any) => {
+    const content = toEventContent(eventType, data);
+    if (!content) return;
+    if (!msg.stream_events) msg.stream_events = [];
+
+    const list = msg.stream_events as StreamEventItem[];
+    const last = list.length > 0 ? list[list.length - 1] : null;
+    const ts = Date.now();
+
+    if (eventType === 'text' || eventType === 'think') {
+      if (last && last.event === eventType) {
+        last.content = content;
+        last.ts = ts;
+        last.raw = data;
+        return;
+      }
+    }
+
+    if (last && last.event === eventType && last.content === content) return;
+
+    list.push({
+      id: `${ts}-${Math.random().toString(16).slice(2)}`,
+      event: eventType,
+      content,
+      ts,
+      raw: data
+    });
+
+    if (list.length > 200) {
+      msg.stream_events = list.slice(-200);
+    }
+  };
+
   const sendMessage = async (
     userMsg: string, 
     attachments: Attachment[], 
@@ -122,6 +180,14 @@ export function useChatSession() {
       }
       
       if (!currentSessionId.value) throw new Error("Failed to create session");
+
+      // Initialize workflow store so it's ready to accept events from /chat SSE
+      if (mode === 'solo' || mode === 'team') {
+          workflowStore.initWorkflow(currentSessionId.value);
+          workflowStore.isRunning = true;
+          workflowStore.tasks = [];
+          workflowStore.logs = [];
+      }
 
       const payload = {
         message: userMsg,
@@ -213,12 +279,18 @@ export function useChatSession() {
                   if (data) {
                       try {
                           const parsedData = JSON.parse(data);
+                          appendStreamEvent(assistantMsg, eventType, parsedData);
                           switch (eventType) {
                               case 'status':
                                   if (typeof parsedData === 'string') {
                                       loadingStatus.value = parsedData;
                                   } else if (parsedData.content) {
                                       loadingStatus.value = parsedData.content;
+                                  }
+                                  if (workflowStore.handleWorkflowEvent) {
+                                    workflowStore.handleWorkflowEvent(parsedData);
+                                  } else {
+                                    workflowStore.addLog?.(normalizeThink(parsedData), 'info', 'status');
                                   }
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
@@ -231,30 +303,30 @@ export function useChatSession() {
                                   assistantMsg.steps.push(parsedData);
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
-                              case 'plan_step':
-                                  // Handle backend plan update
-                                  if (Array.isArray(parsedData)) {
-                                      workflowStore.updatePlanFromBackend(parsedData);
-                                      // Also append to assistant message for debug or history?
-                                      // assistantMsg.content += `\n[Plan Updated: ${parsedData.length} steps]`;
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              case 'tool_call':
-                                  // Handle tool execution details (e.g. Python code)
-                                  if (parsedData.tool === 'python' || parsedData.tool === 'code_interpreter') {
-                                      // We might want to show this in the Code Editor view
-                                      // We can add a log entry to the current running task
-                                      const runningTask = workflowStore.tasks.find(t => t.status === 'running');
-                                      if (runningTask) {
-                                          runningTask.logs.push(`Running Code:\n${parsedData.input}`);
-                                      } else {
-                                          // Or just log globally if no task is running (which shouldn't happen in plan mode)
-                                          workflowStore.addLog(`Running Code:\n${parsedData.input}`, 'info');
-                                      }
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
+                              case 'plan':
+                                // Handle plan event
+                                workflowStore.handleWorkflowEvent(parsedData);
+                                if (parsedData.plan) {
+                                    workflowStore.updatePlanFromBackend(parsedData.plan.tasks || parsedData.plan);
+                                }
+                                if (onEvent) onEvent(eventType, parsedData);
+                                break;
+                            case 'plan_step':
+                                // Handle backend plan update
+                                workflowStore.handleWorkflowEvent(parsedData);
+                                if (Array.isArray(parsedData)) {
+                                    workflowStore.updatePlanFromBackend(parsedData);
+                                    // Also append to assistant message for debug or history?
+                                    // assistantMsg.content += `\n[Plan Updated: ${parsedData.length} steps]`;
+                                } else if (parsedData.plan) {
+                                    workflowStore.updatePlanFromBackend(parsedData.plan.tasks || parsedData.plan);
+                                }
+                                if (onEvent) onEvent(eventType, parsedData);
+                                break;
+                            case 'tool_call':
+                                workflowStore.handleWorkflowEvent(parsedData);
+                                if (onEvent) onEvent(eventType, parsedData);
+                                break;
                               case 'tool_start': {
                                   const tool = parsedData?.tool ? String(parsedData.tool) : 'tool';
                                   workflowStore.updateToolStatus?.(tool, 'running', parsedData);
@@ -268,15 +340,6 @@ export function useChatSession() {
                                   const resultPreview = parsedData?.result != null ? normalizeThink(parsedData.result) : '';
                                   if (resultPreview) {
                                       workflowStore.addLog?.(resultPreview, 'info', tool);
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-                              case 'status': {
-                                  if (workflowStore.handleWorkflowEvent) {
-                                      workflowStore.handleWorkflowEvent(parsedData);
-                                  } else {
-                                      workflowStore.addLog?.(normalizeThink(parsedData), 'info', 'status');
                                   }
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
@@ -297,7 +360,7 @@ export function useChatSession() {
                                   if (typeof thinking !== 'string') {
                                       thinking = thinking.content || normalizeThink(thinking);
                                   }
-                                  assistantMsg.reasoning_content = (assistantMsg.reasoning_content || '') + thinking;
+                                  assistantMsg.reasoning = (assistantMsg.reasoning || '') + thinking;
                                   // Also log thoughts to workflow store so they appear in logs
                                   workflowStore.addLog(thinking, 'info', 'thinking');
                                   if (onEvent) onEvent(eventType, parsedData);
@@ -341,6 +404,11 @@ export function useChatSession() {
           isLoading.value = false;
           isStreaming.value = false;
           
+          if (workflowStore.isRunning) {
+              workflowStore.isRunning = false;
+              workflowStore.addLog?.('Execution completed', 'success');
+          }
+
           // Set duration when stream ends
           const durationMs = Date.now() - startTime;
           assistantMsg.meta_data = { ...(assistantMsg.meta_data || {}), duration: durationMs };

@@ -8,39 +8,13 @@
  * @备注    通过 ReadableStream 模拟服务端推流，重点保护流式解析稳定性
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
-import SmartQA from '../SmartQA.vue';
 import { createPinia, setActivePinia } from 'pinia';
-
-// Avoid loading 3D viewer libs in test env
-vi.mock('@/shared/components/organisms/GraphViewer/GraphViewer3D.vue', () => ({
-  default: { template: '<div />' }
-}));
-
-// Reuse minimal stubs similar to SmartQA.spec.js
-const AntComponents = {
-  'a-dropdown': { template: '<div><slot /><slot name="overlay" /></div>' },
-  'a-menu': { template: '<div><slot /></div>' },
-  'a-menu-item': { template: '<div><slot /></div>' },
-  'a-select': { template: '<div><slot /></div>' },
-  'a-select-option': { template: '<option><slot /></option>' },
-  'a-switch': { template: '<div></div>' },
-  'a-progress': { template: '<div></div>' },
-  'a-modal': { template: '<div><slot /></div>' },
-  'a-tabs': { template: '<div><slot /></div>' },
-  'a-tab-pane': { template: '<div><slot /></div>' },
-  'a-upload-dragger': { template: '<div><slot /></div>' },
-  'a-input': { template: '<input />' },
-  'a-button': { template: '<button><slot /></button>' },
-  'a-table': { template: '<div></div>' },
-};
+import { useChatSession } from '../../composables/useChatSession';
 
 describe('SmartQA SSE streaming', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
-    // Default fetch mock
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
     // Mock matchMedia
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -63,6 +37,7 @@ describe('SmartQA SSE streaming', () => {
     const stream = new ReadableStream({
       start(controller) {
         const chunks = [
+          'event: status\n' + 'data: ' + JSON.stringify({ type: 'status', content: 'Orchestrating context...' }) + '\n\n',
           'event: think\n' + 'data: ' + JSON.stringify({ message: '正在初始化' }) + '\n\n',
           'event: text\n' + 'data: ' + JSON.stringify({ desc: '对象片段' }) + '\n\n',
           'event: text\n' + 'data: ' + JSON.stringify('正文字符串') + '\n\n',
@@ -72,55 +47,15 @@ describe('SmartQA SSE streaming', () => {
         controller.close();
       }
     });
+    const { handleStreamResponse, messages } = useChatSession();
 
-    // Mock fetch: default json for GET/Upload, SSE for chat POST with JSON body
-    global.fetch = vi.fn((url, opts = {}) => {
-      if (opts.method === 'POST' && opts.body && !(opts.body instanceof FormData)) {
-        return Promise.resolve({ ok: true, body: stream });
-      }
-      return Promise.resolve({ ok: true, json: async () => [] });
-    });
+    await handleStreamResponse({ body: stream });
 
-    const wrapper = mount(SmartQA, {
-      props: { sessionId: 'session-1' },
-      global: {
-        components: { ...AntComponents },
-        stubs: {
-          DynamicGridBackground: { template: '<div><slot /></div>' },
-          AutoTaskPanel: true,
-          WorkspaceTabs: true,
-          MessageList: true,
-          BaseIcon: true,
-          LoadingOutlined: true,
-          StopOutlined: true,
-          ArrowUpOutlined: true,
-          PaperClipOutlined: true,
-          DeleteOutlined: true,
-          InboxOutlined: true,
-          SearchOutlined: true,
-          RobotOutlined: true,
-          ProjectOutlined: true,
-          MessageOutlined: true,
-          DownOutlined: true
-        }
-      }
-    });
-
-    // Set input and click send
-    const ta = wrapper.find('textarea');
-    await ta.setValue('hello');
-    const sendBtn = wrapper.find('button.rounded-full');
-    await sendBtn.trigger('click');
-
-    // Wait for stream processing
-    await new Promise(res => setTimeout(res, 200));
-
-    // Inspect messages (MessageList is stubbed, check component state)
-    const msgs = (wrapper.vm.messages || []);
-    const assistant = msgs.find(m => m.role === 'assistant');
+    const assistant = (messages.value || []).find(m => m.role === 'assistant');
     expect(assistant).toBeDefined();
     expect(assistant.content || '').not.toContain('[object Object]');
     expect((assistant.reasoning || '')).toContain('正在初始化');
+    expect((assistant.stream_events || []).some(e => e.event === 'status' && (e.content || '').includes('Orchestrating context'))).toBe(true);
   });
 
   it('handles unclosed think tags by wrapping them', async () => {
@@ -138,41 +73,11 @@ describe('SmartQA SSE streaming', () => {
         controller.close();
       }
     });
+    const { handleStreamResponse, messages } = useChatSession();
 
-    global.fetch = vi.fn((url, opts = {}) => {
-      if (opts.method === 'POST') {
-        return Promise.resolve({ ok: true, body: stream });
-      }
-      return Promise.resolve({ ok: true, json: async () => [] });
-    });
+    await handleStreamResponse({ body: stream });
 
-    const wrapper = mount(SmartQA, {
-       props: { sessionId: 'session-unclosed' },
-       global: {
-         components: { ...AntComponents },
-         stubs: {
-           DynamicGridBackground: { template: '<div><slot /></div>' },
-           AutoTaskPanel: true,
-           WorkspaceTabs: true,
-           MessageList: true,
-           BaseIcon: true
-         }
-       }
-     });
- 
-     await new Promise(resolve => setTimeout(resolve, 0)); // Allow mount effects
-     const ta = wrapper.find('textarea');
-     if (!ta.exists()) {
-        console.log(wrapper.html());
-        throw new Error('Textarea not found');
-     }
-     await ta.setValue('test unclosed');
-    await wrapper.find('button.rounded-full').trigger('click');
-
-    await new Promise(res => setTimeout(res, 200));
-
-    const msgs = wrapper.vm.messages || [];
-    const assistant = msgs.find(m => m.role === 'assistant');
+    const assistant = (messages.value || []).find(m => m.role === 'assistant');
     
     // The component should detect unclosed <think> and move it to reasoning
     // OR render it within a details block in the content

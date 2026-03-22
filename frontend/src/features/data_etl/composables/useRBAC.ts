@@ -1,4 +1,5 @@
 import { ref, computed, readonly } from 'vue';
+import { roleApi, type Role as RoleType } from '../api';
 
 export interface ActionDef {
   id: string;
@@ -30,48 +31,49 @@ export interface Role {
 
 export const MODULES: ModuleDef[] = [
   {
-    id: 'data_integration',
-    name: '数据集成',
-    resources: [
-      { id: 'datasource', name: '数据源', actions: [{ id: 'read', name: '查看' }, { id: 'write', name: '编辑' }, { id: 'delete', name: '删除' }] },
-      { id: 'dataset', name: '数据集', actions: [{ id: 'read', name: '查看' }, { id: 'write', name: '编辑' }, { id: 'delete', name: '删除' }, { id: 'export', name: '导出' }] },
-    ]
+    id: 'knowledge_base',
+    name: '公共知识库管理',
+    resources: []
   },
   {
-    id: 'pipeline',
-    name: '数据管道',
-    resources: [
-      { id: 'job', name: '作业任务', actions: [{ id: 'read', name: '查看' }, { id: 'write', name: '编辑' }, { id: 'execute', name: '执行' }, { id: 'delete', name: '删除' }] },
-      { id: 'schedule', name: '调度配置', actions: [{ id: 'read', name: '查看' }, { id: 'write', name: '编辑' }] },
-    ]
-  },
-  {
-    id: 'system',
-    name: '系统设置',
-    resources: [
-      { id: 'user', name: '用户管理', actions: [{ id: 'read', name: '查看' }, { id: 'write', name: '编辑' }, { id: 'delete', name: '删除' }] },
-      { id: 'role', name: '角色权限', actions: [{ id: 'read', name: '查看' }, { id: 'write', name: '编辑' }] },
-    ]
+    id: 'agent',
+    name: '公共智能体管理',
+    resources: []
   }
-];
-
-export const MOCK_ROLES: Role[] = [
-  { id: '1', name: '超级管理员', code: 'admin', description: '系统最高权限，不可删除', isSystem: true, userCount: 2, permissions: ['*'] },
-  { id: '2', name: '数据工程师', code: 'data_eng', description: '负责数据集成与管道开发', isSystem: false, userCount: 15, permissions: ['datasource:read', 'datasource:write', 'dataset:read', 'dataset:write', 'job:read', 'job:write', 'job:execute', 'schedule:read', 'schedule:write'] },
-  { id: '3', name: '数据分析师', code: 'data_analyst', description: '只读权限，可导出数据', isSystem: false, userCount: 25, permissions: ['datasource:read', 'dataset:read', 'dataset:export', 'job:read'] },
 ];
 
 export function useRBAC() {
   const normalizePermissions = (codes: string[]) => Array.from(new Set(codes)).sort();
 
-  // Snapshot for discarding changes
-  const originalRoles = ref<Role[]>(JSON.parse(JSON.stringify(MOCK_ROLES)));
-  const roles = ref<Role[]>(JSON.parse(JSON.stringify(MOCK_ROLES)));
-  
-  const activeRoleId = ref<string>(roles.value[0].id);
+  const roles = ref<Role[]>([]);
+  const originalRoles = ref<Role[]>([]);
+  const activeRoleId = ref<string | null>(null);
   const hasUnsavedChanges = ref(false);
+  const isLoading = ref(false);
 
   const activeRole = computed(() => roles.value.find(r => r.id === activeRoleId.value));
+
+  const fetchRoles = async () => {
+    isLoading.value = true;
+    try {
+      const data = await roleApi.list();
+      roles.value = data.map(r => ({
+        id: r.id,
+        name: r.name,
+        code: r.code,
+        description: r.description ?? '',
+        isSystem: r.is_system ?? false,
+        userCount: r.userCount,
+        permissions: r.permissions ?? []
+      }));
+      originalRoles.value = JSON.parse(JSON.stringify(roles.value));
+      if (roles.value.length > 0 && !activeRoleId.value) {
+        activeRoleId.value = roles.value[0].id;
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  };
 
   const selectRole = (id: string) => {
     if (hasUnsavedChanges.value) {
@@ -88,10 +90,10 @@ export function useRBAC() {
 
   const togglePermission = (resourceId: string, actionId: string, checked: boolean) => {
     if (!activeRole.value || activeRole.value.permissions.includes('*')) return;
-    
+
     hasUnsavedChanges.value = true;
     const perm = `${resourceId}:${actionId}`;
-    
+
     if (checked) {
       if (!activeRole.value.permissions.includes(perm)) {
         activeRole.value.permissions.push(perm);
@@ -139,39 +141,64 @@ export function useRBAC() {
   };
 
   const saveConfig = async () => {
-    // Simulate API call to save config
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        originalRoles.value = JSON.parse(JSON.stringify(roles.value));
-        hasUnsavedChanges.value = false;
-        resolve(true);
-      }, 500);
+    if (!activeRole.value) return;
+    await roleApi.update(activeRole.value.id, {
+      permissions: activeRole.value.permissions
     });
-  };
-
-  const discardChanges = () => {
-    roles.value = JSON.parse(JSON.stringify(originalRoles.value));
+    const idx = originalRoles.value.findIndex(r => r.id === activeRole.value!.id);
+    if (idx !== -1) {
+      originalRoles.value[idx] = JSON.parse(JSON.stringify(activeRole.value));
+    }
     hasUnsavedChanges.value = false;
   };
 
-  const addRole = (newRole: Omit<Role, 'id' | 'isSystem' | 'userCount' | 'permissions'>) => {
-    const role: Role = {
-      ...newRole,
-      id: Date.now().toString(),
-      isSystem: false,
-      userCount: 0,
+  const discardChanges = () => {
+    const idx = roles.value.findIndex(r => r.id === activeRoleId.value);
+    if (idx !== -1) {
+      roles.value[idx] = JSON.parse(JSON.stringify(originalRoles.value[idx]));
+    }
+    hasUnsavedChanges.value = false;
+  };
+
+  const addRole = async (newRole: Omit<Role, 'id' | 'isSystem' | 'userCount' | 'permissions'>) => {
+    const created = await roleApi.create({
+      name: newRole.name,
+      code: newRole.code,
+      description: newRole.description,
       permissions: []
+    });
+    const role: Role = {
+      id: created.id,
+      name: created.name,
+      code: created.code,
+      description: created.description ?? '',
+      isSystem: created.is_system ?? false,
+      userCount: created.userCount,
+      permissions: created.permissions ?? []
     };
     roles.value.push(role);
-    originalRoles.value.push(JSON.parse(JSON.stringify(role))); // Assume adding role saves it directly
+    originalRoles.value.push(JSON.parse(JSON.stringify(role)));
     selectRole(role.id);
+    return role;
   };
+
+  const deleteRole = async (id: string) => {
+    await roleApi.delete(id);
+    roles.value = roles.value.filter(r => r.id !== id);
+    originalRoles.value = originalRoles.value.filter(r => r.id !== id);
+    if (activeRoleId.value === id && roles.value.length > 0) {
+      activeRoleId.value = roles.value[0].id;
+    }
+  };
+
+  fetchRoles();
 
   return {
     roles,
     activeRoleId,
     activeRole,
     hasUnsavedChanges: readonly(hasUnsavedChanges),
+    isLoading: readonly(isLoading),
     selectRole,
     hasPermission,
     togglePermission,
@@ -182,6 +209,7 @@ export function useRBAC() {
     saveConfig,
     discardChanges,
     addRole,
+    deleteRole,
     MODULES
   };
 }

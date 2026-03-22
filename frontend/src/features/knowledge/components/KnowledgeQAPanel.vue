@@ -1155,7 +1155,7 @@ watch(() => props.visible, (newVal) => {
     border: 1px solid hsl(var(--border));
 }
 .markdown-content :deep(code) {
-    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-family: "Hack", 'Menlo', 'Monaco', 'Courier New', monospace;
     font-size: 12px;
 }
 </style>

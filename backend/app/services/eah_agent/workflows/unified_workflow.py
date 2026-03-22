@@ -87,7 +87,9 @@ class UnifiedAgentWorkflow(EAHWorkflow):
             await self.state_manager.update_mode(self.session_id, "workflow")
             
             # 4. Planning Phase
-            planner = PlannerAgent(self.db)
+            # We can optionally accept a model_id from kwargs if passed by AgentWorkflowEngine for retries
+            fallback_model_id = kwargs.get("planner_model_id")
+            planner = PlannerAgent(self.db, model_id=fallback_model_id)
             
             yield {"type": "status", "content": _("Planning tasks...")}
             
@@ -101,8 +103,28 @@ class UnifiedAgentWorkflow(EAHWorkflow):
             if not plan:
                 yield {"type": "error", "content": _("Failed to create execution plan.")}
                 return
+                
+            # Fetch tasks for the plan to send to frontend
+            stmt = select(AgentTask).filter(AgentTask.plan_id == plan_id).order_by(AgentTask.sequence.asc())
+            result = await self.db.execute(stmt)
+            tasks = result.scalars().all()
+            
+            plan_dict = {
+                "id": str(plan.id),
+                "reasoning": getattr(plan, "reasoning", ""),
+                "status": plan.status.value if hasattr(plan.status, 'value') else str(plan.status),
+                "tasks": [
+                    {
+                        "id": str(t.id),
+                        "name": t.name,
+                        "description": t.description,
+                        "status": t.status.value if hasattr(t.status, 'value') else str(t.status),
+                        "assigned_agent_role": t.assigned_agent_role
+                    } for t in tasks
+                ]
+            }
 
-            yield {"type": "plan", "content": plan_id, "plan": plan}
+            yield {"type": "plan", "content": plan_id, "plan": plan_dict}
 
             while True:
                 # Fetch next pending task
@@ -131,22 +153,49 @@ class UnifiedAgentWorkflow(EAHWorkflow):
                     
                     # Stream execution
                     response_content = ""
-                    # Agno Agent.run_stream usage:
-                    stream_gen = executor.run_stream(
-                        task.description, 
-                        images=processed_images if self.input_images else None
+                    
+                    task_prompt = (
+                        f"Original User Goal: {self.user_goal}\n\n"
+                        f"Your Current Task: {task.name}\n"
+                        f"Task Details: {task.description}\n\n"
+                        f"Please execute this task and respond in the same language as the Original User Goal."
+                    )
+                    
+                    # Agno Agent.arun usage for async streaming:
+                    stream_gen = executor.arun(
+                        task_prompt, 
+                        images=processed_images if self.input_images else None,
+                        stream=True
                     )
                     
                     async for chunk in stream_gen:
                         # Aggregate content for history/result
-                        if hasattr(chunk, "content"):
-                            content = chunk.content
-                            response_content += str(content)
-                            yield {"type": "content", "content": content}
+                        if hasattr(chunk, "content") and chunk.content is not None:
+                            response_content += str(chunk.content)
+                            yield {"type": "content", "content": chunk.content}
                         elif isinstance(chunk, str):
                             response_content += chunk
                             yield {"type": "content", "content": chunk}
-                        # Handle other chunk types if necessary
+                        
+                        # Handle tool calls dynamically from event
+                        if hasattr(chunk, "event"):
+                            event_name = chunk.event
+                            # ToolCallStartedEvent or ToolCallCompletedEvent
+                            if event_name in ("ToolCallStarted", "ToolCallCompleted") and hasattr(chunk, "tool") and chunk.tool:
+                                tool = chunk.tool
+                                tool_info = {
+                                    "tool_name": tool.tool_name,
+                                    "tool_args": tool.tool_args,
+                                    "status": "started" if event_name == "ToolCallStarted" else "completed"
+                                }
+                                if event_name == "ToolCallCompleted" and hasattr(tool, "result"):
+                                    tool_info["result"] = str(tool.result)
+                                
+                                yield {
+                                    "type": "tool_call",
+                                    "content": f"Tool '{tool.tool_name}' {tool_info['status']}.",
+                                    "tool": tool_info
+                                }
 
                     # Mark Task Complete
                     task.status = TaskStatus.COMPLETED
@@ -190,6 +239,9 @@ class UnifiedAgentWorkflow(EAHWorkflow):
                 yield {"type": "status", "content": _("Workflow execution completed.")}
         
         except Exception as e:
+            from app.services.eah_agent.core.schema import PlanValidationError
+            if isinstance(e, PlanValidationError):
+                raise e
             logger.exception(f"Workflow execution failed: {e}")
             yield {"type": "error", "content": f"Workflow execution failed: {e}"}
         finally:
@@ -213,6 +265,9 @@ class UnifiedAgentWorkflow(EAHWorkflow):
         Creates an Agno Agent configured for the specific task.
         Enforces Sandbox (E2B) if code execution is likely needed.
         """
+        from app.services.llm.resolver import resolve_chat_llm_model
+        from app.services.llm.factory import ModelFactory
+        
         tools = []
         # Check if task implies code execution
         is_code_task = any(kw in task.description.lower() for kw in ["code", "script", "python", "calculate", "plot", "analyze"])
@@ -225,14 +280,20 @@ class UnifiedAgentWorkflow(EAHWorkflow):
                 else:
                     logger.warning("E2B_API_KEY not found. Skipping E2BTools.")
         
+        # Resolve the best available chat model
+        llm_model = await resolve_chat_llm_model(self.db)
+        model_instance = ModelFactory.create_model(llm_model)
+
         # Create Agent
         return Agent(
-            model=OpenAIChat(id="gpt-4-turbo"), # Default model
+            model=model_instance,
             tools=tools,
-            knowledge_base=kb,
+            knowledge=kb,
             description=f"You are an expert executor for the task: {task.name}",
-            instructions=task.description,
-            show_tool_calls=True,
+            instructions=[
+                task.description,
+                "IMPORTANT: You must always reply in the same language as the user's original request. If the task or context is in Chinese, you MUST reply in Chinese."
+            ],
             markdown=True
         )
 

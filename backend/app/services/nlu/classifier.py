@@ -70,11 +70,11 @@ Your task is to analyze the user's query and classify it into one of the followi
 - STRUCTURED_QUERY: For very specific data queries that map clearly to database tables.
 
 Also extract relevant parameters like time ranges, locations, and entities.
+You must output a valid JSON matching the required schema.
 """,
-                         # response_model=IntentResponse, # Agno < 2.0 might not support this directly in init or syntax differs
-                          # For now, we rely on instructions to produce JSON or we use structured output if available
-                          # show_tool_calls=False
-                      )
+                         # response_model=IntentResponse,
+                         markdown=False,
+                     )
                 else:
                     logger.warning("No active LLM model found for IntentClassifier.")
         except Exception as e:
@@ -92,29 +92,26 @@ Also extract relevant parameters like time ranges, locations, and entities.
         
         if self.agent:
             try:
-                # Manually parse response if structured output is not supported via init
-                # Or try to pass response_model to arun if supported there
-                # For now, let's assume arun can handle it or we use a wrapper
-                try:
-                    response = await self.agent.arun(question, response_model=IntentResponse)
-                except TypeError:
-                     # Fallback: prompt engineering for JSON
-                     await self.agent.arun(question + "\nRespond in JSON format matching the schema.")
-                     # Parse JSON manually (omitted for brevity in this fix, assuming fallback handles it)
-                     return self._rule_based_classify(question) # Temporary fallback
+                # We removed response_model from __init__ because Agno version doesn't support it there
+                # Let's use instructions to force JSON and parse it
+                prompt = question + "\n\nOutput ONLY a valid JSON object matching the requested schema."
+                response = await self.agent.arun(prompt)
                 
-                if isinstance(response, IntentResponse):
-                    return response.intent
-                elif hasattr(response, "content"):
-                     # If Agno returned a RunOutput but content is structured
-                     import json
-                     try:
-                         # It might be a RunResponse/RunOutput object
-                         # Check if content is JSON string
-                         data = json.loads(response.content)
-                         return QueryIntent(data.get("intent", "RAG_QUERY"))
-                     except Exception:
-                         pass
+                content = getattr(response, "content", "")
+                if isinstance(content, str):
+                    import json
+                    content = content.strip()
+                    if content.startswith("```json"):
+                        content = content[7:]
+                    if content.startswith("```"):
+                        content = content[3:]
+                    if content.endswith("```"):
+                        content = content[:-3]
+                    try:
+                        data = json.loads(content.strip())
+                        return IntentResponse(**data).intent
+                    except Exception:
+                        pass
             except Exception as e:
                 logger.error(f"LLM Classification failed: {e}. Falling back to rules.")
         
@@ -131,24 +128,24 @@ Also extract relevant parameters like time ranges, locations, and entities.
         
         if self.agent:
             try:
-                response = None
-                try:
-                    response = await self.agent.arun(question, response_model=IntentResponse)
-                except TypeError:
-                    # If Agno version doesn't support response_model in arun, try structured output or just fallback
-                    pass
+                prompt = question + "\n\nOutput ONLY a valid JSON object matching the requested schema."
+                response = await self.agent.arun(prompt)
                 
-                if isinstance(response, IntentResponse):
-                    return response
-                
-                if response and hasattr(response, "content"):
-                     # Parse JSON from content if response_model failed to automatically parse
-                     import json
-                     try:
-                         data = json.loads(response.content)
-                         return IntentResponse(**data)
-                     except Exception:
-                         pass
+                content = getattr(response, "content", "")
+                if isinstance(content, str):
+                    import json
+                    content = content.strip()
+                    if content.startswith("```json"):
+                        content = content[7:]
+                    if content.startswith("```"):
+                        content = content[3:]
+                    if content.endswith("```"):
+                        content = content[:-3]
+                    try:
+                        data = json.loads(content.strip())
+                        return IntentResponse(**data)
+                    except Exception:
+                        pass
             except Exception as e:
                 logger.error(f"LLM Detailed Classification failed: {e}")
         

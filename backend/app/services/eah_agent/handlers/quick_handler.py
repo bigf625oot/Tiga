@@ -87,6 +87,10 @@ class QuickHandler(BaseHandler):
                 # 将 Agno 原生块转换为标准的 StreamResponse
                 async for event in self.stream_adapter.to_standard_events(chunk):
                     yield event
+            
+            # Flush the stream adapter buffer
+            async for event in self.stream_adapter.flush():
+                yield event
 
         except Exception as e:
             logger.error(f"QuickHandler execution failed: {e}", exc_info=True)

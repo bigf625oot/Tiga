@@ -33,43 +33,54 @@ class PlanHandler(BaseHandler):
         files: List[Any] = kwargs.get("files", [])
         agent_id: str = kwargs.get("agent_id")
 
+        assert db is not None, "Missing required parameter: db"
+        assert session_id is not None, "Missing required parameter: session_id"
+
         yield {"type": "status", "content": _("Orchestrating autonomous planning environment...")}
 
-        # 1. 资源并行装配 (Resource Parallelism)
-        # 同时启动：智能体装配、文件多模态解析、历史上下文压缩
-        setup_tasks = [
-            asyncio.create_task(self._assemble_plan_agent(db, agent_id, session_id)),
-            asyncio.create_task(FileOrchestrator.process_batch(files, session_id)), # 假设支持批量处理
-            asyncio.create_task(self._prepare_history(db, session_id, current_query=input_text))
-        ]
-
-        # 2. 等待资源就绪
-        agent, file_results, (history_msgs, _was_compressed) = await asyncio.gather(*setup_tasks)
-
-        # 2. 动态指令合成 (Instruction Synthesis)
-        base_instructions = getattr(agent, "instructions", None)
-        if isinstance(base_instructions, str):
-            instructions = [base_instructions] if base_instructions.strip() else []
-        elif isinstance(base_instructions, list):
-            instructions = [str(x) for x in base_instructions if str(x).strip()]
-        else:
-            instructions = []
-        
-        # 注入多模态上下文与意图增强
-        if file_results["context"]:
-            instructions.append(f"Environment Context (Files):\n{file_results['context']}")
-            yield {"type": "status", "content": _("Contextualized with {} files.").format(len(files))}
-            
-        if intent and intent.parameters:
-            instructions.append(f"Extraction Hints: {intent.parameters}")
-
-        # 3. 增强任务目标
-        # 强制要求 Agent 遵循依赖感知的规划协议
-        enriched_goal = self._enrich_goal(input_text, "\n\n".join(instructions))
-
-        # 4. 移交工作流引擎 (Engine Delegation)
-        # P10 准则：Handler 不自己跑循环，而是启动专门的状态机引擎
         try:
+            # 1. 资源并行装配 (Resource Parallelism)
+            # 同时启动：智能体装配、文件多模态解析、历史上下文压缩
+            setup_tasks = [
+                asyncio.create_task(self._assemble_plan_agent(db, agent_id, session_id)),
+                asyncio.create_task(FileOrchestrator.process_batch(files, session_id)), # 假设支持批量处理
+                asyncio.create_task(self._prepare_history(db, session_id, current_query=input_text))
+            ]
+
+            # 2. 等待资源就绪
+            # 使用 return_exceptions=True 捕获异常
+            results = await asyncio.gather(*setup_tasks, return_exceptions=True)
+            
+            # 检查是否有异常抛出
+            for res in results:
+                if isinstance(res, Exception):
+                    raise res
+
+            agent, file_results, (history_msgs, _was_compressed) = results
+
+            # 2. 动态指令合成 (Instruction Synthesis)
+            base_instructions = getattr(agent, "instructions", None)
+            if isinstance(base_instructions, str):
+                instructions = [base_instructions] if base_instructions.strip() else []
+            elif isinstance(base_instructions, list):
+                instructions = [str(x) for x in base_instructions if str(x).strip()]
+            else:
+                instructions = []
+            
+            # 注入多模态上下文与意图增强
+            if file_results and file_results.get("context"):
+                instructions.append(f"Environment Context (Files):\n{file_results['context']}")
+                yield {"type": "status", "content": _("Contextualized with {} files.").format(len(files))}
+                
+            if intent and intent.parameters:
+                instructions.append(f"Extraction Hints: {intent.parameters}")
+
+            # 3. 增强任务目标
+            # 强制要求 Agent 遵循依赖感知的规划协议
+            enriched_goal = self._enrich_goal(input_text, "\n\n".join(instructions))
+
+            # 4. 移交工作流引擎 (Engine Delegation)
+            # P10 准则：Handler 不自己跑循环，而是启动专门的状态机引擎
             workflow_engine = AgentWorkflowEngine(db=db)
             
             # 这里的 workflow_engine 内部会处理 PlannerAgent 的创建、
@@ -78,7 +89,7 @@ class PlanHandler(BaseHandler):
                 session_id=session_id,
                 user_goal=enriched_goal,
                 agent_instance=agent, # 注入已经装配好的 Agent
-                media_objects=file_results["media"]
+                media_objects=file_results.get("media", []) if file_results else []
             ):
                 yield event
 
@@ -107,5 +118,7 @@ class PlanHandler(BaseHandler):
         return (
             f"SYSTEM_INSTRUCTIONS:\n{full_instructions}\n\n"
             f"USER_GOAL:\n{text}\n\n"
-            "MISSION: Break down into steps, respect dependencies, and execute."
+            "MISSION: Break down the goal into steps, respect dependencies, and execute.\n"
+            "Your task is to call the planning tool to submit the task plan.\n"
+            "IMPORTANT: Maintain the same language as the USER_GOAL for all task descriptions and final outputs."
         )

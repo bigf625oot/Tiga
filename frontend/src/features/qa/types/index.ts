@@ -16,6 +16,14 @@ export interface ChartConfig {
   options?: any;
 }
 
+export interface StreamEventItem {
+  id: string;
+  event: string;
+  content: string;
+  ts: number;
+  raw?: any;
+}
+
 export interface Message {
   role: Role;
   content: string;
@@ -24,6 +32,7 @@ export interface Message {
   status?: MessageStatus;
   reasoning?: string;
   steps?: { content: string; step: number }[];
+  stream_events?: StreamEventItem[];
   chart_config?: ChartConfig;
   sources?: MessageSource[];
   isSystem?: boolean;

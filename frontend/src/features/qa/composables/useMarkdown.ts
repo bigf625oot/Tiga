@@ -3,8 +3,10 @@ import type { Tokens } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { createHighlighter, type Highlighter } from 'shiki';
+import { ref } from 'vue';
 
 let highlighter: Highlighter | null = null;
+export const isHighlighterReady = ref(false);
 
 // 初始化 shiki (单例)
 const initHighlighter = async () => {
@@ -13,6 +15,7 @@ const initHighlighter = async () => {
             themes: ['github-dark', 'github-light'],
             langs: ['javascript', 'typescript', 'vue', 'python', 'json', 'bash', 'html', 'css', 'sql', 'yaml', 'markdown'],
         });
+        isHighlighterReady.value = true;
     }
     return highlighter;
 };
@@ -82,25 +85,31 @@ export function useMarkdown() {
                     });
                     
                     // 剥离 shiki 外层 pre 标签，方便我们自定义外壳
-                    const match = highlightedCode.match(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/);
+                    // shiki 默认会包裹 <pre class="shiki github-dark" style="background-color:#24292e;color:#e1e4e8" tabindex="0"><code>...</code></pre>
+                    // 注意：这里我们使用 /<code[^>]*>([\s\S]*?)<\/code>/ 来匹配，更安全
+                    const match = highlightedCode.match(/<code[^>]*>([\s\S]*?)<\/code>/);
                     if (match) {
                         highlightedCode = match[1];
+                    } else {
+                        // 如果没有匹配到，则尝试简单的清理
+                        highlightedCode = highlightedCode.replace(/^<pre[^>]*><code[^>]*>/, '').replace(/<\/code><\/pre>$/, '');
                     }
                 } catch (e) {
                     console.warn(`Failed to highlight lang: ${lang}`, e);
+                    highlightedCode = escapeHtml(code);
                 }
             }
 
             // 返回一个包含语言和代码内容的自定义结构，方便后续组件化处理（如一键复制）
             return `
-                <div class="code-block-wrapper relative group my-4 rounded-md overflow-hidden border border-border bg-zinc-950">
-                    <div class="code-block-header flex items-center justify-between px-4 py-1.5 bg-zinc-900 border-b border-zinc-800">
+                <div class="code-block-wrapper relative group my-4 rounded-md overflow-hidden border border-zinc-800 bg-[#0d1117]">
+                    <div class="code-block-header flex items-center justify-between px-4 py-1.5 bg-[#161b22] border-b border-zinc-800">
                         <span class="text-xs font-mono text-zinc-400">${lang}</span>
                         <button class="copy-btn opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-200" data-code="${escapeHtml(code).replace(/"/g, '&quot;')}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                         </button>
                     </div>
-                    <pre class="p-4 m-0 overflow-x-auto text-[13px] leading-relaxed custom-scrollbar"><code class="shiki language-${lang}">${highlightedCode}</code></pre>
+                    <pre class="p-4 m-0 overflow-x-auto text-[13px] leading-relaxed custom-scrollbar text-gray-100 bg-[#0d1117]"><code class="shiki language-${lang}">${highlightedCode}</code></pre>
                 </div>
             `;
         };

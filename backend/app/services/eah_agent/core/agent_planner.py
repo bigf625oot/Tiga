@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import hashlib
 import networkx as nx
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, validator
@@ -55,7 +56,7 @@ class PlannerAgent:
     """
     def __init__(self, db: AsyncSession, model_id: Optional[str] = None):
         self.db = db
-        self.model_id = model_id or "gpt-4-turbo"
+        self.model_id = model_id
         self._agent: Optional[Agent] = None
         self._init_lock = asyncio.Lock()
 
@@ -74,15 +75,17 @@ class PlannerAgent:
                 self._agent = Agent(
                     name="Lead-Architect-Planner",
                     model=model_instance,
-                    # 关键优化：强制 Pydantic 响应模型，Agno 会自动重试直到通过 Schema 校验
-                    response_model=PlanManifest,
                     instructions=[
                         "你是一位资深系统架构师，负责将复杂的业务目标拆解为可执行的任务流。",
                         "每个任务必须是原子性的，且有明确的 'expected_output'。",
                         "你必须明确任务间的依赖关系，严禁产生循环依赖。",
-                        "在 'reasoning' 中解释你的规划策略。"
+                        "仅输出一个 JSON 对象，不要解释，不要 Markdown，不要代码块。",
+                        "JSON 顶层必须包含 keys: steps, estimated_reasoning。",
+                        "steps 是数组；每个元素必须包含: id(int), task(str), tool_name(str), dependencies(int[])。",
+                        "id 从 1 开始递增；dependencies 只能引用已出现的更小 id。",
+                        "estimated_reasoning 用于解释规划策略。"
                     ],
-                    max_retries=3,  # 如果校验失败（如 DAG 环），自动要求 LLM 修正
+                    retries=3,  # 在新版 agno 中 max_retries 可能变为了 retries
                     markdown=False,
                 )
         return self._agent
@@ -95,12 +98,64 @@ class PlannerAgent:
         
         agent = await self._ensure_agent()
         
-        # 1. 运行规划任务
-        prompt = f"Goal: {user_goal}\nContextual Info: {ctx.get('extra_info', 'N/A')}"
-        response = await agent.arun(prompt)
         
-        # 此时 manifest 已经是经过 Pydantic 和自定义 validate_logic_graph 验证过的对象
-        manifest: PlanManifest = response.content
+        # 1. 运行规划任务
+        prompt = f"""
+        User Goal: {user_goal}
+        Contextual Info: {ctx.get('extra_info', 'N/A')}
+        
+        Please ensure that the 'task' description and 'estimated_reasoning' are in the same language as the User Goal.
+        """
+        
+        from app.services.eah_agent.core.schema import PlanValidationError, TaskPlan, parse_task_plan
+
+        agent.response_model = TaskPlan
+
+        response = await agent.arun(prompt)
+        raw_plan = response.content if hasattr(response, "content") else response
+        try:
+            raw_text = raw_plan if isinstance(raw_plan, str) else str(raw_plan)
+            try:
+                plan = parse_task_plan(raw_plan)
+            except PlanValidationError:
+                repair_src = raw_text
+                if len(repair_src) > 6000:
+                    repair_src = repair_src[:6000]
+
+                repair_prompt = (
+                    "把下面内容转换为严格 JSON，对齐如下 schema：\n"
+                    '{"steps":[{"id":1,"task":"...","tool_name":"...","dependencies":[0]}],"estimated_reasoning":"..."}\n'
+                    "要求：\n"
+                    "1) 只输出 JSON 对象；不要 Markdown；不要代码块；不要额外文字。\n"
+                    "2) steps[].id 从 1 开始递增；dependencies 只能引用更小 id。\n"
+                    "3) tool_name 必须是字符串。\n"
+                    "内容如下：\n"
+                    f"{repair_src}"
+                )
+                repair_resp = await agent.arun(repair_prompt)
+                repair_raw = repair_resp.content if hasattr(repair_resp, "content") else repair_resp
+                plan = parse_task_plan(repair_raw)
+
+            manifest = PlanManifest(
+                reasoning=plan.estimated_reasoning,
+                tasks=[
+                    TaskDefinition(
+                        task_id=str(step.id),
+                        title=step.task,
+                        description=step.task,
+                        dependencies=[str(d) for d in step.dependencies],
+                        executor_role=step.tool_name,
+                        expected_output="Execute successfully",
+                    )
+                    for step in plan.steps
+                ],
+            )
+        except Exception as e:
+            raw_text = raw_plan if isinstance(raw_plan, str) else str(raw_plan)
+            sha = hashlib.sha256(raw_text.encode("utf-8", errors="ignore")).hexdigest()[:12]
+            logger.error(f"Plan validation failed: {e} (raw_type={type(raw_plan)}, len={len(raw_text)}, sha={sha})")
+            logger.error(f"Raw plan output: {raw_text[:2000]}")
+            raise PlanValidationError(f"Invalid plan format returned by LLM: {e}")
         
         # 2. 原子化持久化 (Transactional Persistence)
         try:
@@ -116,12 +171,14 @@ class PlannerAgent:
 
     async def _persist_plan(self, session_id: str, user_goal: str, manifest: PlanManifest) -> str:
         """数据映射层：将 Manifest 转换为数据库实体"""
+        from app.models.agent_plan import PlanStatus
+        
         # 创建主计划
         plan = AgentPlan(
             session_id=session_id,
             user_goal=user_goal,
-            reasoning=manifest.reasoning,
-            status="prepared"
+            # reasoning=manifest.reasoning,  # AgentPlan doesn't have a reasoning column
+            status=PlanStatus.PLANNING
         )
         self.db.add(plan)
         await self.db.flush() # 获取自增 ID
@@ -132,7 +189,7 @@ class PlannerAgent:
             task_entities.append(AgentTask(
                 plan_id=plan.id,
                 sequence=i + 1,
-                logic_id=t_def.task_id, # 业务层逻辑标识
+                # logic_id=t_def.task_id, # AgentTask doesn't have logic_id
                 name=t_def.title,
                 description=t_def.description,
                 dependencies=t_def.dependencies, # 存储逻辑依赖关系 JSON

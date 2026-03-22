@@ -4,7 +4,7 @@
     :animation-speed="20" :show-grid="!useTaskUI">
     
     <!-- Task/Workflow Mode UI -->
-    <div v-if="useTaskUI" class="h-full flex flex-col">
+    <div v-if="useTaskUI" key="task-ui" class="h-full flex flex-col">
       <SmartQAHeader
         :is-left-collapsed="isLeftCollapsed"
         :is-right-collapsed="isRightCollapsed"
@@ -88,7 +88,7 @@
     </div>
 
     <!-- Standalone Chat UI -->
-    <div v-else class="h-full flex flex-col bg-background overflow-hidden relative">
+    <div v-else key="chat-ui" class="h-full flex flex-col bg-background overflow-hidden relative">
       <SmartQAHeader
           v-if="messages.length > 0 && !embedded"
           :is-left-collapsed="false"
@@ -524,6 +524,15 @@ const onSendMessage = async () => {
           isLoading.value = true;
           const enableReasoning = localStorage.getItem('enable_reasoning') === '1';
           let res: Response;
+          
+          // Before sending, explicitly ensure workflowStore is tracking if in solo/team mode
+          if (mode.value === 'solo' || mode.value === 'team') {
+              workflowStore.initWorkflow(currentSessionId.value);
+              workflowStore.isRunning = true;
+              workflowStore.tasks = [];
+              workflowStore.logs = [];
+          }
+
           if (mediaFiles.length > 0) {
               const formData = new FormData();
               formData.append('message', userMsg);
@@ -700,8 +709,35 @@ const handleDeleteMessage = async (msg: Message) => {
   }
 };
 
+const deleteMessagesFromIndex = async (startIndex: number) => {
+    if (startIndex < 0 || startIndex >= messages.value.length) return;
+    
+    // 我们需要删除从 startIndex 开始的所有消息，包括后端记录
+    const msgsToDelete = messages.value.slice(startIndex);
+    
+    // 先从 UI 上移除
+    messages.value.splice(startIndex);
+    
+    // 异步删除后端记录
+    if (currentSessionId.value) {
+        for (const msg of msgsToDelete) {
+            if (msg.id) {
+                try {
+                    await chatService.deleteMessage(currentSessionId.value, Number(msg.id));
+                } catch (e) {
+                    console.error('Failed to delete message in backend', e);
+                }
+            }
+        }
+    }
+};
+
 const handleResendMessage = async (msg: Message) => {
-    // 重新发送该消息
+    // 重新发送该消息，并且删除该消息以及其后的所有消息
+    const idx = messages.value.indexOf(msg);
+    if (idx >= 0) {
+        await deleteMessagesFromIndex(idx);
+    }
     input.value = msg.content;
     await onSendMessage();
 };
@@ -709,6 +745,11 @@ const handleResendMessage = async (msg: Message) => {
 const handleEditMessage = async ({ originalMessage, newContent }: { originalMessage: Message, newContent: string }) => {
     // 1. 将输入框的内容替换为新内容
     input.value = newContent;
+    // 如果想要编辑的消息是当前显示的最后一条（或者需要把它从本地状态里移出再发一遍）
+    const idx = messages.value.indexOf(originalMessage);
+    if (idx >= 0) {
+        await deleteMessagesFromIndex(idx);
+    }
     // 2. 发送新消息
     await onSendMessage();
 };

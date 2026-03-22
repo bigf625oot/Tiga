@@ -36,6 +36,7 @@
                     :agent="currentAgent"
                     :is-last="idx === messageGroups.length - 1 && mIdx === group.messages.length - 1"
                     :is-streaming="props.isStreaming"
+                    :current-mode-id="currentModeId"
                     @locate-node="$emit('locate-node', $event)"
                     @open-doc-space="$emit('open-doc-space', $event)"
                     @quote-message="$emit('quote-message', $event)"
@@ -120,6 +121,7 @@ const props = defineProps<{
   currentAgent: Agent | Team | undefined;
   isLoading: boolean;
   isStreaming?: boolean;
+  currentModeId?: string | null;
 }>();
 
 const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);

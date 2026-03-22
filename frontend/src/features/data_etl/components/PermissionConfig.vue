@@ -185,7 +185,7 @@ const handleToggleRow = (resourceId: string, visibleActionIds: string[], checked
       <div class="flex items-center gap-3 w-full sm:w-auto bg-muted/30 p-1.5 rounded-lg border dark:bg-slate-900/50 dark:border-slate-800">
         <div class="flex items-center gap-2 px-2">
           <span class="text-sm font-medium text-muted-foreground whitespace-nowrap">当前角色:</span>
-          <Select :model-value="activeRoleId" @update:model-value="handleSelectRole">
+          <Select :model-value="activeRoleId ?? ''" @update:model-value="handleSelectRole">
             <SelectTrigger class="w-[180px] h-8 border-transparent bg-transparent hover:bg-muted font-semibold">
               <SelectValue placeholder="请选择角色" />
             </SelectTrigger>
@@ -264,6 +264,7 @@ const handleToggleRow = (resourceId: string, visibleActionIds: string[], checked
           </div>
 
           <ScrollArea class="h-[calc(100vh-26rem)] min-h-[400px]">
+            
             <div class="p-6">
               <TabsContent
                 v-for="module in MODULES"

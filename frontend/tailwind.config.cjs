@@ -22,6 +22,7 @@ module.exports = {
       fontFamily: {
         sans: [
           'DIN Alternate',
+          'Hack',
           'SF Pro Display',
           'SF Pro Text',
           '-apple-system',
@@ -31,6 +32,17 @@ module.exports = {
           'Helvetica Neue',
           'Arial',
           'sans-serif',
+        ],
+        mono: [
+          'Hack',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          'Liberation Mono',
+          'Courier New',
+          'monospace',
         ],
       },
       // User requested font sizes: 12/14/16/18/20/24px

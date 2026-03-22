@@ -390,10 +390,27 @@ export const useWorkflowStore = defineStore('workflow', () => {
     };
 
     const handleEvent = (data: any) => {
-        // data: { step: string, status: string, output?: string, plan?: any }
+        // data: { step: string, status: string, output?: string, plan?: any, type?: string, tool?: any }
         if (data.system) {
             addLog(data.output, data.status === 'failed' ? 'error' : 'info');
             return;
+        }
+
+        // Handle tool_call events dynamically
+        if (data.type === 'tool_call') {
+            const toolInfo = data.tool;
+            const logMsg = toolInfo.status === 'started' 
+                ? `🔧 调用工具: ${toolInfo.tool_name}\n参数: ${JSON.stringify(toolInfo.tool_args)}`
+                : `✅ 工具 ${toolInfo.tool_name} 执行完成\n结果: ${toolInfo.result || '无'}`;
+            
+            addLog(logMsg, toolInfo.status === 'started' ? 'info' : 'success', data.step || 'execute');
+            
+            // Append to the currently running task logs if possible
+            const runningTask = tasks.value.find(t => t.status === 'running');
+            if (runningTask) {
+                runningTask.logs.push(logMsg);
+            }
+            return; // We don't want to process this as a standard step state change
         }
 
         currentStep.value = data.step;

@@ -57,8 +57,14 @@
         <!-- Agent Mode: Rich Content -->
         <div v-else class="agent-content flex flex-col gap-3">
             
+            <StreamSteps
+                v-if="showStreamSteps"
+                :events="message.stream_events"
+                :is-streaming="isStreaming && isLast"
+            />
+
             <!-- 0. Empty State / Initial Loading -->
-            <div v-if="!parsed.text && !parsed.html && !parsed.sql && !thinkingContent && !chartOption && !message.steps?.length && isStreaming && isLast" class="flex items-center gap-2 py-1">
+            <div v-if="!parsed.text && !parsed.html && !parsed.sql && !thinkingContent && !chartOption && !message.steps?.length && (!showStreamSteps) && isStreaming && isLast" class="flex items-center gap-2 py-1">
                 <span class="relative flex h-2.5 w-2.5">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
@@ -273,13 +279,14 @@ import ChartFrame from '../../analytics/components/ChartFrame.vue';
 import GenericResourceCard from './GenericResourceCard.vue';
 import { useMessageParser } from '../composables/useMessageParser';
 import { useChartOptions } from '../composables/useChart';
-import { useMarkdown } from '../composables/useMarkdown';
+import { useMarkdown, isHighlighterReady } from '../composables/useMarkdown';
 
 // 新引入的 UI 组件
 import ThinkingBlock from './SmartQA/ThinkingBlock.vue';
 import ToolStatus from './SmartQA/ToolStatus.vue';
 import MarkdownRenderer from './SmartQA/MarkdownRenderer.vue';
 import ErrorCallout from './SmartQA/ErrorCallout.vue';
+import StreamSteps from './SmartQA/StreamSteps.vue';
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -289,7 +296,8 @@ const props = defineProps({
   showMeta: { type: Boolean, default: false },
   agent: { type: Object, default: null },
   isLast: { type: Boolean, default: false },
-  isStreaming: { type: Boolean, default: false }
+  isStreaming: { type: Boolean, default: false },
+  currentModeId: { type: String, default: null }
 });
 
 const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
@@ -329,7 +337,11 @@ const contentRef = computed(() => props.message?.content || '');
 const { parsed } = useMessageParser(contentRef);
 const { processOption } = useChartOptions();
 const { render } = useMarkdown();
-const userHtml = computed(() => render(contentRef.value, { allowHtml: false }));
+const userHtml = computed(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    isHighlighterReady.value;
+    return render(contentRef.value, { allowHtml: false });
+});
 
 watch(() => props.message.steps, (newVal, oldVal) => {
     if (newVal && newVal.length > 0 && (!oldVal || oldVal.length === 0)) {
@@ -338,6 +350,13 @@ watch(() => props.message.steps, (newVal, oldVal) => {
 }, { deep: true });
 
 // Computed
+const showStreamSteps = computed(() => {
+    if (!props.message.stream_events || props.message.stream_events.length === 0) return false;
+    // 不在 quick 模式下展示执行记录
+    if (props.currentModeId === 'quick') return false;
+    return true;
+});
+
 type ThinkingContent = {
     raw: string;
     html: string;
@@ -433,14 +452,14 @@ const handleResourceClick = (id: string) => {
     border-radius: 0.5rem; 
     overflow-x: auto; 
     margin: 0.5rem 0;
-    font-family: monospace;
+    font-family: "Hack", monospace;
     font-size: 0.9em;
 }
 .user-markdown :deep(code) { 
     background-color: hsl(var(--primary-foreground) / 0.15); 
     padding: 0.125rem 0.25rem; 
     border-radius: 0.25rem; 
-    font-family: monospace;
+    font-family: "Hack", monospace;
     font-size: 0.9em;
 }
 .user-markdown :deep(pre code) {

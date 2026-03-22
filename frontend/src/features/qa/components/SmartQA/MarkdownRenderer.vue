@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useMarkdown } from '../../composables/useMarkdown';
+import { useMarkdown, isHighlighterReady } from '../../composables/useMarkdown';
 import { useToast } from '@/components/ui/toast/use-toast';
 
 const props = defineProps<{
@@ -25,6 +25,9 @@ onMounted(async () => {
 
 // 使用 computed 缓存渲染结果（类似于 React 的 memo 效果，依赖项 `props.content` 变化时才重新计算）
 const renderedHtml = computed(() => {
+  // 依赖 isHighlighterReady.value，当 shiki 加载完毕时会触发重新渲染
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  isHighlighterReady.value;
   return render(props.content || '');
 });
 
@@ -61,34 +64,80 @@ const handleContentClick = async (e: MouseEvent) => {
 };
 </script>
 
-<style>
+<style scoped>
 /* Markdown 基础样式调整，适配 shadcn/ui 的设计语言 */
 .markdown-body {
-  @apply text-foreground break-words;
+  color: hsl(var(--foreground));
+  word-break: break-word;
 }
 .markdown-body p {
-  @apply mb-2.5 last:mb-0;
+  margin-bottom: 0.625rem;
+}
+.markdown-body p:last-child {
+  margin-bottom: 0;
 }
 .markdown-body a {
-  @apply text-primary hover:underline underline-offset-4;
+  color: hsl(var(--primary));
+  text-decoration: none;
+}
+.markdown-body a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .markdown-body ul {
-  @apply list-disc pl-5 mb-3 space-y-0.5;
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.markdown-body ul li, .markdown-body ol li {
+  margin-bottom: 0.125rem;
 }
 .markdown-body ol {
-  @apply list-decimal pl-5 mb-3 space-y-0.5;
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
-  @apply font-semibold tracking-tight text-foreground mt-4 mb-2;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: hsl(var(--foreground));
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
 }
-.markdown-body h1 { @apply text-xl; }
-.markdown-body h2 { @apply text-lg border-b border-border pb-1; }
-.markdown-body h3 { @apply text-base; }
+.markdown-body h1 { font-size: 1.25rem; line-height: 1.75rem; }
+.markdown-body h2 { 
+  font-size: 1.125rem; 
+  line-height: 1.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.25rem;
+}
+.markdown-body h3 { font-size: 1rem; line-height: 1.5rem; }
 .markdown-body blockquote {
-  @apply border-l-4 border-muted-foreground/30 pl-4 italic text-muted-foreground my-3;
+  border-left: 4px solid hsl(var(--muted-foreground) / 0.3);
+  padding-left: 1rem;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 /* 行内代码 */
 .markdown-body code:not(.shiki) {
-  @apply relative rounded bg-muted px-[0.3rem] py-[0.1rem] font-mono text-[13px] font-medium text-primary;
+  position: relative;
+  border-radius: 0.25rem;
+  background-color: hsl(var(--muted));
+  padding: 0.1rem 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--primary));
+}
+
+/* 修复 Shiki 内联代码块背景问题 */
+.markdown-body pre code.shiki {
+  background-color: transparent !important;
+}
+.markdown-body pre code.shiki .line {
+  display: block;
+  min-height: 1.5rem;
 }
 </style>

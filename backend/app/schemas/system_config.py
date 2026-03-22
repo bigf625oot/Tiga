@@ -22,6 +22,20 @@ class ContextMemoryConfig(BaseModel):
     memory: MemoryManagementConfig = Field(default_factory=MemoryManagementConfig)
 
 
+class EmailServerConfig(BaseModel):
+    mail_username: str = ""
+    mail_password: str = ""
+    mail_from: str = ""
+    mail_port: int = 465
+    mail_server: str = ""
+    mail_from_name: str = "Tiga System"
+    mail_starttls: bool = False
+    mail_ssl_tls: bool = True
+
+class BasicSettingsConfig(BaseModel):
+    version: int = Field(default=1, ge=1)
+    email: EmailServerConfig = Field(default_factory=EmailServerConfig)
+
 class SystemConfigResponse(BaseModel):
     key: str
     value: Dict[str, Any]

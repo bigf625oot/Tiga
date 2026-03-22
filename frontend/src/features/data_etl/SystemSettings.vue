@@ -55,7 +55,7 @@ const menuGroups = [
     label: '系统基础',
     items: [
       { id: 'basic', label: '基础设置', subLabel: '配置系统本地化、日志与核心业务开关', icon: Settings2 },
-      { id: 'menu', label: '菜单管理', subLabel: '管理系统导航菜单与路由配置', icon: Menu },
+      // { id: 'menu', label: '菜单管理', subLabel: '管理系统导航菜单与路由配置', icon: Menu },
       { id: 'storage', label: '外部存储', subLabel: '配置 S3 等外部存储服务的连接参数', icon: HardDrive },
       { id: 'database', label: '数据连接', subLabel: '配置图数据库和向量数据库的连接信息', icon: Database },
     ]

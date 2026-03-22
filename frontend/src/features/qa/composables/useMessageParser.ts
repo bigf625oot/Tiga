@@ -1,5 +1,5 @@
 import { computed, type Ref } from 'vue';
-import { useMarkdown } from './useMarkdown';
+import { useMarkdown, isHighlighterReady } from './useMarkdown';
 
 export interface ParsedMessage {
     text: string;
@@ -31,6 +31,8 @@ export function useMessageParser(contentRef: Ref<string>) {
     const { render } = useMarkdown();
 
     const parsed = computed<ParsedMessage>(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        isHighlighterReady.value; // ensure re-render when highlighter is ready
         let raw = contentRef.value || '';
         const result: ParsedMessage = {
             text: '',

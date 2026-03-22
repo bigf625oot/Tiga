@@ -1,8 +1,12 @@
 import logging
 import oss2
+import urllib3
 from typing import Optional, BinaryIO
 from app.services.storage.base import StorageProvider
 from app.core.config import settings
+
+# 禁用 urllib3 SSL 警告 (应对某些内网或测试环境证书异常)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,19 @@ class AliyunOSSStorage(StorageProvider):
             self.endpoint = "https://" + self.endpoint
 
         auth = oss2.Auth(self.access_key.strip(), self.access_secret.strip())
-        self.bucket = oss2.Bucket(auth, self.endpoint.strip(), self.bucket_name.strip())
+        
+        # Configure connection settings to handle SSL/EOF errors
+        # https://help.aliyun.com/document_detail/32026.html
+        import requests
+        session = oss2.Session()
+        # 增加重试次数并关闭严格的 SSL 证书校验，防止 SSLEOFError
+        adapter = requests.adapters.HTTPAdapter(max_retries=3)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        # 在底层 requests session 关闭 SSL 验证
+        session.verify = False 
+        
+        self.bucket = oss2.Bucket(auth, self.endpoint.strip(), self.bucket_name.strip(), session=session)
         logger.info(f"Initialized Aliyun OSS Storage (Bucket: {self.bucket_name})")
 
     async def upload_file(self, file_obj: BinaryIO, object_name: str) -> bool:

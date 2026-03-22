@@ -373,7 +373,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .markdown-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: "Hack", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     font-size: 14px;
     line-height: 1.6;
     color: hsl(var(--foreground));
@@ -381,7 +381,7 @@ onBeforeUnmount(() => {
 .markdown-body :deep(h1) { font-size: 2em; border-bottom: 1px solid hsl(var(--border)); padding-bottom: 0.3em; margin-bottom: 16px; font-weight: 600; color: hsl(var(--foreground)); }
 .markdown-body :deep(h2) { font-size: 1.5em; border-bottom: 1px solid hsl(var(--border)); padding-bottom: 0.3em; margin-bottom: 16px; font-weight: 600; margin-top: 24px; color: hsl(var(--foreground)); }
 .markdown-body :deep(p) { margin-bottom: 16px; color: hsl(var(--foreground)); }
-.markdown-body :deep(code) { background-color: hsl(var(--muted)); padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; color: hsl(var(--foreground)); }
+.markdown-body :deep(code) { background-color: hsl(var(--muted)); padding: 0.2em 0.4em; border-radius: 3px; font-family: "Hack", monospace; color: hsl(var(--foreground)); }
 .markdown-body :deep(pre) { background-color: hsl(var(--muted)); padding: 16px; overflow: auto; border-radius: 6px; margin-bottom: 16px; }
 .markdown-body :deep(pre code) { background-color: transparent; padding: 0; }
 .markdown-body :deep(blockquote) { color: hsl(var(--muted-foreground)); border-left: 0.25em solid hsl(var(--border)); padding-left: 1em; margin-left: 0; margin-bottom: 16px; }

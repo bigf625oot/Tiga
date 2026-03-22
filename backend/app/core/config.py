@@ -227,6 +227,16 @@ class Settings(BaseSettings):
     # Smart Ask Data (Text-to-SQL) / 智能问数
     KG_Q2S_ENABLE: bool = True
 
+    # Email Configuration
+    MAIL_USERNAME: str = ""
+    MAIL_PASSWORD: str = ""
+    MAIL_FROM: str = ""
+    MAIL_PORT: int = 587
+    MAIL_SERVER: str = ""
+    MAIL_FROM_NAME: str = "Tiga System"
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
+
     class Config:
         # Support loading from .env in backend directory regardless of cwd
         # Try multiple locations: current dir, backend/, or parent/backend/

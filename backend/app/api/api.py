@@ -9,6 +9,7 @@ from app.api.endpoints import (
     health,
     indicators,
     knowledge,
+    knowledge_bases,
     llm,
     mcp,
     metrics_tool,
@@ -33,6 +34,7 @@ from app.api.endpoints import (
     teams,
     system_config,
     users,
+    departments,
 )
 from app.api.endpoints.search_agent import news
 from app.services.pathway.api import router as pathway_router
@@ -54,6 +56,7 @@ api_router.include_router(news.router, prefix="/news_search", tags=["news_search
 api_router.include_router(metrics_tool.router, prefix="/metrics", tags=["metrics"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
+api_router.include_router(knowledge_bases.router, prefix="/knowledge-bases", tags=["knowledge-bases"])
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
 api_router.include_router(teams.router, prefix="/teams", tags=["teams"])
 api_router.include_router(mcp.router, prefix="/mcp", tags=["mcp"])
@@ -72,3 +75,4 @@ api_router.include_router(service_categories.router, prefix="/service-categories
 api_router.include_router(service_market.router, prefix="/service-market", tags=["service-market"])
 api_router.include_router(task_mode.router, prefix="/task-mode", tags=["task-mode"])
 api_router.include_router(system_config.router, prefix="/system-config", tags=["system-config"])
+api_router.include_router(departments.router, prefix="/departments", tags=["departments"])

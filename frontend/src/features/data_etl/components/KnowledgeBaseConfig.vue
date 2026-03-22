@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,35 +15,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Library, Plus, Search, FolderOpen, FileText, Users, Shield, 
+import {
+  Library, Plus, Search, FolderOpen, FileText, Users, Shield,
   Settings, Save, Trash2, Edit3, Check, X, AlertCircle,
-  ChevronRight, MoreVertical, Upload, Download, Copy, Eye
+  ChevronRight, MoreVertical, Upload, Download, Copy, Eye, Loader2
 } from 'lucide-vue-next';
+import { knowledgeBaseService } from '../services/knowledgeBaseService';
+import type { KnowledgeBase, KnowledgeFile, KnowledgeBaseConfig, KnowledgeBasePermission } from '../api';
 
 const { toast } = useToast();
-
-interface KnowledgeBase {
-  id: string;
-  name: string;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-  fileCount: number;
-  folderCount: number;
-  status: 'active' | 'inactive';
-}
-
-interface KnowledgeFile {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  size?: string;
-  children?: KnowledgeFile[];
-  createdAt: string;
-  authorizedRoles: string[];
-  authorizedUsers: string[];
-}
 
 interface Role {
   id: string;
@@ -56,62 +36,51 @@ interface User {
   avatar?: string;
 }
 
-const mockKnowledgeBases: KnowledgeBase[] = [
-  { id: '1', name: '产品知识库', description: '公司产品相关文档和技术规格', createdAt: '2024-01-15', updatedAt: '2024-03-10', fileCount: 156, folderCount: 12, status: 'active' },
-  { id: '2', name: '客服知识库', description: '客服常见问题解答和操作指南', createdAt: '2024-02-01', updatedAt: '2024-03-12', fileCount: 89, folderCount: 5, status: 'active' },
-  { id: '3', name: '培训资料库', description: '新员工培训材料和教程', createdAt: '2024-02-20', updatedAt: '2024-03-08', fileCount: 45, folderCount: 8, status: 'inactive' },
-];
-
-const mockRoles: Role[] = [
-  { id: 'r1', name: '管理员' },
-  { id: 'r2', name: '产品经理' },
-  { id: 'r3', name: '客服专员' },
-  { id: 'r4', name: '普通员工' },
-];
-
-const mockUsers: User[] = [
-  { id: 'u1', name: '张三' },
-  { id: 'u2', name: '李四' },
-  { id: 'u3', name: '王五' },
-];
-
-const mockFiles: KnowledgeFile[] = [
-  { 
-    id: 'f1', name: '产品手册', type: 'folder', createdAt: '2024-01-15', authorizedRoles: ['r1', 'r2'], authorizedUsers: [],
-    children: [
-      { id: 'f1-1', name: '产品介绍.pdf', type: 'file', size: '2.3MB', createdAt: '2024-01-16', authorizedRoles: [], authorizedUsers: [] },
-      { id: 'f1-2', name: '技术规格.docx', type: 'file', size: '1.1MB', createdAt: '2024-01-17', authorizedRoles: [], authorizedUsers: [] },
-    ]
-  },
-  { id: 'f2', name: '常见问题', type: 'folder', createdAt: '2024-01-20', authorizedRoles: ['r3'], authorizedUsers: [],
-    children: [
-      { id: 'f2-1', name: 'FAQ.pdf', type: 'file', size: '856KB', createdAt: '2024-01-21', authorizedRoles: [], authorizedUsers: [] },
-    ]
-  },
-  { id: 'f3', name: '更新日志.txt', type: 'file', size: '12KB', createdAt: '2024-02-01', authorizedRoles: [], authorizedUsers: [] },
-];
-
-const knowledgeBases = ref<KnowledgeBase[]>(mockKnowledgeBases);
+const knowledgeBases = ref<KnowledgeBase[]>([]);
 const activeKnowledgeBaseId = ref<string | null>(null);
 const activeTab = ref('info');
 const searchQuery = ref('');
 const hasUnsavedChanges = ref(false);
+const isLoading = ref(false);
+const filesLoading = ref(false);
 
-const config = reactive({
-  enableRAG: true,
-  enableKG: true,
-  chunkSize: 512,
-  embeddingModel: 'text-embedding-3-small',
-  retrievalStrategy: 'hybrid',
-  maxFileSize: 100,
-  allowedFileTypes: ['.pdf', '.docx', '.txt', '.md'],
+const roles = ref<Role[]>([]);
+const users = ref<User[]>([]);
+
+const config = reactive<KnowledgeBaseConfig>({
+  enable_rag: true,
+  enable_kg: true,
+  chunk_size: 512,
+  embedding_model: 'text-embedding-3-small',
+  retrieval_strategy: 'hybrid',
+  max_file_size: 100,
+  allowed_file_types: ['.pdf', '.docx', '.txt', '.md'],
+});
+
+const kbPermissions = reactive<KnowledgeBasePermission>({
+  roles: [],
+  users: [],
 });
 
 const isAddDialogOpen = ref(false);
 const isDeleteDialogOpen = ref(false);
+const isRenameDialogOpen = ref(false);
 const isEditMode = ref(false);
 const editingFileId = ref<string | null>(null);
 const itemToDelete = ref<{ id: string; type: 'base' | 'file' | 'folder' } | null>(null);
+const renamingFileId = ref<string | null>(null);
+const renameLoading = ref(false);
+
+const renameForm = reactive({
+  name: '',
+});
+
+watch(isRenameDialogOpen, (open) => {
+  if (!open) {
+    renamingFileId.value = null;
+    renameForm.name = '';
+  }
+});
 
 const newKnowledgeBase = reactive({
   name: '',
@@ -125,9 +94,9 @@ const editForm = reactive({
   status: 'active' as 'active' | 'inactive',
 });
 
-const expandedFolders = ref<Set<string>>(new Set(['f1', 'f2']));
+const expandedFolders = ref<Set<string>>(new Set());
 const selectedFiles = ref<Set<string>>(new Set());
-const currentFiles = ref<KnowledgeFile[]>(mockFiles);
+const currentFiles = ref<KnowledgeFile[]>([]);
 
 const activeKnowledgeBase = computed(() => {
   return knowledgeBases.value.find(kb => kb.id === activeKnowledgeBaseId.value);
@@ -136,14 +105,92 @@ const activeKnowledgeBase = computed(() => {
 const filteredKnowledgeBases = computed(() => {
   if (!searchQuery.value) return knowledgeBases.value;
   const query = searchQuery.value.toLowerCase();
-  return knowledgeBases.value.filter(kb => 
-    kb.name.toLowerCase().includes(query) || 
+  return knowledgeBases.value.filter(kb =>
+    kb.name.toLowerCase().includes(query) ||
     kb.description.toLowerCase().includes(query)
   );
 });
 
 const selectedFilesList = computed(() => {
   return currentFiles.value.filter(f => selectedFiles.value.has(f.id));
+});
+
+const fetchKnowledgeBases = async () => {
+  isLoading.value = true;
+  try {
+    knowledgeBases.value = await knowledgeBaseService.getKnowledgeBases();
+  } catch (error) {
+    toast({
+      title: '加载失败',
+      description: '知识库列表加载失败',
+      variant: 'destructive',
+    });
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const fetchFiles = async (kbId: string) => {
+  filesLoading.value = true;
+  try {
+    currentFiles.value = await knowledgeBaseService.getFiles(kbId);
+    expandedFolders.value.clear();
+    currentFiles.value.forEach(f => {
+      if (f.type === 'folder') {
+        expandedFolders.value.add(f.id);
+      }
+    });
+  } catch (error) {
+    toast({
+      title: '加载失败',
+      description: '文件列表加载失败',
+      variant: 'destructive',
+    });
+  } finally {
+    filesLoading.value = false;
+  }
+};
+
+const fetchConfig = async (kbId: string) => {
+  try {
+    const data = await knowledgeBaseService.getConfig(kbId);
+    Object.assign(config, data);
+  } catch (error) {
+    console.error('Failed to load config');
+  }
+};
+
+const fetchPermissions = async (kbId: string) => {
+  try {
+    const data = await knowledgeBaseService.getPermissions(kbId);
+    Object.assign(kbPermissions, data);
+  } catch (error) {
+    console.error('Failed to load permissions');
+  }
+};
+
+onMounted(async () => {
+  await fetchKnowledgeBases();
+  try {
+    const [rolesData, usersData] = await Promise.all([
+      fetch('/api/v1/users/roles').then(r => r.json()),
+      fetch('/api/v1/users?page_size=100').then(r => r.json()),
+    ]);
+    roles.value = rolesData;
+    users.value = usersData.items || [];
+  } catch (error) {
+    console.error('Failed to load roles/users');
+  }
+});
+
+watch(activeKnowledgeBaseId, async (newId) => {
+  if (newId) {
+    await Promise.all([
+      fetchFiles(newId),
+      fetchConfig(newId),
+      fetchPermissions(newId),
+    ]);
+  }
 });
 
 const toggleFolder = (folderId: string) => {
@@ -176,7 +223,7 @@ const resetEditForm = () => {
   isEditMode.value = false;
 };
 
-const saveEdit = () => {
+const saveEdit = async () => {
   if (!editForm.name.trim()) {
     toast({
       title: '验证失败',
@@ -185,23 +232,33 @@ const saveEdit = () => {
     });
     return;
   }
-  
-  const kb = knowledgeBases.value.find(k => k.id === activeKnowledgeBaseId.value);
-  if (kb) {
-    kb.name = editForm.name;
-    kb.description = editForm.description;
-    kb.status = editForm.status;
-    kb.updatedAt = new Date().toISOString().split('T')[0];
+
+  try {
+    const updated = await knowledgeBaseService.updateKnowledgeBase(activeKnowledgeBaseId.value!, {
+      name: editForm.name,
+      description: editForm.description,
+      status: editForm.status,
+    });
+    const index = knowledgeBases.value.findIndex(k => k.id === activeKnowledgeBaseId.value);
+    if (index !== -1) {
+      knowledgeBases.value[index] = updated;
+    }
     hasUnsavedChanges.value = false;
     isEditMode.value = false;
     toast({
       title: '保存成功',
       description: '知识库信息已更新',
     });
+  } catch (error) {
+    toast({
+      title: '保存失败',
+      description: '知识库信息更新失败',
+      variant: 'destructive',
+    });
   }
 };
 
-const handleAddKnowledgeBase = () => {
+const handleAddKnowledgeBase = async () => {
   if (!newKnowledgeBase.name.trim()) {
     toast({
       title: '验证失败',
@@ -211,27 +268,30 @@ const handleAddKnowledgeBase = () => {
     return;
   }
 
-  const newKB: KnowledgeBase = {
-    id: Date.now().toString(),
-    name: newKnowledgeBase.name,
-    description: newKnowledgeBase.description,
-    createdAt: new Date().toISOString().split('T')[0],
-    updatedAt: new Date().toISOString().split('T')[0],
-    fileCount: 0,
-    folderCount: 0,
-    status: newKnowledgeBase.status,
-  };
+  try {
+    const newKB = await knowledgeBaseService.createKnowledgeBase({
+      name: newKnowledgeBase.name,
+      description: newKnowledgeBase.description,
+      status: newKnowledgeBase.status,
+    });
 
-  knowledgeBases.value.unshift(newKB);
-  activeKnowledgeBaseId.value = newKB.id;
-  
-  Object.assign(newKnowledgeBase, { name: '', description: '', status: 'active' });
-  isAddDialogOpen.value = false;
-  
-  toast({
-    title: '创建成功',
-    description: `知识库"${newKB.name}"已创建`,
-  });
+    knowledgeBases.value.unshift(newKB);
+    activeKnowledgeBaseId.value = newKB.id;
+
+    Object.assign(newKnowledgeBase, { name: '', description: '', status: 'active' });
+    isAddDialogOpen.value = false;
+
+    toast({
+      title: '创建成功',
+      description: `知识库"${newKB.name}"已创建`,
+    });
+  } catch (error) {
+    toast({
+      title: '创建失败',
+      description: '知识库创建失败',
+      variant: 'destructive',
+    });
+  }
 };
 
 const confirmDelete = (item: { id: string; type: 'base' | 'file' | 'folder' }) => {
@@ -239,18 +299,80 @@ const confirmDelete = (item: { id: string; type: 'base' | 'file' | 'folder' }) =
   isDeleteDialogOpen.value = true;
 };
 
-const handleDelete = () => {
+const openRenameDialog = (fileId: string) => {
+  const file = findFileById(fileId);
+  if (!file || file.type !== 'folder') return;
+  renamingFileId.value = fileId;
+  renameForm.name = file.name;
+  isRenameDialogOpen.value = true;
+};
+
+const handleRename = async () => {
+  if (!activeKnowledgeBaseId.value || !renamingFileId.value) return;
+  const name = renameForm.name.trim();
+  if (!name) {
+    toast({
+      title: '验证失败',
+      description: '文件夹名称不能为空',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  const file = findFileById(renamingFileId.value);
+  if (file && file.name === name) {
+    isRenameDialogOpen.value = false;
+    renamingFileId.value = null;
+    return;
+  }
+
+  renameLoading.value = true;
+  try {
+    const updated = await knowledgeBaseService.renameFile(activeKnowledgeBaseId.value, renamingFileId.value, name);
+    const target = findFileById(updated.id);
+    if (target) target.name = updated.name;
+    toast({ title: '重命名成功' });
+    isRenameDialogOpen.value = false;
+    renamingFileId.value = null;
+  } catch (error) {
+    toast({
+      title: '重命名失败',
+      description: '文件夹重命名失败',
+      variant: 'destructive',
+    });
+  } finally {
+    renameLoading.value = false;
+  }
+};
+
+const handleDelete = async () => {
   if (!itemToDelete.value) return;
 
-  if (itemToDelete.value.type === 'base') {
-    const kb = knowledgeBases.value.find(k => k.id === itemToDelete.value!.id);
-    knowledgeBases.value = knowledgeBases.value.filter(k => k.id !== itemToDelete.value!.id);
-    if (activeKnowledgeBaseId.value === itemToDelete.value.id) {
-      activeKnowledgeBaseId.value = knowledgeBases.value[0]?.id || null;
+  try {
+    if (itemToDelete.value.type === 'base') {
+      await knowledgeBaseService.deleteKnowledgeBase(itemToDelete.value.id);
+      const kb = knowledgeBases.value.find(k => k.id === itemToDelete.value!.id);
+      knowledgeBases.value = knowledgeBases.value.filter(k => k.id !== itemToDelete.value!.id);
+      if (activeKnowledgeBaseId.value === itemToDelete.value.id) {
+        activeKnowledgeBaseId.value = knowledgeBases.value[0]?.id || null;
+      }
+      toast({
+        title: '删除成功',
+        description: `知识库"${kb?.name}"已删除`,
+      });
+    } else if (itemToDelete.value.type === 'file' || itemToDelete.value.type === 'folder') {
+      await knowledgeBaseService.deleteFile(activeKnowledgeBaseId.value!, itemToDelete.value.id);
+      await fetchFiles(activeKnowledgeBaseId.value!);
+      toast({
+        title: '删除成功',
+        description: `${itemToDelete.value.type === 'folder' ? '文件夹' : '文件'}已删除`,
+      });
     }
+  } catch (error) {
     toast({
-      title: '删除成功',
-      description: `知识库"${kb?.name}"已删除`,
+      title: '删除失败',
+      description: '删除操作失败',
+      variant: 'destructive',
     });
   }
 
@@ -258,16 +380,32 @@ const handleDelete = () => {
   isDeleteDialogOpen.value = false;
 };
 
-const saveConfig = () => {
-  toast({
-    title: '保存成功',
-    description: '知识库配置已更新',
-  });
-  hasUnsavedChanges.value = false;
+const saveConfig = async () => {
+  if (!activeKnowledgeBaseId.value) return;
+
+  try {
+    await knowledgeBaseService.updateConfig(activeKnowledgeBaseId.value, { ...config });
+    await knowledgeBaseService.updatePermissions(activeKnowledgeBaseId.value, { ...kbPermissions });
+    toast({
+      title: '保存成功',
+      description: '知识库配置已更新',
+    });
+    hasUnsavedChanges.value = false;
+  } catch (error) {
+    toast({
+      title: '保存失败',
+      description: '配置保存失败',
+      variant: 'destructive',
+    });
+  }
 };
 
 const discardChanges = () => {
   hasUnsavedChanges.value = false;
+  if (activeKnowledgeBaseId.value) {
+    fetchConfig(activeKnowledgeBaseId.value);
+    fetchPermissions(activeKnowledgeBaseId.value);
+  }
   resetEditForm();
   toast({
     title: '已撤销',
@@ -283,24 +421,36 @@ const toggleFileSelection = (fileId: string) => {
   }
 };
 
-const toggleFileAuthorization = (fileId: string, type: 'role' | 'user', id: string, authorized: boolean) => {
+const toggleFileAuthorization = async (fileId: string, type: 'role' | 'user', id: string, authorized: boolean) => {
   const file = findFileById(fileId);
   if (!file) return;
-  
+
   if (type === 'role') {
     if (authorized) {
-      file.authorizedRoles = file.authorizedRoles.filter(r => r !== id);
+      file.authorized_roles = file.authorized_roles.filter(r => r !== id);
     } else {
-      file.authorizedRoles.push(id);
+      file.authorized_roles.push(id);
     }
   } else {
     if (authorized) {
-      file.authorizedUsers = file.authorizedUsers.filter(u => u !== id);
+      file.authorized_users = file.authorized_users.filter(u => u !== id);
     } else {
-      file.authorizedUsers.push(id);
+      file.authorized_users.push(id);
     }
   }
-  hasUnsavedChanges.value = true;
+
+  try {
+    await knowledgeBaseService.updateFile(activeKnowledgeBaseId.value!, fileId, {
+      authorized_roles: file.authorized_roles,
+      authorized_users: file.authorized_users,
+    });
+  } catch (error) {
+    toast({
+      title: '授权失败',
+      description: '文件授权更新失败',
+      variant: 'destructive',
+    });
+  }
 };
 
 const findFileById = (id: string): KnowledgeFile | null => {
@@ -315,8 +465,19 @@ const findFileById = (id: string): KnowledgeFile | null => {
 };
 
 const toggleKnowledgeBaseAuthorization = (type: 'role' | 'user', id: string, authorized: boolean) => {
-  const kb = knowledgeBases.value.find(k => k.id === activeKnowledgeBaseId.value);
-  if (!kb) return;
+  if (type === 'role') {
+    if (authorized) {
+      kbPermissions.roles = kbPermissions.roles.filter(r => r !== id);
+    } else {
+      kbPermissions.roles.push(id);
+    }
+  } else {
+    if (authorized) {
+      kbPermissions.users = kbPermissions.users.filter(u => u !== id);
+    } else {
+      kbPermissions.users.push(id);
+    }
+  }
   hasUnsavedChanges.value = true;
 };
 
@@ -329,15 +490,61 @@ const formatFileSize = (size?: string) => {
 };
 
 const getStatusBadge = (status: 'active' | 'inactive') => {
-  return status === 'active' 
+  return status === 'active'
     ? { label: '启用', class: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' }
     : { label: '停用', class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+};
+
+const handleCreateFolder = async () => {
+  if (!activeKnowledgeBaseId.value) return;
+  try {
+    const created = await knowledgeBaseService.createFolder(activeKnowledgeBaseId.value, '新建文件夹');
+    await fetchFiles(activeKnowledgeBaseId.value);
+    toast({ title: '文件夹创建成功' });
+    openRenameDialog(created.id);
+  } catch (error) {
+    toast({ title: '文件夹创建失败', variant: 'destructive' });
+  }
+};
+
+const handleCreateSubFolder = async (parentId: string) => {
+  if (!activeKnowledgeBaseId.value) return;
+  try {
+    const created = await knowledgeBaseService.createFolder(activeKnowledgeBaseId.value, '新建子文件夹', parentId);
+    await fetchFiles(activeKnowledgeBaseId.value);
+    expandedFolders.value.add(parentId);
+    toast({ title: '子文件夹创建成功' });
+    openRenameDialog(created.id);
+  } catch (error) {
+    toast({ title: '子文件夹创建失败', variant: 'destructive' });
+  }
+};
+
+const handleUploadFile = async (parentId?: string) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = config.allowed_file_types.join(',');
+  input.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file && activeKnowledgeBaseId.value) {
+      try {
+        await knowledgeBaseService.uploadFile(activeKnowledgeBaseId.value, file, parentId);
+        await fetchFiles(activeKnowledgeBaseId.value);
+        if (parentId) {
+          expandedFolders.value.add(parentId);
+        }
+        toast({ title: '文件上传成功' });
+      } catch (error) {
+        toast({ title: '文件上传失败', variant: 'destructive' });
+      }
+    }
+  };
+  input.click();
 };
 </script>
 
 <template>
   <div class="flex h-full min-h-[600px] gap-6">
-    <!-- Left Panel: Knowledge Base List -->
     <Card class="w-80 flex flex-col dark:bg-slate-950 dark:border-slate-800">
       <CardHeader class="pb-4">
         <div class="flex items-center justify-between">
@@ -383,13 +590,12 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
             </DialogContent>
           </Dialog>
         </div>
-        
-        <!-- Search -->
+
         <div class="relative mt-4">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
+          <Input
             v-model="searchQuery"
-            placeholder="搜索知识库..." 
+            placeholder="搜索知识库..."
             class="pl-9"
           />
         </div>
@@ -398,22 +604,25 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
       <CardContent class="flex-1 overflow-hidden p-0">
         <ScrollArea class="h-[calc(100vh-18rem)]">
           <div class="px-4 pb-4 space-y-2">
-            <div v-if="filteredKnowledgeBases.length === 0" class="text-center py-8 text-muted-foreground">
-              <Library class="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <div v-if="isLoading" class="flex items-center justify-center h-[calc(100vh-20rem)]">
+              <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+            <div v-else-if="filteredKnowledgeBases.length === 0" class="flex flex-col items-center justify-center h-[calc(100vh-20rem)] text-muted-foreground">
+              <img src="/public/Placeholder/null_file.svg" class="w-12 h-12 mb-3 opacity-50" />
               <p class="text-sm">未找到知识库</p>
               <Button variant="link" class="mt-2" @click="isAddDialogOpen = true">
                 创建第一个知识库
               </Button>
             </div>
 
-            <div 
-              v-for="kb in filteredKnowledgeBases" 
+            <div
+              v-for="kb in filteredKnowledgeBases"
               :key="kb.id"
               @click="selectKnowledgeBase(kb.id)"
               class="group relative p-3 rounded-lg border cursor-pointer transition-colors"
               :class="[
-                activeKnowledgeBaseId === kb.id 
-                  ? 'bg-primary/10 border-primary/50 dark:bg-primary/20 dark:border-primary/50' 
+                activeKnowledgeBaseId === kb.id
+                  ? 'bg-primary/10 border-primary/50 dark:bg-primary/20 dark:border-primary/50'
                   : 'hover:bg-muted dark:hover:bg-slate-900 border-transparent dark:border-transparent'
               ]"
             >
@@ -431,11 +640,11 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                   <div class="flex items-center gap-3 text-xs text-muted-foreground/70">
                     <span class="flex items-center gap-1">
                       <FolderOpen class="w-3 h-3" />
-                      {{ kb.folderCount }}
+                      {{ kb.folder_count }}
                     </span>
                     <span class="flex items-center gap-1">
                       <FileText class="w-3 h-3" />
-                      {{ kb.fileCount }}
+                      {{ kb.file_count }}
                     </span>
                   </div>
                 </div>
@@ -447,8 +656,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent class="w-40 p-1" align="end">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         class="w-full justify-start text-sm h-9 text-destructive"
                         @click.stop="confirmDelete({ id: kb.id, type: 'base' })"
                       >
@@ -465,18 +674,15 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
       </CardContent>
     </Card>
 
-    <!-- Right Panel: Details -->
     <Card class="flex-1 flex flex-col dark:bg-slate-950 dark:border-slate-800">
-      <!-- Empty State -->
       <div v-if="!activeKnowledgeBase" class="flex-1 flex items-center justify-center">
         <div class="text-center text-muted-foreground">
-          <Library class="w-16 h-16 mx-auto mb-4 opacity-30" />
+          <img src="/public/Placeholder/null_file.svg" class="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p class="text-lg font-medium mb-2">选择知识库</p>
           <p class="text-sm">从左侧列表选择一个知识库进行管理</p>
         </div>
       </div>
 
-      <!-- Content -->
       <template v-else>
         <CardHeader class="pb-4 border-b">
           <div class="flex items-center justify-between">
@@ -487,9 +693,9 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
               <div>
                 <div class="flex items-center gap-2">
                   <span v-if="!isEditMode" class="font-semibold">{{ activeKnowledgeBase.name }}</span>
-                  <Input 
-                    v-else 
-                    v-model="editForm.name" 
+                  <Input
+                    v-else
+                    v-model="editForm.name"
                     class="h-8 w-64 font-semibold"
                     @change="hasUnsavedChanges = true"
                   />
@@ -502,9 +708,9 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                 </div>
                 <p class="text-sm text-muted-foreground mt-0.5">
                   <span v-if="!isEditMode">{{ activeKnowledgeBase.description || '暂无描述' }}</span>
-                  <Input 
-                    v-else 
-                    v-model="editForm.description" 
+                  <Input
+                    v-else
+                    v-model="editForm.description"
                     class="h-7 w-80 text-sm mt-1"
                     @change="hasUnsavedChanges = true"
                   />
@@ -540,21 +746,21 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
           <Tabs v-model="activeTab" class="flex-1 flex flex-col">
             <div class="px-6 pt-4 border-b">
               <TabsList class="w-full justify-start h-auto p-0 bg-transparent gap-6">
-                <TabsTrigger 
+                <TabsTrigger
                   value="info"
                   class="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-3 pt-2 font-medium"
                 >
                   <FileText class="w-4 h-4 mr-2" />
                   文件管理
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="permission"
                   class="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-3 pt-2 font-medium"
                 >
                   <Shield class="w-4 h-4 mr-2" />
                   权限管理
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="config"
                   class="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-3 pt-2 font-medium"
                 >
@@ -564,18 +770,16 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
               </TabsList>
             </div>
 
-            <!-- File Management Tab -->
             <TabsContent value="info" class="m-0 flex-1 flex flex-col">
               <ScrollArea class="flex-1 h-[calc(100vh-20rem)]">
                 <div class="p-6">
-                  <!-- Toolbar -->
                   <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" @click="handleUploadFile">
                         <Upload class="w-4 h-4 mr-2" />
                         上传文件
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" @click="handleCreateFolder">
                         <FolderOpen class="w-4 h-4 mr-2" />
                         新建文件夹
                       </Button>
@@ -584,9 +788,9 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       <span v-if="selectedFiles.size > 0">
                         已选择 {{ selectedFiles.size }} 项
                       </span>
-                      <Button 
-                        v-if="selectedFiles.size > 0" 
-                        variant="ghost" 
+                      <Button
+                        v-if="selectedFiles.size > 0"
+                        variant="ghost"
                         size="sm"
                         @click="selectedFiles.clear()"
                       >
@@ -595,11 +799,17 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                     </div>
                   </div>
 
-                  <!-- File Tree -->
-                  <div class="border rounded-lg overflow-hidden">
+                  <div v-if="filesLoading" class="flex items-center justify-center py-8">
+                    <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                  <div v-else-if="currentFiles.length === 0" class="text-center py-8 text-muted-foreground">
+                    <FileText class="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p class="text-sm">暂无文件</p>
+                  </div>
+                  <div v-else class="border rounded-lg overflow-hidden">
                     <div class="bg-muted/50 dark:bg-slate-900 px-4 py-3 flex items-center text-sm font-medium dark:text-slate-200">
-                      <Checkbox 
-                        class="mr-3" 
+                      <Checkbox
+                        class="mr-3"
                         :checked="selectedFiles.size === currentFiles.length && currentFiles.length > 0"
                         @update:checked="(val) => { if (val) currentFiles.forEach(f => selectedFiles.add(f.id)); else selectedFiles.clear(); }"
                       />
@@ -608,26 +818,25 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       <span class="w-32 text-center">授权</span>
                       <span class="w-16 text-center">操作</span>
                     </div>
-                    
+
                     <div class="divide-y dark:divide-slate-800">
                       <div v-for="item in currentFiles" :key="item.id" class="dark:hover:bg-slate-900/50 transition-colors">
-                        <!-- Folder -->
                         <div v-if="item.type === 'folder'" class="flex items-center px-4 py-3">
-                          <Checkbox 
-                            class="mr-3" 
+                          <Checkbox
+                            class="mr-3"
                             :checked="selectedFiles.has(item.id)"
                             @update:checked="toggleFileSelection(item.id)"
                           />
-                          <button 
+                          <button
                             @click="toggleFolder(item.id)"
                             class="flex items-center gap-2 flex-1 hover:text-primary transition-colors"
                           >
-                            <ChevronRight 
+                            <ChevronRight
                               class="w-4 h-4 transition-transform"
                               :class="{ 'rotate-90': expandedFolders.has(item.id) }"
                             />
                             <FolderOpen class="w-5 h-5 text-primary" />
-                            <span class="font-medium">{{ item.name }}</span>
+                            <span class="text-sm font-medium">{{ item.name }}</span>
                             <Badge variant="secondary" class="text-[10px] ml-2">
                               {{ item.children?.length || 0 }} 项
                             </Badge>
@@ -638,20 +847,20 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                               <PopoverTrigger as-child>
                                 <Button variant="ghost" size="sm" class="h-7 px-2">
                                   <Shield class="w-4 h-4 mr-1" />
-                                  {{ item.authorizedRoles.length }} 角色
+                                  {{ item.authorized_roles.length }} 角色
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent class="w-64 p-3">
                                 <div class="space-y-3">
                                   <div class="text-sm font-medium">授权角色</div>
                                   <div class="space-y-2">
-                                    <label 
-                                      v-for="role in mockRoles" 
+                                    <label
+                                      v-for="role in roles"
                                       :key="role.id"
                                       class="flex items-center gap-2 cursor-pointer"
                                     >
-                                      <Checkbox 
-                                        :checked="item.authorizedRoles.includes(role.id)"
+                                      <Checkbox
+                                        :checked="item.authorized_roles.includes(role.id)"
                                         @update:checked="(val) => toggleFileAuthorization(item.id, 'role', role.id, val)"
                                       />
                                       <span class="text-sm">{{ role.name }}</span>
@@ -669,17 +878,21 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent class="w-40 p-1" align="end">
-                                <Button variant="ghost" class="w-full justify-start text-sm h-9">
+                                <Button variant="ghost" class="w-full justify-start text-sm h-9" @click="handleUploadFile(item.id)">
                                   <Upload class="w-4 h-4 mr-2" />
                                   上传
                                 </Button>
-                                <Button variant="ghost" class="w-full justify-start text-sm h-9">
+                                <Button variant="ghost" class="w-full justify-start text-sm h-9" @click="handleCreateSubFolder(item.id)">
                                   <FolderOpen class="w-4 h-4 mr-2" />
                                   新建子文件夹
                                 </Button>
+                                <Button variant="ghost" class="w-full justify-start text-sm h-9" @click="openRenameDialog(item.id)">
+                                  <Edit3 class="w-4 h-4 mr-2" />
+                                  重命名
+                                </Button>
                                 <Separator class="my-1" />
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   class="w-full justify-start text-sm h-9 text-destructive"
                                   @click="confirmDelete({ id: item.id, type: 'folder' })"
                                 >
@@ -691,15 +904,14 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                           </div>
                         </div>
 
-                        <!-- Folder Children -->
                         <div v-if="item.type === 'folder' && expandedFolders.has(item.id)" class="ml-8 bg-muted/30 dark:bg-slate-900/30">
-                          <div 
-                            v-for="child in item.children" 
+                          <div
+                            v-for="child in item.children"
                             :key="child.id"
                             class="flex items-center px-4 py-2.5 border-t dark:border-slate-800"
                           >
-                            <Checkbox 
-                              class="mr-3" 
+                            <Checkbox
+                              class="mr-3"
                               :checked="selectedFiles.has(child.id)"
                               @update:checked="toggleFileSelection(child.id)"
                             />
@@ -711,20 +923,20 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                                 <PopoverTrigger as-child>
                                   <Button variant="ghost" size="sm" class="h-7 px-2">
                                     <Shield class="w-4 h-4 mr-1" />
-                                    {{ child.authorizedRoles.length + child.authorizedUsers.length }}
+                                    {{ child.authorized_roles.length + child.authorized_users.length }}
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent class="w-64 p-3">
                                   <div class="space-y-3">
                                     <div class="text-sm font-medium">授权角色</div>
                                     <div class="space-y-2">
-                                      <label 
-                                        v-for="role in mockRoles" 
+                                      <label
+                                        v-for="role in roles"
                                         :key="role.id"
                                         class="flex items-center gap-2 cursor-pointer"
                                       >
-                                        <Checkbox 
-                                          :checked="child.authorizedRoles.includes(role.id)"
+                                        <Checkbox
+                                          :checked="child.authorized_roles.includes(role.id)"
                                           @update:checked="(val) => toggleFileAuthorization(child.id, 'role', role.id, val)"
                                         />
                                         <span class="text-sm">{{ role.name }}</span>
@@ -735,17 +947,37 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                               </Popover>
                             </div>
                             <div class="w-16 flex justify-center">
-                              <Button variant="ghost" size="icon" class="h-8 w-8">
-                                <MoreVertical class="w-4 h-4" />
-                              </Button>
+                              <Popover>
+                                <PopoverTrigger as-child>
+                                  <Button variant="ghost" size="icon" class="h-8 w-8">
+                                    <MoreVertical class="w-4 h-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent class="w-40 p-1" align="end">
+                                  <template v-if="child.type === 'folder'">
+                                    <Button variant="ghost" class="w-full justify-start text-sm h-9" @click="openRenameDialog(child.id)">
+                                      <Edit3 class="w-4 h-4 mr-2" />
+                                      重命名
+                                    </Button>
+                                    <Separator class="my-1" />
+                                  </template>
+                                  <Button
+                                    variant="ghost"
+                                    class="w-full justify-start text-sm h-9 text-destructive"
+                                    @click="confirmDelete({ id: child.id, type: child.type as 'file' | 'folder' })"
+                                  >
+                                    <Trash2 class="w-4 h-4 mr-2" />
+                                    删除
+                                  </Button>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </div>
                         </div>
 
-                        <!-- File -->
                         <div v-else class="flex items-center px-4 py-3">
-                          <Checkbox 
-                            class="mr-3" 
+                          <Checkbox
+                            class="mr-3"
                             :checked="selectedFiles.has(item.id)"
                             @update:checked="toggleFileSelection(item.id)"
                           />
@@ -757,20 +989,20 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                               <PopoverTrigger as-child>
                                 <Button variant="ghost" size="sm" class="h-7 px-2">
                                   <Shield class="w-4 h-4 mr-1" />
-                                  {{ item.authorizedRoles.length + item.authorizedUsers.length }}
+                                  {{ item.authorized_roles.length + item.authorized_users.length }}
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent class="w-64 p-3">
                                 <div class="space-y-3">
                                   <div class="text-sm font-medium">授权角色</div>
                                   <div class="space-y-2">
-                                    <label 
-                                      v-for="role in mockRoles" 
+                                    <label
+                                      v-for="role in roles"
                                       :key="role.id"
                                       class="flex items-center gap-2 cursor-pointer"
                                     >
-                                      <Checkbox 
-                                        :checked="item.authorizedRoles.includes(role.id)"
+                                      <Checkbox
+                                        :checked="item.authorized_roles.includes(role.id)"
                                         @update:checked="(val) => toggleFileAuthorization(item.id, 'role', role.id, val)"
                                       />
                                       <span class="text-sm">{{ role.name }}</span>
@@ -801,8 +1033,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                                   复制
                                 </Button>
                                 <Separator class="my-1" />
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   class="w-full justify-start text-sm h-9 text-destructive"
                                   @click="confirmDelete({ id: item.id, type: 'file' })"
                                 >
@@ -820,12 +1052,10 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
               </ScrollArea>
             </TabsContent>
 
-            <!-- Permission Management Tab -->
             <TabsContent value="permission" class="m-0 flex-1 flex flex-col">
               <ScrollArea class="flex-1 h-[calc(100vh-20rem)]">
                 <div class="p-6">
                   <div class="grid grid-cols-2 gap-6">
-                    <!-- Role Authorization -->
                     <Card class="dark:bg-slate-900/50 dark:border-slate-800">
                       <CardHeader class="pb-4">
                         <CardTitle class="text-base flex items-center gap-2">
@@ -836,20 +1066,20 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       </CardHeader>
                       <CardContent>
                         <div class="space-y-3">
-                          <label 
-                            v-for="role in mockRoles" 
+                          <label
+                            v-for="role in roles"
                             :key="role.id"
                             class="flex items-center gap-3 p-3 rounded-lg border dark:border-slate-700 hover:bg-muted/50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                           >
-                            <Checkbox 
-                              :checked="false"
+                            <Checkbox
+                              :checked="kbPermissions.roles.includes(role.id)"
                               @update:checked="(val) => toggleKnowledgeBaseAuthorization('role', role.id, val)"
                             />
                             <div class="flex-1">
                               <div class="font-medium text-sm">{{ role.name }}</div>
                               <div class="text-xs text-muted-foreground">访问和管理知识库内容</div>
                             </div>
-                            <Badge variant="secondary" class="text-[10px]">
+                            <Badge v-if="kbPermissions.roles.includes(role.id)" variant="secondary" class="text-[10px]">
                               <Check class="w-3 h-3 mr-1" />
                               已授权
                             </Badge>
@@ -858,7 +1088,6 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       </CardContent>
                     </Card>
 
-                    <!-- User Authorization -->
                     <Card class="dark:bg-slate-900/50 dark:border-slate-800">
                       <CardHeader class="pb-4">
                         <CardTitle class="text-base flex items-center gap-2">
@@ -869,7 +1098,7 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       </CardHeader>
                       <CardContent>
                         <div class="space-y-3">
-                          <div v-for="user in mockUsers" :key="user.id" class="flex items-center gap-3 p-3 rounded-lg border dark:border-slate-700 hover:bg-muted/50 dark:hover:bg-slate-800/50 transition-colors">
+                          <div v-for="user in users" :key="user.id" class="flex items-center gap-3 p-3 rounded-lg border dark:border-slate-700 hover:bg-muted/50 dark:hover:bg-slate-800/50 transition-colors">
                             <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary text-sm font-medium">
                               {{ user.name.charAt(0) }}
                             </div>
@@ -877,8 +1106,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                               <div class="font-medium text-sm">{{ user.name }}</div>
                               <div class="text-xs text-muted-foreground">ID: {{ user.id }}</div>
                             </div>
-                            <Checkbox 
-                              :checked="false"
+                            <Checkbox
+                              :checked="kbPermissions.users.includes(user.id)"
                               @update:checked="(val) => toggleKnowledgeBaseAuthorization('user', user.id, val)"
                             />
                           </div>
@@ -887,7 +1116,6 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                     </Card>
                   </div>
 
-                  <!-- Batch Authorization -->
                   <Card class="mt-6 dark:bg-slate-900/50 dark:border-slate-800">
                     <CardHeader class="pb-4">
                       <CardTitle class="text-base flex items-center gap-2">
@@ -910,8 +1138,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                           <div class="space-y-3">
                             <Label class="text-sm font-medium">授权角色</Label>
                             <div class="space-y-2">
-                              <label 
-                                v-for="role in mockRoles" 
+                              <label
+                                v-for="role in roles"
                                 :key="role.id"
                                 class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-muted/50"
                               >
@@ -923,8 +1151,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                           <div class="space-y-3">
                             <Label class="text-sm font-medium">授权用户</Label>
                             <div class="space-y-2">
-                              <label 
-                                v-for="user in mockUsers" 
+                              <label
+                                v-for="user in users"
                                 :key="user.id"
                                 class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-muted/50"
                               >
@@ -947,11 +1175,9 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
               </ScrollArea>
             </TabsContent>
 
-            <!-- Configuration Tab -->
             <TabsContent value="config" class="m-0 flex-1 flex flex-col">
               <ScrollArea class="flex-1 h-[calc(100vh-20rem)]">
                 <div class="p-6 space-y-6">
-                  <!-- Retrieval Settings -->
                   <Card class="dark:bg-slate-900/50 dark:border-slate-800">
                     <CardHeader class="pb-4">
                       <CardTitle class="text-base flex items-center gap-2">
@@ -966,9 +1192,9 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                           <Label class="text-base dark:text-slate-200">启用 RAG 检索</Label>
                           <p class="text-sm text-muted-foreground">开启基于向量的知识检索增强生成</p>
                         </div>
-                        <Switch 
-                          :checked="config.enableRAG" 
-                          @update:checked="(val) => { config.enableRAG = val; hasUnsavedChanges = true; }" 
+                        <Switch
+                          :checked="config.enable_rag"
+                          @update:checked="(val) => { config.enable_rag = val; hasUnsavedChanges = true; }"
                         />
                       </div>
 
@@ -977,9 +1203,9 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                           <Label class="text-base dark:text-slate-200">启用知识图谱</Label>
                           <p class="text-sm text-muted-foreground">开启结构化知识图谱检索</p>
                         </div>
-                        <Switch 
-                          :checked="config.enableKG" 
-                          @update:checked="(val) => { config.enableKG = val; hasUnsavedChanges = true; }" 
+                        <Switch
+                          :checked="config.enable_kg"
+                          @update:checked="(val) => { config.enable_kg = val; hasUnsavedChanges = true; }"
                         />
                       </div>
 
@@ -988,8 +1214,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       <div class="grid grid-cols-2 gap-6">
                         <div class="space-y-3">
                           <Label class="dark:text-slate-200">检索策略</Label>
-                          <Select 
-                            v-model="config.retrievalStrategy"
+                          <Select
+                            v-model="config.retrieval_strategy"
                             @update:modelValue="hasUnsavedChanges = true"
                           >
                             <SelectTrigger>
@@ -1010,8 +1236,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
 
                         <div class="space-y-3">
                           <Label class="dark:text-slate-200">Embedding 模型</Label>
-                          <Select 
-                            v-model="config.embeddingModel"
+                          <Select
+                            v-model="config.embedding_model"
                             @update:modelValue="hasUnsavedChanges = true"
                           >
                             <SelectTrigger>
@@ -1033,7 +1259,6 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                     </CardContent>
                   </Card>
 
-                  <!-- Document Processing -->
                   <Card class="dark:bg-slate-900/50 dark:border-slate-800">
                     <CardHeader class="pb-4">
                       <CardTitle class="text-base flex items-center gap-2">
@@ -1047,8 +1272,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                         <div class="space-y-3">
                           <Label class="dark:text-slate-200">文档切分大小</Label>
                           <div class="flex items-center gap-4">
-                            <Input 
-                              v-model.number="config.chunkSize"
+                            <Input
+                              v-model.number="config.chunk_size"
                               type="number"
                               class="w-32"
                               @change="hasUnsavedChanges = true"
@@ -1063,8 +1288,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                         <div class="space-y-3">
                           <Label class="dark:text-slate-200">最大文件大小</Label>
                           <div class="flex items-center gap-4">
-                            <Input 
-                              v-model.number="config.maxFileSize"
+                            <Input
+                              v-model.number="config.max_file_size"
                               type="number"
                               class="w-32"
                               @change="hasUnsavedChanges = true"
@@ -1080,8 +1305,8 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
                       <div class="space-y-3">
                         <Label class="dark:text-slate-200">允许的文件类型</Label>
                         <div class="flex flex-wrap gap-2">
-                          <Badge 
-                            v-for="type in config.allowedFileTypes" 
+                          <Badge
+                            v-for="type in config.allowed_file_types"
                             :key="type"
                             variant="outline"
                             class="px-3 py-1 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-colors"
@@ -1116,7 +1341,6 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
       </template>
     </Card>
 
-    <!-- Delete Confirmation Dialog -->
     <Dialog v-model:open="isDeleteDialogOpen">
       <DialogContent>
         <DialogHeader>
@@ -1130,6 +1354,26 @@ const getStatusBadge = (status: 'active' | 'inactive') => {
           <Button variant="destructive" @click="handleDelete">
             <Trash2 class="w-4 h-4 mr-2" />
             删除
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="isRenameDialogOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>重命名文件夹</DialogTitle>
+          <DialogDescription>请输入新的文件夹名称。</DialogDescription>
+        </DialogHeader>
+        <div class="space-y-2 py-4">
+          <Label>文件夹名称</Label>
+          <Input v-model="renameForm.name" placeholder="例如：产品文档" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" :disabled="renameLoading" @click="isRenameDialogOpen = false">取消</Button>
+          <Button :disabled="renameLoading || !renameForm.name.trim()" @click="handleRename">
+            <Loader2 v-if="renameLoading" class="w-4 h-4 mr-2 animate-spin" />
+            确认
           </Button>
         </DialogFooter>
       </DialogContent>

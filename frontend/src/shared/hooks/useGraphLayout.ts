@@ -61,7 +61,7 @@ export function useGraphLayout(nodes: Ref<Record<string, IGraphNode>>) {
           label: {
               // @ts-ignore
               visible: true,
-              fontFamily: "PingFang SC, Microsoft YaHei, sans-serif",
+              fontFamily: '"Hack", "PingFang SC", "Microsoft YaHei", sans-serif',
               fontSize: 11,
               lineHeight: 1.1,
               color: "#666666",

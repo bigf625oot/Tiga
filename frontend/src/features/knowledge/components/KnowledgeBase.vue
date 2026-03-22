@@ -892,7 +892,7 @@ onUnmounted(() => {
     cursor: pointer;
     vertical-align: super;
     transition: all 0.2s;
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Hack", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 .markdown-content :deep(.citation-icon:hover) {
     background-color: #3b82f6;

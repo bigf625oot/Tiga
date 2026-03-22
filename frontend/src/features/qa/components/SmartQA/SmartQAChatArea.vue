@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex-1 flex flex-col min-h-0 relative min-w-0">
     <!-- Empty State -->
-    <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-start pt-[15vh] px-4 overflow-y-auto relative custom-scrollbar">
+    <div v-if="messages.length === 0" key="empty-state" class="flex-1 flex flex-col items-center justify-start pt-[15vh] px-4 overflow-y-auto relative custom-scrollbar">
       <div class="w-full max-w-2xl flex flex-col items-center gap-6">
         <div class="flex flex-col items-center gap-4 transition-all duration-500 ease-in-out" 
              :class="inputValue ? 'opacity-40 scale-90 translate-y-4' : 'opacity-100'">
@@ -119,7 +119,7 @@
 
       <!-- Message List State -->
     <template v-else>
-      <div class="flex-1 relative min-h-0 min-w-0 flex flex-col w-full h-full overflow-hidden">
+      <div key="message-list-state" class="flex-1 relative min-h-0 min-w-0 flex flex-col w-full h-full overflow-hidden">
         <div class="flex-1 min-h-0 min-w-0 w-full relative">
           <MessageList
             ref="messagesContainer"
@@ -128,6 +128,7 @@
             :is-loading="isLoading"
             :is-streaming="isStreaming"
             :loading-status="loadingStatus"
+            :current-mode-id="currentModeId"
             @locate-node="$emit('locate-node', $event)"
             @open-doc-space="$emit('open-doc-space', $event)"
             @quote-message="handleQuoteMessage"

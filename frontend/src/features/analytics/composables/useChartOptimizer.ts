@@ -27,7 +27,7 @@ export function useChartOptimizer() {
         option.backgroundColor = 'transparent';
         
         // 2. Typography & Text
-        const fontStack = '"Inter", "system-ui", "-apple-system", sans-serif';
+        const fontStack = '"Hack", "Inter", "system-ui", "-apple-system", sans-serif';
         const textMain = '#334155'; // Slate 700
         const textSub = '#64748b';  // Slate 500
 

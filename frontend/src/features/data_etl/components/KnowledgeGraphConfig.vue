@@ -261,8 +261,8 @@ const requestReset = () => {
     </Dialog>
 
     <Tabs v-model="activeTab" class="w-full">
-      <TabsList class="mb-4 grid w-full grid-cols-2">
-        <TabsTrigger value="config" class="flex items-center gap-2">
+      <TabsList class="mb-4 grid w-80 grid-cols-2">
+        <TabsTrigger value="config" class="flex  items-center gap-2">
           <LayoutGrid class="w-4 h-4" />
           配置表单
         </TabsTrigger>

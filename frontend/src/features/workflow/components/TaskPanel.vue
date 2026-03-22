@@ -26,7 +26,7 @@
        <div class="flex-1 overflow-hidden relative flex flex-col">
           <template v-if="currentTask || activeView === 'code' || activeView === 'results' || activeView === 'graph'">
               <!-- Task View -->
-              <div v-if="activeView === 'tasks'" class="h-full overflow-y-auto p-4 custom-scrollbar">
+              <div v-if="activeView === 'tasks'" key="tasks" class="h-full overflow-y-auto p-4 custom-scrollbar">
                  <!-- Task List / Details -->
                   <div class="space-y-4 pb-20">
                       <div v-for="(task, idx) in store.tasks" :key="idx" 
@@ -35,26 +35,27 @@
                            @click="currentStepIndex = idx"
                       >
                           <div class="flex justify-between items-start mb-2">
-                              <h4 class="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{{ task.name || `Task #${idx + 1}` }}</h4>
+                              <h4 class="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{{ task?.name || `Task #${idx + 1}` }}</h4>
                               <span class="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border uppercase tracking-wide">
                                   {{ detectLanguage(task) }}
                               </span>
                           </div>
                           <p class="text-xs text-muted-foreground font-mono bg-muted/50 p-2 rounded border border-border line-clamp-3">
-                              {{ task.logs.join('\n') || 'No output' }}
+                              {{ task?.logs?.join('\n') || 'No output' }}
                           </p>
                       </div>
                   </div>
               </div>
 
               <!-- Graph View -->
-              <div v-else-if="activeView === 'graph'" class="h-full w-full">
+              <div v-else-if="activeView === 'graph'" key="graph" class="h-full w-full">
                   <TaskGraph />
               </div>
 
               <!-- Code View -->
               <ArtifactEditor  
                   v-else-if="activeView === 'code'"
+                  key="code"
                   :value="taskContent"
                   :language="detectLanguage(currentTask)"
                   :read-only="true"
@@ -64,15 +65,16 @@
               <!-- Results View -->
               <SandboxResultViewer 
                   v-else-if="activeView === 'results'"
+                  key="results"
                   :code="currentTask ? taskContent : ''"
                   :language="currentTask ? detectLanguage(currentTask) : 'python'"
-                  :title="currentTask ? currentTask.name : '沙箱'"
+                  :title="currentTask && currentTask.name ? currentTask.name : '沙箱'"
                   :auto-run="false"
                   class="h-full w-full border-none rounded-none"
               />
 
               <!-- Terminal View -->
-              <div v-else-if="activeView === 'terminal'" class="h-full w-full bg-slate-900">
+              <div v-else-if="activeView === 'terminal'" key="terminal" class="h-full w-full bg-slate-900">
                    <SandboxTerminal 
                        ref="terminalRef" 
                        theme="dark" 
@@ -161,7 +163,7 @@
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
             </span>
-            <span>正在执行: {{ currentTask?.name || 'Processing...' }}</span>
+            <span>正在执行: {{ currentTask && currentTask.name ? currentTask.name : 'Processing...' }}</span>
         </div>
         <button 
             @click="store.stopWorkflow" 
@@ -290,11 +292,11 @@ watch(dashboardStatus, (newStatus) => {
 });
 
 const detectLanguage = (task) => {
-    if (!task) return 'plaintext';
-    const content = task.logs.join('\n');
+    if (!task || !task.name) return 'plaintext';
+    const content = task.logs ? task.logs.join('\n') : '';
     if (content.trim().startsWith('{') || content.trim().startsWith('[')) return 'json';
     if (content.includes('def ') || content.includes('import ')) return 'python';
-    if (task.name.includes('Markdown')) return 'markdown';
+    if (task.name && task.name.includes('Markdown')) return 'markdown';
     return 'markdown'; 
 };
 

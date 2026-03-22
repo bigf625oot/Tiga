@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue';
+import { reactive, ref, computed, onMounted, watch } from 'vue';
+import { api } from '@/core/api/client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -23,28 +24,19 @@ import { useToast } from '@/components/ui/toast/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Plus, Pencil, Trash2, KeyRound, Download, Upload, RefreshCw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, ShieldCheck, UserX, CheckCircle2, XCircle, Users } from 'lucide-vue-next';
 
-interface Role {
-  id: number;
-  name: string;
-  code: string;
-  description?: string;
-}
-
-interface Department {
-  id: number;
-  name: string;
-  parent_id?: number;
-}
+import { roleApi, departmentApi } from '../api';
+import type { Role, Department } from '../api';
 
 interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
   phone?: string;
+  avatar?: string;
   role: Role;
-  role_id: number;
+  role_id: string;
   department?: Department;
-  department_id?: number;
+  department_id?: string;
   status: boolean;
   last_login_at?: string;
   created_at: string;
@@ -52,10 +44,11 @@ interface User {
 }
 
 interface UserFormData {
-  id?: number;
+  id?: string;
   username: string;
   email: string;
   phone: string;
+  avatar: string;
   role_id: string | undefined;
   department_id: string | undefined;
   password?: string;
@@ -69,30 +62,11 @@ interface PaginationState {
 
 const { toast } = useToast();
 
-const roles = ref<Role[]>([
-  { id: 1, name: '超级管理员', code: 'super_admin', description: '系统最高权限' },
-  { id: 2, name: '管理员', code: 'admin', description: '管理权限' },
-  { id: 3, name: '普通用户', code: 'user', description: '常规操作' },
-  { id: 4, name: '访客', code: 'guest', description: '只读权限' },
-]);
+const roles = ref<Role[]>([]);
+const departments = ref<Department[]>([]);
 
-const departments = ref<Department[]>([
-  { id: 1, name: '技术研发部' },
-  { id: 2, name: '产品设计部' },
-  { id: 3, name: '市场营销部' },
-  { id: 4, name: '人力资源部' },
-]);
-
-const mockUsers: User[] = [
-  { id: 1, username: 'admin', email: 'admin@example.com', phone: '13800138000', role: roles.value[0], role_id: 1, department: departments.value[0], department_id: 1, status: true, last_login_at: '2026-03-20 14:30:00', created_at: '2025-01-15 08:00:00', updated_at: '2026-03-15 10:20:00' },
-  { id: 2, username: 'zhang_san', email: 'zhangsan@example.com', phone: '13800138001', role: roles.value[2], role_id: 3, department: departments.value[0], department_id: 1, status: true, last_login_at: '2026-03-21 09:15:00', created_at: '2025-03-10 14:30:00', updated_at: '2026-03-10 14:30:00' },
-  { id: 3, username: 'li_si', email: 'lisi@example.com', phone: '13800138002', role: roles.value[2], role_id: 3, department: departments.value[1], department_id: 2, status: true, last_login_at: '2026-03-19 16:45:00', created_at: '2025-04-20 09:00:00', updated_at: '2026-03-19 16:45:00' },
-  { id: 4, username: 'wang_wu', email: 'wangwu@example.com', phone: '13800138003', role: roles.value[3], role_id: 4, department: departments.value[2], department_id: 3, status: false, created_at: '2025-06-01 11:00:00', updated_at: '2026-02-28 15:30:00' },
-  { id: 5, username: 'zhao_liu', email: 'zhaoliu@example.com', phone: '13800138004', role: roles.value[1], role_id: 2, department: departments.value[0], department_id: 1, status: true, last_login_at: '2026-03-21 11:00:00', created_at: '2025-02-15 10:00:00', updated_at: '2026-03-20 09:30:00' },
-];
-
-const users = ref<User[]>([...mockUsers]);
-const selectedUsers = ref<number[]>([]);
+const users = ref<User[]>([]);
+const selectedUsers = ref<string[]>([]);
 const isLoading = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref<'all' | 'active' | 'inactive'>('all');
@@ -116,6 +90,7 @@ const userForm = reactive<UserFormData>({
   username: '',
   email: '',
   phone: '',
+  avatar: '',
   role_id: undefined,
   department_id: undefined,
   password: '',
@@ -123,52 +98,63 @@ const userForm = reactive<UserFormData>({
 
 const formErrors = reactive<Partial<Record<keyof UserFormData, string>>>({});
 
-const filteredUsers = computed(() => {
-  let result = users.value;
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    result = result.filter(u =>
-      u.username.toLowerCase().includes(query) ||
-      u.email.toLowerCase().includes(query) ||
-      (u.phone && u.phone.includes(query))
-    );
-  }
-
-  if (statusFilter.value !== 'all') {
-    result = result.filter(u => statusFilter.value === 'active' ? u.status : !u.status);
-  }
-
-  if (roleFilter.value !== 'all') {
-    result = result.filter(u => u.role_id === Number(roleFilter.value));
-  }
-
-  return result;
-});
-
-const paginatedUsers = computed(() => {
-  const start = (pagination.page - 1) * pagination.pageSize;
-  const end = start + pagination.pageSize;
-  pagination.total = filteredUsers.value.length;
-  return filteredUsers.value.slice(start, end);
-});
-
-const totalPages = computed(() => Math.ceil(pagination.total / pagination.pageSize));
-
 const isAllSelected = computed(() =>
-  paginatedUsers.value.length > 0 &&
-  paginatedUsers.value.every(u => selectedUsers.value.includes(u.id))
+  users.value.length > 0 &&
+  users.value.every(u => selectedUsers.value.includes(u.id))
 );
 
 const selectedUsersData = computed(() =>
   users.value.filter(u => selectedUsers.value.includes(u.id))
 );
 
+async function fetchRolesAndDepartments() {
+  try {
+    const [rolesRes, deptsRes] = await Promise.all([
+      roleApi.list(),
+      departmentApi.list()
+    ]);
+    roles.value = rolesRes;
+    departments.value = deptsRes;
+  } catch (error) {
+    console.error('Failed to fetch roles/departments:', error);
+    toast({ title: '加载失败', description: '无法获取角色和部门信息', variant: 'destructive' });
+  }
+}
+
+async function fetchUsers() {
+  isLoading.value = true;
+  try {
+    const params: any = {
+      page: pagination.page,
+      page_size: pagination.pageSize,
+    };
+    if (searchQuery.value) params.query = searchQuery.value;
+    if (statusFilter.value !== 'all') params.status = statusFilter.value;
+    if (roleFilter.value !== 'all') params.role_id = roleFilter.value;
+
+    const res = await api.get('/users/', { params });
+    users.value = res.data.items;
+    pagination.total = res.data.total;
+  } catch (error) {
+    console.error('Failed to fetch users:', error);
+    toast({ title: '加载失败', description: '无法获取用户列表', variant: 'destructive' });
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchUsers();
+});
+
+const totalPages = computed(() => Math.ceil(pagination.total / pagination.pageSize));
+
 function resetForm() {
   userForm.id = undefined;
   userForm.username = '';
   userForm.email = '';
   userForm.phone = '';
+  userForm.avatar = '/user/hair.svg';
   userForm.role_id = undefined;
   userForm.department_id = undefined;
   userForm.password = '';
@@ -214,9 +200,30 @@ function openEditDialog(user: User) {
   userForm.username = user.username;
   userForm.email = user.email;
   userForm.phone = user.phone || '';
+  userForm.avatar = user.avatar || '/user/hair.svg';
   userForm.role_id = String(user.role_id);
   userForm.department_id = user.department_id ? String(user.department_id) : undefined;
   isDialogOpen.value = true;
+}
+
+function triggerAvatarUpload() {
+  const el = document.getElementById('avatar-upload');
+  if (el) el.click();
+}
+
+async function handleAvatarUpload(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await api.post('/users/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    if (res.data?.url) userForm.avatar = res.data.url;
+  } catch (err) {
+    toast({ title: '上传失败', description: '头像上传失败', variant: 'destructive' });
+  }
 }
 
 function openDeleteDialog(user: User) {
@@ -243,50 +250,30 @@ async function handleSaveUser() {
 
   isLoading.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const payload = {
+      username: userForm.username,
+      email: userForm.email,
+      phone: userForm.phone,
+      avatar: userForm.avatar,
+      role_id: userForm.role_id,
+      department_id: userForm.department_id,
+      ...(userForm.password ? { password: userForm.password } : {})
+    };
 
     if (userForm.id) {
-      const index = users.value.findIndex(u => u.id === userForm.id);
-      if (index !== -1) {
-        const role = roles.value.find(r => r.id === Number(userForm.role_id));
-        const dept = departments.value.find(d => d.id === Number(userForm.department_id));
-        users.value[index] = {
-          ...users.value[index],
-          username: userForm.username,
-          email: userForm.email,
-          phone: userForm.phone,
-          role_id: Number(userForm.role_id),
-          role: role!,
-          department_id: userForm.department_id ? Number(userForm.department_id) : undefined,
-          department: dept,
-          updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        };
-      }
+      await api.put(`/users/${userForm.id}`, payload);
       toast({ title: '更新成功', description: `用户 ${userForm.username} 信息已更新`, variant: 'default' });
     } else {
-      const role = roles.value.find(r => r.id === Number(userForm.role_id));
-      const dept = departments.value.find(d => d.id === Number(userForm.department_id));
-      const newUser: User = {
-        id: Math.max(...users.value.map(u => u.id)) + 1,
-        username: userForm.username,
-        email: userForm.email,
-        phone: userForm.phone,
-        role: role!,
-        role_id: Number(userForm.role_id),
-        department: dept,
-        department_id: userForm.department_id ? Number(userForm.department_id) : undefined,
-        status: true,
-        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      };
-      users.value.unshift(newUser);
+      await api.post('/users/', payload);
       toast({ title: '创建成功', description: `用户 ${userForm.username} 已创建`, variant: 'default' });
     }
 
     isDialogOpen.value = false;
     resetForm();
-  } catch {
-    toast({ title: '操作失败', description: '请稍后重试', variant: 'destructive' });
+    fetchUsers();
+  } catch (error: any) {
+    const msg = error.response?.data?.detail || '操作失败，请稍后重试';
+    toast({ title: '操作失败', description: msg, variant: 'destructive' });
   } finally {
     isLoading.value = false;
   }
@@ -297,12 +284,13 @@ async function handleDeleteUser() {
 
   isLoading.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    users.value = users.value.filter(u => u.id !== currentUser.value!.id);
-    selectedUsers.value = selectedUsers.value.filter(id => id !== currentUser.value!.id);
-    toast({ title: '删除成功', description: `用户 ${currentUser.value!.username} 已删除`, variant: 'default' });
+    await api.delete(`/users/${currentUser.value.id}`);
+    toast({ title: '删除成功', description: `用户 ${currentUser.value.username} 已删除`, variant: 'default' });
     isDeleteDialogOpen.value = false;
     currentUser.value = null;
+    fetchUsers();
+  } catch (error: any) {
+    toast({ title: '操作失败', description: '删除用户失败', variant: 'destructive' });
   } finally {
     isLoading.value = false;
   }
@@ -313,10 +301,17 @@ async function handleResetPassword() {
 
   isLoading.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    toast({ title: '密码重置成功', description: `已生成随机密码并发送至 ${currentUser.value!.email}`, variant: 'default' });
+    const res = await api.post(`/users/${currentUser.value.id}/reset-password`);
+    if (res.data.email_sent) {
+      toast({ title: '密码重置成功', description: `已将新密码发送至 ${currentUser.value.email}`, variant: 'default' });
+    } else {
+      toast({ title: '密码重置成功', description: `新密码为: ${res.data.new_password} (邮件发送失败或未配置)`, variant: 'default' });
+    }
     isResetPasswordDialogOpen.value = false;
     currentUser.value = null;
+  } catch (error: any) {
+    const msg = error.response?.data?.detail || '密码重置失败';
+    toast({ title: '操作失败', description: msg, variant: 'destructive' });
   } finally {
     isLoading.value = false;
   }
@@ -327,7 +322,7 @@ async function handleToggleStatus(user: User) {
   user.status = !user.status;
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await api.put(`/users/${user.id}`, { status: user.status });
     toast({
       title: user.status ? '已启用' : '已禁用',
       description: `用户 ${user.username} 状态已更新`,
@@ -344,12 +339,13 @@ async function handleBulkDelete() {
 
   isLoading.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const usernames = selectedUsersData.value.map(u => u.username).join(', ');
-    users.value = users.value.filter(u => !selectedUsers.value.includes(u.id));
-    selectedUsers.value = [];
-    toast({ title: '批量删除成功', description: `已删除 ${usernames}`, variant: 'default' });
+    await api.post('/users/bulk-delete', { user_ids: selectedUsers.value });
+    toast({ title: '批量删除成功', description: `已删除 ${selectedUsers.value.length} 个用户`, variant: 'default' });
     isBulkDeleteDialogOpen.value = false;
+    selectedUsers.value = [];
+    fetchUsers();
+  } catch (error) {
+    toast({ title: '操作失败', description: '批量删除失败', variant: 'destructive' });
   } finally {
     isLoading.value = false;
   }
@@ -360,14 +356,16 @@ async function handleBulkStatusToggle() {
 
   isLoading.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    selectedUsers.value.forEach(id => {
-      const user = users.value.find(u => u.id === id);
-      if (user) user.status = bulkNewStatus.value;
+    await api.post('/users/bulk-status', { 
+      user_ids: selectedUsers.value,
+      status: bulkNewStatus.value 
     });
     const action = bulkNewStatus.value ? '启用' : '禁用';
     toast({ title: `批量${action}成功`, description: `已更新 ${selectedUsers.value.length} 个用户的状态`, variant: 'default' });
     isBulkStatusDialogOpen.value = false;
+    fetchUsers();
+  } catch (error) {
+    toast({ title: '操作失败', description: '批量状态更新失败', variant: 'destructive' });
   } finally {
     isLoading.value = false;
   }
@@ -375,14 +373,14 @@ async function handleBulkStatusToggle() {
 
 function toggleSelectAll() {
   if (isAllSelected.value) {
-    selectedUsers.value = selectedUsers.value.filter(id => !paginatedUsers.value.some(u => u.id === id));
+    selectedUsers.value = selectedUsers.value.filter(id => !users.value.some(u => u.id === id));
   } else {
-    const newSelected = [...new Set([...selectedUsers.value, ...paginatedUsers.value.map(u => u.id)])];
+    const newSelected = [...new Set([...selectedUsers.value, ...users.value.map(u => u.id)])];
     selectedUsers.value = newSelected;
   }
 }
 
-function toggleSelectUser(id: number) {
+function toggleSelectUser(id: string) {
   const index = selectedUsers.value.indexOf(id);
   if (index === -1) {
     selectedUsers.value.push(id);
@@ -393,6 +391,7 @@ function toggleSelectUser(id: number) {
 
 function handleSearch() {
   pagination.page = 1;
+  fetchUsers();
 }
 
 function handlePageChange(newPage: number) {
@@ -413,18 +412,18 @@ function goToLastPage() {
 }
 
 function handleExport() {
-  const dataToExport = filteredUsers.value;
+  const dataToExport = users.value;
   const csvContent = [
     ['用户名', '邮箱', '手机', '角色', '部门', '状态', '最后登录', '创建时间'].join(','),
     ...dataToExport.map(u => [
       u.username,
       u.email,
       u.phone || '',
-      u.role.name,
+      u.role?.name || '',
       u.department?.name || '',
       u.status ? '启用' : '禁用',
-      u.last_login_at || '从未登录',
-      u.created_at,
+      u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '从未登录',
+      new Date(u.created_at).toLocaleString(),
     ].join(','))
   ].join('\n');
 
@@ -444,15 +443,12 @@ function handleImport() {
 }
 
 function refreshData() {
-  isLoading.value = true;
-  setTimeout(() => {
-    isLoading.value = false;
-    toast({ title: '刷新成功', description: '用户数据已更新', variant: 'default' });
-  }, 500);
+  fetchUsers();
 }
 
 onMounted(() => {
-  pagination.total = users.value.length;
+  fetchRolesAndDepartments();
+  fetchUsers();
 });
 </script>
 
@@ -569,7 +565,7 @@ onMounted(() => {
             </TableHeader>
             <TableBody>
               <TableRow
-                v-for="user in paginatedUsers"
+                v-for="user in users"
                 :key="user.id"
                 :class="cn('dark:hover:bg-slate-900/50 dark:border-slate-800', selectedUsers.includes(user.id) && 'bg-muted/30')"
               >
@@ -583,16 +579,17 @@ onMounted(() => {
                 </TableCell>
                 <TableCell class="font-medium dark:text-slate-200">
                   <div class="flex items-center gap-2">
+                    <img :src="user.avatar || '/user/hair.svg'" alt="avatar" class="w-6 h-6 rounded-full object-cover" />
                     {{ user.username }}
-                    <Badge v-if="user.role.code === 'super_admin'" variant="destructive" class="text-xs">SUPER</Badge>
-                    <Badge v-else-if="user.role.code === 'admin'" variant="default" class="text-xs">ADMIN</Badge>
+                    <Badge v-if="user.role?.code === 'super_admin'" variant="destructive" class="text-xs">SUPER</Badge>
+                    <Badge v-else-if="user.role?.code === 'admin'" variant="default" class="text-xs">ADMIN</Badge>
                   </div>
                 </TableCell>
                 <TableCell class="dark:text-slate-300">{{ user.email }}</TableCell>
                 <TableCell class="dark:text-slate-300">{{ user.phone || '-' }}</TableCell>
                 <TableCell>
-                  <Badge :variant="user.role.code === 'super_admin' ? 'destructive' : 'secondary'" class="text-xs">
-                    {{ user.role.name }}
+                  <Badge :variant="user.role?.code === 'super_admin' ? 'destructive' : 'secondary'" class="text-xs">
+                    {{ user.role?.name || '-' }}
                   </Badge>
                 </TableCell>
                 <TableCell class="dark:text-slate-300">{{ user.department?.name || '-' }}</TableCell>
@@ -600,7 +597,7 @@ onMounted(() => {
                   <Switch :checked="user.status" @update:checked="handleToggleStatus(user)" />
                 </TableCell>
                 <TableCell class="dark:text-slate-300 text-xs">
-                  {{ user.last_login_at || '从未登录' }}
+                  {{ user.last_login_at ? new Date(user.last_login_at).toLocaleString() : '从未登录' }}
                 </TableCell>
                 <TableCell>
                   <div class="flex items-center gap-1">
@@ -612,7 +609,7 @@ onMounted(() => {
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger as-child>
-                        <Button variant="ghost" size="icon" class="h-8 w-8 text-red-500 hover:text-red-400" title="删除">
+                        <Button variant="ghost" size="icon" class="h-8 w-8 text-red-500 hover:text-red-400" title="删除" @click="currentUser = user">
                           <Trash2 class="w-4 h-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -634,7 +631,7 @@ onMounted(() => {
                   </div>
                 </TableCell>
               </TableRow>
-              <TableRow v-if="paginatedUsers.length === 0">
+              <TableRow v-if="users.length === 0">
                 <TableCell colspan="9" class="text-center py-8 text-muted-foreground">
                   暂无数据
                 </TableCell>
@@ -682,8 +679,7 @@ onMounted(() => {
     <Sheet v-model:open="isDialogOpen">
         <SheetContent side="right" class="w-[480px] sm:max-w-[480px] flex flex-col">
           <SheetHeader>
-            <div class="flex items-center gap-2">
-              <Users class="w-5 h-5 text-primary" />
+            <div class="flex items-center text-lg font-medium gap-2"> 
               <SheetTitle>{{ userForm.id ? '编辑用户' : '新建用户' }}</SheetTitle>
             </div>
             <SheetDescription>
@@ -692,7 +688,16 @@ onMounted(() => {
           </SheetHeader>
 
           <ScrollArea class="flex-1 mt-4">
-            <div class="space-y-4 pr-4">
+            <div class="space-y-4 pr-4 px-1 pb-1">
+              <div class="flex justify-center mb-4">
+                  <div class="relative group cursor-pointer" @click="triggerAvatarUpload">
+                    <img :src="userForm.avatar || '/user/hair.svg'" alt="avatar" class="w-20 h-20 rounded-full object-cover border-2 border-border" />
+                    <div class="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <span class="text-white text-xs">修改头像</span>
+                    </div>
+                    <input type="file" id="avatar-upload" class="hidden" accept="image/*" @change="handleAvatarUpload" />
+                  </div>
+                </div>
               <div class="grid gap-2">
                 <Label for="username">用户名 <span class="text-destructive">*</span></Label>
                 <Input
@@ -727,14 +732,14 @@ onMounted(() => {
               <div class="grid gap-2">
                 <Label for="role">角色 <span class="text-destructive">*</span></Label>
                 <Select v-model="userForm.role_id">
-                  <SelectTrigger>
+                  <SelectTrigger id="role" :class="cn(formErrors.role_id && 'border-destructive')">
                     <SelectValue placeholder="请选择角色" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       <SelectLabel>系统角色</SelectLabel>
                       <SelectItem v-for="role in roles" :key="role.id" :value="String(role.id)">
-                        {{ role.name }} - {{ role.description }}
+                        {{ role.name }} {{ role.description ? '- ' + role.description : '' }}
                       </SelectItem>
                     </SelectGroup>
                   </SelectContent>

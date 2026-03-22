@@ -47,7 +47,7 @@ const initTerminal = () => {
   term = new Terminal({
     cursorBlink: true,
     fontSize: props.fontSize || 14,
-    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    fontFamily: '"Hack", Menlo, Monaco, "Courier New", monospace',
     theme: props.theme === 'light' ? {
       background: '#ffffff',
       foreground: '#333333',

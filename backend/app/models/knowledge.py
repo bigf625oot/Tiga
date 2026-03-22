@@ -19,6 +19,7 @@ class KnowledgeDocument(Base):
     __tablename__ = "knowledge_documents"
 
     id = Column(Integer, primary_key=True, index=True)
+    knowledge_base_id = Column(String(36), index=True, nullable=True) # 关联到 KnowledgeBase
     filename = Column(String, index=True)
     oss_key = Column(String)
     oss_url = Column(String)
