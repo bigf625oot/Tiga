@@ -16,8 +16,10 @@ def main():
     
     print(f"[*] 正在对比数据库并生成迁移脚本: {args.message}...")
     try:
+        alembic_cmd = [sys.executable, "-m", "alembic"]
+
         # 生成迁移脚本
-        subprocess.run(["alembic", "revision", "--autogenerate", "-m", args.message], check=True)
+        subprocess.run([*alembic_cmd, "revision", "--autogenerate", "-m", args.message], check=True)
         print("\n[*] 迁移脚本生成成功！")
         
         if args.dry_run:
@@ -26,14 +28,11 @@ def main():
 
         print("[*] 正在执行迁移命令，将修改应用到数据库...")
         # 执行迁移
-        subprocess.run(["alembic", "upgrade", "head"], check=True)
+        subprocess.run([*alembic_cmd, "upgrade", "head"], check=True)
         print("\n[*] 数据库迁移执行成功！")
         
     except subprocess.CalledProcessError as e:
         print(f"\n[!] 发生错误，进程退出码: {e.returncode}")
-        sys.exit(1)
-    except FileNotFoundError:
-        print("\n[!] 找不到 alembic 命令，请确保已安装相关的依赖，并在正确的虚拟环境中执行。")
         sys.exit(1)
 
 if __name__ == "__main__":
