@@ -119,6 +119,78 @@ export interface KnowledgeDoc {
   updated_at: string;
 }
 
+// ─── AgentEvent 协议类型（与 backend/app/schemas/agent_event.py 严格对应）───
+
+export type AgentEventType =
+  | 'thought'
+  | 'plan_created'
+  | 'task_start'
+  | 'tool_call'
+  | 'tool_output'
+  | 'artifact'
+  | 'summary';
+
+export type AgentTaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface AgentTaskStep {
+  id: string;
+  title: string;
+  status: AgentTaskStatus;
+  description: string;
+  assigned_role: string;
+}
+
+export interface AgentExecutionPlan {
+  plan_id: string;
+  reasoning: string;
+  tasks: AgentTaskStep[];
+}
+
+export interface AgentToolCallInfo {
+  tool: string;
+  args: Record<string, any>;
+  task_id?: string;
+}
+
+// tool_output 事件内容
+export interface AgentObservationInfo {
+  tool: string;
+  output: any;
+  logs: string[];
+  is_error: boolean;
+  task_id?: string;
+}
+
+export interface AgentArtifactCard {
+  file_name: string;
+  file_size: number;
+  url: string;
+  type: string;
+}
+
+// task_start 事件内容（替代旧的 AgentStatusUpdate）
+export interface AgentTaskStartInfo {
+  task_id: string;
+  title?: string;
+  status: AgentTaskStatus;
+}
+
+/** @deprecated 使用 AgentTaskStartInfo 替代 */
+export interface AgentStatusUpdate {
+  task_id: string;
+  status: AgentTaskStatus;
+  message: string;
+}
+
+export interface AgentEvent {
+  agent_run_id: string;
+  type: AgentEventType;
+  content: string | AgentExecutionPlan | AgentToolCallInfo | AgentObservationInfo | AgentArtifactCard | AgentTaskStartInfo;
+  task_id?: string;
+  elapsed_ms?: number;
+  token_usage?: number;
+}
+
 export interface ModeConfig {
   id: string;
   name: string;

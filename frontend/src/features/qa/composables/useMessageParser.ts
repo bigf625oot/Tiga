@@ -93,7 +93,7 @@ export function useMessageParser(contentRef: Ref<string>) {
         if (thinkContent) {
             result.think = {
                 raw: thinkContent.trim() || '正在思考...',
-                html: render(thinkContent.trim() || '正在思考...'),
+                html: '', // Not used by ThinkingBlock, skip expensive render during stream
                 isPartial: result.think?.isPartial || false
             };
         }
@@ -155,7 +155,7 @@ export function useMessageParser(contentRef: Ref<string>) {
 
         // 5. Remaining Text
         result.text = textParts.join('').trim();
-        result.html = render(result.text);
+        result.html = ''; // Skipping render here to avoid performance issues during streaming
 
         return result;
     });

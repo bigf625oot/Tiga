@@ -7,7 +7,7 @@ test.describe('SearchAgent', () => {
     
     // Navigate to Search Agent view
     // 1. Click "Agent" tab in sidebar
-    const agentTab = page.getByRole('button', { name: '智能体' });
+    const agentTab = page.getByRole('button', { name: '智能体', exact: true });
     await agentTab.click();
     
     // 2. Click "Smart Search" (智能爬取) in the list

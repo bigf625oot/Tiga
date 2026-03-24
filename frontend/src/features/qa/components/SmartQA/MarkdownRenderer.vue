@@ -133,10 +133,10 @@ const handleContentClick = async (e: MouseEvent) => {
 }
 
 /* 修复 Shiki 内联代码块背景问题 */
-.markdown-body pre code.shiki {
+:deep(.markdown-body pre code.shiki) {
   background-color: transparent !important;
 }
-.markdown-body pre code.shiki .line {
+:deep(.markdown-body pre code.shiki .line) {
   display: block;
   min-height: 1.5rem;
 }

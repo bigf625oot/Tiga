@@ -1,8 +1,12 @@
-import { ref, nextTick } from 'vue';
+import { ref } from 'vue';
 import { chatService } from '../services/chatService';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import { useToast } from '@/components/ui/toast/use-toast';
-import type { Session, Message, Attachment, ModeType, StreamEventItem } from '../types';
+import type {
+  Session, Message, Attachment, ModeType, StreamEventItem,
+  AgentEvent, AgentExecutionPlan, AgentToolCallInfo, AgentObservationInfo,
+  AgentArtifactCard,
+} from '../types';
 
 /**
  * Manages chat session state, message streaming, and workflow integration.
@@ -21,6 +25,8 @@ export function useChatSession() {
   const isStopping = ref(false);
   const loadingStatus = ref<string>('');
   const abortController = ref<AbortController | null>(null);
+  // NexusExecutor 路径：存储 agent_run_id 供断线续传使用
+  const agentRunId = ref<string | null>(null);
 
   const fetchSessionDetails = async (id: string) => {
     try {
@@ -240,14 +246,16 @@ export function useChatSession() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       const startTime = Date.now();
-      
-      messages.value.push({ 
-          role: 'assistant', 
-          content: '', 
-          reasoning: '', 
-          timestamp: new Date().toISOString() 
+
+      messages.value.push({
+          role: 'assistant',
+          content: '',
+          reasoning: '',
+          timestamp: new Date().toISOString()
       });
       const assistantMsg = messages.value[messages.value.length - 1];
+      // 立即切换到 streaming 状态，消除 loading 空窗期
+      isLoading.value = false;
       isStreaming.value = true;
       let buffer = '';
 
@@ -279,116 +287,139 @@ export function useChatSession() {
                   if (data) {
                       try {
                           const parsedData = JSON.parse(data);
-                          appendStreamEvent(assistantMsg, eventType, parsedData);
+
+                          // 不写入 stream_events 的系统级事件
+                          const NO_STREAM_EVENTS = new Set(['meta', 'task_start', 'done']);
+                          if (!NO_STREAM_EVENTS.has(eventType)) {
+                              appendStreamEvent(assistantMsg, eventType, parsedData);
+                          }
+
                           switch (eventType) {
-                              case 'status':
-                                  if (typeof parsedData === 'string') {
-                                      loadingStatus.value = parsedData;
-                                  } else if (parsedData.content) {
-                                      loadingStatus.value = parsedData.content;
-                                  }
-                                  if (workflowStore.handleWorkflowEvent) {
-                                    workflowStore.handleWorkflowEvent(parsedData);
-                                  } else {
-                                    workflowStore.addLog?.(normalizeThink(parsedData), 'info', 'status');
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
+                              // ── NexusExecutor 新协议 ──────────────────────────────────
                               case 'meta':
+                                  if (parsedData?.agent_run_id) agentRunId.value = parsedData.agent_run_id;
                                   if (parsedData?.msg_type) assistantMsg.type = parsedData.msg_type;
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
-                              case 'step':
-                                  if (!assistantMsg.steps) assistantMsg.steps = [];
-                                  assistantMsg.steps.push(parsedData);
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              case 'plan':
-                                // Handle plan event
-                                workflowStore.handleWorkflowEvent(parsedData);
-                                if (parsedData.plan) {
-                                    workflowStore.updatePlanFromBackend(parsedData.plan.tasks || parsedData.plan);
-                                }
-                                if (onEvent) onEvent(eventType, parsedData);
-                                break;
-                            case 'plan_step':
-                                // Handle backend plan update
-                                workflowStore.handleWorkflowEvent(parsedData);
-                                if (Array.isArray(parsedData)) {
-                                    workflowStore.updatePlanFromBackend(parsedData);
-                                    // Also append to assistant message for debug or history?
-                                    // assistantMsg.content += `\n[Plan Updated: ${parsedData.length} steps]`;
-                                } else if (parsedData.plan) {
-                                    workflowStore.updatePlanFromBackend(parsedData.plan.tasks || parsedData.plan);
-                                }
-                                if (onEvent) onEvent(eventType, parsedData);
-                                break;
-                            case 'tool_call':
-                                workflowStore.handleWorkflowEvent(parsedData);
-                                if (onEvent) onEvent(eventType, parsedData);
-                                break;
-                              case 'tool_start': {
-                                  const tool = parsedData?.tool ? String(parsedData.tool) : 'tool';
-                                  workflowStore.updateToolStatus?.(tool, 'running', parsedData);
-                                  workflowStore.addLog?.(`Tool start: ${tool}`, 'info', tool);
+
+                              case 'thought': {
+                                  const thoughtText = typeof parsedData.content === 'string' ? parsedData.content : '';
+                                  assistantMsg.reasoning = (assistantMsg.reasoning || '') + thoughtText;
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               }
-                              case 'tool_end': {
-                                  const tool = parsedData?.tool ? String(parsedData.tool) : 'tool';
-                                  workflowStore.updateToolStatus?.(tool, 'completed', parsedData);
-                                  const resultPreview = parsedData?.result != null ? normalizeThink(parsedData.result) : '';
-                                  if (resultPreview) {
-                                      workflowStore.addLog?.(resultPreview, 'info', tool);
+
+                              case 'plan_created': {
+                                  const planContent = parsedData.content as AgentExecutionPlan | undefined;
+                                  if (planContent?.tasks) {
+                                      workflowStore.initFromAgentPlan(planContent);
                                   }
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               }
-                              case 'text':
+
+                              case 'task_start': {
+                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+                              }
+
+                              case 'tool_call': {
+                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+                              }
+
+                              case 'tool_output': {
+                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+                              }
+
+                              case 'artifact': {
+                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+                              }
+
+                              case 'summary': {
+                                  const summaryText = typeof parsedData.content === 'string' ? parsedData.content : '';
+                                  if (summaryText) {
+                                      assistantMsg.content = summaryText;
+                                  }
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+                              }
+
+                              // ── AgnoControlPlane 路径（chat/quick 模式）─────────────────
+                              case 'text': {
                                   let textChunk = parsedData;
                                   if (typeof textChunk !== 'string') {
                                       textChunk = textChunk.content || normalizeThink(textChunk);
                                   }
                                   assistantMsg.content = (assistantMsg.content || '') + textChunk;
+                                  workflowStore.appendOutput(textChunk);
                                   if (onEvent) onEvent(eventType, parsedData);
-                                  
-                                  // Add text to the running task's logs for Code View / Results View
-                                  workflowStore.appendOutput?.(textChunk);
                                   break;
-                              case 'think':
+                              }
+
+                              case 'think': {
                                   let thinking = parsedData;
                                   if (typeof thinking !== 'string') {
                                       thinking = thinking.content || normalizeThink(thinking);
                                   }
                                   assistantMsg.reasoning = (assistantMsg.reasoning || '') + thinking;
-                                  // Also log thoughts to workflow store so they appear in logs
-                                  workflowStore.addLog(thinking, 'info', 'thinking');
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
+                              }
+
                               case 'sources':
                                   assistantMsg.sources = parsedData;
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
-                              case 'file':
-                                  assistantMsg.content = (assistantMsg.content || '') + `\n::: file\n${JSON.stringify(parsedData)}\n:::\n`;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              case 'image':
-                                  // Handle image artifacts
-                                  // parsedData should be { url: "..." }
-                                  if (parsedData && parsedData.url) {
-                                      // We can display it as a markdown image
-                                      assistantMsg.content = (assistantMsg.content || '') + `\n![Generated Image](${parsedData.url})\n`;
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              case 'error':
+
+                              case 'error': {
                                   let errorText = parsedData;
                                   if (typeof errorText !== 'string') {
                                       errorText = errorText.content || errorText.message || errorText.detail || normalizeThink(errorText);
                                   }
-                                  assistantMsg.content += `\n**System Error**: ${errorText}`;
+                                  assistantMsg.content = (assistantMsg.content || '') + `\n**错误**: ${errorText}`;
                                   if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+                              }
+
+                              case 'file':
+                                  assistantMsg.content = (assistantMsg.content || '') + `\n::: file\n${JSON.stringify(parsedData)}\n:::\n`;
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+
+                              case 'image':
+                                  if (parsedData?.url) {
+                                      assistantMsg.content = (assistantMsg.content || '') + `\n![生成图片](${parsedData.url})\n`;
+                                  }
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+
+                              case 'step':
+                                  if (!assistantMsg.steps) assistantMsg.steps = [];
+                                  assistantMsg.steps.push(parsedData);
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+
+                              case 'chart':
+                                  assistantMsg.chart_config = parsedData;
+                                  if (onEvent) onEvent(eventType, parsedData);
+                                  break;
+
+                              // 遗留兼容
+                              case 'plan_step':
+                              case 'task_started':
+                              case 'task_content':
+                              case 'task_completed':
+                              case 'task_failed':
+                              case 'task_tool_call':
+                              case 'artifacts':
+                                  workflowStore.handleWorkflowEvent(parsedData);
                                   break;
                           }
                       } catch (e) {
@@ -406,7 +437,7 @@ export function useChatSession() {
           
           if (workflowStore.isRunning) {
               workflowStore.isRunning = false;
-              workflowStore.addLog?.('Execution completed', 'success');
+              workflowStore.addLog('Execution completed', 'success');
           }
 
           // Set duration when stream ends
@@ -429,6 +460,7 @@ export function useChatSession() {
     createNewSession,
     stopGeneration,
     handleStreamResponse,
-    abortController
+    abortController,
+    agentRunId
   };
 }

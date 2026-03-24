@@ -1,6 +1,8 @@
 import json
 import re
 import logging
+from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, List, Optional, Dict, Union, Generator, Type, TypeVar
 from pydantic import BaseModel, Field, ValidationError, ConfigDict
 
@@ -49,7 +51,7 @@ class JsonFixer:
     _FENCES = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.IGNORECASE)
     _PY_CONST = re.compile(r"\b(True|False|None)\b")
     _TRAILING_COMMA = re.compile(r",\s*([\]}])")
-    _SINGLE_QUOTE_KEY = re.compile(r"(?m)^\s*'(\w+)'\s*:") # 修复单引号key
+    _SINGLE_QUOTE_KEY = re.compile(r"'(\w+)'\s*:") # 修复单引号key
     _CONTROL_CHARS = re.compile(r"[\x00-\x1F\x7F]") # 移除不可见控制字符
 
     @classmethod
@@ -174,3 +176,82 @@ def parse_task_plan(value: Any) -> TaskPlan:
             raw_content=getattr(e, "raw_content", None),
             diagnostics=getattr(e, "diagnostics", None),
         )
+
+# --- 4. 运行时执行计划 Schema (Runtime Execution Schema) ---
+
+class RuntimeTaskStatus(str, Enum):
+    """任务运行时状态枚举 — 严格四态"""
+    pending   = "pending"
+    running   = "running"
+    completed = "completed"
+    failed    = "failed"
+
+
+class ExecutionTaskStep(BaseModel):
+    """
+    运行时单任务的完整描述，包含状态与输出日志。
+    由后端在执行过程中持续更新，并通过 SSE 推送前端。
+    """
+    model_config = ConfigDict(extra='ignore')
+
+    task_id: str = Field(..., description="全局唯一任务 ID，与 DB 主键对齐")
+    title: str = Field(..., description="任务标题（100 字以内）")
+    description: str = Field(default="", description="详细执行描述")
+    status: RuntimeTaskStatus = Field(default=RuntimeTaskStatus.pending, description="四态状态机")
+    output_logs: List[str] = Field(default_factory=list, description="按时间序追加的输出行")
+    dependencies: List[str] = Field(default_factory=list, description="依赖的前置 task_id 列表")
+    executor_role: str = Field(default="", description="执行角色，如 'coder', 'researcher'")
+    started_at: Optional[str] = Field(default=None, description="ISO8601 开始时间")
+    completed_at: Optional[str] = Field(default=None, description="ISO8601 完成时间")
+    error: Optional[str] = Field(default=None, description="失败时的错误摘要")
+
+    def mark_running(self) -> None:
+        self.status = RuntimeTaskStatus.running
+        self.started_at = datetime.now(timezone.utc).isoformat()
+
+    def mark_completed(self) -> None:
+        self.status = RuntimeTaskStatus.completed
+        self.completed_at = datetime.now(timezone.utc).isoformat()
+
+    def mark_failed(self, error: str) -> None:
+        self.status = RuntimeTaskStatus.failed
+        self.error = error
+        self.completed_at = datetime.now(timezone.utc).isoformat()
+
+    def append_log(self, line: str) -> None:
+        self.output_logs.append(line)
+
+
+class ExecutionPlan(BaseModel):
+    """
+    完整执行计划 — Schema 规范：由 Planner 生成后在整个执行生命周期中保持同步。
+    前端通过 SSE type='plan' 事件接收此结构的序列化形式。
+    """
+    model_config = ConfigDict(extra='ignore')
+
+    plan_id: str = Field(..., description="DB 计划主键字符串")
+    session_id: str = Field(..., description="关联会话 ID")
+    user_goal: str = Field(default="", description="原始用户目标")
+    reasoning: str = Field(default="", description="LLM 规划思路")
+    tasks: List[ExecutionTaskStep] = Field(..., description="有序任务列表")
+    created_at: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        description="计划创建时间"
+    )
+
+    @property
+    def total(self) -> int:
+        return len(self.tasks)
+
+    @property
+    def completed_count(self) -> int:
+        return sum(1 for t in self.tasks if t.status == RuntimeTaskStatus.completed)
+
+    @property
+    def progress_pct(self) -> int:
+        if self.total == 0:
+            return 0
+        return round(self.completed_count / self.total * 100)
+
+    def get_task(self, task_id: str) -> Optional[ExecutionTaskStep]:
+        return next((t for t in self.tasks if t.task_id == task_id), None)

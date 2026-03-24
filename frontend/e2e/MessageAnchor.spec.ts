@@ -67,8 +67,8 @@ test.describe('MessageAnchor Component', () => {
     await page.goto(`/?session_id=${sessionId}`);
     
     // Wait for messages to load
-    await expect(page.getByText('Message 0')).toBeVisible();
-    await expect(page.getByText('Message 49')).toBeVisible();
+    await expect(page.getByText('Message 0 - This is a long message').first()).toBeVisible();
+    await expect(page.getByText('Message 49 - This is a long message').first()).toBeVisible();
   });
 
   test('should render message anchor when content overflows', async ({ page }) => {
@@ -124,7 +124,7 @@ test.describe('MessageAnchor Component', () => {
     
     if (count > 0) {
       const firstMarker = markers.first();
-      await firstMarker.hover();
+      await firstMarker.hover({ force: true });
       
       // Tooltip should appear
       // Tooltip class: absolute right-3 ...
@@ -162,7 +162,7 @@ test.describe('MessageAnchor Component', () => {
     if (!initialBox) throw new Error('Thumb not found');
     
     // Drag thumb down
-    await thumb.hover();
+    await thumb.hover({ force: true });
     await page.mouse.down();
     await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + 100);
     await page.mouse.up();

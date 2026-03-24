@@ -176,3 +176,12 @@ html, body {
 .font-din {
   font-family: "DIN Alternate", "Hack", "SF Pro SC", "SF Pro Text", "Inter", "PingFang SC",  sans-serif;
 }
+
+/* Global Shiki code block styles (v-html injected content won't get scoped CSS) */
+.code-block-wrapper pre code.shiki .line {
+  display: block;
+  min-height: 1.5rem;
+}
+.code-block-wrapper pre code.shiki {
+  background-color: transparent !important;
+}

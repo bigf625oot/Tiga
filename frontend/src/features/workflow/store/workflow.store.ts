@@ -1,5 +1,23 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
+import type {
+    AgentEvent, AgentExecutionPlan, AgentToolCallInfo,
+    AgentObservationInfo, AgentArtifactCard,
+} from '@/features/qa/types';
+
+export interface TaskToolCall {
+    tool_name: string;
+    tool_args?: Record<string, any>;
+    status: 'running' | 'completed' | 'failed';
+    result?: string;
+}
+
+export interface TaskArtifact {
+    name: string;
+    url: string;
+    type: string;
+    size?: number;
+}
 
 export interface WorkflowTask {
     id: string;
@@ -10,6 +28,8 @@ export interface WorkflowTask {
     startTime?: number;
     endTime?: number;
     logs: string[];
+    output: string;          // realtime streamed content for this task
+    toolCalls: TaskToolCall[];
     children?: WorkflowTask[];
     dependencies?: string[]; // IDs
     priority?: 'high' | 'medium' | 'low';
@@ -39,9 +59,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const documents = ref<WorkflowDocument[]>([]);
     const currentStep = ref<string>('');
     const sessionId = ref<string>('');
-    const eventSource = ref<EventSource | null>(null);
     const executeBuffer = ref<string>('');
-    
+    const artifacts = ref<TaskArtifact[]>([]);
+
     // Graph State
     const graph = ref<{ nodes: any[], edges: any[] }>({ nodes: [], edges: [] });
     const selectedTaskId = ref<string | null>(null);
@@ -76,7 +96,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const initWorkflow = (sid: string, initialState?: any) => {
         sessionId.value = sid;
         const saved = localStorage.getItem(`workflow-${sid}`);
-        
+
         let data = null;
         if (initialState) {
             data = initialState;
@@ -96,10 +116,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
             logs.value = data.logs || [];
             documents.value = data.documents || [];
             currentStep.value = data.currentStep || '';
+            artifacts.value = data.artifacts || [];
         } else {
             tasks.value = [];
             logs.value = [];
             documents.value = [];
+            artifacts.value = [];
         }
         tasks.value.forEach(t => updateGraph(t));
         isRunning.value = false;
@@ -166,11 +188,17 @@ export const useWorkflowStore = defineStore('workflow', () => {
             updateGraph(lastTask);
             return;
         }
+        // No tasks (solo/quick mode): accumulate into executeBuffer so code editor can display it
+        executeBuffer.value += output;
         addLog(output, 'info', step);
     };
 
     const clearLogs = () => {
         logs.value = [];
+    };
+
+    const resetArtifacts = () => {
+        artifacts.value = [];
     };
 
     const resetWorkflow = () => {
@@ -181,12 +209,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
         currentStep.value = '';
         executeBuffer.value = '';
         isRunning.value = false;
+        artifacts.value = [];
     };
 
     const updateGraph = (task: WorkflowTask) => {
-        // Check if node exists
         const existingNodeIndex = graph.value.nodes.findIndex(n => n.id === task.id);
-        
+
         const nodeData = {
             label: task.name,
             status: task.status,
@@ -195,22 +223,17 @@ export const useWorkflowStore = defineStore('workflow', () => {
         };
 
         if (existingNodeIndex !== -1) {
-            // Update existing node
             graph.value.nodes[existingNodeIndex].data = nodeData;
         } else {
-            // Add new node
-            // Simple layout for now: vertical stack based on order
             const y = graph.value.nodes.length * 100;
-            
             graph.value.nodes.push({
                 id: task.id,
-                type: 'custom', // We will create a custom node component
+                type: 'custom',
                 data: nodeData,
                 position: { x: 250, y: y }
             });
         }
 
-        // Add edges based on dependencies
         if (task.dependencies) {
             task.dependencies.forEach(depId => {
                 const edgeId = `e-${depId}-${task.id}`;
@@ -227,17 +250,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
     };
 
     const updateTaskStatus = (stepName: string, status: WorkflowTask['status'], output?: string) => {
-        // Find the last task with this stepName to see if we need a new one
-        // If the last one is completed/failed, and we get 'running', create a new one.
-        
         let taskIndex = -1;
-        
+
         if (status === 'running') {
-            // 1. Try to find a pending task from the plan (future steps)
             const formattedName = formatStepName(stepName);
             taskIndex = tasks.value.findIndex(t => t.status === 'pending' && t.name === formattedName);
 
-            // 2. If no pending task, check if we have a running task (re-entrant)
             if (taskIndex === -1) {
                  for (let i = tasks.value.length - 1; i >= 0; i--) {
                     if (tasks.value[i].id.startsWith(stepName) && tasks.value[i].status === 'running') {
@@ -247,7 +265,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
                 }
             }
         } else {
-             // For completion/failure, we must find the currently running task or the last one with this prefix
              for (let i = tasks.value.length - 1; i >= 0; i--) {
                 if (tasks.value[i].id.startsWith(stepName) || (tasks.value[i].status === 'running' && tasks.value[i].name === formatStepName(stepName))) {
                     taskIndex = i;
@@ -262,21 +279,21 @@ export const useWorkflowStore = defineStore('workflow', () => {
         if (!task) {
             createNew = true;
         } else if (status === 'running' && (task.status === 'completed' || task.status === 'failed')) {
-            // If the found task is already finished, and we are starting running again, create new
             createNew = true;
         }
 
         if (createNew) {
-            // Generate unique ID
             const count = tasks.value.filter(t => t.id.startsWith(stepName)).length;
             const newId = count > 0 ? `${stepName}-${count + 1}` : stepName;
-            
+
             task = {
                 id: newId,
                 name: formatStepName(stepName) + (count > 0 ? ` (${count + 1})` : ''),
                 status: 'pending',
                 progress: 0,
                 logs: [],
+                output: '',
+                toolCalls: [],
                 priority: 'medium'
             };
             tasks.value.push(task);
@@ -286,8 +303,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
             if (status === 'running' && task.status !== 'running') {
                 task.status = 'running';
                 task.startTime = Date.now();
-                // Update ID if it was a future task to indicate it's now active/real?
-                // Actually keeping ID 'future-x' is fine, it just becomes running.
             } else if (status === 'completed' || status === 'failed') {
                 task.status = status;
                 task.endTime = Date.now();
@@ -297,7 +312,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
             if (output) {
                 task.logs.push(output);
             }
-            
+
             updateGraph(task);
         }
     };
@@ -316,18 +331,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const runWorkflow = async (message: string, agentId?: string, attachments?: string[]) => {
         if (isRunning.value) return;
         isRunning.value = true;
-        // Reset tasks for new run? 
-        // If we want to keep history of previous run in the same session, maybe not.
-        // But usually a run is a new set of tasks.
-        // Let's keep it cumulative for now, or clear?
-        // User might want to "Retry", which means clearing or updating.
-        // Let's clear logs/tasks for a NEW run.
         tasks.value = [];
         logs.value = [];
         documents.value = [];
+        artifacts.value = [];
         executeBuffer.value = '';
-        
-        // Use fetch with ReadableStream for SSE handling to support POST
+
         try {
             const response = await fetch('/api/v1/agent-workflows/run_stream', {
                 method: 'POST',
@@ -336,10 +345,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
                     session_id: sessionId.value,
                     message: message,
                     agent_id: agentId,
-                    mode: 'dynamic', // Use dynamic for full experience
-                    params: {
-                        attachments
-                    }
+                    mode: 'dynamic',
+                    params: { attachments }
                 })
             });
 
@@ -353,14 +360,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    
+
                     const chunk = decoder.decode(value, { stream: true });
                     buffer += chunk;
-                    
-                    // Process SSE lines
+
                     const lines = buffer.split('\n\n');
-                    buffer = lines.pop() || ''; // Keep incomplete line
-                    
+                    buffer = lines.pop() || '';
+
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
                             const dataStr = line.slice(6);
@@ -369,7 +375,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
                                 addLog('Workflow finished', 'success');
                                 return;
                             }
-                            
+
                             try {
                                 const data = JSON.parse(dataStr);
                                 handleEvent(data);
@@ -380,7 +386,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
                     }
                 }
             }
-            // If loop finishes without return, it means stream ended without [DONE]
             isRunning.value = false;
             addLog('Connection closed', 'warning');
         } catch (e: any) {
@@ -389,68 +394,178 @@ export const useWorkflowStore = defineStore('workflow', () => {
         }
     };
 
+    // --- Per-task event handlers ---
+
+    const _findTaskById = (taskId: string): WorkflowTask | undefined => {
+        return tasks.value.find(t => t.id === taskId);
+    };
+
+    const handleTaskStarted = (data: any) => {
+        const taskId = data.task_id;
+        // Try to find a matching pending task from plan (by task name if id mismatch)
+        let task = _findTaskById(taskId);
+        if (!task) {
+            // Try to find by name match (plan tasks may have different ids)
+            task = tasks.value.find(t => t.status === 'pending' && t.name === data.task_name);
+        }
+
+        if (task) {
+            task.id = taskId; // align id
+            task.status = 'running';
+            task.startTime = Date.now();
+            task.output = '';
+            task.toolCalls = [];
+            updateGraph(task);
+        } else {
+            // Task not in plan yet — create it
+            const newTask: WorkflowTask = {
+                id: taskId,
+                name: data.task_name || taskId,
+                description: data.task_description || '',
+                status: 'running',
+                progress: 0,
+                logs: [],
+                output: '',
+                toolCalls: [],
+                startTime: Date.now()
+            };
+            tasks.value.push(newTask);
+            updateGraph(newTask);
+        }
+    };
+
+    const handleTaskContent = (data: any) => {
+        const task = _findTaskById(data.task_id);
+        if (task && data.content) {
+            task.output += data.content;
+        }
+    };
+
+    const handleTaskToolCall = (data: any) => {
+        const task = _findTaskById(data.task_id);
+        if (!task || !data.tool) return;
+        const toolInfo = data.tool;
+
+        // Find existing tool call entry (to update status)
+        const existingIdx = task.toolCalls.findIndex(tc =>
+            tc.tool_name === toolInfo.tool_name && tc.status === 'running'
+        );
+
+        if (toolInfo.status === 'started') {
+            task.toolCalls.push({
+                tool_name: toolInfo.tool_name,
+                tool_args: toolInfo.tool_args,
+                status: 'running'
+            });
+        } else if (existingIdx !== -1) {
+            task.toolCalls[existingIdx].status = toolInfo.status === 'completed' ? 'completed' : 'failed';
+            task.toolCalls[existingIdx].result = toolInfo.result;
+        }
+    };
+
+    const handleTaskCompleted = (data: any) => {
+        const task = _findTaskById(data.task_id);
+        if (task) {
+            task.status = 'completed';
+            task.endTime = Date.now();
+            task.progress = 100;
+            updateGraph(task);
+
+            // Save output as document if non-empty
+            const content = (task.output || '').trim();
+            if (content) {
+                const title = deriveDocumentTitle(content) || task.name;
+                documents.value.unshift({
+                    id: `doc-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                    title,
+                    content,
+                    step: task.name,
+                    createdAt: Date.now()
+                });
+            }
+        }
+    };
+
+    const handleTaskFailed = (data: any) => {
+        const task = _findTaskById(data.task_id);
+        if (task) {
+            task.status = 'failed';
+            task.endTime = Date.now();
+            task.progress = 100;
+            if (data.error) task.logs.push(`错误: ${data.error}`);
+            updateGraph(task);
+        }
+    };
+
+    const handleArtifacts = (data: any) => {
+        if (Array.isArray(data.files)) {
+            artifacts.value = data.files;
+            addLog(`产出物清单已生成: ${data.files.length} 个文件`, 'success');
+        }
+    };
+
     const handleEvent = (data: any) => {
-        // data: { step: string, status: string, output?: string, plan?: any, type?: string, tool?: any }
         if (data.system) {
             addLog(data.output, data.status === 'failed' ? 'error' : 'info');
             return;
         }
 
-        // Handle tool_call events dynamically
+        // --- New per-task event types ---
+        if (data.type === 'task_started') { handleTaskStarted(data); return; }
+        if (data.type === 'task_content') { handleTaskContent(data); return; }
+        if (data.type === 'task_tool_call') { handleTaskToolCall(data); return; }
+        if (data.type === 'task_completed') { handleTaskCompleted(data); return; }
+        if (data.type === 'task_failed') { handleTaskFailed(data); return; }
+        if (data.type === 'artifacts') { handleArtifacts(data); return; }
+
+        // --- Legacy tool_call (step-based) ---
         if (data.type === 'tool_call') {
             const toolInfo = data.tool;
-            const logMsg = toolInfo.status === 'started' 
+            const logMsg = toolInfo.status === 'started'
                 ? `🔧 调用工具: ${toolInfo.tool_name}\n参数: ${JSON.stringify(toolInfo.tool_args)}`
                 : `✅ 工具 ${toolInfo.tool_name} 执行完成\n结果: ${toolInfo.result || '无'}`;
-            
+
             addLog(logMsg, toolInfo.status === 'started' ? 'info' : 'success', data.step || 'execute');
-            
-            // Append to the currently running task logs if possible
+
             const runningTask = tasks.value.find(t => t.status === 'running');
             if (runningTask) {
                 runningTask.logs.push(logMsg);
             }
-            return; // We don't want to process this as a standard step state change
+            return;
         }
 
         currentStep.value = data.step;
-        
-        // Handle Plan Update
-        if (data.step === 'plan' && data.status === 'success' && data.plan) {
-             // Remove all PENDING tasks (old plan) as they are superseded
-             tasks.value = tasks.value.filter(t => t.status !== 'pending');
-             
-             // Add new plan tasks
-              if (data.plan.steps && Array.isArray(data.plan.steps)) {
-                  // Add reasoning as a log if available
-                  if (data.plan.reasoning) {
-                      addLog(`规划思路: ${data.plan.reasoning}`, 'info', 'plan');
-                      // Also add to the Planning task logs so it shows on the card
-                      const planTask = tasks.value.find(t => t.id.startsWith('plan') || t.name.includes('Planning') || t.name.includes('任务规划'));
-                      if (planTask) {
-                          planTask.logs.push(`规划思路: ${data.plan.reasoning}`);
-                      }
-                  }
-                  
-                  data.plan.steps.forEach((step: any) => {
-                     // Use step.description if available (it should be in Chinese now), otherwise fallback to formatted name
-                     const taskName = step.description || formatStepName(step.operation);
-                     
-                     tasks.value.push({
-                         id: `future-${step.step_id}`, // Use prefix to avoid collision but simple enough
-                         name: taskName,
-                         description: step.description,
-                         status: 'pending',
-                         progress: 0,
-                         logs: [],
-                         priority: 'medium',
-                         dependencies: step.dependencies?.map(String) || [],
-                         estimatedTime: step.estimated_time,
-                         requiredResources: step.required_resources || []
-                     });
-                 });
-                 addLog(`任务规划已更新: ${data.plan.steps.length} 个步骤`, 'success', 'plan');
-             }
+
+        // Handle Plan Update (legacy + new "plan" type)
+        if ((data.step === 'plan' && data.status === 'success' && data.plan) || (data.type === 'plan' && data.plan)) {
+            const planData = data.plan;
+            tasks.value = tasks.value.filter(t => t.status !== 'pending');
+
+            // New structured plan format from unified_workflow
+            const planTasks = planData.tasks || planData.steps || [];
+            planTasks.forEach((step: any) => {
+                const taskName = step.name || step.description || formatStepName(step.operation);
+                tasks.value.push({
+                    id: step.id ? `${step.id}` : `future-${Math.random().toString(16).slice(2)}`,
+                    name: taskName,
+                    description: step.description || step.name || '',
+                    status: 'pending',
+                    progress: 0,
+                    logs: [],
+                    output: '',
+                    toolCalls: [],
+                    priority: 'medium',
+                    dependencies: step.dependencies?.map(String) || [],
+                    estimatedTime: step.estimated_time,
+                    requiredResources: step.required_resources || []
+                });
+            });
+
+            if (planData.reasoning) {
+                addLog(`规划思路: ${planData.reasoning}`, 'info', 'plan');
+            }
+            addLog(`任务规划已生成: ${planTasks.length} 个步骤`, 'success', 'plan');
+            return;
         }
 
         if (data.status === 'running') {
@@ -492,7 +607,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
             addLog(data, 'info', 'status');
             return;
         }
-        if (typeof data === 'object' && (data.step || data.system || data.status || data.output || data.plan)) {
+        if (typeof data === 'object' && (data.step || data.system || data.status || data.output || data.plan || data.type)) {
             handleEvent(data);
             return;
         }
@@ -512,52 +627,36 @@ export const useWorkflowStore = defineStore('workflow', () => {
     };
 
     const stopWorkflow = () => {
-        // In a real implementation, call an API to stop.
-        // For now, just close client side.
         isRunning.value = false;
         addLog('Workflow stopped by user', 'warning');
     };
 
-    const updatePlanFromBackend = (steps: Array<{ title: string, description?: string, status: string }>) => {
-        // Sync tasks with backend plan
-        // Strategy: 
-        // 1. Identify existing tasks by title/name to preserve logs/progress/history
-        // 2. Add new tasks
-        // 3. Update status of existing tasks
-        // 4. Remove tasks not in the plan (careful with completed history?)
-        //    Actually, if the agent re-plans, it might remove steps. So we should reflect that.
-        
+    const updatePlanFromBackend = (steps: Array<{ title?: string, name?: string, id?: string, description?: string, status: string, assigned_agent_role?: string }>) => {
         const newTasks: WorkflowTask[] = [];
-        
+
         steps.forEach((step, index) => {
-            // Try to find existing task
-            const existingTask = tasks.value.find(t => t.name === step.title);
-            
+            const stepName = step.title || step.name || `Task ${index + 1}`;
+            const existingTask = tasks.value.find(t => t.name === stepName);
+
             if (existingTask) {
-                // Update existing
-                // Map backend status string to frontend status
                 let newStatus: WorkflowTask['status'] = 'pending';
                 const s = step.status.toLowerCase();
                 if (s === 'running') newStatus = 'running';
                 else if (s === 'completed') newStatus = 'completed';
                 else if (s === 'failed') newStatus = 'failed';
-                
-                // If status changed to running, set start time
+
                 if (newStatus === 'running' && existingTask.status !== 'running') {
                     existingTask.startTime = Date.now();
                 }
-                // If completed/failed, set end time
                 if ((newStatus === 'completed' || newStatus === 'failed') && existingTask.status !== 'completed' && existingTask.status !== 'failed') {
                     existingTask.endTime = Date.now();
                     existingTask.progress = 100;
                 }
-                
+
                 existingTask.status = newStatus;
                 existingTask.description = step.description || existingTask.description;
-                
                 newTasks.push(existingTask);
             } else {
-                // Create new
                 let newStatus: WorkflowTask['status'] = 'pending';
                 const s = step.status.toLowerCase();
                 if (s === 'running') newStatus = 'running';
@@ -565,26 +664,109 @@ export const useWorkflowStore = defineStore('workflow', () => {
                 else if (s === 'failed') newStatus = 'failed';
 
                 newTasks.push({
-                    id: `step-${index}-${Date.now()}`, // Unique ID
-                    name: step.title,
+                    id: step.id ? `step-${step.id}` : `step-${index}-${Date.now()}`,
+                    name: stepName,
                     description: step.description,
                     status: newStatus,
                     progress: newStatus === 'completed' ? 100 : 0,
                     logs: [],
+                    output: '',
+                    toolCalls: [],
                     startTime: newStatus === 'running' ? Date.now() : undefined,
                     endTime: (newStatus === 'completed' || newStatus === 'failed') ? Date.now() : undefined
                 });
             }
         });
-        
+
         tasks.value = newTasks;
-        
-        // Update graph nodes
         graph.value = { nodes: [], edges: [] };
         tasks.value.forEach(t => updateGraph(t));
-        
-        // Log update
         addLog(`任务计划已更新: ${steps.length} 个步骤`, 'info', 'plan');
+    };
+
+    // ── AgentEvent 协议（NexusExecutor 路径）──
+
+    const initFromAgentPlan = (plan: AgentExecutionPlan) => {
+        tasks.value = plan.tasks.map(t => ({
+            id: t.id,
+            name: t.title,
+            description: t.description,
+            status: t.status as WorkflowTask['status'],
+            progress: 0,
+            logs: [],
+            output: '',
+            toolCalls: [],
+        }));
+        tasks.value.forEach(t => updateGraph(t));
+        if (plan.reasoning) {
+            addLog(`规划完成：${plan.reasoning}`, 'info', 'plan');
+        }
+        addLog(`任务计划已生成: ${plan.tasks.length} 个步骤`, 'success', 'plan');
+    };
+
+    const handleAgentEvent = (event: AgentEvent) => {
+        switch (event.type) {
+            // task_start：pending/running/completed/failed 状态变更
+            case 'task_start': {
+                const info = event.content as { task_id: string; title?: string; status: string };
+                const task = tasks.value.find(t => t.id === info.task_id);
+                if (task) {
+                    task.status = info.status as WorkflowTask['status'];
+                    if (info.status === 'running') task.startTime = Date.now();
+                    if (info.status === 'completed' || info.status === 'failed') {
+                        task.endTime = Date.now();
+                        task.progress = 100;
+                    }
+                    if (info.title) task.logs.push(info.title);
+                    updateGraph(task);
+                }
+                break;
+            }
+
+            // tool_call：工具调用开始
+            case 'tool_call': {
+                const info = event.content as AgentToolCallInfo;
+                const taskId = event.task_id || info.task_id;
+                const task = taskId ? tasks.value.find(t => t.id === taskId) : undefined;
+                if (task) {
+                    task.toolCalls.push({
+                        tool_name: info.tool,
+                        tool_args: info.args,
+                        status: 'running',
+                    });
+                }
+                break;
+            }
+
+            // tool_output：工具执行结果 + 日志
+            case 'tool_output': {
+                const info = event.content as AgentObservationInfo;
+                const task = event.task_id ? tasks.value.find(t => t.id === event.task_id) : undefined;
+                if (task) {
+                    const tc = [...task.toolCalls].reverse().find(tc => tc.tool_name === info.tool && tc.status === 'running');
+                    if (tc) tc.status = info.is_error ? 'failed' : 'completed';
+                    info.logs?.forEach(line => task.logs.push(line));
+                    updateGraph(task);
+                }
+                break;
+            }
+
+            // artifact：产出物卡片
+            case 'artifact': {
+                const card = event.content as AgentArtifactCard;
+                artifacts.value.push({
+                    name: card.file_name,
+                    url: card.url,
+                    type: card.type,
+                    size: card.file_size,
+                });
+                addLog(`产出物已生成: ${card.file_name}`, 'success');
+                break;
+            }
+
+            default:
+                break;
+        }
     };
 
     const updateToolStatus = (toolName: string, status: 'running' | 'completed' | 'failed', payload?: any) => {
@@ -596,7 +778,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
                 name: idBase,
                 status: 'pending',
                 progress: 0,
-                logs: []
+                logs: [],
+                output: '',
+                toolCalls: []
             };
             tasks.value.push(task);
         }
@@ -632,7 +816,11 @@ export const useWorkflowStore = defineStore('workflow', () => {
         documents,
         currentStep,
         progress,
-        graph, // Export graph state
+        totalTasks,
+        completedTasks,
+        artifacts,
+        executeBuffer,
+        graph,
         initWorkflow,
         runWorkflow,
         stopWorkflow,
@@ -640,9 +828,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
         appendOutput,
         clearLogs,
         resetWorkflow,
-        updateGraph, // Export updateGraph action
-        updatePlanFromBackend, // Export new action
+        resetArtifacts,
+        updateGraph,
+        updatePlanFromBackend,
         updateToolStatus,
-        handleWorkflowEvent
+        handleWorkflowEvent,
+        initFromAgentPlan,
+        handleAgentEvent
     };
 });

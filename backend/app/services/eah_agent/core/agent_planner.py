@@ -67,8 +67,17 @@ class PlannerAgent:
             
         async with self._init_lock:
             if not self._agent:
-                # 1. 解析模型记录
-                llm_model = await resolve_chat_llm_model(self.db, model_id=self.model_id)
+                from app.services.llm.resolver import resolve_fast_llm_model
+                
+                # 1. 解析模型记录：优先使用传入的模型，否则使用全局快速模型，最后 fallback 到普通模型
+                llm_model = None
+                if self.model_id:
+                    llm_model = await resolve_chat_llm_model(self.db, model_id=self.model_id)
+                if not llm_model:
+                    llm_model = await resolve_fast_llm_model(self.db)
+                if not llm_model:
+                    llm_model = await resolve_chat_llm_model(self.db)
+                    
                 model_instance = ModelFactory.create_model(llm_model)
 
                 # 2. 装配规划者实例
@@ -77,6 +86,8 @@ class PlannerAgent:
                     model=model_instance,
                     instructions=[
                         "你是一位资深系统架构师，负责将复杂的业务目标拆解为可执行的任务流。",
+                        "【极简原则】：如果用户目标可以通过一次生成或查询完成（例如写一篇文章、生成测试用例、回答问题、写一段代码），请只输出 1 个任务步骤！不要过度设计！",
+                        "只有在涉及多个异构系统调用或需要强制的先后依赖（如先搜索再汇总）时，才拆分为多个步骤。",
                         "每个任务必须是原子性的，且有明确的 'expected_output'。",
                         "你必须明确任务间的依赖关系，严禁产生循环依赖。",
                         "仅输出一个 JSON 对象，不要解释，不要 Markdown，不要代码块。",
@@ -85,7 +96,7 @@ class PlannerAgent:
                         "id 从 1 开始递增；dependencies 只能引用已出现的更小 id。",
                         "estimated_reasoning 用于解释规划策略。"
                     ],
-                    retries=3,  # 在新版 agno 中 max_retries 可能变为了 retries
+                    retries=3,
                     markdown=False,
                 )
         return self._agent
@@ -93,81 +104,125 @@ class PlannerAgent:
     async def create_plan(self, session_id: str, user_goal: str, **ctx) -> str:
         """
         核心业务流：需求分析 -> 神经规划 -> 逻辑验证 -> 原子落库。
+        采用显式 Self-Correction Loop：最多 3 轮，每轮将上一轮的校验错误
+        作为反馈语义喂回 LLM，引导其自主纠错。
         """
         logger.info(f"Initiating planning for session: {session_id}")
-        
+
         agent = await self._ensure_agent()
-        
-        
-        # 1. 运行规划任务
-        prompt = f"""
-        User Goal: {user_goal}
-        Contextual Info: {ctx.get('extra_info', 'N/A')}
-        
-        Please ensure that the 'task' description and 'estimated_reasoning' are in the same language as the User Goal.
-        """
-        
+
         from app.services.eah_agent.core.schema import PlanValidationError, TaskPlan, parse_task_plan
 
         agent.response_model = TaskPlan
 
-        response = await agent.arun(prompt)
-        raw_plan = response.content if hasattr(response, "content") else response
-        try:
-            raw_text = raw_plan if isinstance(raw_plan, str) else str(raw_plan)
-            try:
-                plan = parse_task_plan(raw_plan)
-            except PlanValidationError:
-                repair_src = raw_text
-                if len(repair_src) > 6000:
-                    repair_src = repair_src[:6000]
+        base_prompt = (
+            f"User Goal: {user_goal}\n"
+            f"Contextual Info: {ctx.get('extra_info', 'N/A')}\n\n"
+            "【CRITICAL】: If the User Goal is a simple generation task (like writing a document, test case, code, or answering a question), you MUST output exactly ONE step. "
+            "Do NOT split it into multiple steps like 'analyze', 'write part 1', 'write part 2', 'review'. The executor is highly capable and can do it in one go.\n"
+            "Please ensure that the 'task' description and 'estimated_reasoning' "
+            "are in the same language as the User Goal."
+        )
 
-                repair_prompt = (
-                    "把下面内容转换为严格 JSON，对齐如下 schema：\n"
-                    '{"steps":[{"id":1,"task":"...","tool_name":"...","dependencies":[0]}],"estimated_reasoning":"..."}\n'
-                    "要求：\n"
-                    "1) 只输出 JSON 对象；不要 Markdown；不要代码块；不要额外文字。\n"
-                    "2) steps[].id 从 1 开始递增；dependencies 只能引用更小 id。\n"
-                    "3) tool_name 必须是字符串。\n"
-                    "内容如下：\n"
-                    f"{repair_src}"
+        MAX_SELF_CORRECTION_ROUNDS = 3
+        last_error: Optional[Exception] = None
+        last_raw: str = ""
+
+        for attempt in range(1, MAX_SELF_CORRECTION_ROUNDS + 1):
+            # --- 构造本轮 Prompt ---
+            if attempt == 1:
+                prompt = base_prompt
+            else:
+                # 将上一轮错误作为语义反馈注入
+                error_feedback = self._format_error_feedback(last_error, last_raw)
+                prompt = (
+                    f"{base_prompt}\n\n"
+                    f"--- SELF-CORRECTION ROUND {attempt} ---\n"
+                    f"Your previous response failed validation. Fix the issues below and output ONLY valid JSON:\n"
+                    f"{error_feedback}"
                 )
-                repair_resp = await agent.arun(repair_prompt)
-                repair_raw = repair_resp.content if hasattr(repair_resp, "content") else repair_resp
-                plan = parse_task_plan(repair_raw)
+                logger.warning(
+                    f"[Planner] Self-correction attempt {attempt}/{MAX_SELF_CORRECTION_ROUNDS} "
+                    f"for session {session_id}: {last_error}"
+                )
 
-            manifest = PlanManifest(
-                reasoning=plan.estimated_reasoning,
-                tasks=[
-                    TaskDefinition(
-                        task_id=str(step.id),
-                        title=step.task,
-                        description=step.task,
-                        dependencies=[str(d) for d in step.dependencies],
-                        executor_role=step.tool_name,
-                        expected_output="Execute successfully",
+            try:
+                response = await agent.arun(prompt)
+                raw_plan = response.content if hasattr(response, "content") else response
+                last_raw = raw_plan if isinstance(raw_plan, str) else str(raw_plan)
+
+                plan = parse_task_plan(raw_plan)
+
+                manifest = PlanManifest(
+                    reasoning=plan.estimated_reasoning,
+                    tasks=[
+                        TaskDefinition(
+                            task_id=str(step.id),
+                            title=step.task[:90], # 避免超过 TaskDefinition 的 title 长度限制
+                            description=step.task,
+                            dependencies=[str(d) for d in step.dependencies],
+                            executor_role=step.tool_name,
+                            expected_output="Execute successfully",
+                        )
+                        for step in plan.steps
+                    ],
+                )
+
+                # --- 校验通过：持久化 ---
+                try:
+                    plan_id = await self._persist_plan(session_id, user_goal, manifest)
+                    await self.db.commit()
+                    if attempt > 1:
+                        logger.info(f"[Planner] Self-correction succeeded on attempt {attempt}.")
+                    return plan_id
+                except Exception as e:
+                    logger.critical(f"Critical persistence failure for session {session_id}: {e}")
+                    await self.db.rollback()
+                    raise
+
+            except PlanValidationError as e:
+                last_error = e
+                sha = hashlib.sha256(last_raw.encode("utf-8", errors="ignore")).hexdigest()[:12]
+                logger.error(
+                    f"[Planner] Attempt {attempt} validation failed "
+                    f"(sha={sha}): {e}"
+                )
+                if attempt == MAX_SELF_CORRECTION_ROUNDS:
+                    logger.error(f"[Planner] All {MAX_SELF_CORRECTION_ROUNDS} attempts exhausted.")
+                    logger.error(f"[Planner] Last raw output: {last_raw[:2000]}")
+                    raise PlanValidationError(
+                        f"Plan validation failed after {MAX_SELF_CORRECTION_ROUNDS} self-correction attempts: {e}"
                     )
-                    for step in plan.steps
-                ],
-            )
-        except Exception as e:
-            raw_text = raw_plan if isinstance(raw_plan, str) else str(raw_plan)
-            sha = hashlib.sha256(raw_text.encode("utf-8", errors="ignore")).hexdigest()[:12]
-            logger.error(f"Plan validation failed: {e} (raw_type={type(raw_plan)}, len={len(raw_text)}, sha={sha})")
-            logger.error(f"Raw plan output: {raw_text[:2000]}")
-            raise PlanValidationError(f"Invalid plan format returned by LLM: {e}")
-        
-        # 2. 原子化持久化 (Transactional Persistence)
-        try:
-            # 使用 SAVEPOINT 确保子事务一致性
-            async with self.db.begin_nested():
-                plan_id = await self._persist_plan(session_id, user_goal, manifest)
-                await self.db.commit()
-                return plan_id
-        except Exception as e:
-            logger.critical(f"Critical persistence failure for session {session_id}: {e}")
-            await self.db.rollback()
-            raise
+                # else: loop continues with error feedback
+
+    @staticmethod
+    def _format_error_feedback(error: Optional[Exception], raw_output: str) -> str:
+        """
+        将 PlanValidationError 的结构化错误转换为 LLM 可理解的纯文本反馈。
+        附带原始输出摘要，引导 LLM 定位问题。
+        """
+        from app.services.eah_agent.core.schema import PlanValidationError as PVE
+        lines = []
+
+        if isinstance(error, PVE) and error.validation_details:
+            lines.append("Validation errors found:")
+            for detail in error.validation_details:
+                path = detail.get("path", "?")
+                issue = detail.get("issue", "?")
+                received = detail.get("received", "N/A")
+                lines.append(f"  - Field '{path}': {issue} (received: {repr(received)[:80]})")
+        elif error:
+            lines.append(f"Error: {error}")
+
+        # Attach a clipped view of the bad output so LLM can compare
+        snippet = raw_output[:1200].replace("\n", " ")
+        lines.append(f"\nYour previous output (first 1200 chars): {snippet}")
+        lines.append(
+            "\nSchema reminder: output must be a single JSON object with keys "
+            "'steps' (array) and 'estimated_reasoning' (string). "
+            "Each step must have: id(int, starts at 1), task(str), tool_name(str), dependencies(int[])."
+        )
+        return "\n".join(lines)
 
     async def _persist_plan(self, session_id: str, user_goal: str, manifest: PlanManifest) -> str:
         """数据映射层：将 Manifest 转换为数据库实体"""

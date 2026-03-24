@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.endpoints import (
     agents,
     chat,
+    nexus,
     data_query,
     data_source,
     graph_export,
@@ -40,6 +41,7 @@ from app.api.endpoints.search_agent import news
 from app.services.pathway.api import router as pathway_router
 
 api_router = APIRouter()
+api_router.include_router(nexus.router, prefix="/nexus", tags=["nexus"])
 api_router.include_router(pathway_router, prefix="/pathway", tags=["pathway"])
 api_router.include_router(nodes.router, prefix="/nodes", tags=["nodes"])
 api_router.include_router(openclaw.router, prefix="/openclaw", tags=["openclaw"])

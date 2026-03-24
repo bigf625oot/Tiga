@@ -64,7 +64,7 @@
             />
 
             <!-- 0. Empty State / Initial Loading -->
-            <div v-if="!parsed.text && !parsed.html && !parsed.sql && !thinkingContent && !chartOption && !message.steps?.length && (!showStreamSteps) && isStreaming && isLast" class="flex items-center gap-2 py-1">
+            <div v-if="!parsed.text && !parsed.sql && !thinkingContent && !chartOption && !message.steps?.length && (!showStreamSteps) && isStreaming && isLast" class="flex items-center gap-2 py-1">
                 <span class="relative flex h-2.5 w-2.5">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
@@ -134,7 +134,7 @@
 
             <!-- 3. Data Summary (Text + Table + SQL) -->
             <div 
-                v-if="parsed.text || parsed.html || parsed.sql" 
+                v-if="parsed.text || parsed.sql" 
                 class="w-full group/summary"
                 :class="chartOption ? 'bg-card rounded-lg border border-border shadow-sm p-4' : ''"
             >
@@ -147,7 +147,7 @@
                 </div>
 
                 <!-- Markdown Content (Table, Summary) -->
-                <div v-if="parsed.html" class="w-full mt-2">
+                <div v-if="parsed.text" class="w-full mt-2">
                     <MarkdownRenderer :content="parsed.text" />
                 </div>
                 
@@ -221,7 +221,7 @@
             />
 
             <!-- 6. Streaming Cursor -->
-            <div v-if="isStreaming && isLast && (parsed.text || parsed.html || thinkingContent)" class="h-4 mt-1">
+            <div v-if="isStreaming && isLast && (parsed.text || thinkingContent)" class="h-4 mt-1">
                  <span class="inline-block w-2 h-4 bg-indigo-500/80 animate-pulse rounded-sm"></span>
             </div>
 
@@ -352,6 +352,12 @@ watch(() => props.message.steps, (newVal, oldVal) => {
 // Computed
 const showStreamSteps = computed(() => {
     if (!props.message.stream_events || props.message.stream_events.length === 0) return false;
+    // Filter out pure generation events to see if there's any actual execution trace
+    const hasExecutionEvents = props.message.stream_events.some((e: any) => 
+        !['thought', 'text', 'think'].includes(e.event)
+    );
+    if (!hasExecutionEvents) return false;
+    
     // 不在 quick 模式下展示执行记录
     if (props.currentModeId === 'quick') return false;
     return true;
@@ -368,25 +374,29 @@ const thinkingContent = computed<ThinkingContent | null>(() => {
     if (parsed.value.think) {
         return parsed.value.think;
     }
-    
+
     // 2. Explicit reasoning field (from stream)
     if (props.message.reasoning) {
+        // PERF: Don't call render() during streaming — ThinkingBlock uses `raw` only.
+        // render() (Shiki+marked) blocks the main thread and runs on every token.
+        // Only compute html after streaming completes.
+        const isActive = props.isStreaming && props.isLast;
         return {
             raw: props.message.reasoning,
-            html: render(props.message.reasoning),
-            isPartial: true // Assume active thinking if in this field during stream
+            html: '', // HTML is not used by ThinkingBlock anyway
+            isPartial: isActive,
         };
     }
-    
+
     // 3. Metadata reasoning (from history)
     if (props.message.meta_data && props.message.meta_data.reasoning) {
         return {
             raw: props.message.meta_data.reasoning,
-            html: render(props.message.meta_data.reasoning),
+            html: '', // Not used
             isPartial: false // History defaults to collapsed
         };
     }
-    
+
     return null;
 });
 

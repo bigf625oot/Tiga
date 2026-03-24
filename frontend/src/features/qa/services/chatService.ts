@@ -26,15 +26,22 @@ const getHeaders = (contentType: string | null = 'application/json') => {
 export const chatService = {
   async getSession(sessionId: string): Promise<Session> {
     const res = await api.get(`/chat/sessions/${sessionId}`);
-    console.log('[chatService] getSession response:', res);
-    // Compatibility for wrapped response { code: 200, data: ... }
-    if (res.data && typeof res.data === 'object' && 'data' in res.data) {
-        // Double check if 'messages' is missing in root but present in data
-        if (!('messages' in res.data) && 'messages' in res.data.data) {
-            return res.data.data;
-        }
+    // 兼容 { code: 200, data: ... } 包装
+    let raw = res.data;
+    if (raw && typeof raw === 'object' && 'data' in raw && !('messages' in raw)) {
+        raw = raw.data;
     }
-    return res.data;
+    // 映射后端字段到前端 Message 结构
+    if (raw?.messages) {
+        raw.messages = raw.messages.map((m: any) => ({
+            ...m,
+            // reasoning_content → reasoning（ThinkingBlock 使用）
+            reasoning: m.reasoning_content || m.reasoning || undefined,
+            // meta_data.stream_events → stream_events（StreamSteps 使用）
+            stream_events: m.meta_data?.stream_events || m.stream_events || undefined,
+        }));
+    }
+    return raw;
   },
 
   async createSession(title: string, agentId: string | null, mode: ModeType, signal?: AbortSignal): Promise<Session> {

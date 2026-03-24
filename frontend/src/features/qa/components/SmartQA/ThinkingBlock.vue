@@ -10,30 +10,33 @@
               <Brain v-if="!isThinking" class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               <Loader2 v-else class="w-3.5 h-3.5 text-primary animate-spin" />
             </div>
-            
+
             <span class="text-xs font-medium" :class="isThinking ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'">
               {{ isThinking ? '正在思考...' : `思考过程 (${timeSpent || '已完成'})` }}
             </span>
           </div>
-          
-          <ChevronDown 
+
+          <ChevronDown
             class="w-4 h-4 text-muted-foreground/50 transition-transform duration-200"
             :class="isOpen ? 'rotate-180' : ''"
           />
         </button>
       </CollapsibleTrigger>
-      
-      <!-- 内容区域 -->
-      <CollapsibleContent class="px-4 pb-3 pt-1 text-sm text-muted-foreground font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
-        {{ content }}
-        <span v-if="isThinking" class="inline-block w-1.5 h-3.5 ml-1 bg-primary align-middle animate-pulse"></span>
+
+      <!-- 内容区域 — 固定最大高度，启用滚动 -->
+      <CollapsibleContent>
+        <div
+          ref="contentRef"
+          class="px-4 pb-3 pt-1 text-sm text-muted-foreground font-mono leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap max-h-64 custom-scrollbar"
+        >{{ content }}<span v-if="isThinking" class="inline-block w-1.5 h-3.5 ml-1 bg-primary align-middle animate-pulse"></span>
+        </div>
       </CollapsibleContent>
     </Collapsible>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import { Brain, ChevronDown, Loader2 } from 'lucide-vue-next';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
@@ -43,12 +46,22 @@ const props = defineProps<{
   timeSpent?: string;
 }>();
 
-// 默认在思考中展开，思考结束后根据用户偏好决定（这里默认收起）
 const isOpen = ref(true);
+const contentRef = ref<HTMLElement | null>(null);
+
+// Auto-scroll to bottom as new think tokens arrive
+watch(() => props.content, () => {
+  if (!props.isThinking) return;
+  nextTick(() => {
+    if (contentRef.value) {
+      contentRef.value.scrollTop = contentRef.value.scrollHeight;
+    }
+  });
+});
 
 watch(() => props.isThinking, (newVal, oldVal) => {
   if (oldVal && !newVal) {
-    // 当思考结束时，自动收起以节省空间（遵循尼尔森极简设计原则）
+    // 当思考结束时，自动收起以节省空间
     setTimeout(() => {
       isOpen.value = false;
     }, 1500);
@@ -58,7 +71,9 @@ watch(() => props.isThinking, (newVal, oldVal) => {
 
 <style scoped>
 .thinking-block {
-  /* 增加柔和的阴影和过渡 */
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 </style>

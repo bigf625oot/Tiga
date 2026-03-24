@@ -1,0 +1,112 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "TiGA Logo" [ref=e7]
+      - button [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+    - button "新建对话" [ref=e12] [cursor=pointer]:
+      - img [ref=e13]
+      - generic [ref=e14]: 新建对话
+    - generic [ref=e15]:
+      - button "任务" [active] [ref=e16] [cursor=pointer]
+      - button "智能体" [ref=e17] [cursor=pointer]
+      - button "知识中心" [ref=e18] [cursor=pointer]
+    - generic [ref=e20]:
+      - img "暂无任务记录" [ref=e22]
+      - heading "暂无任务记录" [level=3] [ref=e23]
+      - paragraph [ref=e24]: 点击左上角“新建对话”开始新的对话
+    - generic [ref=e26] [cursor=pointer]:
+      - generic [ref=e27]:
+        - img "Avatar" [ref=e28]
+        - img [ref=e30]
+      - generic [ref=e33]:
+        - paragraph [ref=e34]: 管理员
+        - paragraph [ref=e35]: 数字化转型部
+      - generic [ref=e36]:
+        - button [ref=e37]:
+          - img [ref=e38]
+        - button "Toggle theme" [ref=e41]:
+          - img [ref=e42]
+          - generic [ref=e48]: Toggle theme
+  - main [ref=e49]:
+    - generic [ref=e52]:
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - img [ref=e62]
+          - heading "让我们创造点厉害的东西！" [level=1] [ref=e68]
+        - generic [ref=e70]:
+          - button "秒懂 秒懂 大模型基于用户意图的自主执行 适合需求场景模糊的快速启动 AI秒懂 自动选择能力与流程，减少手动配置 点击进入" [ref=e71] [cursor=pointer]:
+            - generic [ref=e72]:
+              - generic [ref=e74]:
+                - generic [ref=e75]:
+                  - generic [ref=e76]:
+                    - img "秒懂" [ref=e78]
+                    - generic [ref=e79]:
+                      - generic [ref=e80]: 秒懂
+                      - generic [ref=e81]: 大模型基于用户意图的自主执行
+                  - img [ref=e83]
+                - generic [ref=e85]:
+                  - generic [ref=e86]: 适合需求场景模糊的快速启动
+                  - img [ref=e87]
+              - generic [ref=e90]:
+                - generic [ref=e91]: AI秒懂
+                - generic [ref=e92]: 自动选择能力与流程，减少手动配置
+                - generic [ref=e93]:
+                  - text: 点击进入
+                  - img [ref=e94]
+          - button "极客 极客 智能体自定义与精细控制 需求场景明确熟练使用智能体平台 手动 专业 自由选择 Quick / Solo / 团队 / 工作流 / Openclaw 点击选择" [ref=e96] [cursor=pointer]:
+            - generic [ref=e97]:
+              - generic [ref=e99]:
+                - generic [ref=e101]:
+                  - img "极客" [ref=e103]
+                  - generic [ref=e104]:
+                    - generic [ref=e105]: 极客
+                    - generic [ref=e106]: 智能体自定义与精细控制
+                - generic [ref=e107]:
+                  - generic [ref=e108]: 需求场景明确熟练使用智能体平台
+                  - img [ref=e109]
+              - generic [ref=e112]:
+                - generic [ref=e113]: 手动 专业
+                - generic [ref=e114]: 自由选择 Quick / Solo / 团队 / 工作流 / Openclaw
+                - generic [ref=e115]:
+                  - text: 点击选择
+                  - img [ref=e116]
+        - generic [ref=e118]:
+          - textbox "生成一份周报模板..." [ref=e119]
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - button [ref=e122] [cursor=pointer]:
+                - img [ref=e123]
+              - button "联网" [ref=e125] [cursor=pointer]:
+                - img [ref=e126]
+                - generic [ref=e129]: 联网
+              - generic [ref=e133]:
+                - generic [ref=e134]:
+                  - generic: Enter
+                  - generic [ref=e135]: 发送
+                - generic [ref=e136]:
+                  - generic: Shift + Enter
+                  - generic [ref=e137]: 换行
+            - generic [ref=e138] [cursor=pointer]:
+              - button [disabled]:
+                - img
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - img [ref=e142]
+            - heading "秒记列表" [level=3] [ref=e144]
+            - generic [ref=e145]: "0"
+          - button [ref=e146] [cursor=pointer]:
+            - img [ref=e147]
+        - generic [ref=e151]:
+          - img [ref=e152]
+          - paragraph [ref=e154]: 暂无摘录内容
+          - paragraph [ref=e155]: 点击消息上的书签图标进行摘录
+  - region "Notifications (F8)":
+    - list
+  - button [ref=e158] [cursor=pointer]:
+    - img [ref=e160]
+```

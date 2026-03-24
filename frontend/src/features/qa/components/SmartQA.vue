@@ -178,7 +178,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onErrorCaptured } from 'vue';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import { useTheme } from '@/composables/useTheme';
 import { useToast } from '@/components/ui/toast/use-toast';
@@ -303,6 +303,15 @@ const {
 const isTaskRunning = computed(() => isLoading.value || workflowStore.isRunning || isStreaming.value);
 const taskPanelRef = ref<any>(null);
 
+// Error boundary: ensure loading states always reset on unhandled Vue errors
+onErrorCaptured((err) => {
+  console.error('[SmartQA] Unhandled component error:', err);
+  isLoading.value = false;
+  isStreaming.value = false;
+  if (workflowStore.isRunning) workflowStore.isRunning = false;
+  return false; // let the error propagate to the console
+});
+
 const syncSessionAgent = async () => {
   const sid = currentSessionId.value;
   const aid = selectedAgentId.value;
@@ -337,10 +346,11 @@ const handleModeSelect = (m: ModeConfig) => {
   currentModeId.value = m.id;
   mode.value = m.value;
 
-  // 如果手动选择了“秒懂”模式 (auto)，我们需要确保下次加载会话时不会因为它有消息而强制切回 auto?
-  // 不，这里的逻辑是“加载会话”时的默认状态。手动切换是用户行为，优先级更高。
-  // 但这里只是处理点击事件。
-  
+  // 持久化模式到后端，确保刷新/重新打开时恢复正确模式
+  if (currentSessionId.value) {
+    chatService.updateSession(currentSessionId.value, { mode: m.value } as any).catch(() => {});
+  }
+
   // Reset agent selection logic
   if (m.id === 'quick') {
       const defaultAgent = agents.value.find(a => a.name === '通用' || a.name === '快问快答') || agents.value[0];
@@ -583,6 +593,8 @@ const onSendMessage = async () => {
           console.error(e);
           messages.value.push({ role: 'assistant', content: "Error: " + (e as Error).message });
           isLoading.value = false;
+          isStreaming.value = false;
+          if (workflowStore.isRunning) workflowStore.isRunning = false;
       }
   }
 };
@@ -652,17 +664,19 @@ const syncModeFromSession = () => {
     if (currentSession.value) {
         let sessionMode = (currentSession.value as any).mode;
         if (!sessionMode) return; // Fallback to defaults if no mode
-        
+
         // Backend 'plan' mode maps to frontend 'solo' mode (Self-Planning)
         if (sessionMode === 'plan') sessionMode = 'solo';
-        
+        // 'chat' / 'auto' are legacy/default values — map to 'quick' (快问快答)
+        if (sessionMode === 'chat' || sessionMode === 'auto') sessionMode = 'quick';
+
         // Try to match by value or id
         const matched = MODES.find(m => m.value === sessionMode || m.id === sessionMode);
-        
+
         if (matched) {
             mode.value = matched.value;
             currentModeId.value = matched.id;
-            
+
             // Also ensure layout matches mode
             if (matched.value === 'workflow' || matched.value === 'auto_task') {
                 isRightCollapsed.value = false;
@@ -675,7 +689,7 @@ const syncModeFromSession = () => {
             return;
         }
     }
-    
+
     // Fallback if no session or unknown mode
     const nextDefaults = getSmartQADefaults(currentSessionId.value, messages.value);
     mode.value = nextDefaults.mode;

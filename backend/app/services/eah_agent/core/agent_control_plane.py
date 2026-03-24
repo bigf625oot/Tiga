@@ -160,9 +160,12 @@ class AgnoControlPlane:
             logger.error(f"Control Plane Pipeline Failure: {e}", exc_info=True)
             yield {"type": "error", "content": f"System orchestration error: {str(e)}"}
         finally:
-            # Step 7: 非阻塞持久化 (Fire and Forget in Background)
-            # 响应已经发给用户了，后台慢慢存数据库
-            asyncio.create_task(self._finalize_session(ctx, aggregator))
+            # Step 7: 非阻塞持久化 — 使用新 session 避免请求 session 关闭竞态
+            content, reasoning, tools = aggregator.finalize()
+            if content or reasoning:
+                asyncio.create_task(self._finalize_session_safe(
+                    ctx.session_id, ctx.start_time, ctx.intent, content, reasoning, tools
+                ))
 
     async def _resolve_intent(self, ctx: OrchestrationContext) -> IntentResult:
         """带强制逻辑与超时回退的意图识别"""
@@ -241,26 +244,33 @@ class AgnoControlPlane:
         except Exception as e:
             logger.error(f"History init failed: {e}")
 
-    async def _finalize_session(self, ctx: OrchestrationContext, aggregator: StreamAggregator):
-        """收尾工作：保存回复、耗时统计、工具调用记录"""
-        content, reasoning, tools = aggregator.finalize()
-        if not content and not reasoning:
-            return
-
-        duration = int((time.time() - ctx.start_time) * 1000)
+    async def _finalize_session_safe(
+        self,
+        session_id: str,
+        start_time: float,
+        intent: Optional[IntentResult],
+        content: str,
+        reasoning: str,
+        tools: List[Dict[str, Any]],
+    ):
+        """收尾工作：用独立 session 保存回复，避免与请求 session 生命周期冲突"""
+        from app.db.session import AsyncSessionLocal
+        duration = int((time.time() - start_time) * 1000)
         try:
-            await ctx.history_manager.add_message(
-                ctx.session_id,
-                "assistant",
-                content,
-                reasoning_content=reasoning,
-                tool_calls=tools if tools else None,
-                meta_data={
-                    "duration_ms": duration,
-                    "intent": ctx.intent.intent.value if isinstance(ctx.intent.intent, Enum) else str(ctx.intent.intent),
-                }
-            )
-            logger.debug(f"Session {ctx.session_id} persisted in {duration}ms")
+            async with AsyncSessionLocal() as db:
+                history = SessionHistory(db)
+                await history.add_message(
+                    session_id,
+                    "assistant",
+                    content,
+                    reasoning_content=reasoning,
+                    tool_calls=tools if tools else None,
+                    meta_data={
+                        "duration_ms": duration,
+                        "intent": intent.intent.value if isinstance(intent.intent, Enum) else str(intent.intent) if intent else "unknown",
+                    }
+                )
+            logger.debug(f"Session {session_id} persisted in {duration}ms")
         except Exception as e:
             logger.error(f"Final persistence failed: {e}")
 
