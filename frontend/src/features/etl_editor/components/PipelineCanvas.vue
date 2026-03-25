@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, markRaw, nextTick } from 'vue';
 import { VueFlow, useVueFlow, type Node, type Edge, type Connection, MarkerType, type VueFlowStore } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
 import { usePipelineStore } from '../composables/usePipelineStore';
+import { usePipelineLayout, type PipelineLayoutMode } from '../composables/usePipelineLayout';
 import CustomNode from './CustomNode.vue';
 import { Button } from '@/components/ui/button';
-import { Play, Square, Save, Undo, Redo } from 'lucide-vue-next';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { LayoutGrid, Redo, Undo } from 'lucide-vue-next';
 import { useTheme } from '@/composables/useTheme';
+import type { NodeData } from '../types/pipeline';
 
 // Styles
 import '@vue-flow/core/dist/style.css';
@@ -18,16 +27,46 @@ import '@vue-flow/minimap/dist/style.css';
 // import '@vue-flow/background/dist/style.css';
 
 const store = usePipelineStore();
+const flow = useVueFlow();
+const { fitView } = flow;
 const { isLightMode } = useTheme();
+const { applyLayout, layoutLabels } = usePipelineLayout();
 let flowInstance: VueFlowStore | null = null;
 
 // Register node types
 const nodeTypes = {
-  custom: CustomNode,
+  custom: markRaw(CustomNode),
 };
 
 const onPaneReady = (instance: VueFlowStore) => {
   flowInstance = instance;
+};
+
+const applyQuickLayout = async (mode: PipelineLayoutMode) => {
+  const instanceNodes = (flowInstance?.getNodes?.value as any[] | undefined) ?? (flow.getNodes.value as any[] | undefined) ?? [];
+  const sizes: Record<string, { width: number; height: number }> = {};
+
+  if (instanceNodes?.length) {
+    for (const n of instanceNodes) {
+      const width = n?.dimensions?.width ?? n?.width;
+      const height = n?.dimensions?.height ?? n?.height;
+      if (n?.id && Number.isFinite(width) && Number.isFinite(height)) {
+        sizes[n.id] = { width, height };
+      }
+    }
+  }
+
+  store.nodes = await applyLayout({
+    mode,
+    nodes: store.nodes,
+    edges: store.edges,
+    nodeSizes: sizes,
+  });
+
+  await nextTick();
+  try {
+    await fitView({ padding: 0.2 });
+  } catch {}
 };
 
 // Handle connections
@@ -44,8 +83,8 @@ const onConnect = (params: Connection) => {
   const targetNode = store.nodes.find(n => n.id === params.target);
 
   if (sourceNode && targetNode) {
-    const sourceType = sourceNode.data.type;
-    const targetType = targetNode.data.type;
+    const sourceType = sourceNode.data?.type;
+    const targetType = targetNode.data?.type;
 
     // Rules:
     // 1. Source cannot be a target (handled by handle type usually, but double check)
@@ -57,15 +96,17 @@ const onConnect = (params: Connection) => {
     if (targetType === 'source') return; // Source cannot be target
   }
 
-  flowInstance.addEdges([{
+  const newEdge: Edge = {
     ...params,
+    id: `vueflow__edge-${params.source}${params.sourceHandle || ''}-${params.target}${params.targetHandle || ''}`,
     animated: true,
     style: { 
       stroke: isLightMode.value ? '#94a3b8' : '#475569', 
       strokeWidth: 2 
     },
     markerEnd: MarkerType.ArrowClosed,
-  }]);
+  };
+  flowInstance.addEdges([newEdge]);
 };
 
 const onDragOver = (event: DragEvent) => {
@@ -102,7 +143,7 @@ const onDrop = (event: DragEvent) => {
   });
 
   // Create a new node
-  const newNode: Node = {
+  const newNode: Node<NodeData> = {
     id: `node_${Date.now()}`,
     type: 'custom',
     position, 
@@ -140,6 +181,9 @@ const edgeOptions = computed(() => ({
       :min-zoom="0.2"
       :max-zoom="4"
       :default-edge-options="edgeOptions"
+      :elevate-nodes-on-select="false"
+      :elevate-edges-on-select="false"
+      :only-render-visible-elements="true"
       fit-view-on-init
       class="etl-flow"
       @pane-ready="onPaneReady"
@@ -158,6 +202,37 @@ const edgeOptions = computed(() => ({
       
       <!-- Controls Panel -->
       <div class="absolute top-4 right-4 flex gap-2 p-1.5 bg-background/80 backdrop-blur border border-border rounded-lg shadow-sm z-10">
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="ghost" size="icon" class="h-8 w-8" title="快捷布局">
+              <LayoutGrid class="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="applyQuickLayout('dagre-lr')">
+              {{ layoutLabels['dagre-lr'] }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="applyQuickLayout('dagre-tb')">
+              {{ layoutLabels['dagre-tb'] }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="applyQuickLayout('elk-lr')">
+              {{ layoutLabels['elk-lr'] }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="applyQuickLayout('elk-tb')">
+              {{ layoutLabels['elk-tb'] }}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="applyQuickLayout('force')">
+              {{ layoutLabels.force }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="applyQuickLayout('grid')">
+              {{ layoutLabels.grid }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="applyQuickLayout('circle')">
+              {{ layoutLabels.circle }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button variant="ghost" size="icon" class="h-8 w-8" @click="store.undo" :disabled="!store.canUndo">
           <Undo class="w-4 h-4" />
         </Button>

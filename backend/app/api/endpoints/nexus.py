@@ -14,7 +14,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.services.eah_agent.core.nexus_executor import NexusExecutor
+from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
+from app.schemas.agent_event import AgentEvent
 
 router = APIRouter()
 logger = logging.getLogger("eah.api.nexus")
@@ -61,18 +62,21 @@ async def stream_run(
       重连时传入 resume_from=<上次收到的 Redis Stream ID>，
       服务端从 Redis 回放历史事件，然后继续执行（若任务仍在运行）。
     """
-    executor = NexusExecutor(
-        agent_run_id=agent_run_id,
-        session_id=session_id,
-        db=db,
-        user_goal=user_goal,
-        resume_from=resume_from,
-    )
+    control_plane = AgnoControlPlane()
 
     async def event_generator():
         try:
-            async for event in executor.stream():
-                yield event.sse_encode()
+            # TODO: Convert the raw stream dicts to AgentEvent before encoding if necessary
+            async for chunk in control_plane.process_stream(
+                user_input=user_goal,
+                db=db,
+                session_id=session_id,
+                # Nexus legacy args
+                agent_run_id=agent_run_id,
+                resume_from=resume_from,
+            ):
+                import json
+                yield f"data: {json.dumps(chunk)}\n\n"
         except Exception as exc:
             logger.exception(f"[NexusSSE] run={agent_run_id} error: {exc}")
             yield f'data: {{"type":"error","content":"{exc}","agent_run_id":"{agent_run_id}"}}\n\n'

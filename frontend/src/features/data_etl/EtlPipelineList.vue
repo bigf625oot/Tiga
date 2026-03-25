@@ -275,7 +275,7 @@ import EtlPipelineCard from './components/EtlPipelineCard.vue';
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
-const emit = defineEmits(['create', 'edit']);
+const emit = defineEmits(['create', 'edit', 'back', 'viewDetail', 'navigate', 'navigateToExtraction']);
 const { toast } = useToast();
 const pipelineStore = usePipelineStore();
 

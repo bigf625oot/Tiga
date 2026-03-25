@@ -17,7 +17,7 @@ const props = defineProps<{
   pipelineId?: number;
 }>();
 
-const emit = defineEmits(['back']);
+const emit = defineEmits(['back', 'viewDetail', 'navigate', 'navigateToExtraction', 'create', 'edit']);
 const searchQuery = ref('');
 const store = usePipelineStore();
 const isSidebarOpen = ref(true);

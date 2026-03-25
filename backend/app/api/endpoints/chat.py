@@ -164,126 +164,66 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
 
     # Use SSE
     async def sse_generator():
-        if is_planning_mode:
-            # ── NexusExecutor 路径：规划型任务 ────────────────────────────
-            from app.services.eah_agent.core.nexus_executor import NexusExecutor
-            agent_run_id = str(uuid.uuid4())
+        # ── AgnoControlPlane 路径：支持所有模式 ──
+        await crud_chat.create_message(db, session_id, "user", request.message)
 
-            # 1. 持久化用户消息
-            await crud_chat.create_message(db, session_id, "user", request.message)
+        text_parts: List[str] = []
+        think_parts: List[str] = []
+        cp_stream_events: List[Dict[str, Any]] = []
 
-            # 2. 立即推送 meta，前端拿到 agent_run_id 可开始渲染
-            yield format_sse_json("meta", {"agent_run_id": agent_run_id, "session_id": session_id})
+        async for chunk in control_plane.process_stream(
+            user_input=request.message,
+            db=db,
+            session_id=session_id,
+            agent_id=effective_agent_id,
+            mode=effective_mode,
+            intent_override=request.intent,
+            persist_user_message=False,
+            persist_assistant_message=False,
+            doc_ids=doc_ids,
+            enable_search=request.enable_search,
+            enable_reasoning=request.enable_reasoning,
+            strict_mode=effective_strict_mode,
+            threshold=request.threshold,
+            debug=request.debug,
+            ab_variant=request.ab_variant,
+            attachments=request.attachments,
+            attachment_context=kb_scope_context,
+        ):
+            event_type = chunk.get("type", "message")
+            if event_type == "content":
+                sse_event = "text"
+                chunk_data = chunk.get("content", "")
+                text_parts.append(chunk_data)
+            elif event_type == "think":
+                sse_event = "think"
+                chunk_data = chunk.get("content", "")
+                think_parts.append(chunk_data)
+            elif event_type == "chart":
+                sse_event = "chart"
+                chunk_data = chunk
+            elif event_type == "status":
+                sse_event = "status"
+                chunk_data = chunk
+            elif event_type == "error":
+                sse_event = "error"
+                chunk_data = chunk
+            else:
+                sse_event = event_type
+                chunk_data = chunk
 
-            # 3. 收集流式事件，用于事后持久化
-            thought_parts: List[str] = []
-            summary_parts: List[str] = []
-            tool_calls_log: List[Dict[str, Any]] = []
-            stream_events_log: List[Dict[str, Any]] = []
-            artifacts_log: List[Dict[str, Any]] = []
+            cp_stream_events.append({"type": sse_event, "content": chunk_data})
+            yield format_sse_json(sse_event, chunk_data)
 
-            executor = NexusExecutor(
-                agent_run_id=agent_run_id,
-                session_id=session_id,
-                db=db,
-                user_goal=request.message,
-            )
-            async for evt in executor.stream():
-                yield f"event: {evt.type.value}\ndata: {evt.model_dump_json()}\n\n"
-                # 收集事件用于持久化
-                evt_type = evt.type.value
-                content = evt.content
-                if evt_type == "thought" and isinstance(content, str):
-                    thought_parts.append(content)
-                elif evt_type == "summary" and isinstance(content, str):
-                    summary_parts.append(content)
-                elif evt_type == "tool_call":
-                    tool_calls_log.append(content if isinstance(content, dict) else {})
-                elif evt_type == "artifact":
-                    artifacts_log.append(content if isinstance(content, dict) else {})
-                # 所有事件都记录到 stream_events（供历史回放渲染）
-                stream_events_log.append({
-                    "type": evt_type,
-                    "content": content,
-                    "task_id": evt.task_id,
-                    "elapsed_ms": evt.elapsed_ms,
-                })
-
-            # 4. 持久化助手消息
-            reasoning_content = "".join(thought_parts) or None
-            final_content = "".join(summary_parts) or None
-            await crud_chat.create_message(
-                db,
-                session_id,
-                "assistant",
-                final_content or "",
-                meta_data={
-                    "agent_run_id": agent_run_id,
-                    "stream_events": stream_events_log,
-                    "artifacts": artifacts_log,
-                    "tool_calls": tool_calls_log,
-                },
-                reasoning_content=reasoning_content,
-            )
-        else:
-            # ── AgnoControlPlane 路径：快问快答 / 数据查询等模式 ──
-            await crud_chat.create_message(db, session_id, "user", request.message)
-
-            text_parts: List[str] = []
-            think_parts: List[str] = []
-            cp_stream_events: List[Dict[str, Any]] = []
-
-            async for chunk in control_plane.process_stream(
-                user_input=request.message,
-                db=db,
-                session_id=session_id,
-                agent_id=effective_agent_id,
-                mode=effective_mode,
-                intent_override=request.intent,
-                doc_ids=doc_ids,
-                enable_search=request.enable_search,
-                enable_reasoning=request.enable_reasoning,
-                strict_mode=effective_strict_mode,
-                threshold=request.threshold,
-                debug=request.debug,
-                ab_variant=request.ab_variant,
-                attachments=request.attachments,
-                attachment_context=kb_scope_context,
-            ):
-                event_type = chunk.get("type", "message")
-                if event_type == "content":
-                    sse_event = "text"
-                    chunk_data = chunk.get("content", "")
-                    text_parts.append(chunk_data)
-                elif event_type == "think":
-                    sse_event = "think"
-                    chunk_data = chunk.get("content", "")
-                    think_parts.append(chunk_data)
-                elif event_type == "chart":
-                    sse_event = "chart"
-                    chunk_data = chunk
-                elif event_type == "status":
-                    sse_event = "status"
-                    chunk_data = chunk
-                elif event_type == "error":
-                    sse_event = "error"
-                    chunk_data = chunk
-                else:
-                    sse_event = event_type
-                    chunk_data = chunk
-
-                cp_stream_events.append({"type": sse_event, "content": chunk_data})
-                yield format_sse_json(sse_event, chunk_data)
-
-            # 持久化 chat 模式助手消息
-            await crud_chat.create_message(
-                db,
-                session_id,
-                "assistant",
-                "".join(text_parts),
-                meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
-                reasoning_content="".join(think_parts) or None,
-            )
+        # 持久化助手消息
+        await crud_chat.create_message(
+            db,
+            session_id,
+            "assistant",
+            "".join(text_parts),
+            meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
+            reasoning_content="".join(think_parts) or None,
+        )
 
         yield format_sse_json("done", "[DONE]")
 
@@ -454,18 +394,13 @@ async def resume_stream(
     前端断线后携带 agent_run_id 和最后一条事件的 Redis ID 调用此接口，
     服务端从 Redis Stream 中重放该位置之后的所有事件。
     """
-    from app.services.eah_agent.core.nexus_executor import NexusExecutor
+    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
+    
+    control_plane = AgnoControlPlane()
 
     async def sse_gen():
-        executor = NexusExecutor(
-            agent_run_id=agent_run_id,
-            session_id=session_id,
-            db=db,
-            user_goal="",  # 回放模式不需要重新执行
-            resume_from=resume_from,
-        )
-        async for evt in executor.stream():
-            yield f"event: {evt.type.value}\ndata: {evt.model_dump_json()}\n\n"
+        # TODO: Handle replay from control plane if needed
+        # Fallback to just sending done for now
         yield format_sse_json("done", "[DONE]")
 
     return StreamingResponse(

@@ -336,7 +336,7 @@ onMounted(async () => {
               <div class="space-y-2">
                 <Label>选择模型 (Model)</Label>
                 <Select 
-                  :model-value="node.data?.config?.model_id"
+                  :model-value="node?.data?.config?.model_id"
                   @update:model-value="(v) => updateConfig('model_id', v)"
                 >
                   <SelectTrigger class="h-10">
@@ -360,7 +360,7 @@ onMounted(async () => {
                   <Label>向量维度</Label>
                   <Input 
                     type="number" 
-                    :model-value="node.data?.config?.dimension ?? 1536"
+                    :model-value="node?.data?.config?.dimension ?? 1536"
                     @update:model-value="(v) => updateConfig('dimension', parseInt(v as string))"
                   />
                 </div>
@@ -368,7 +368,7 @@ onMounted(async () => {
                   <Label>批处理大小</Label>
                   <Input 
                     type="number" 
-                    :model-value="node.data?.config?.batch_size ?? 32"
+                    :model-value="node?.data?.config?.batch_size ?? 32"
                     @update:model-value="(v) => updateConfig('batch_size', parseInt(v as string))"
                   />
                 </div>

@@ -12,7 +12,8 @@
       >
         <div v-if="!imageError" class="w-full h-full rounded-xl overflow-hidden bg-white flex items-center justify-center p-1">
             <img 
-                :src="getProviderLogo(item.provider)" 
+                :key="providerLogoSrc"
+                :src="providerLogoSrc" 
                 class="w-full h-full object-contain"
                 alt="provider logo"
                 @error="imageError = true"
@@ -22,10 +23,10 @@
         
         <!-- Country Flag -->
         <img 
-            v-if="getProviderCountry(item.provider)"
-            :src="`/flags/${getProviderCountry(item.provider)}.svg`" 
+            v-if="providerCountry"
+            :src="`/flags/${providerCountry}.svg`" 
             class="absolute -bottom-1 -right-1 w-[18px] h-[13px] rounded-[2px] shadow-sm border border-muted/50 object-cover"
-            :alt="getProviderCountry(item.provider)"
+            :alt="providerCountry"
         />
       </div>
 
@@ -111,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { 
   MoreVertical, 
   Edit2, 
@@ -157,6 +158,16 @@ const props = defineProps<{
 defineEmits(['edit', 'delete', 'toggle-status', 'test']);
 
 const imageError = ref(false);
+const providerLogoSrc = computed(() => getProviderLogo(props.item.provider));
+const providerCountry = computed(() => getProviderCountry(props.item.provider));
+
+watch(
+  () => props.item.provider,
+  () => {
+    imageError.value = false;
+  },
+  { immediate: true }
+);
 
 const formatDate = (date: string) => {
     return dayjs(date).format('YYYY-MM-DD');
@@ -188,7 +199,7 @@ const getProviderLogo = (provider: string) => {
         'nebius': 'nebius',
         'vertexai': 'vertexai'
     };
-    const key = provider?.toLowerCase() || '';
+    const key = provider?.toLowerCase().trim() || '';
     const logoName = providerMap[key] || key;
     return `/flags/llm/${logoName}.svg`;
 };
@@ -215,7 +226,7 @@ const getProviderCountry = (provider: string) => {
         'dashscope': 'cn',
         'deepseek': 'cn'
     };
-    const key = provider?.toLowerCase() || '';
+    const key = provider?.toLowerCase().trim() || '';
     return countryMap[key] || '';
 };
 </script>

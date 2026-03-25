@@ -14,13 +14,6 @@ from app.services.eah_agent.core.agent_stream_adapter import AgnoStreamAdapter
 from app.services.eah_agent.storage.session_history import SessionHistory
 from app.services.rag.retrieval.engines.lightrag import lightrag_engine
 
-# Handlers (Strategy Pattern)
-from app.services.eah_agent.handlers.quick_handler import QuickHandler
-from app.services.eah_agent.handlers.plan_handler import PlanHandler
-from app.services.eah_agent.handlers.team_handler import TeamHandler
-from app.services.eah_agent.handlers.flow_handler import FlowHandler
-from app.services.eah_agent.handlers.data_handler import DataHandler
-
 logger = logging.getLogger("agno.control_plane")
 
 @dataclass
@@ -72,15 +65,6 @@ class AgnoControlPlane:
 
     def __init__(self, llm_model: Optional[LLMModel] = None):
         self.llm_model = llm_model
-        # 处理器映射 (Strategy Registry)
-        self._handlers = {
-            "chat": QuickHandler(llm_model),
-            "task": PlanHandler(llm_model),
-            "team": TeamHandler(llm_model),
-            "workflow": FlowHandler(llm_model),
-            "data_query": DataHandler(llm_model),
-            "kg_qa": DataHandler(llm_model)
-        }
 
     async def stop(self) -> None:
         return None
@@ -117,6 +101,8 @@ class AgnoControlPlane:
         """
         ctx = OrchestrationContext(user_input=user_input, db=db, session_id=session_id, kwargs=kwargs)
         aggregator = StreamAggregator()
+        persist_user_message = bool(ctx.kwargs.get("persist_user_message", True))
+        persist_assistant_message = bool(ctx.kwargs.get("persist_assistant_message", True))
 
         try:
             # Step 1: 预热 (模型解析)
@@ -141,20 +127,16 @@ class AgnoControlPlane:
             augmented_input = self._build_prompt(ctx)
 
             # Step 6: 路由分发与流式输出
-            intent_key = ctx.intent.intent.value if isinstance(ctx.intent.intent, Enum) else str(ctx.intent.intent)
-            handler = self._handlers.get(intent_key, self._handlers["chat"])
+            from app.services.eah_agent.core.mode_router import ModeRouter
+            router = ModeRouter(self.llm_model)
+            executor, intent = await router.route_request(ctx.user_input, db, kwargs)
             
-            logger.info(f"Routing to {handler.__class__.__name__} for intent {intent_key}")
+            logger.info(f"Routing to {executor.__class__.__name__} for intent {intent.intent}")
 
-            raw_stream = handler.process(augmented_input, ctx.intent, db=db, session_id=session_id, **kwargs)
-            adapter = AgnoStreamAdapter(extract_charts=True)
+            raw_stream = executor.execute(augmented_input, intent, db=db, session_id=session_id, **kwargs)
             async for chunk in raw_stream:
-                async for event in adapter.to_standard_events(chunk):
-                    aggregator.consume(event)
-                    yield event
-            async for event in adapter.flush():
-                aggregator.consume(event)
-                yield event
+                aggregator.consume(chunk)
+                yield chunk
 
         except Exception as e:
             logger.error(f"Control Plane Pipeline Failure: {e}", exc_info=True)
@@ -162,7 +144,7 @@ class AgnoControlPlane:
         finally:
             # Step 7: 非阻塞持久化 — 使用新 session 避免请求 session 关闭竞态
             content, reasoning, tools = aggregator.finalize()
-            if content or reasoning:
+            if persist_assistant_message and (content or reasoning):
                 asyncio.create_task(self._finalize_session_safe(
                     ctx.session_id, ctx.start_time, ctx.intent, content, reasoning, tools
                 ))
@@ -240,7 +222,8 @@ class AgnoControlPlane:
                 user_id="system_user", 
                 agent_id=ctx.kwargs.get("agent_id")
             )
-            await ctx.history_manager.add_message(ctx.session_id, "user", ctx.user_input)
+            if bool(ctx.kwargs.get("persist_user_message", True)):
+                await ctx.history_manager.add_message(ctx.session_id, "user", ctx.user_input)
         except Exception as e:
             logger.error(f"History init failed: {e}")
 
@@ -279,9 +262,6 @@ class AgnoControlPlane:
         if not self.llm_model:
             from app.services.llm.resolver import resolve_chat_llm_model
             self.llm_model = await resolve_chat_llm_model(db)
-            # 更新所有 Handler 的引用
-            for h in self._handlers.values():
-                h.llm_model = self.llm_model
 
     def _get_forced_intent(self, kwargs: Dict) -> Optional[str]:
         """从请求参数中提取强制意图或模式"""

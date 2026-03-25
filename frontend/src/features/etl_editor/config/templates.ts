@@ -1,16 +1,15 @@
-import { NodeType, SourceType, TransformType, SinkType } from '../types/pipeline';
-import type { Node, Edge } from '@vue-flow/core';
+import { NodeType, SourceType, TransformType, SinkType, type PipelineNode, type PipelineEdge } from '../types/pipeline';
 
 export interface PipelineTemplate {
   id: string;
   name: string;
   description: string;
   icon: string;
-  nodes: Node[];
-  edges: Edge[];
+  nodes: PipelineNode[];
+  edges: PipelineEdge[];
 }
 
-const createNode = (id: string, type: NodeType, subType: string, label: string, position: { x: number, y: number }) => ({
+const createNode = (id: string, type: NodeType, subType: string, label: string, position: { x: number, y: number }): PipelineNode => ({
   id,
   type: 'custom',
   position,
@@ -22,7 +21,7 @@ const createNode = (id: string, type: NodeType, subType: string, label: string, 
   }
 });
 
-const createEdge = (source: string, target: string) => ({
+const createEdge = (source: string, target: string): PipelineEdge => ({
   id: `e${source}-${target}`,
   source,
   target,

@@ -67,6 +67,21 @@ export interface NodeData {
   color?: string;
 }
 
+export type PipelineNode = {
+  id: string;
+  type?: string;
+  position: { x: number; y: number };
+  data?: NodeData;
+  [key: string]: any;
+};
+
+export type PipelineEdge = {
+  id: string;
+  source: string;
+  target: string;
+  [key: string]: any;
+};
+
 export interface LogEntry {
   timestamp: string;
   level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
@@ -94,8 +109,8 @@ export interface Pipeline {
   description?: string;
   status: PipelineStatus;
   dag_config?: {
-    nodes: any[]; // Vue Flow Nodes
-    edges: any[]; // Vue Flow Edges
+    nodes: PipelineNode[];
+    edges: PipelineEdge[];
   };
   schedule_config?: ScheduleConfig;
   created_at: string;
@@ -107,8 +122,8 @@ export interface PipelineCreate {
   name: string;
   description?: string;
   dag_config: {
-    nodes: any[];
-    edges: any[];
+    nodes: PipelineNode[];
+    edges: PipelineEdge[];
   };
   schedule_config?: ScheduleConfig;
 }
@@ -116,8 +131,8 @@ export interface PipelineCreate {
 export interface PipelineUpdate {
   description?: string;
   dag_config?: {
-    nodes: any[];
-    edges: any[];
+    nodes: PipelineNode[];
+    edges: PipelineEdge[];
   };
   schedule_config?: ScheduleConfig;
 }

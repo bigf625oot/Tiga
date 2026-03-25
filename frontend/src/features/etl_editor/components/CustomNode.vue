@@ -5,7 +5,7 @@ import { NodeToolbar } from '@vue-flow/node-toolbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { NodeData, NodeType, SourceType, TransformType, SinkType } from '../types/pipeline';
-import { Database, FileJson, ArrowRightLeft, Save, AlertCircle, PlayCircle, Copy, Trash2, Settings2 } from 'lucide-vue-next';
+import { Database, FileJson, ArrowRightLeft, Save, AlertCircle, Copy, Trash2, Settings2 } from 'lucide-vue-next';
 import { cn } from '@/lib/utils';
 import { usePipelineStore } from '../composables/usePipelineStore';
 

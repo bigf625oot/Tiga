@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import uuid
 import urllib.request
@@ -193,10 +194,12 @@ def main() -> None:
         "analysis": analyze_tc_pl_02(events2),
     }
 
-    out_path = "d:/Tiga/workspace/solo_mode_tc_report.json"
+    out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "solo_mode_tc_report.json")
+    
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-    print(out_path)
+        json.dump(report, f, ensure_ascii=False, indent=4)
+    
+    print(f"\n[Done] Test run finished. Report saved to {out_path}")
 
 
 if __name__ == "__main__":

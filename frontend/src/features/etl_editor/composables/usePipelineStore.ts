@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref, computed, type ComputedRef } from 'vue';
+import { ref, computed } from 'vue';
 import { pipelineApi } from '../api/pipeline';
-import { type Pipeline, type PipelineCreate, type PipelineUpdate, type NodeData, PipelineStatus } from '../types/pipeline';
-import type { Node, Edge } from '@vue-flow/core';
+import { type Pipeline, type PipelineCreate, type PipelineUpdate, type NodeData, type PipelineNode, type PipelineEdge, PipelineStatus } from '../types/pipeline';
 
 export const usePipelineStore = defineStore('pipeline', () => {
   const pipelines = ref<Pipeline[]>([]);
@@ -10,9 +9,13 @@ export const usePipelineStore = defineStore('pipeline', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  type FlowNode = PipelineNode;
+  type FlowEdge = PipelineEdge;
+  type SelectedNode = PipelineNode;
+
   // Vue Flow State
-  const nodes = ref<any[]>([]);
-  const edges = ref<any[]>([]);
+  const nodes = ref<FlowNode[]>([]);
+  const edges = ref<FlowEdge[]>([]);
   const selectedNodeId = ref<string | null>(null);
 
   const isRunning = computed(() => currentPipeline.value?.status === PipelineStatus.RUNNING);
@@ -25,10 +28,6 @@ export const usePipelineStore = defineStore('pipeline', () => {
     if (!targetId) return;
     
     pollTimer = setInterval(async () => {
-      // If we are viewing a different pipeline, stop polling for the old one?
-      // Or we only poll for the currentPipeline.
-      // If id is provided, it means we might be polling for a background pipeline?
-      // For now, let's stick to polling for currentPipeline if it matches.
       
       if (!currentPipeline.value) {
           stopPolling();
@@ -54,11 +53,13 @@ export const usePipelineStore = defineStore('pipeline', () => {
              const localNodeIndex = nodes.value.findIndex(n => n.id === remoteNode.id);
              if (localNodeIndex !== -1 && remoteNode.data) {
                const localNode = nodes.value[localNodeIndex];
-               // Avoid deep merge that might confuse TS
-               nodes.value[localNodeIndex].data = {
-                 ...(localNode.data as any),
-                 status: remoteNode.data.status,
-                 metrics: remoteNode.data.metrics
+               nodes.value[localNodeIndex] = {
+                 ...localNode,
+                 data: {
+                   ...(localNode.data ?? {}),
+                   status: remoteNode.data.status,
+                   metrics: remoteNode.data.metrics,
+                 },
                };
              }
            });
@@ -81,11 +82,13 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   };
   
-  const selectedNode = computed<any>(() => {
-    const list = nodes.value as unknown as Array<any>;
+  const selectedNode = computed<SelectedNode | null>(() => {
     const id = selectedNodeId.value;
-    const found = list.find((n: any) => n?.id === id);
-    return found || null;
+    if (!id) return null;
+    for (const n of nodes.value) {
+      if (n.id === id) return n as unknown as SelectedNode;
+    }
+    return null;
   });
 
   // Actions
@@ -94,14 +97,16 @@ export const usePipelineStore = defineStore('pipeline', () => {
   };
 
   const updateNodeData = (id: string, data: Partial<NodeData>) => {
-    const node = nodes.value.find(n => n.id === id);
-    if (node) {
-      node.data = { ...node.data, ...data };
-    }
+    nodes.value = nodes.value.map(n => {
+      if (n.id === id) {
+        return { ...n, data: { ...(n.data ?? {}), ...data } } as FlowNode;
+      }
+      return n;
+    });
   };
 
-  const addNode = (node: any) => {
-    nodes.value.push(node);
+  const addNode = (node: FlowNode) => {
+    nodes.value = [...nodes.value, node];
     // Auto save or mark dirty?
   };
 
@@ -130,8 +135,8 @@ export const usePipelineStore = defineStore('pipeline', () => {
       const pipeline = await pipelineApi.get(id);
       currentPipeline.value = pipeline;
       if (pipeline.dag_config) {
-        nodes.value = pipeline.dag_config.nodes || [];
-        edges.value = pipeline.dag_config.edges || [];
+        nodes.value = (pipeline.dag_config.nodes || []) as FlowNode[];
+        edges.value = (pipeline.dag_config.edges || []) as FlowEdge[];
       } else {
         nodes.value = [];
         edges.value = [];
@@ -256,7 +261,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
   };
 
   // Version Control State
-  const versions = ref<{ id: string; name: string; timestamp: number; data: { nodes: any[]; edges: any[] } }[]>([]);
+  const versions = ref<{ id: string; name: string; timestamp: number; data: { nodes: FlowNode[]; edges: FlowEdge[] } }[]>([]);
 
   const createVersion = (name: string) => {
     const newVersion = {
@@ -264,8 +269,8 @@ export const usePipelineStore = defineStore('pipeline', () => {
       name: name || `Version ${versions.value.length + 1}`,
       timestamp: Date.now(),
       data: {
-        nodes: JSON.parse(JSON.stringify(nodes.value)),
-        edges: JSON.parse(JSON.stringify(edges.value))
+        nodes: JSON.parse(JSON.stringify(nodes.value)) as FlowNode[],
+        edges: JSON.parse(JSON.stringify(edges.value)) as FlowEdge[]
       }
     };
     versions.value.unshift(newVersion); // Add to top
@@ -275,17 +280,17 @@ export const usePipelineStore = defineStore('pipeline', () => {
   const restoreVersion = (versionId: string) => {
     const version = versions.value.find(v => v.id === versionId);
     if (version) {
-      nodes.value = JSON.parse(JSON.stringify(version.data.nodes));
-      edges.value = JSON.parse(JSON.stringify(version.data.edges));
+      nodes.value = JSON.parse(JSON.stringify(version.data.nodes)) as FlowNode[];
+      edges.value = JSON.parse(JSON.stringify(version.data.edges)) as FlowEdge[];
       return true;
     }
     return false;
   };
 
-  const initializeTemplate = (templateNodes: any[], templateEdges: any[]) => {
+  const initializeTemplate = (templateNodes: FlowNode[], templateEdges: FlowEdge[]) => {
     currentPipeline.value = null; // Reset current pipeline
-    nodes.value = JSON.parse(JSON.stringify(templateNodes));
-    edges.value = JSON.parse(JSON.stringify(templateEdges));
+    nodes.value = JSON.parse(JSON.stringify(templateNodes)) as FlowNode[];
+    edges.value = JSON.parse(JSON.stringify(templateEdges)) as FlowEdge[];
     versions.value = []; // Reset history
   };
 

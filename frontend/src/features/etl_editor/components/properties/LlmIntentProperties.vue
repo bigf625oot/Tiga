@@ -36,7 +36,7 @@ onMounted(async () => {
     <div class="space-y-2">
       <Label>模型 (Model)</Label>
       <Select 
-        :model-value="node.data?.config?.model"
+        :model-value="node?.data?.config?.model"
         @update:model-value="(v) => updateConfig('model', v)"
       >
         <SelectTrigger>
@@ -58,7 +58,7 @@ onMounted(async () => {
       <textarea 
         placeholder="你是一个意图识别助手..." 
         class="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono text-xs"
-        :value="node.data?.config?.prompt_template"
+        :value="node?.data?.config?.prompt_template"
         @input="(e) => updateConfig('prompt_template', (e.target as HTMLTextAreaElement).value)"
       />
       <p class="text-xs text-muted-foreground" v-pre>使用 {{text}} 作为输入变量占位符。</p>
@@ -70,7 +70,7 @@ onMounted(async () => {
       <textarea 
         placeholder='[{"input": "退款", "intent": "refund"}]' 
         class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono text-xs"
-        :value="node.data?.config?.few_shot_examples"
+        :value="node?.data?.config?.few_shot_examples"
         @input="(e) => updateConfig('few_shot_examples', (e.target as HTMLTextAreaElement).value)"
       />
     </div>
@@ -81,7 +81,7 @@ onMounted(async () => {
       <textarea 
         placeholder='{"type": "object", "properties": {"intent": {"type": "string"}}}' 
         class="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono text-xs"
-        :value="node.data?.config?.output_schema"
+        :value="node?.data?.config?.output_schema"
         @input="(e) => updateConfig('output_schema', (e.target as HTMLTextAreaElement).value)"
       />
     </div>
@@ -94,10 +94,10 @@ onMounted(async () => {
           <div class="space-y-2">
             <div class="flex justify-between">
               <Label>温度 (Temperature)</Label>
-              <span class="text-xs text-muted-foreground">{{ node.data?.config?.temperature ?? 0.7 }}</span>
+              <span class="text-xs text-muted-foreground">{{ node?.data?.config?.temperature ?? 0.7 }}</span>
             </div>
             <Slider 
-              :model-value="[node.data?.config?.temperature ?? 0.7]"
+              :model-value="[node?.data?.config?.temperature ?? 0.7]"
               :max="2" :step="0.1"
               @update:model-value="(v) => updateConfig('temperature', v?.[0])"
             />
@@ -106,10 +106,10 @@ onMounted(async () => {
           <div class="space-y-2">
              <div class="flex justify-between">
               <Label>Top P</Label>
-              <span class="text-xs text-muted-foreground">{{ node.data?.config?.top_p ?? 1.0 }}</span>
+              <span class="text-xs text-muted-foreground">{{ node?.data?.config?.top_p ?? 1.0 }}</span>
             </div>
             <Slider 
-              :model-value="[node.data?.config?.top_p ?? 1.0]"
+              :model-value="[node?.data?.config?.top_p ?? 1.0]"
               :max="1" :step="0.05"
               @update:model-value="(v) => updateConfig('top_p', v?.[0])"
             />
@@ -119,7 +119,7 @@ onMounted(async () => {
             <Label>最大 Token (Max Tokens)</Label>
             <Input 
               type="number" 
-              :model-value="node.data?.config?.max_tokens ?? 1024"
+              :model-value="node?.data?.config?.max_tokens ?? 1024"
               @update:model-value="(v) => updateConfig('max_tokens', parseInt(v as string))"
             />
           </div>
@@ -128,7 +128,7 @@ onMounted(async () => {
             <Label>超时时间 (Timeout ms)</Label>
              <Input 
               type="number" 
-              :model-value="node.data?.config?.timeout ?? 3000"
+              :model-value="node?.data?.config?.timeout ?? 3000"
               @update:model-value="(v) => updateConfig('timeout', parseInt(v as string))"
             />
           </div>
@@ -136,7 +136,7 @@ onMounted(async () => {
           <div class="flex items-center justify-between space-x-2">
             <Label>启用 A/B 测试 (A/B Testing)</Label>
             <Switch 
-              :checked="node.data?.config?.ab_testing_enabled ?? false"
+              :checked="node?.data?.config?.ab_testing_enabled ?? false"
               @update:checked="(v) => updateConfig('ab_testing_enabled', v)"
             />
           </div>

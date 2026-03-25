@@ -120,6 +120,7 @@ async def run_workflow(request: WorkflowRunRequest, db: AsyncSession = Depends(g
             agent_id=request.agent_id,
             mode=request.mode,
             history=history,
+            persist_user_message=False,
             **request.params
         )
         return {"status": "success", "output": result}
@@ -152,6 +153,7 @@ async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = De
                 agent_id=request.agent_id,
                 mode=request.mode,
                 history=history,
+                persist_user_message=False,
                 **request.params
             ):
                 if event is not None:
