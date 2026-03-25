@@ -168,9 +168,17 @@ def run_script(
     """
     if platform.system() == "Windows":
         cmd = _build_windows_command(script_path, args or [])
+        # Allow shell execution for scripts without shebangs
+        shell = True if not parse_shebang(script_path) else False
     else:
         ensure_executable(script_path)
-        cmd = [str(script_path), *(args or [])]
+        if not parse_shebang(script_path):
+            # Fallback for shebang-less scripts on Unix: explicitly invoke /bin/sh
+            cmd = ["/bin/sh", str(script_path), *(args or [])]
+        else:
+            # Native OS execution via shebang
+            cmd = [str(script_path), *(args or [])]
+        shell = False
 
     result = subprocess.run(
         cmd,
@@ -178,6 +186,7 @@ def run_script(
         text=True,
         timeout=timeout,
         cwd=cwd,
+        shell=shell,
     )
 
     return ScriptResult(
