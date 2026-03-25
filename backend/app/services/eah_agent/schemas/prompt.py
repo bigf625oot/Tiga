@@ -1,12 +1,10 @@
 import logging
 from enum import IntEnum
-from typing import List, Dict, Any, Optional, Set, Union
-from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional, Set
+from dataclasses import dataclass
 from app.core.i18n import _
 
 logger = logging.getLogger(__name__)
-
-# --- 1. 领域模型定义 ---
 
 class InstructionCategory(IntEnum):
     """
@@ -36,8 +34,6 @@ class InstructionSegment:
         if not isinstance(other, InstructionSegment):
             return False
         return self.key == other.key
-
-# --- 2. 指令内容库 (与逻辑分离) ---
 
 class InstructionLibrary:
     """集中管理静态提示词模板，支持 i18n"""
@@ -96,8 +92,6 @@ Analyze, plan, then execute.""")
 4. **Adapt**: Adjust plan based on observations.
 Proceed autonomously unless critical confirmation is needed.""")
 
-# --- 3. 核心编排引擎 ---
-
 class InstructionComposer:
     """
     P10 级指令编排器。
@@ -123,7 +117,7 @@ class InstructionComposer:
     def add_segment(self, segment: InstructionSegment) -> "InstructionComposer":
         """原子化添加指令段（幂等）"""
         if segment.content and segment.content.strip():
-            # 这里的 set.add 会根据 __hash__ 和 __eq__ (即 key) 自动去重
+            # 利用 __hash__ 和 __eq__ 实现 O(1) 的原子级去重，保证指令集拓扑的唯一性
             self._segments.add(segment)
         return self
 
@@ -190,40 +184,20 @@ class InstructionComposer:
             ))
         return self
 
-    # --- 最终构建 ---
-
     def build(self) -> str:
-        """
-        按照 Category (优先级) 和 Priority (同级排序) 构建最终字符串。
-        """
+        
         if not self._segments:
             return ""
 
-        # 1. 转换并排序
         ordered_segments = sorted(
             list(self._segments),
             key=lambda x: (x.category.value, x.priority)
         )
 
-        # 2. 聚合内容
-        # P10 细节：在不同分类之间使用清晰的 Markdown 分隔符
+        # 确保不同上下文域之间的严格隔离，避免大模型产生指令漂移 (Attention Drift)
         final_parts = []
-        last_category = None
 
         for seg in ordered_segments:
-            # 如果类别切换，可以根据需要增加额外的逻辑（如添加分割线，目前直接换行）
             final_parts.append(seg.content.strip())
-            last_category = seg.category
 
         return "\n\n".join(final_parts)
-
-# --- 使用示例 ---
-# prompt = (
-#     InstructionComposer(agent_model.system_prompt)
-#     .with_openclaw()
-#     .with_sandbox()
-#     .with_knowledge()
-#     .with_market_skills(agent_model.tools_config)
-#     .with_strategies(cot=True, react=True)
-#     .build()
-# )

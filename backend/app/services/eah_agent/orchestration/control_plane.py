@@ -6,13 +6,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.config import settings
 from app.core.i18n import _
 from app.models.llm_model import LLMModel
-from app.services.eah_agent.core.agent_nlu import NluService, IntentResult
-from app.services.eah_agent.core.agent_stream_adapter import AgnoStreamAdapter
+from app.services.eah_agent.orchestration.nlu import NluService
+from app.services.eah_agent.schemas.intent import IntentResult
 from app.services.eah_agent.storage.session_history import SessionHistory
-from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 
 logger = logging.getLogger("agno.control_plane")
 
@@ -101,7 +100,6 @@ class AgnoControlPlane:
         """
         ctx = OrchestrationContext(user_input=user_input, db=db, session_id=session_id, kwargs=kwargs)
         aggregator = StreamAggregator()
-        persist_user_message = bool(ctx.kwargs.get("persist_user_message", True))
         persist_assistant_message = bool(ctx.kwargs.get("persist_assistant_message", True))
 
         try:
@@ -127,7 +125,7 @@ class AgnoControlPlane:
             augmented_input = self._build_prompt(ctx)
 
             # Step 6: 路由分发与流式输出
-            from app.services.eah_agent.core.mode_router import ModeRouter
+            from app.services.eah_agent.orchestration.router import ModeRouter
             router = ModeRouter(self.llm_model)
             executor, intent = await router.route_request(ctx.user_input, db, kwargs)
             

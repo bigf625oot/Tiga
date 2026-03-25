@@ -1,7 +1,7 @@
 ﻿import logging
 import asyncio
 import json
-from typing import AsyncGenerator, Dict, Any, Optional, List, Tuple
+from typing import AsyncGenerator, Dict, Any, Optional, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,10 +27,10 @@ logger = logging.getLogger("eah.executors.single")
 
 class SingleExecutor(BaseExecutor):
     """
-    鍗曚綋闂幆鎵ц鍣?(Single Executor)
-    鍘?plan_handler.py 鍜?PlanAgent 鐨勫崌绾х増銆?
-    鏁村悎浜?Planning -> Execution -> Evaluation -> Reflection 瀹屾暣鐢熷懡鍛ㄦ湡銆?
-    寮曞叆浜?Harness 妯″紡鐨勯噸璇曟満鍒跺拰鍙嶆€濆惊鐜€?
+    Single Executor (Monolithic Loop)
+    An upgraded version of plan_handler.py and PlanAgent.
+    Integrates the full lifecycle: Planning -> Execution -> Evaluation -> Reflection.
+    Introduces Harness mode with retry mechanisms and reflection loops.
     """
     
     MAX_RETRIES = 3
@@ -153,7 +153,7 @@ class SingleExecutor(BaseExecutor):
                     
                     # 濡傛灉鏈€氳繃锛岃繘琛屽弽鎬濆苟鍑嗗涓嬩竴娆￠噸璇?
                     if attempt < self.MAX_RETRIES - 1:
-                        yield {"type": "status", "content": _(f"Task failed evaluation, reflecting...")}
+                        yield {"type": "status", "content": _("Task failed evaluation, reflecting...")}
                         hint = await evaluation_engine.reflect(
                             task_goal=task.description,
                             execution_result=task_output,

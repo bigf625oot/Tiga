@@ -27,11 +27,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.knowledge import DocumentStatus, KnowledgeChat, KnowledgeDocument
-from app.services.rag.knowledge.parser import parse_local_file
-from app.services.rag.knowledge_base import UPLOAD_DIR, kb_service
-from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.knowledge.extractor.document_parser import parse_local_file
+from app.services.knowledge.rag.knowledge_base import UPLOAD_DIR, kb_service
+from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 from app.services.storage.service import storage_service
-from app.services.rag.qa import qa_service
+from app.services.knowledge.rag.qa import qa_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,7 @@ async def background_delete_cleanup(filename: str, oss_key: str = None):
 class CreateFolderRequest(BaseModel):
     name: str
     parent_id: Optional[int] = None
+    knowledge_base_id: Optional[str] = None
 
 
 @router.post("/folder")
@@ -68,7 +69,8 @@ async def create_folder(request: CreateFolderRequest, db: AsyncSession = Depends
     stmt = select(KnowledgeDocument).where(
         KnowledgeDocument.filename == request.name,
         KnowledgeDocument.is_folder,
-        KnowledgeDocument.parent_id == request.parent_id
+        KnowledgeDocument.parent_id == request.parent_id,
+        KnowledgeDocument.knowledge_base_id == request.knowledge_base_id
     )
     result = await db.execute(stmt)
     if result.scalars().first():
@@ -78,6 +80,7 @@ async def create_folder(request: CreateFolderRequest, db: AsyncSession = Depends
         filename=request.name,
         is_folder=True,
         parent_id=request.parent_id,
+        knowledge_base_id=request.knowledge_base_id,
         status=DocumentStatus.INDEXED, # Folders are always "indexed" / ready
         file_size=0
     )
@@ -142,7 +145,7 @@ async def background_incremental_index(doc_id: int, segments: List[str]):
             try:
                 import networkx as nx
 
-                from app.services.rag.config.settings import LIGHTRAG_DIR
+                from app.services.knowledge.rag.config.settings import LIGHTRAG_DIR
 
                 p = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
                 if not p.exists():
@@ -241,7 +244,7 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             try:
                 import networkx as nx
 
-                from app.services.rag.config.settings import LIGHTRAG_DIR
+                from app.services.knowledge.rag.config.settings import LIGHTRAG_DIR
 
                 gp = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
                 if gp.exists():
@@ -295,9 +298,10 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     parent_id: Optional[int] = Query(None),
+    knowledge_base_id: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
-    logger.info(f"收到上传请求 文件={file.filename} parent_id={parent_id}")
+    logger.info(f"收到上传请求 文件={file.filename} parent_id={parent_id} knowledge_base_id={knowledge_base_id}")
     # 1. Save to Temp File (for indexing)
     file_ext = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -320,7 +324,8 @@ async def upload_document(
             oss_url=None,
             file_size=file_size,
             status=DocumentStatus.UPLOADING,
-            parent_id=parent_id
+            parent_id=parent_id,
+            knowledge_base_id=knowledge_base_id
         )
         db.add(new_doc)
         await db.commit()
@@ -385,11 +390,12 @@ async def list_documents(
     parent_id: Optional[int] = Query(None),
     keyword: Optional[str] = Query(None),
     show_deleted: bool = Query(False),
+    knowledge_base_id: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    logger.info(f"查询文档列表 parent_id={parent_id} keyword={keyword} show_deleted={show_deleted} page={page}")
+    logger.info(f"查询文档列表 parent_id={parent_id} keyword={keyword} show_deleted={show_deleted} knowledge_base_id={knowledge_base_id} page={page}")
     stmt = select(KnowledgeDocument)
     
     if not show_deleted:
@@ -397,6 +403,12 @@ async def list_documents(
 
     if keyword:
         stmt = stmt.where(KnowledgeDocument.filename.ilike(f"%{keyword}%"))
+
+    if knowledge_base_id is not None:
+        stmt = stmt.where(KnowledgeDocument.knowledge_base_id == knowledge_base_id)
+    else:
+        # Compatibility: return global docs (no knowledge_base_id) if not requested
+        stmt = stmt.where(KnowledgeDocument.knowledge_base_id.is_(None))
 
     if parent_id is None:
         if not keyword: # Only filter by parent_id if not searching globally
@@ -695,7 +707,7 @@ async def get_document_graph(doc_id: int, request: Request, db: AsyncSession = D
 
 @router.get("/graph")
 async def get_global_graph(request: Request, db: AsyncSession = Depends(get_db)):
-    from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+    from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 
     await lightrag_engine.ensure_initialized(db)
     data = lightrag_engine.get_graph_data()

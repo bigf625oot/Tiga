@@ -1,6 +1,5 @@
 import logging
-import asyncio
-from typing import AsyncGenerator, Dict, Any, Optional, List, Tuple
+from typing import AsyncGenerator, Dict, Any, Optional, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from agno.agent import Agent
@@ -164,8 +163,10 @@ class TeamExecutor(BaseExecutor):
             
         params = intent.parameters
         notes = []
-        if "entities" in params: notes.append(f"Entities: {params['entities']}")
-        if "locations" in params: notes.append(f"Locations: {params['locations']}")
+        if "entities" in params:
+            notes.append(f"Entities: {params['entities']}")
+        if "locations" in params:
+            notes.append(f"Locations: {params['locations']}")
         
         if notes:
             return f"{input_text}\n\n[Detected Context]: " + " | ".join(notes)

@@ -5,9 +5,9 @@ from agno.agent import Agent
 
 from app.models.llm_model import LLMModel
 from app.services.llm.factory import ModelFactory
-from app.services.eah_agent.core.agent_planner import TaskDefinition
-from app.services.eah_agent.core.agent_stream_adapter import AgnoStreamAdapter
-from app.services.eah_agent.core.components.default_tool_registry import DefaultToolRegistry
+from app.services.eah_agent.schemas.plan import ExecutionTaskStep
+from app.services.eah_agent.utils.stream_adapter import AgnoStreamAdapter
+from app.services.eah_agent.components.tool_registry import DefaultToolRegistry
 
 logger = logging.getLogger("eah.core.engines.execution")
 
@@ -24,7 +24,7 @@ class ExecutionEngine:
 
     async def execute_task(
         self, 
-        task: TaskDefinition, 
+        task: ExecutionTaskStep, 
         context: List[Dict[str, Any]], 
         **kwargs
     ) -> AsyncGenerator[Dict[str, Any], None]:

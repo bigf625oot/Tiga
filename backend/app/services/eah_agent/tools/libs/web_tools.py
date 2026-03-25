@@ -26,7 +26,6 @@ class WebsiteTools(AgnoWebsiteTools):
     def __init__(self):
         super().__init__()
 
-    # Override read_url to add headers for strict sites
     def read_url(self, url: str) -> str:
         """This function reads a url and returns the content.
 
@@ -41,9 +40,8 @@ class WebsiteTools(AgnoWebsiteTools):
         
         log_debug(f"Reading website: {url}")
         
-        # We need to monkey patch httpx.get locally to add User-Agent to WebsiteReader
+        # 通过动态 Patch httpx 注入浏览器 UA，以绕过基础的反爬策略
         original_get = httpx.get
-        original_async_get = httpx.AsyncClient.get
         
         def patched_get(*args, **kwargs):
             headers = kwargs.get('headers', {})
@@ -63,8 +61,8 @@ class WebsiteTools(AgnoWebsiteTools):
             httpx.get = patched_get
             relevant_docs = website.read(url=url)
             return json.dumps([doc.to_dict() for doc in relevant_docs])
-        except Exception as e:
-            # Fallback to pure requests if httpx patch doesn't bypass 403
+        except Exception:
+            # 应对高级反爬机制的降级策略：回退至带头部伪装的 requests 抓取
             import requests
             from bs4 import BeautifulSoup
             try:
@@ -86,7 +84,7 @@ class WebsiteTools(AgnoWebsiteTools):
                 text = soup.get_text(strip=True, separator=" ")
                 return json.dumps([{"name": url, "id": url, "meta_data": {"url": url}, "content": text}])
             except Exception as inner_e:
-                # Try Jina AI reader as a last resort
+                # 第二级降级：使用 Jina AI 阅读器处理动态渲染或强反爬网站
                 try:
                     jina_url = f"https://r.jina.ai/{url}"
                     jina_res = requests.get(jina_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
@@ -95,7 +93,7 @@ class WebsiteTools(AgnoWebsiteTools):
                 except Exception:
                     pass
                     
-                # Try a final naive fetch using urllib with spoofed headers
+                # 第三级兜底：基于标准库的直接探测，规避 requests 特征被拦截
                 try:
                     import urllib.request
                     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
@@ -109,7 +107,7 @@ class WebsiteTools(AgnoWebsiteTools):
                 except Exception:
                     pass
 
-                # We will return the fallback error as text so the LLM knows it failed but doesn't crash the tool.
+                # 以文本形式返回异常信息，保持容错性避免 Agent 崩溃
                 return f"Error reading website {url}. The site may be blocking scrapers (403 Forbidden). Details: {str(inner_e)}"
         finally:
             httpx.get = original_get

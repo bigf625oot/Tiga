@@ -1,15 +1,15 @@
 import logging
 import asyncio
 import hashlib
-from typing import List, Optional, Dict, Any
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from agno.agent import Agent
 
 from app.models.llm_model import LLMModel
 from app.services.llm.factory import ModelFactory
-from app.services.eah_agent.core.schema import PlanValidationError, TaskPlan, parse_task_plan
-from app.services.eah_agent.core.agent_planner import PlanManifest, TaskDefinition
+from app.services.eah_agent.schemas.plan import PlanValidationError, TaskPlan, parse_task_plan, ExecutionPlan, ExecutionTaskStep
+import uuid
 
 logger = logging.getLogger("eah.core.engines.planning")
 
@@ -99,10 +99,12 @@ class PlanningEngine:
 
                 plan = parse_task_plan(raw_plan)
 
-                manifest = PlanManifest(
+                manifest = ExecutionPlan(
+                    plan_id=f"plan-{uuid.uuid4()}",
+                    session_id=session_id,
                     reasoning=plan.estimated_reasoning,
                     tasks=[
-                        TaskDefinition(
+                        ExecutionTaskStep(
                             task_id=str(step.id),
                             title=step.task[:90],
                             description=step.task,

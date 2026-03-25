@@ -29,13 +29,13 @@ class OpenAICompatLLM:
 
 class LightRAGVectorStore:
     def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        from app.services.rag.knowledge.service import kb_service
+        from app.services.knowledge.rag.knowledge_base import kb_service
 
         refs, _ = kb_service.search(query, top_k=top_k)
         return refs
 
     def index(self, texts: List[str], ids: Optional[List[str]] = None):
-        from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+        from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 
         for t in texts:
             lightrag_engine.insert_text(t)

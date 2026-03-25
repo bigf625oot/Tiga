@@ -17,7 +17,7 @@ from agno.agent import Agent as AgnoAgent
 from app.core.exceptions import AgentBuildError, ModelNotFoundError
 from app.models.agent import Agent as AgentModel
 from app.models.llm_model import LLMModel
-from app.services.eah_agent.core.agent_prompt import InstructionComposer, InstructionSegment, InstructionCategory
+from app.services.eah_agent.schemas.prompt import InstructionComposer, InstructionSegment, InstructionCategory
 from app.services.eah_agent.tools import default_tools
 from app.services.eah_agent.tools.tool_factory import ToolFactory
 from app.services.eah_agent.skills.loaders.local import LocalSkills
@@ -53,21 +53,18 @@ class ModelSelector:
     
     @staticmethod
     async def select(db: AsyncSession, target_id: Optional[str]) -> LLMModel:
-        # 1. 获取所有活跃模型（带缓存预热思考）
-        stmt = select(LLMModel).where(LLMModel.is_active == True).order_by(LLMModel.updated_at.desc())
+        stmt = select(LLMModel).where(LLMModel.is_active).order_by(LLMModel.updated_at.desc())
         result = await db.execute(stmt)
         active_models = result.scalars().all()
         
         if not active_models:
             raise ModelNotFoundError("No active LLM models configured in system.")
 
-        # 2. 定义可用性检查逻辑
         def is_viable(m: LLMModel) -> bool:
             has_key = bool(m.api_key and m.api_key.strip())
             has_global = bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("sk-"))
             return has_key or has_global
 
-        # 3. 优先级匹配：指定模型 -> 有Key的最新模型 -> 兜底模型
         target = next((m for m in active_models if m.model_id == target_id), None)
         if target and is_viable(target):
             return target
@@ -109,22 +106,17 @@ class AgentAssembler:
     async def build(self, **overrides) -> AgnoAgent:
         """核心构建流"""
         try:
-            # Step 1: 异步并行加载基础配置
             await self._load_essential_data()
             
-            # Step 2: 动态工具装配与指令提取
             await self._assemble_toolset(
                 session_id=overrides.get("session_id"),
                 enable_search=overrides.get("enable_search")
             )
             
-            # Step 3: 指令工程编排 (Prompt Orchestration)
             final_instructions = self._orchestrate_instructions()
             
-            # Step 4: 适配 Agno 框架特有参数
             agent_kwargs = self._prepare_agno_params(final_instructions, overrides)
             
-            # Step 5: 实例化与后处理
             return await self._finalize_instance(agent_kwargs)
             
         except Exception as e:
@@ -134,13 +126,11 @@ class AgentAssembler:
     async def _load_essential_data(self):
         """加载 Agent 和 Model 数据"""
         if self.ctx.agent_id:
-            # 获取 Agent 配置
             res = await self.db.execute(select(AgentModel).filter(AgentModel.id == self.ctx.agent_id))
             self.ctx.agent_model = res.scalars().first()
             if not self.ctx.agent_model:
                 raise AgentBuildError(f"Agent entity {self.ctx.agent_id} missing")
         else:
-            # 无 agent_id 时，创建一个临时的默认 Agent 配置
             self.ctx.agent_model = AgentModel(
                 id="default_adhoc_agent",
                 name="Assistant",
@@ -153,13 +143,11 @@ class AgentAssembler:
                 knowledge_config={}
             )
 
-        # 策略性选择模型
         self.ctx.llm_model = await ModelSelector.select(
             self.db, 
             self.ctx.agent_model.model_id or (self.ctx.agent_model.model_config or {}).get("model_id")
         )
         
-        # 初始化指令构建器
         self.ctx.instruction_builder = InstructionComposer(self.ctx.agent_model.system_prompt)
 
     async def _assemble_toolset(self, session_id: Optional[str], enable_search: Optional[bool]):
@@ -218,9 +206,11 @@ class AgentAssembler:
                     name = getattr(tc, "name", None)
                     config = getattr(tc, "config", {})
                 
-                if not enabled or not name: continue
+                if not enabled or not name:
+                    continue
                 t_inst = ToolFactory.create_tool(name, resolve_secret_refs(config))
-                if t_inst: self.ctx.tools.append(t_inst)
+                if t_inst:
+                    self.ctx.tools.append(t_inst)
         
         # 4. 提取带有契约的工具指令
         for tool in self.ctx.tools:
@@ -237,7 +227,6 @@ class AgentAssembler:
         builder = self.ctx.instruction_builder
         model = self.ctx.agent_model
         
-        # 1. 注入自定义列表指令
         if isinstance(model.instructions, list):
             for i, inst in enumerate(model.instructions):
                 builder.add_segment(InstructionSegment(
@@ -246,8 +235,8 @@ class AgentAssembler:
                     category=InstructionCategory.SKILL
                 ))
 
-        # 2. 注入能力集 (根据配置动态开启)
-        if settings.OPENCLAW_BASE_URL: builder.with_openclaw()
+        if settings.OPENCLAW_BASE_URL:
+            builder.with_openclaw()
         
         skills_cfg = model.skills_config or {}
         if skills_cfg.get("sandbox", {}).get("enabled"): 
@@ -256,7 +245,6 @@ class AgentAssembler:
         if model.knowledge_config: 
             builder.with_knowledge()
 
-        # 3. 注入思维链逻辑
         builder.with_strategies(
             cot=bool(model.enable_cot),
             react=bool(model.enable_react)
@@ -269,8 +257,7 @@ class AgentAssembler:
         model = self.ctx.agent_model
         llm = self.ctx.llm_model
         
-        # 关键逻辑：推理冲突规避
-        # 若底层模型已是推理模型 (o1/R1)，则禁用 Agno 的逻辑层推理，防止输出冗余
+        # 规避推理冲突：若底层模型已是推理模型 (o1/R1)，则禁用 Agno 的逻辑层推理，防止输出冗余
         is_reasoning_model = getattr(llm, "is_reasoning_model", False)
         reasoning_enabled = overrides.get("reasoning_override")
         if reasoning_enabled is None:
@@ -281,7 +268,7 @@ class AgentAssembler:
             "role": model.description,
             "instructions": instructions,
             "tools": self.ctx.tools,
-            "model": llm.model_id, # 此处应通过 ModelFactory 转换为 Agno Model 对象
+            "model": llm.model_id,
             "reasoning": reasoning_enabled,
             "markdown": model.enable_markdown,
             "memory": overrides.get("memory"),
@@ -293,7 +280,7 @@ class AgentAssembler:
     async def _finalize_instance(self, params: Dict[str, Any]) -> AgnoAgent:
         """实例化 Agent 并注入监控与元数据"""
         # 这里可以使用已有的 AgentFactory
-        from app.services.eah_agent.core.agent_factory import AgentFactory
+        from app.services.eah_agent.orchestration.factory import AgentFactory
         
         # 转换内部 config 对象
         from app.services.eah_agent.domain.config import AgentConfig

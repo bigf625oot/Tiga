@@ -1,0 +1,43 @@
+[33mcommit 3a17d0a4778559a495fbc41cbc671cdcc180a862[m
+Author: bigf625oot <bigf625oot@users.noreply.github.com>
+Date:   Wed Mar 18 20:45:09 2026 +0800
+
+    style: 清理未使用的导入并优化代码风格
+    
+    - 移除多个文件中未使用的导入语句（typing, json, os, logging等）
+    - 统一布尔值比较写法（`== True`改为直接使用变量）
+    - 修复SQLAlchemy查询中的布尔表达式问题
+    - 添加缺失的导入语句（prometheus-client）
+    - 更新requirements.txt，注释冲突依赖项
+    - 修正异常处理中的通用异常捕获
+    - 优化变量命名和代码格式
+    - 添加Python版本验证到README.md
+
+[1mdiff --git a/backend/app/services/eah_agent/tools/tool_runner.py b/backend/app/services/eah_agent/tools/tool_runner.py[m
+[1mindex 64d2e99..8b13789 100644[m
+[1m--- a/backend/app/services/eah_agent/tools/tool_runner.py[m
+[1m+++ b/backend/app/services/eah_agent/tools/tool_runner.py[m
+[36m@@ -1,2 +1 @@[m
+[31m-from app.services.eah_agent.tools.libs.runner import run_reasoning_tool_loop[m
+ [m
+
+[33mcommit 629b39070d4d1de3ea0b4a91cef6440f9b477a5c[m
+Author: 17701342156 <staffer_xucao@126.com>
+Date:   Thu Mar 12 13:52:17 2026 +0800
+
+    refactor(services): 重构服务目录结构，统一智能体与工具模块
+    
+    - 将 agent、skills、tools 服务迁移至 eah_agent 统一目录
+    - 重构 RAG 服务模块，拆分检索、生成、知识库等子模块
+    - 更新所有相关导入路径，确保向后兼容
+    - 添加 pre-commit 配置和项目构建配置
+    - 新增金融数据工具依赖，优化模块组织结构
+
+[1mdiff --git a/backend/app/services/eah_agent/tools/tool_runner.py b/backend/app/services/eah_agent/tools/tool_runner.py[m
+[1mnew file mode 100644[m
+[1mindex 0000000..64d2e99[m
+[1m--- /dev/null[m
+[1m+++ b/backend/app/services/eah_agent/tools/tool_runner.py[m
+[36m@@ -0,0 +1,2 @@[m
+[32m+[m[32mfrom app.services.eah_agent.tools.libs.runner import run_reasoning_tool_loop[m
+[32m+[m

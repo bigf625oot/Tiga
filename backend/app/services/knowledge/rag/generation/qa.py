@@ -12,11 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge import KnowledgeChat, KnowledgeDocument
 from app.services.nlu.classifier import IntentClassifier, QueryIntent
-from app.services.rag.retrieval.engines.lightrag import lightrag_engine
-from app.services.rag.knowledge.service import UPLOAD_DIR, kb_service
+from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.knowledge.rag.knowledge_base import UPLOAD_DIR, kb_service
 from app.services.storage.service import storage_service
 from app.services.utils.markdown import to_markdown
-from app.services.rag.utils.chunking import chunk_text
+from app.services.knowledge.rag.utils.chunking import chunk_text
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +244,7 @@ class QAService:
         Types: text, process, sql, data, chart, error, sources
         """
         from app.db.session import AsyncSessionLocal
-        from app.services.rag.generation.kg_query import KGQueryService
+        from app.services.knowledge.graph.analysis.nl2chart import KGQueryService
         
         kg_query_service = KGQueryService.get_instance()
         intent_classifier = IntentClassifier.get_instance()
@@ -339,7 +339,7 @@ class QAService:
             if final_mode == "data":
                 yield pack("process", "正在路由至数据查询引擎...", step=4)
                 
-                from app.services.chatbi.vanna.service import data_query_service
+                from app.services.indus_agent.chatbi.vanna.service import data_query_service
                 
                 full_answer = ""
                 chart_data = None

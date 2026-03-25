@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to purge expired task logs: {e}")
 
     # Initialize Knowledge Base with DB Config
-    from app.services.rag.knowledge_base import kb_service
+    from app.services.knowledge.rag.knowledge_base import kb_service
 
     try:
         async with AsyncSessionLocal() as db:

@@ -3,8 +3,8 @@ import asyncio
 import logging
 from typing import Dict, Any
 from pathlib import Path
-from app.services.rag.knowledge.service import kb_service
-from app.services.rag.knowledge.parser import parse_local_file_chunks
+from app.services.knowledge.rag.knowledge_base import kb_service
+from app.services.knowledge.extractor.document_parser import parse_local_file_chunks
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ import re
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, List, Optional, Dict, Union, Generator, Type, TypeVar
+from typing import Any, List, Optional, Dict, Generator, Type, TypeVar
 from pydantic import BaseModel, Field, ValidationError, ConfigDict
 
 # --- 1. 深度增强型异常体系 ---
@@ -201,6 +201,8 @@ class ExecutionTaskStep(BaseModel):
     output_logs: List[str] = Field(default_factory=list, description="按时间序追加的输出行")
     dependencies: List[str] = Field(default_factory=list, description="依赖的前置 task_id 列表")
     executor_role: str = Field(default="", description="执行角色，如 'coder', 'researcher'")
+    expected_output: str = Field(default="Execute successfully", description="预期输出")
+    reflection: Optional[str] = Field(default=None, description="反思提示")
     started_at: Optional[str] = Field(default=None, description="ISO8601 开始时间")
     completed_at: Optional[str] = Field(default=None, description="ISO8601 完成时间")
     error: Optional[str] = Field(default=None, description="失败时的错误摘要")

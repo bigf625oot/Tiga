@@ -1,6 +1,6 @@
 import logging
-from typing import List, Optional, Sequence
-from sqlalchemy import delete, select
+from typing import List, Sequence
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import EntityNotFoundException, ServiceException

@@ -70,7 +70,7 @@ class GraphMemoryRetriever:
             
         try:
             # 延迟加载避免循环依赖，保持模块的拓扑单向性
-            from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+            from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
             await lightrag_engine.ensure_initialized(self.db)
             
             memory_subgraph = lightrag_engine.query_subgraph(query, top_k=5)

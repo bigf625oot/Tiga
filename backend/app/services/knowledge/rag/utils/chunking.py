@@ -1,6 +1,6 @@
 import re
 from typing import List
-from app.services.rag.config.settings import settings
+from app.services.knowledge.rag.config.settings import settings
 
 def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> List[str]:
     strategy = (settings.CHUNK_STRATEGY or "semantic").lower()

@@ -17,16 +17,14 @@ logger = logging.getLogger("eah.executors.fast")
 
 class FastExecutor(LightBaseExecutor):
     """
-    杞婚噺绾ф墽琛屽櫒 (Fast Executor)
-    鍘?quick_handler.py 鍜?QuickAgent 鐨勫崌绾х増銆?
-    涓撴敞浜庝綆寤惰繜銆侀珮鍙潬鐨勯棶绛斾笌鍗虫椂浜掑姩銆傝烦杩囦簡澶嶆潅鐨勮鍒掑拰鍙嶆€濈粍浠躲€?
-    铻嶅悎浜?QuickAgent 涓殑浼樼鎸囦护绾︽潫銆?
+    Lightweight executor optimized for low-latency, high-reliability QA.
+    Bypasses complex planning and reflection overhead to guarantee a fast deterministic execution path.
     """
 
     SYSTEM_INSTRUCTIONS: List[str] = [
-        "You are a helpful assistant operating in Fast mode 鈥?fast, accurate, and concise.",
-        "When using web search or tools, always cite sources inline as [1], [2], 鈥? "
-        "and append a **鍙傝€冭祫鏂?* section at the end of your answer.",
+        "You are a helpful assistant operating in Fast mode — fast, accurate, and concise.",
+        "When using web search or tools, always cite sources inline as [1], [2], … "
+        "and append a **References** section at the end of your answer.",
         "If a tool call fails or times out, acknowledge it honestly and answer "
         "from your existing knowledge instead of fabricating results.",
         "Keep answers focused; avoid unnecessary verbosity.",
@@ -48,7 +46,7 @@ class FastExecutor(LightBaseExecutor):
         session_id: str = kwargs.get("session_id")
         files: List[Any] = kwargs.get("files", [])
         
-        # 1. 璧勬簮瑁呴厤 (骞惰鎵ц锛氬姞杞藉巻鍙?+ 澶勭悊鏂囦欢)
+        # 1. Concurrent Context Assembly (Agent, History, Files)
         setup_tasks = [
             asyncio.create_task(self._prepare_agent(db, session_id, kwargs)),
             asyncio.create_task(self._prepare_history(session_id, current_query=input_text)),
@@ -63,12 +61,13 @@ class FastExecutor(LightBaseExecutor):
         history_msgs = await setup_tasks[1]
         file_ctx, media_objs = await setup_tasks[2]
 
-        # 2. 鎸囦护缂栨帓
+        # 2. Instruction Orchestration
         base_instructions = getattr(agent, "instructions", None)
         instructions = list(self.SYSTEM_INSTRUCTIONS)
         
         if isinstance(base_instructions, str):
-            if base_instructions.strip(): instructions.append(base_instructions)
+            if base_instructions.strip():
+                instructions.append(base_instructions)
         elif isinstance(base_instructions, list):
             instructions.extend([str(x) for x in base_instructions if str(x).strip()])
             
@@ -76,10 +75,10 @@ class FastExecutor(LightBaseExecutor):
             instructions.append(f"Uploaded Files Context:\n{file_ctx}")
             yield {"type": "status", "content": f"Processed {len(files)} files."}
 
-        # 3. 杈撳叆澧炲己
+        # 3. Contextual Augmentation
         augmented_input = self._augment_input(input_text, intent)
 
-        # 4. 鎵ц娴佽緭鍑?
+        # 4. Streaming Execution
         try:
             async for chunk in agent.arun(
                 augmented_input,
@@ -99,7 +98,7 @@ class FastExecutor(LightBaseExecutor):
             yield self._yield_error("Internal processing error", e)
 
     async def _prepare_agent(self, db: AsyncSession, session_id: str, kwargs: Any) -> Agent:
-        """浠庤閰嶅櫒鑾峰彇 Agent 瀹炰緥"""
+        """Resolves and constructs the Agent instance with injected configurations."""
         agent_id = kwargs.get("agent_id")
         reasoning = kwargs.get("enable_reasoning", False)
         search = kwargs.get("enable_search", True)
@@ -112,7 +111,7 @@ class FastExecutor(LightBaseExecutor):
         )
 
     async def _handle_incoming_files(self, session_id: str, files: List[Any]) -> Tuple[str, List[Any]]:
-        """骞惰澶勭悊涓婁紶鏂囦欢"""
+        """Executes parallel parsing and embedding of incoming files to minimize I/O latency."""
         if not files:
             return "", []
 
@@ -126,22 +125,25 @@ class FastExecutor(LightBaseExecutor):
         media = []
         for r in results:
             if r["status"] == "success":
-                if r["content_text"]: contexts.append(r["content_text"])
-                if r["media_objects"]: media.extend(r["media_objects"])
+                if r["content_text"]:
+                    contexts.append(r["content_text"])
+                if r["media_objects"]:
+                    media.extend(r["media_objects"])
         
         return "\n\n".join(contexts), media
 
     def _augment_input(self, text: str, intent: Optional[IntentResult]) -> str:
-        """鍩轰簬 NLU 鎰忓浘澧炲己杈撳叆"""
+        """Injects structural NLU context (entities, time) into the raw input to narrow the LLM's reasoning scope."""
         if not intent or not intent.parameters:
             return text
         
         params = intent.parameters
         notes = []
-        if "entities" in params: notes.append(f"Entities: {params['entities']}")
-        if "time" in params: notes.append(f"Time Context: {params['time']}")
+        if "entities" in params:
+            notes.append(f"Entities: {params['entities']}")
+        if "time" in params:
+            notes.append(f"Time Context: {params['time']}")
         
         if notes:
             return f"[Context: {' | '.join(notes)}]\n{text}"
         return text
-

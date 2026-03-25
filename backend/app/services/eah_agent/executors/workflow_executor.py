@@ -1,5 +1,4 @@
 ﻿import logging
-import json
 import uuid
 from typing import AsyncGenerator, Dict, Any, Optional
 
@@ -50,9 +49,8 @@ class WorkflowExecutor(BaseExecutor):
                 if isinstance(definition, dict) and definition.get("nodes"):
                     yield {"type": "status", "content": _("Executing workflow: {} (v{})").format(wf.name, wf.version)}
                     
-                    history_messages = []
                     if self.memory_manager:
-                        history_messages = await self.memory_manager.get_compressed_context(session_id, current_query=input_text)
+                        await self.memory_manager.get_compressed_context(session_id, current_query=input_text)
                     
                     # TODO: Migrate legacy DynamicWorkflow logic here or to a separate Pipeline executor
                     yield {"type": "status", "content": _("Workflow engine ready, parsing DAG...")}

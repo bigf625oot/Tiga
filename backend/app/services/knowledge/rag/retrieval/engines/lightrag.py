@@ -16,10 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.services.rag.config.settings import LIGHTRAG_DIR, UPLOAD_DIR, DATA_DIR
+from app.services.knowledge.rag.config.settings import LIGHTRAG_DIR, UPLOAD_DIR, DATA_DIR
 from app.models.knowledge import KnowledgeDocument
 from app.models.llm_model import LLMModel
-from app.services.rag.knowledge.parser import parse_local_file
+from app.services.knowledge.extractor.document_parser import parse_local_file
 from app.services.storage.service import storage_service
 
 logger = logging.getLogger(__name__)

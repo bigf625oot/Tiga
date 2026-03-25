@@ -6,7 +6,6 @@
 """
 import logging
 import re
-from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.eah_agent.storage.session_history import SessionHistory

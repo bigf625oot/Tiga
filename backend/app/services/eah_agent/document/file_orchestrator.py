@@ -2,7 +2,7 @@ import asyncio
 import io
 import logging
 from pathlib import Path
-from typing import Any, Union, Dict, List
+from typing import Any, Union
 
 from app.services.eah_agent.document.file_processors import FileProcessorFactory
 

@@ -1,22 +1,17 @@
 import asyncio
 import logging
-from pathlib import Path
-from typing import Optional, Union, List, Dict, Any, Type
+from typing import Optional, Union, Any
 
 from agno.agent import Agent
-from sqlalchemy.ext.asyncio import AsyncSession
 
 # 内部模块依赖
 from app.core.config import settings
 from app.models.llm_model import LLMModel
 from app.services.llm.factory import ModelFactory
-from app.services.llm.resolver import resolve_chat_llm_model
 from app.services.eah_agent.domain.config import AgentConfig, TeamConfig
 from app.services.eah_agent.utils.agno_compat import filter_init_kwargs
 
 logger = logging.getLogger(__name__)
-
-# --- 1. 模型适配器 (Model Provider Adapter) ---
 
 class ModelProviderAdapter:
     """解耦厂商特定的逻辑 (DeepSeek, OpenAI o1, etc.)"""
@@ -40,8 +35,6 @@ class ModelProviderAdapter:
         
         # 未来可在此扩展 OpenAI o1-preview 或 Claude 3.5 Sonnet 的特殊处理
 
-# --- 2. 核心 Agent 工厂 (The Grand Factory) ---
-
 class AgentFactory:
     """
     P10 级 Agent 工厂：支持高并发构建、多态模型适配。
@@ -60,23 +53,19 @@ class AgentFactory:
         构建单个 Agno Agent。
         """
         try:
-            # 1. 模型资源解析 (Resource Resolution) - 由调用方保证 llm_model 传入
             if not llm_model:
                 llm_model = ModelFactory.resolve_default_llm_model(settings)
 
-            # 2. 模型实例化与适配 (Model Instantiation & Adaptation)
             model_instance = ModelFactory.create_model(llm_model)
-            # 注入配置参数
             model_params = getattr(config, "model_params", {})
             if model_params:
                 for k, v in model_params.items():
-                    if hasattr(model_instance, k): setattr(model_instance, k, v)
+                    if hasattr(model_instance, k):
+                        setattr(model_instance, k, v)
             
-            # 应用厂商特定策略
             ModelProviderAdapter.apply_custom_logic(model_instance, llm_model, config)
 
-            # 3. 实例封装 (Final Assembly)
-            # Remove model from kwargs if it exists to prevent overwriting model_instance
+            # 避免将 model 强行注入导致与 model_instance 冲突
             kwargs.pop("model", None)
             
             agent_payload = {
@@ -93,10 +82,9 @@ class AgentFactory:
                 **kwargs,
             }
 
-            # 过滤 Agno 构造函数参数，防止 SDK 升级崩溃
+            # 过滤 Agno 构造函数参数，防止 SDK 升级引发异常
             agent = Agent(**filter_init_kwargs(Agent.__init__, agent_payload))
             
-            # 注入元数据用于 Trace
             agent.extra_metadata = {"model_id": llm_model.model_id, "provider": llm_model.provider}
             
             return agent
@@ -111,7 +99,6 @@ class AgentFactory:
         P10 级团队构建：支持成员并行实例化，自动生成协作提示词。
         """
         try:
-            # 1. 并行构建所有成员 (Concurrency Optimization)
             # 相比于 for 循环，并行构建能显著降低复杂团队的启动延迟
             member_tasks = [
                 AgentFactory.create_agent(m_cfg, llm_model=llm_model) 
@@ -119,13 +106,9 @@ class AgentFactory:
             ]
             members = await asyncio.gather(*member_tasks)
 
-            # 2. 构建 Leader
             leader_agent = await AgentFactory.create_agent(config.leader, llm_model=llm_model)
-            
-            # 3. 编排团队逻辑
             leader_agent.team = members
             
-            # 4. 自动生成增强型团队指令 (Team Orchestration Prompt)
             member_context = "\n".join([f"- {m.name}: {m.description}" for m in members])
             team_prompt = (
                 f"\n\n## Team Collaboration\n"

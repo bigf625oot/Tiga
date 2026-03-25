@@ -5,7 +5,7 @@ import re
 import json
 from typing import Any, AsyncGenerator, Dict, Optional
 from enum import Enum, auto
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

@@ -128,6 +128,17 @@ def _build_windows_command(script_path: Path, args: List[str]) -> List[str]:
         cmd_prefix = get_interpreter_command(interpreter)
         return [*cmd_prefix, str(script_path), *args]
 
+    # Fallback based on extension if no shebang is present
+    suffix = script_path.suffix.lower()
+    if suffix == '.py':
+        return [sys.executable, str(script_path), *args]
+    elif suffix == '.ps1':
+        return ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script_path), *args]
+    elif suffix == '.sh':
+        return ["bash", str(script_path), *args]
+    elif suffix == '.js':
+        return ["node", str(script_path), *args]
+
     # Fallback: try direct execution (may fail, but provides clear error)
     return [str(script_path), *args]
 
@@ -168,8 +179,8 @@ def run_script(
     """
     if platform.system() == "Windows":
         cmd = _build_windows_command(script_path, args or [])
-        # Allow shell execution for scripts without shebangs
-        shell = True if not parse_shebang(script_path) else False
+        # Allow shell execution only if we fall back to direct execution (no interpreter added)
+        shell = cmd[0] == str(script_path)
     else:
         ensure_executable(script_path)
         if not parse_shebang(script_path):

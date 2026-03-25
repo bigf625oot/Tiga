@@ -221,3 +221,6 @@ class E2BSandboxService:
         finally:
             if not session_id:
                 await sandbox.close()
+
+# 全局沙箱服务实例
+sandbox_service = E2BSandboxService()

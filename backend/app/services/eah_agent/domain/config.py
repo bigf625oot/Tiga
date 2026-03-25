@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any, Union, Literal
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 # --- 1. 核心基类：消除元数据重复 ---
@@ -44,7 +44,8 @@ class AgentConfig(BaseNode):
     @field_validator('instructions', mode='before')
     @classmethod
     def ensure_list(cls, v):
-        if isinstance(v, str): return [v]
+        if isinstance(v, str):
+            return [v]
         return v
 
 class TeamConfig(BaseNode):
