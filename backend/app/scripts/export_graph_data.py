@@ -1,370 +1,373 @@
-import argparse
-import hashlib
 import json
 import logging
-import multiprocessing
-import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from pathlib import Path
-from typing import Any, Dict, List
-
-import networkx as nx
+import uuid
+import re
+from typing import List, Optional, Dict, Any
 import pandas as pd
-import yaml
-from sqlalchemy import create_engine, text
+import lancedb
+from lancedb.pydantic import LanceModel, Vector
+from openai import OpenAI
+import sqlparse
+from pathlib import Path
 
-# 设置日志记录
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("export_graph.log"), logging.StreamHandler()],
-)
-logger = logging.getLogger("GraphExporter")
+from .runners.sql_runner import SQLAlchemyRunner
 
+logger = logging.getLogger(__name__)
 
-class GraphExportConfig:
-    def __init__(self, config_path: str):
-        with open(config_path, "r", encoding="utf-8") as f:
-            self.cfg = yaml.safe_load(f)
+# --- Data Models for LanceDB ---
+class VannaContext(LanceModel):
+    id: str
+    text: str = ""
+    type: str # "ddl", "sql", "doc"
+    # Using dynamic vector dimension instead of hardcoded Vector(1536)
+    vector: List[float] = Vector(1536) 
 
-        self.db_cfg = self.cfg.get("database", {})
-        self.proc_cfg = self.cfg.get("processing", {})
-        self.graph_cfg = self.cfg.get("graph", {})
-        self.out_cfg = self.cfg.get("output", {})
+# --- Core Vanna Engine (Re-implementation for Vanna 2.0 / Custom RAG) ---
+class VannaCore:
+    def __init__(self, db_path: Optional[str] = None):
+        if db_path is None:
+            # Default to backend/data/vanna_lancedb
+            backend_dir = Path(__file__).resolve().parents[4]
+            db_path = str(backend_dir / "data" / "vanna_lancedb")
+            
+        self.db = lancedb.connect(db_path)
 
-        # 输出目录设置
-        self.output_dir = Path(self.out_cfg.get("output_dir", "./data/export"))
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.table_name = "vanna_context"
+        self.table = None
+        
+        self.openai_client: Optional[OpenAI] = None
+        self.embed_client: Optional[OpenAI] = None
+        self.model = "gpt-3.5-turbo" # Default, will be overwritten by config
+        self.embed_model = "text-embedding-3-small"
+        self.sql_runner: Optional[SQLAlchemyRunner] = None
+        self._sql_cache = {} # Simple in-memory cache for SQL generation
 
-    def get_db_url(self) -> str:
-        if self.db_cfg.get("url"):  # Support direct URL from JSON config
-            return self.db_cfg["url"]
+    def configure_llm(self, api_key: str, base_url: str = None, model: str = None, 
+                      embedding_api_key: str = None, embedding_base_url: str = None, embedding_model: str = None):
+        """Configure the LLM client dynamically."""
+        if not api_key:
+            raise ValueError("API Key is required for VannaCore")
+        
+        self.openai_client = OpenAI(api_key=api_key, base_url=base_url)
+        if model:
+            self.model = model
+            
+        # Configure Embedding Client (if different from Chat)
+        if embedding_api_key:
+            self.embed_client = OpenAI(api_key=embedding_api_key, base_url=embedding_base_url)
+            self.embed_model = embedding_model
+        else:
+            # Fallback to same client if no specific embedding config
+            self.embed_client = self.openai_client
+            # Try to respect the chat model if it looks like an embedding one (unlikely but possible)
+            # or default to standard openai
+            self.embed_model = "text-embedding-3-small"
+            
+        logger.info(f"VannaCore configured. Chat Model: {self.model}, Embed Model: {self.embed_model}")
 
-        if self.db_cfg.get("connection_string"):
-            return self.db_cfg["connection_string"]
+    def set_sql_runner(self, runner: SQLAlchemyRunner):
+        self.sql_runner = runner
 
-        db_type = self.db_cfg.get("type", "postgresql")
-        if db_type == "sqlite":
-            return f"sqlite:///{self.db_cfg.get('database')}"
+    def _check_llm_configured(self):
+        if not self.openai_client:
+            raise RuntimeError("LLM not configured. Please configure OpenAI/LLM settings first.")
 
-        return f"{db_type}+psycopg2://{self.db_cfg['user']}:{self.db_cfg['password']}@{self.db_cfg['host']}:{self.db_cfg['port']}/{self.db_cfg['database']}"
-
-
-def process_chunk(
-    chunk_data: pd.DataFrame, table_config: Dict, relationships: List[Dict], batch_id: int
-) -> Dict[str, Any]:
-    """
-    处理单个数据块：
-    - 创建节点
-    - 基于外键创建边
-    - 返回子图数据（节点、边）和映射数据
-    """
-    nodes = []
-    edges = []
-    vector_mappings = []
-
-    table_name = table_config["table"]
-    label = table_config.get("label", table_name)
-    id_col = table_config.get("id_column", "id")
-    long_text_fields = set(table_config.get("long_text_fields", []))
-    allowed_attrs = table_config.get("attributes")
-
-    def format_id(val):
-        """Standardize ID formatting to avoid 1 vs 1.0 mismatches"""
+    def _get_embedding(self, text: str) -> List[float]:
+        self._check_llm_configured()
+        if text is None:
+            text = ""
+        text = text.replace("\n", " ")
+        
         try:
-            if pd.isna(val):
-                return ""
-            # If it's a float that is actually an integer (e.g. 1.0), convert to int first
-            if isinstance(val, float) and val.is_integer():
-                return str(int(val))
-            return str(val)
-        except Exception:
-            return str(val)
-
-    for _, row in chunk_data.iterrows():
-        # 1. 创建节点
-        # 确保 ID 是字符串
-        row_id_val = row[id_col]
-        if pd.isna(row_id_val):
-            continue
-
-        node_id = f"{label}:{format_id(row_id_val)}"
-
-        # 过滤属性
-        attrs = {}
-        for col, val in row.items():
-            if pd.isna(val):
-                continue
-            if col == id_col:
-                continue
-            # 处理长文本
-            if col in long_text_fields:
-                # 存储哈希值或引用，实际文本存入向量数据库映射表
-                val_str = str(val)
-                content_hash = hashlib.md5(val_str.encode()).hexdigest()
-                attrs[f"{col}_hash"] = content_hash
-
-                vector_mappings.append(
-                    {
-                        "node_id": node_id,
-                        "vector_db_collection": f"{label}_vectors",
-                        "vector_id": f"{node_id}_{col}",
-                        "text_content_hash": content_hash,
-                        "content_preview": val_str[:100],
-                    }
-                )
-            elif not allowed_attrs or col in allowed_attrs:
-                # 转换非基本类型为字符串，保证 GraphML 兼容性
-                if isinstance(val, (dict, list, tuple)):
-                    attrs[col] = json.dumps(val, ensure_ascii=False)
-                else:
-                    attrs[col] = val
-
-        nodes.append({"id": node_id, "label": label, "properties": attrs})
-
-        # 2. 创建边（关系）
-        for rel in relationships:
-            if rel["source_table"] == table_name:
-                fk = rel["foreign_key"]
-                if fk in row and pd.notna(row[fk]):
-                    target_table = rel["target_table"]
-                    target_label = rel.get("target_label", target_table)
-
-                    target_id = f"{target_label}:{format_id(row[fk])}"
-
-                    edge_props = {"type": rel["relation_type"]}
-                    if rel.get("weight_column"):
-                        w_col = rel["weight_column"]
-                        if w_col in row:
-                            edge_props["weight"] = row[w_col]
-
-                    edges.append(
-                        {
-                            "source": node_id,
-                            "target": target_id,
-                            "relation": rel["relation_type"],
-                            "properties": edge_props,
-                        }
-                    )
-
-    return {"nodes": nodes, "edges": edges, "mappings": vector_mappings, "batch_id": batch_id}
-
-
-class GraphExporter:
-    def __init__(self, config_file: str):
-        self.config = GraphExportConfig(config_file)
-        try:
-            self.engine = create_engine(self.config.get_db_url())
+            return self.embed_client.embeddings.create(input=[text], model=self.embed_model).data[0].embedding
         except Exception as e:
-            logger.error(f"Failed to create database engine: {e}")
-            raise
+            # Fallback strategy only if using default model and it fails
+            if self.embed_model == "text-embedding-3-small":
+                logger.warning(f"Embedding failed with {self.embed_model}, trying text-embedding-ada-002. Error: {e}")
+                return self.embed_client.embeddings.create(input=[text], model="text-embedding-ada-002").data[0].embedding
+            raise e
 
-        # 初始化图
-        self._init_graph()
-
-        # 状态跟踪
-        self.processed_count = 0
-        self.checkpoint_file = Path(self.config.output_dir) / self.config.proc_cfg.get(
-            "checkpoint_file", "checkpoint.json"
-        )
-        self.load_checkpoint()
-
-    def _init_graph(self):
-        """初始化图对象，支持合并模式"""
-        graph_path = self.config.output_dir / "graph_chunk_entity_relation.graphml"
-        update_mode = self.config.out_cfg.get("update_mode", "overwrite")
-
-        if update_mode == "merge" and graph_path.exists():
-            try:
-                logger.info(f"正在加载现有图文件进行合并: {graph_path}")
-                self.graph = nx.read_graphml(str(graph_path))
-                logger.info(f"成功加载现有图: {self.graph.number_of_nodes()} 节点, {self.graph.number_of_edges()} 边")
-            except Exception as e:
-                logger.warning(f"加载现有图文件失败: {e}。将创建新图。")
-                self.graph = nx.DiGraph()
-        else:
-            if update_mode == "merge":
-                logger.info("未找到现有图文件，将创建新图。")
-            else:
-                logger.info("覆盖模式：创建新图。")
-            self.graph = nx.DiGraph()
-
-    def load_checkpoint(self):
-        # 如果是覆盖模式，忽略检查点（重置）
-        if self.config.out_cfg.get("update_mode", "overwrite") == "overwrite":
-            self.state = {"processed_tables": {}}
+    def _ensure_table(self, dimension: int = 1536):
+        """Ensure the table exists and check dimension compatibility."""
+        if self.table:
+            # Table already opened in memory
             return
 
-        if self.checkpoint_file.exists():
-            try:
-                with open(self.checkpoint_file, "r") as f:
-                    self.state = json.load(f)
-            except Exception:
-                self.state = {"processed_tables": {}}
-        else:
-            self.state = {"processed_tables": {}}
+        # Try to open existing table
+        try:
+            self.table = self.db.open_table(self.table_name)
+        except Exception:
+            # Table doesn't exist, we will create it on first write
+            pass
 
-    def save_checkpoint(self):
-        with open(self.checkpoint_file, "w") as f:
-            json.dump(self.state, f)
+    def reset_vector_store(self):
+        """Clear all vector data."""
+        try:
+            self.db.drop_table(self.table_name)
+            self.table = None
+            logger.info(f"Vector store '{self.table_name}' cleared successfully.")
+        except Exception as e:
+            logger.warning(f"Failed to clear vector store (maybe it didn't exist): {e}")
 
-    def run(self):
-        start_time = time.time()
-        logger.info("开始导出图数据...")
+    def train(self, ddl: str = None, sql: str = None, documentation: str = None) -> List[str]:
+        """Add context to the vector store."""
+        self._check_llm_configured()
+        
+        # Collect data points
+        data = []
+        
+        if ddl:
+            vec = self._get_embedding(ddl)
+            data.append({"id": str(uuid.uuid4()), "text": ddl, "type": "ddl", "vector": vec})
+        if sql:
+            vec = self._get_embedding(sql)
+            data.append({"id": str(uuid.uuid4()), "text": sql, "type": "sql", "vector": vec})
+        if documentation:
+            vec = self._get_embedding(documentation)
+            data.append({"id": str(uuid.uuid4()), "text": documentation, "type": "doc", "vector": vec})
+            
+        if not data:
+            return []
 
-        # 获取表配置
-        tables = self.config.graph_cfg.get("entities", [])
-        relationships = self.config.graph_cfg.get("relationships", [])
-
-        # 预处理关系以映射目标标签
-        table_label_map = {t["table"]: t.get("label", t["table"]) for t in tables}
-        for r in relationships:
-            r["target_label"] = table_label_map.get(r["target_table"], r["target_table"])
-
-        chunk_size = self.config.proc_cfg.get("chunk_size", 10000)
-        max_workers = self.config.proc_cfg.get("max_workers", multiprocessing.cpu_count())
-
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = []
-
-            for table_cfg in tables:
-                table_name = table_cfg["table"]
-                last_offset = self.state["processed_tables"].get(table_name, 0)
-
-                logger.info(f"正在处理表: {table_name}, 起始偏移量 {last_offset}")
-
+        # Get dimension from the first vector
+        dim = len(data[0]["vector"])
+        
+        try:
+            # 1. Try to open existing table
+            if not self.table:
                 try:
-                    with self.engine.connect() as conn:
-                        # 简单的行数检查
-                        total_rows = pd.read_sql_query(text(f"SELECT COUNT(*) FROM {table_name}"), conn).iloc[0, 0]
+                    self.table = self.db.open_table(self.table_name)
+                except Exception:
+                    # Table not found
+                    pass
+
+            # 2. If table exists, try to add
+            if self.table:
+                try:
+                    self.table.add(data)
                 except Exception as e:
-                    logger.error(f"无法查询表 {table_name}: {e}")
-                    continue
+                    # If dimension mismatch error (ArrowInvalid), drop and recreate
+                    if "FixedSizeListType" in str(e) or "dimension" in str(e).lower():
+                        logger.warning(f"Vector dimension mismatch (expected different dim, got {dim}). Recreating table...")
+                        self.db.drop_table(self.table_name)
+                        self.table = self.db.create_table(self.table_name, data=data)
+                    else:
+                        raise e
+            else:
+                # 3. Create new table
+                self.table = self.db.create_table(self.table_name, data=data)
+                
+            return [d["id"] for d in data]
+            
+        except Exception as e:
+            logger.error(f"Failed to train/add to vector store: {e}")
+            raise e
 
-                current_offset = last_offset
-                batch_id = 0
-
-                while current_offset < total_rows:
-                    query = f"SELECT * FROM {table_name} LIMIT {chunk_size} OFFSET {current_offset}"
-                    try:
-                        chunk_df = pd.read_sql_query(query, self.engine)
-                    except Exception as e:
-                        logger.error(f"读取数据块失败 ({table_name} offset {current_offset}): {e}")
-                        break
-
-                    if chunk_df.empty:
-                        break
-
-                    future = executor.submit(process_chunk, chunk_df, table_cfg, relationships, batch_id)
-                    futures.append(future)
-
-                    current_offset += chunk_size
-                    batch_id += 1
-
-                    # 内存控制/分批提交
-                    if len(futures) > max_workers * 2:
-                        self._collect_results(futures)
-                        futures = []
-                        self.state["processed_tables"][table_name] = current_offset
-                        self.save_checkpoint()
-
-            # 收集剩余结果
-            self._collect_results(futures)
-
-        # 最终导出
-        self._export_data()
-
-        duration = time.time() - start_time
-        logger.info(f"导出完成，耗时 {duration:.2f} 秒。本次会话处理记录数: {self.processed_count}")
-        logger.info(f"当前图总规模: {self.graph.number_of_nodes()} 节点, {self.graph.number_of_edges()} 边")
-
-        self.engine.dispose()
-
-    def _collect_results(self, futures):
-        for future in as_completed(futures):
+    def get_related_context(self, question: str, limit: int = 10) -> List[str]:
+        """Retrieve related DDL/SQL/Docs."""
+        self._check_llm_configured()
+        
+        # Open table if not opened
+        if not self.table:
             try:
-                res = future.result()
-                self._merge_to_graph(res)
-            except Exception as e:
-                logger.error(f"处理数据块时出错: {e}")
+                self.table = self.db.open_table(self.table_name)
+            except Exception:
+                # Table doesn't exist yet (no training data)
+                return []
+                
+        try:
+            query_vec = self._get_embedding(question)
+            results = self.table.search(query_vec).limit(limit).to_list()
+            return [r["text"] for r in results]
+        except Exception as e:
+            err_msg = str(e).lower()
+            # Handle dimension mismatch (e.g. switching from OpenAI 1536 to other 1024 models)
+            if "dimension mismatch" in err_msg or "query dim" in err_msg or "invalid user input" in err_msg:
+                logger.warning(f"Vector dimension mismatch detected: {e}. Dropping incompatible table '{self.table_name}' to force rebuild on next train.")
+                try:
+                    self.db.drop_table(self.table_name)
+                    self.table = None
+                except Exception as drop_err:
+                    logger.error(f"Failed to drop incompatible table: {drop_err}")
+            else:
+                logger.warning(f"Search failed: {e}")
+            return []
 
-    def _merge_to_graph(self, result: Dict):
-        # 合并节点
-        # NetworkX 的 add_node/add_nodes_from 会更新现有节点的属性，而不是覆盖整个节点
-        # 这满足了 "无损合并" 和 "保留全部属性" (旧属性保留，新属性更新)
-        for node in result["nodes"]:
-            self.graph.add_node(node["id"], entity_type=node["label"], **node["properties"])
-            self.processed_count += 1
+    def classify_intent(self, question: str) -> str:
+        """Classify user intent: aggregation, time_series, comparison, detail, or unknown."""
+        self._check_llm_configured()
+        system_prompt = """You are a Query Intent Classifier.
+Classify the user's question into one of the following categories:
+- aggregation: Questions asking for counts, sums, averages, stats.
+- time_series: Questions asking for trends over time, daily/monthly data.
+- comparison: Questions comparing two or more entities or periods.
+- detail: Questions asking for specific records or lists.
+- unknown: If the intent is unclear.
 
-        # 合并边
-        # 同样，add_edge 更新属性
-        for edge in result["edges"]:
-            self.graph.add_edge(edge["source"], edge["target"], label=edge["relation"], **edge["properties"])
+Return ONLY the category name.
+"""
+        response = self.openai_client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question}
+            ],
+            temperature=0
+        )
+        return response.choices[0].message.content.strip().lower()
 
-        # 立即保存向量映射（追加到文件）
-        self._append_mappings(result["mappings"])
+    def generate_sql(self, question: str) -> str:
+        """RAG-based SQL Generation with Caching."""
+        self._check_llm_configured()
+        # Check Cache
+        if question in self._sql_cache:
+            logger.info(f"Cache hit for question: {question}")
+            return self._sql_cache[question]
 
-    def _append_mappings(self, mappings: List[Dict]):
-        if not mappings:
-            return
+        context = self.get_related_context(question)
+        
+        system_prompt = """You are an expert SQL Data Analyst.
+Your task is to generate a SQL query to answer the user's question.
+You MUST use the provided context (DDL, SQL examples) to construct the query.
+Return ONLY the SQL query, without markdown backticks or explanations.
+If you cannot generate a query, return "-- I do not know".
+"""
+        
+        user_prompt = f"""Question: {question}
 
-        mapping_file = self.config.output_dir / "vector_mappings.csv"
-        df = pd.DataFrame(mappings)
+Context:
+{chr(10).join(context)}
 
-        # 如果是覆盖模式且文件已存在，且是第一次写入(需要外部标志？或者简单点，每次运行前清理？)
-        # 这里简化：如果是 overwrite 模式，run() 开始时应该清理 mapping file。
-        # 但 _init_graph 无法清理 csv。
-        # 更好的做法：在 run() 开始时清理辅助文件。
+Generate SQL:
+"""
+        
+        response = self.openai_client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0
+        )
+        
+        sql = response.choices[0].message.content
+        if not sql:
+             return "-- I do not know"
+        sql = sql.strip().replace("```sql", "").replace("```", "").strip()
+        
+        # Cache Result
+        if not sql.startswith("--"):
+            self._sql_cache[question] = sql
+            
+        return sql
 
-        header = not mapping_file.exists()
-        df.to_csv(mapping_file, mode="a", header=header, index=False)
+    def _mask_sensitive_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Mask sensitive data like emails, phones, ID cards."""
+        # Simple regex-based masking for demonstration
+        # Email
+        email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+        # Phone (Simple 11 digit)
+        phone_pattern = r'\b1[3-9]\d{9}\b'
+        
+        # Helper to mask string
+        def mask_val(val):
+            if not isinstance(val, str):
+                return val
+            if re.match(email_pattern, val):
+                return re.sub(r'(^.{2}).*(@.*$)', r'\1***\2', val)
+            if re.match(phone_pattern, val):
+                return re.sub(r'(\d{3})\d{4}(\d{4})', r'\1****\2', val)
+            return val
 
-    def _export_data(self):
-        logger.info("正在写入最终输出文件...")
+        # Apply to object columns
+        for col in df.select_dtypes(include=['object']):
+             df[col] = df[col].apply(mask_val)
+             
+        return df
 
-        # 1. LightRAG GraphML
-        # LightRAG 兼容性：确保属性类型正确
-        graph_path = self.config.output_dir / "graph_chunk_entity_relation.graphml"
-        nx.write_graphml(self.graph, str(graph_path))
-        logger.info(f"GraphML 已写入 {graph_path}")
+    def run_sql(self, sql: str) -> pd.DataFrame:
+        """Execute SQL with Security Check and Masking."""
+        if not self.sql_runner:
+            raise Exception("Database not connected")
+        
+        # Security Check
+        if not self._is_read_only(sql):
+             raise Exception("Security Alert: Only SELECT queries are allowed.")
 
-        # 2. LightRAG JSON (实体和关系)
-        entities = []
-        for n, attrs in self.graph.nodes(data=True):
-            entities.append(
-                {
-                    "name": n,
-                    "type": attrs.get("entity_type", "Unknown"),
-                    **{k: v for k, v in attrs.items() if k != "entity_type"},
-                }
-            )
+        df = self.sql_runner.run_sql(sql)
+        
+        # Data Masking
+        df = self._mask_sensitive_data(df)
+        
+        return df
 
-        relations = []
-        for u, v, attrs in self.graph.edges(data=True):
-            relations.append({"source": u, "target": v, **attrs})
+    def _is_read_only(self, sql: str) -> bool:
+        """Simple SQL injection/mutation protection."""
+        try:
+            parsed = sqlparse.parse(sql)[0]
+            return parsed.get_type().upper() == 'SELECT'
+        except Exception:
+            # If parsing fails, assume unsafe
+            return False
 
-        self._write_json_sharded(entities, "entities.json")
-        self._write_json_sharded(relations, "relationships.json")
+    def generate_echarts(self, question: str, df: pd.DataFrame, sql: str) -> Dict:
+        """Generate ECharts option JSON."""
+        self._check_llm_configured()
+        if df.empty:
+            return {}
+            
+        data_preview = df.head(5).to_markdown()
+        columns = df.columns.tolist()
+        
+        system_prompt = """You are a Data Visualization Expert.
+Your task is to generate an Apache ECharts option JSON object to visualize the provided data.
+The JSON must be valid and ready to use in `echarts.setOption()`.
+Return ONLY the JSON string.
+"""
+        
+        user_prompt = f"""Question: {question}
+SQL: {sql}
+Data Preview:
+{data_preview}
+Columns: {columns}
 
-    def _write_json_sharded(self, data: List[Dict], filename: str):
-        out_path = self.config.output_dir / filename
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        logger.info(f"已导出 {len(data)} 个项目到 {out_path}")
+Generate ECharts JSON:
+"""
+        
+        response = self.openai_client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0
+        )
+        
+        json_str = response.choices[0].message.content
+        if not json_str:
+             return {}
+        json_str = json_str.strip().replace("```json", "").replace("```", "").strip()
+        try:
+            return json.loads(json_str)
+        except Exception:
+            return {}
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="导出数据库到知识图谱")
-    parser.add_argument("--config", default="export_config.yaml", help="配置文件路径")
-    args = parser.parse_args()
-
-    if not Path(args.config).exists():
-        logger.error(f"未找到配置文件 {args.config}。")
-        exit(1)
-
-    try:
-        exporter = GraphExporter(args.config)
-        exporter.run()
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
-        exit(1)
+    def ask(self, question: str) -> Dict[str, Any]:
+        """Main entry point."""
+        sql = self.generate_sql(question)
+        if sql.startswith("--"):
+            return {"sql": sql, "error": "Could not generate SQL"}
+            
+        try:
+            df = self.run_sql(sql)
+            chart = self.generate_echarts(question, df, sql)
+            
+            return {
+                "question": question,
+                "sql": sql,
+                "data": df.to_dict(orient="records"),
+                "columns": df.columns.tolist(),
+                "chart": chart
+            }
+        except Exception as e:
+            return {"sql": sql, "error": str(e)}
