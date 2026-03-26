@@ -15,7 +15,7 @@ Tools Endpoint
 from fastapi import APIRouter, Depends
 from app.api import deps
 from app.models.user_tool import UserTool
-from app.services.eah_agent.tools.registry import discover_tools
+from app.services.agent.tools.registry import discover_tools
 
 router = APIRouter()
 

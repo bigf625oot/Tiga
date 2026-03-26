@@ -27,7 +27,7 @@ from app.db.session import get_db
 from app.models.llm_model import LLMModel
 from app.schemas.llm_model import LLMModelCreate, LLMModelResponse, LLMModelUpdate, LLMTestRequest, LLMTestResponse
 
-from app.services.llm.factory import ModelFactory
+from app.services.platform.llm.factory import ModelFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

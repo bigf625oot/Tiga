@@ -18,7 +18,7 @@ Relation Fix Endpoint
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from app.services.knowledge.graph.operations.relation_fix import relation_fix_service
+from app.services.intelligence.knowledge.graph.operations.relation_fix import relation_fix_service
 
 router = APIRouter()
 

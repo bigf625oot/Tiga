@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.eah_agent.core.schema import PlanValidationError, TaskPlan, parse_task_plan
+from app.services.agent.core.schema import PlanValidationError, TaskPlan, parse_task_plan
 
 
 def test_parse_task_plan_from_dict() -> None:

@@ -15,7 +15,7 @@ Sandbox Endpoint
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-from app.services.sandbox.e2b_sandbox import sandbox_service
+from app.services.platform.sandbox.e2b_sandbox import sandbox_service
 import uuid
 import os
 import json

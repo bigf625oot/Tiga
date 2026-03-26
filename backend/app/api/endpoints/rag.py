@@ -21,8 +21,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.services.knowledge.rag.schemas import AugmentRequest, EmbedRequest, SearchRequest
-from app.services.knowledge.rag.service import rag_service
+from app.services.intelligence.knowledge.rag.schemas import AugmentRequest, EmbedRequest, SearchRequest
+from app.services.intelligence.knowledge.rag.service import rag_service
 
 router = APIRouter()
 

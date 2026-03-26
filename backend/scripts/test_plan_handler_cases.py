@@ -3,8 +3,8 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 sys.path.append("d:/Tiga/backend")
 
-from app.services.eah_agent.handlers.plan_handler import PlanHandler
-from app.services.eah_agent.core.agent_nlu import IntentResult
+from app.services.agent.handlers.plan_handler import PlanHandler
+from app.services.agent.core.agent_nlu import IntentResult
 
 async def test_case_13():
     print("Running Test Case 13: Agent 装配失败隔离测试")
@@ -14,7 +14,7 @@ async def test_case_13():
     handler._assemble_plan_agent = AsyncMock(side_effect=Exception("Simulated AgentAssembler Error"))
     handler._prepare_history = AsyncMock(return_value=([], False))
     
-    with patch("app.services.eah_agent.handlers.plan_handler.FileOrchestrator.process_batch", new_callable=AsyncMock) as mock_file:
+    with patch("app.services.agent.handlers.plan_handler.FileOrchestrator.process_batch", new_callable=AsyncMock) as mock_file:
         mock_file.return_value = {"context": "", "media": [], "results": []}
         
         try:

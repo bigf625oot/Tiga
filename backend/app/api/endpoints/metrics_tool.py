@@ -21,9 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.knowledge import KnowledgeDocument
-from app.services.knowledge.extractor.document_parser import parse_document
-from app.services.indus_agent.chatbi.extraction import run_extraction, generate_prompt
-from app.services.storage.service import storage_service
+from app.services.intelligence.knowledge.extractor.document_parser import parse_document
+from app.services.domain.chatbi.extraction import run_extraction, generate_prompt
+from app.services.platform.storage.service import storage_service
 
 router = APIRouter()
 

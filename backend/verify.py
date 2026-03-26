@@ -5,8 +5,8 @@ import traceback
 
 modules = [
     'app.api.endpoints.knowledge',
-    'app.services.knowledge.rag.knowledge_base',
-    'app.services.knowledge.extractor.document_parser'
+    'app.services.intelligence.knowledge.rag.knowledge_base',
+    'app.services.intelligence.knowledge.extractor.document_parser'
 ]
 
 with open('verify_log.txt', 'w') as f:

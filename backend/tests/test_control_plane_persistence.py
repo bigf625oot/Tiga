@@ -42,19 +42,19 @@ class _StubHandler:
         return _gen()
 
 
-_stub_mod("app.services.eah_agent.handlers.quick_handler", QuickHandler=_StubHandler)
-_stub_mod("app.services.eah_agent.handlers.plan_handler", PlanHandler=_StubHandler)
-_stub_mod("app.services.eah_agent.handlers.team_handler", TeamHandler=_StubHandler)
-_stub_mod("app.services.eah_agent.handlers.flow_handler", FlowHandler=_StubHandler)
-_stub_mod("app.services.eah_agent.handlers.data_handler", DataHandler=_StubHandler)
+_stub_mod("app.services.agent.handlers.quick_handler", QuickHandler=_StubHandler)
+_stub_mod("app.services.agent.handlers.plan_handler", PlanHandler=_StubHandler)
+_stub_mod("app.services.agent.handlers.team_handler", TeamHandler=_StubHandler)
+_stub_mod("app.services.agent.handlers.flow_handler", FlowHandler=_StubHandler)
+_stub_mod("app.services.agent.handlers.data_handler", DataHandler=_StubHandler)
 
-from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane, OrchestrationContext
-from app.services.eah_agent.core.agent_nlu import IntentResult, IntentType
+from app.services.agent.core.agent_control_plane import AgnoControlPlane, OrchestrationContext
+from app.services.agent.core.agent_nlu import IntentResult, IntentType
 
 
 @pytest.mark.asyncio
 async def test_init_history_respects_persist_user_message_flag(monkeypatch) -> None:
-    import app.services.eah_agent.core.agent_control_plane as mod
+    import app.services.agent.core.agent_control_plane as mod
 
     calls = []
 
@@ -79,7 +79,7 @@ async def test_init_history_respects_persist_user_message_flag(monkeypatch) -> N
 
 @pytest.mark.asyncio
 async def test_process_stream_respects_persist_assistant_message_flag(monkeypatch) -> None:
-    import app.services.eah_agent.core.agent_control_plane as mod
+    import app.services.agent.core.agent_control_plane as mod
 
     class _DummyHandler:
         def process(self, augmented_input, intent, **kwargs):

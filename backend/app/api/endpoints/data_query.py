@@ -24,7 +24,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from app.services.indus_agent.chatbi.vanna.models import (
+from app.services.domain.chatbi.vanna.models import (
     DataQueryMessageResponse,
     DataQuerySessionCreate,
     DataQuerySessionResponse,
@@ -32,9 +32,9 @@ from app.services.indus_agent.chatbi.vanna.models import (
     DbConnectionConfig,
     VannaRequest,
 )
-from app.services.indus_agent.chatbi.vanna.service import data_query_service
-from app.services.knowledge.graph.analysis.nl2chart import KGQueryService
-from app.services.nlu.classifier import IntentClassifier, QueryIntent
+from app.services.domain.chatbi.vanna.service import data_query_service
+from app.services.intelligence.knowledge.graph.analysis.nl2chart import KGQueryService
+from app.services.intelligence.nlu.classifier import IntentClassifier, QueryIntent
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -220,7 +220,7 @@ async def save_config(config: DbConnectionConfig):
             data_query_service.current_db_config.allowed_tables = config.allowed_tables
             data_query_service.current_db_config.sensitive_fields = config.sensitive_fields
             
-            from app.services.indus_agent.chatbi.vanna.permission import SQLPermissionValidator
+            from app.services.domain.chatbi.vanna.permission import SQLPermissionValidator
             allowed_tables = set(config.allowed_tables) if config.allowed_tables else set()
             sensitive_fields = set(config.sensitive_fields) if config.sensitive_fields else set()
             data_query_service.permission_validator = SQLPermissionValidator(

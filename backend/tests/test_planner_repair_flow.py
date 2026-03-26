@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.eah_agent.core.agent_planner import PlannerAgent
+from app.services.agent.core.agent_planner import PlannerAgent
 
 
 class _FakeBegin:

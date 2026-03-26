@@ -7,7 +7,7 @@ Agent WebSocket Endpoint
 """
 import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.services.openclaw.gateway.agent import agent_ws_manager
+from app.services.ops.openclaw.gateway.agent import agent_ws_manager
 
 router = APIRouter()
 logger = logging.getLogger("openclaw.api.agent")

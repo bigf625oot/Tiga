@@ -30,10 +30,10 @@ import asyncio
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.recording import Recording
 from app.models.llm_model import LLMModel
-from app.services.indus_agent.media.asr import aliyun_asr_service
-from app.services.storage.service import storage_service
-from app.services.llm.factory import ModelFactory
-from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.domain.media.asr import aliyun_asr_service
+from app.services.platform.storage.service import storage_service
+from app.services.platform.llm.factory import ModelFactory
+from app.services.intelligence.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 from agno.agent import Agent
 
 logger = logging.getLogger(__name__)

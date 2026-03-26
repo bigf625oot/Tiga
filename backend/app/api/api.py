@@ -38,7 +38,7 @@ from app.api.endpoints import (
     departments,
 )
 from app.api.endpoints.search_agent import news
-from app.services.pathway.api import router as pathway_router
+from app.services.ops.pipeline.api import router as pathway_router
 
 api_router = APIRouter()
 api_router.include_router(nexus.router, prefix="/nexus", tags=["nexus"])

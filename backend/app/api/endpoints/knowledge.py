@@ -27,11 +27,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.knowledge import DocumentStatus, KnowledgeChat, KnowledgeDocument
-from app.services.knowledge.extractor.document_parser import parse_local_file
-from app.services.knowledge.rag.knowledge_base import UPLOAD_DIR, kb_service
-from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
-from app.services.storage.service import storage_service
-from app.services.knowledge.rag.qa import qa_service
+from app.services.intelligence.knowledge.extractor.document_parser import parse_local_file
+from app.services.intelligence.knowledge.rag.knowledge_base import UPLOAD_DIR, kb_service
+from app.services.intelligence.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.platform.storage.service import storage_service
+from app.services.intelligence.knowledge.rag.generation.qa import qa_service
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ async def background_incremental_index(doc_id: int, segments: List[str]):
             try:
                 import networkx as nx
 
-                from app.services.knowledge.rag.config.settings import LIGHTRAG_DIR
+                from app.services.intelligence.knowledge.rag.config.settings import LIGHTRAG_DIR
 
                 p = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
                 if not p.exists():
@@ -244,7 +244,7 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
             try:
                 import networkx as nx
 
-                from app.services.knowledge.rag.config.settings import LIGHTRAG_DIR
+                from app.services.intelligence.knowledge.rag.config.settings import LIGHTRAG_DIR
 
                 gp = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
                 if gp.exists():
@@ -707,7 +707,7 @@ async def get_document_graph(doc_id: int, request: Request, db: AsyncSession = D
 
 @router.get("/graph")
 async def get_global_graph(request: Request, db: AsyncSession = Depends(get_db)):
-    from app.services.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
+    from app.services.intelligence.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 
     await lightrag_engine.ensure_initialized(db)
     data = lightrag_engine.get_graph_data()

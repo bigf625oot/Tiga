@@ -11,7 +11,7 @@ sys.path.append(str(Path.cwd()))
 import os
 os.environ["OPENAI_API_KEY"] = "dummy"
 
-from app.services.eah_agent.tools.tool_factory import ToolFactory
+from app.services.agent.tools.tool_factory import ToolFactory
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

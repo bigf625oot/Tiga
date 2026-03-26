@@ -17,7 +17,7 @@ import time
 from fastapi import APIRouter
 
 from app.core.config import settings
-from app.services.knowledge.rag.knowledge_base import kb_service
+from app.services.intelligence.knowledge.rag.knowledge_base import kb_service
 
 router = APIRouter()
 
@@ -113,7 +113,7 @@ async def retrieval_health() -> Dict[str, Any]:
             import neo4j
 
             out["graph"]["version"] = getattr(neo4j, "__version__", None)
-            from app.services.knowledge.rag.graph import _get_driver
+            from app.services.intelligence.knowledge.rag.graph import _get_driver
 
             driver = _get_driver()
             with driver.session() as session:

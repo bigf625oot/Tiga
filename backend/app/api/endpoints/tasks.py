@@ -18,7 +18,7 @@ from app.db.session import get_db, AsyncSessionLocal
 from app.schemas.task import TaskCreate, TaskResponse, SubTaskResponse
 from app.crud.crud_task import task as crud_task
 from app.crud.crud_task import sub_task as crud_sub_task
-from app.services.task.service import task_service
+from app.services.ops.task.service import task_service
 
 router = APIRouter()
 

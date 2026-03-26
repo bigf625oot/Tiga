@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to purge expired task logs: {e}")
 
     # Initialize Knowledge Base with DB Config
-    from app.services.knowledge.rag.knowledge_base import kb_service
+    from app.services.intelligence.knowledge.rag.knowledge_base import kb_service
 
     try:
         async with AsyncSessionLocal() as db:
@@ -67,11 +67,11 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize Knowledge Base config: {e}")
 
     # Start Node Monitoring Task
-    from app.services.openclaw.node.monitor import node_monitor
+    from app.services.ops.openclaw.node.monitor import node_monitor
     await node_monitor.start()
 
     # Start Task Worker
-    from app.services.openclaw.task.execution import task_worker
+    from app.services.ops.openclaw.task.execution import task_worker
     await task_worker.start()
 
     # Initialize Redis Streams
@@ -80,7 +80,7 @@ async def lifespan(app: FastAPI):
     logger.info(_("Redis Task Stream infrastructure initialized."))
 
     # Start Task Lifecycle Scheduler
-    from app.services.task.scheduler import scheduler
+    from app.services.ops.task.scheduler import scheduler
     await scheduler.start()
     logger.info(_("Task lifecycle scheduler started."))
 
