@@ -14,7 +14,8 @@ from starlette.requests import Request
 from app.api.api import api_router
 from app.core.bootstrap import apply_patches
 from app.core.config import settings
-from app.core.exceptions import global_exception_handler
+from app.core.exceptions import global_exception_handler, http_exception_handler
+from fastapi import HTTPException
 from app.core.logger import logger, setup_logging
 from app.core.i18n import _
 
@@ -74,6 +75,10 @@ async def lifespan(app: FastAPI):
     from app.services.ops.openclaw.task.execution import task_worker
     await task_worker.start()
 
+    # Start Async Task Worker Pool
+    from app.core.worker_pool import task_pool
+    await task_pool.start()
+
     # Initialize Redis Streams
     from app.core.task_stream import task_stream
     await task_stream.ensure_infrastructure()
@@ -87,6 +92,7 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown: Close connections
     logger.info(_("Shutting down..."))
+    await task_pool.stop()
     await task_worker.stop()
     await node_monitor.stop()
     await scheduler.stop()
@@ -107,6 +113,7 @@ app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/o
 
 # Global Exception Handler
 app.add_exception_handler(Exception, global_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 
 # Trace ID Middleware
 app.add_middleware(TraceIDMiddleware)

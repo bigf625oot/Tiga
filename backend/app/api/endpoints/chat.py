@@ -28,7 +28,7 @@ Chat Endpoints（/chat）
 import uuid
 from typing import List, Optional, Any, Dict
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, BackgroundTasks
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -107,7 +107,7 @@ class ChatRequest(BaseModel):
 
 
 @router.post("/sessions/{session_id}/chat")
-async def chat_session(session_id: str, request: ChatRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession = Depends(get_db)):
     """
     统一聊天端点，根据意图路由到适当的处理程序。
     支持: Chat, Task, Team, Workflow, Data Query, KG QA.

@@ -20,7 +20,7 @@ import os
 import tempfile
 from typing import Any, List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -309,7 +309,7 @@ def run_export_task(config_data: dict):
 
 
 @router.post("/{id}/run")
-async def run_graph_export(*, db: AsyncSession = Depends(get_db), id: int, background_tasks: BackgroundTasks) -> Any:
+async def run_graph_export(*, db: AsyncSession = Depends(get_db), id: int) -> Any:
     """
     Run graph export process in background.
     """
@@ -371,6 +371,7 @@ async def run_graph_export(*, db: AsyncSession = Depends(get_db), id: int, backg
                 print(f"Warning: Data source {ds_id} not found")
 
     # We pass the config json to the background task
-    background_tasks.add_task(run_in_threadpool, run_export_task, export_config)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(run_in_threadpool, run_export_task, export_config)
 
     return {"message": "Export task started in background"}

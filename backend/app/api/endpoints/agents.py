@@ -52,15 +52,17 @@ async def upload_agent_icon(file: UploadFile = File(...)):
     # For now, let's hardcode relative to current file or project root if possible.
     # But environment says working directory is d:\Tiga.
     
-    upload_dir = Path("d:/Tiga/backend/data/storage/icons")
+    upload_dir = Path("data/storage/icons")
     upload_dir.mkdir(parents=True, exist_ok=True)
     
     file_ext = file.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{file_ext}"
     file_path = upload_dir / filename
     
-    with file_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    import aiofiles
+    async with aiofiles.open(file_path, "wb") as buffer:
+        while chunk := await file.read(8192):
+            await buffer.write(chunk)
         
     return {"url": f"/uploads/icons/{filename}"}
 

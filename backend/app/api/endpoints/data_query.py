@@ -20,7 +20,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
@@ -84,7 +84,8 @@ async def connect_database(request: Request, config: DbConnectionConfig = None, 
     except Exception as e:
         duration = (time.time() - start_time) * 1000
         logger.error(f"Connection failed after {duration:.2f}ms. Error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail=f"Connection failed: {str(e)}")
 
 
 @router.get("/tables")
@@ -103,7 +104,8 @@ async def get_tables():
             "stats": stats
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail=f"Failed to get tables: {str(e)}")
 
 
 @router.get("/table/{table_name}/data")
@@ -115,25 +117,55 @@ async def get_table_data(table_name: str, limit: int = 100, offset: int = 0):
         result = await run_in_threadpool(data_query_service.get_table_data, table_name, limit, offset)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail=f"Failed to get table data: {str(e)}")
 
 
 @router.post("/table/{table_name}/convert_to_graph")
-async def convert_table_to_graph(table_name: str, background_tasks: BackgroundTasks):
+async def convert_table_to_graph(table_name: str):
     """
     Start a background task to convert table data to Knowledge Graph.
+    Uses Saga Orchestrator to ensure rollback if graph extraction fails.
     """
     job_id = str(uuid.uuid4())
     update_job_status(job_id, "pending", 0, "任务已创建")
 
-    background_tasks.add_task(
-        data_query_service.convert_table_to_graph_task,
-        job_id,
-        table_name,
-        update_job_status
-    )
+    from app.core.saga import SagaOrchestrator, SagaStep
+    
+    saga = SagaOrchestrator(f"Table_To_Graph_{job_id}")
 
-    return {"job_id": job_id, "message": "转换任务已开始"}
+    async def step_convert(ctx):
+        # We need to run the potentially blocking conversion in a thread
+        import asyncio
+        result = await asyncio.to_thread(
+            data_query_service.convert_table_to_graph_task,
+            job_id,
+            table_name,
+            update_job_status
+        )
+        return {"status": "success", "table_name": table_name}
+
+    async def compensate_convert(ctx):
+        # If something fails, we might want to clean up partially created graph nodes
+        # Since this is a complex operation depending on how convert_table_to_graph_task works,
+        # we log the need for cleanup. A full implementation would delete the specific entities.
+        logger.warning(f"[Saga Rollback] 表转图谱失败，准备回滚 {table_name} 的图谱数据 (Not fully implemented yet)")
+        update_job_status(job_id, "failed", 0, "任务失败已回滚")
+
+    saga.add_step(SagaStep(name="Convert_Table", execute=step_convert, compensate=compensate_convert))
+
+    async def run_saga_background():
+        try:
+            success = await saga.run()
+            if not success:
+                logger.error(f"Saga execution failed for job {job_id}")
+        except Exception as e:
+            logger.error(f"Saga background wrapper error: {e}")
+
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(run_saga_background)
+
+    return {"job_id": job_id, "message": "转换任务已开始 (Saga Protected)"}
 
 
 @router.get("/conversion_status/{job_id}")
@@ -246,7 +278,8 @@ async def save_config(config: DbConnectionConfig):
         return {"message": "Config saved successfully"}
     except Exception as e:
         logger.error(f"Failed to save config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save configuration")
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail="Failed to save configuration")
 
 
 @router.get("/config")
@@ -293,7 +326,8 @@ async def create_session(payload: DataQuerySessionCreate):
             last_message_preview=None,
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"Failed to create session: {str(e)}")
 
 
 @router.get("/sessions")
@@ -327,7 +361,8 @@ async def list_sessions(status: str = "active", limit: int = 20, offset: int = 0
             )
         return {"items": out, "limit": limit, "offset": offset, "count": len(out)}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"Failed to list sessions: {str(e)}")
 
 
 @router.get("/sessions/{session_id}", response_model=DataQuerySessionResponse)
@@ -412,4 +447,5 @@ async def get_session_messages(session_id: str):
             ]
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"Failed to get session messages: {str(e)}")

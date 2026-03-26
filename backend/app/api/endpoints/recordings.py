@@ -22,7 +22,7 @@ import tempfile
 import json
 from pydub import AudioSegment
 import imageio_ffmpeg
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
@@ -285,7 +285,6 @@ async def move_recording(
 
 @router.post("/upload")
 async def upload_recording(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     duration: int = Form(0),
     parent_id: int = Form(None),  # Support upload to folder
@@ -300,61 +299,93 @@ async def upload_recording(
     s3_key = f"{uuid.uuid4()}{file_ext}"
 
     # Process Audio (Resample to 16kHz for ASR) and Upload
+    import aiofiles
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_orig:
-        shutil.copyfileobj(file.file, tmp_orig)
         tmp_orig_path = tmp_orig.name
+        
+    async with aiofiles.open(tmp_orig_path, "wb") as buffer:
+        while chunk := await file.read(8192):
+            await buffer.write(chunk)
 
     converted_path = None
     success = False
 
     try:
         logger.info(f"Processing audio file: {tmp_orig_path}")
-
-        # Use subprocess to call ffmpeg directly, bypassing pydub's ffprobe dependency
-        import subprocess
-        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
         
-        # Determine output format (mp4 container for m4a/aac)
-        export_format = file_ext.replace(".", "")
-        if export_format == "m4a":
-             export_format = "mp4"
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{export_format}") as tmp_converted:
-            converted_path = tmp_converted.name
-
-        # Command: ffmpeg -y -i input -ar 16000 -ac 1 -f format output
-        cmd = [
-            ffmpeg_exe,
-            "-y",
-            "-i", tmp_orig_path,
-            "-ar", "16000",
-            "-ac", "1",
-            "-f", export_format,
-            converted_path
-        ]
+        from app.core.saga import SagaOrchestrator, SagaStep
+        saga = SagaOrchestrator(f"Audio_Process_{s3_key}")
         
-        logger.info(f"Running ffmpeg command: {' '.join(cmd)}")
-        # Capture output for debugging
-        process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        async def step_convert(ctx):
+            import subprocess
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+            export_format = file_ext.replace(".", "")
+            if export_format == "m4a":
+                export_format = "mp4"
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{export_format}") as tmp_converted:
+                c_path = tmp_converted.name
+
+            cmd = [
+                ffmpeg_exe, "-y", "-i", tmp_orig_path,
+                "-ar", "16000", "-ac", "1", "-f", export_format,
+                c_path
+            ]
+            
+            logger.info(f"Running ffmpeg command: {' '.join(cmd)}")
+            process = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                logger.error(f"FFmpeg failed with return code {process.returncode}")
+                logger.error(f"FFmpeg stderr: {stderr.decode('utf-8', errors='ignore')}")
+                raise Exception("FFmpeg conversion failed")
+
+            ctx["converted_path"] = c_path
+            return {"converted_path": c_path}
+
+        async def compensate_convert(ctx):
+            c_path = ctx.get("converted_path")
+            if c_path and os.path.exists(c_path):
+                os.unlink(c_path)
+
+        async def step_upload(ctx):
+            c_path = ctx.get("converted_path")
+            async with aiofiles.open(c_path, "rb") as f:
+                content = await f.read()
+                success = await storage_service.upload_file(content, s3_key)
+                if not success:
+                    raise Exception("S3 Upload failed")
+            return {"s3_key": s3_key}
+
+        async def compensate_upload(ctx):
+            logger.info(f"[Saga Rollback] Deleting audio from S3: {s3_key}")
+            try:
+                storage_service.delete_file(s3_key)
+            except Exception as e:
+                logger.error(f"Failed to delete {s3_key} during rollback: {e}")
+
+        saga.add_step(SagaStep("Convert", step_convert, compensate_convert))
+        saga.add_step(SagaStep("Upload", step_upload, compensate_upload))
         
-        if process.returncode != 0:
-            logger.error(f"FFmpeg failed with return code {process.returncode}")
-            logger.error(f"FFmpeg stderr: {process.stderr.decode('utf-8', errors='ignore')}")
-            raise Exception("FFmpeg conversion failed")
-
-        logger.info(f"Audio converted to 16kHz mono: {converted_path}")
-
-        # Upload converted file
-        with open(converted_path, "rb") as f_converted:
-            logger.info(f"Uploading converted file to S3/OSS with key: {s3_key}")
-            success = await storage_service.upload_file(f_converted, s3_key)
+        if await saga.run():
+            success = True
+            converted_path = saga.context.get("converted_path")
+        else:
+            raise Exception("Saga Audio Pipeline failed")
 
     except Exception as e:
         logger.error(f"Audio processing failed: {e}. Falling back to original file.")
         # Fallback to original
-        file.file.seek(0)
-        logger.info(f"Uploading original file to S3/OSS with key: {s3_key}")
-        success = await storage_service.upload_file(file.file, s3_key)
+        try:
+            async with aiofiles.open(tmp_orig_path, "rb") as f:
+                content = await f.read()
+                success = await storage_service.upload_file(content, s3_key)
+        except Exception as e_inner:
+            logger.error(f"Fallback upload failed: {e_inner}")
+            success = False
 
     finally:
         # Cleanup temp files
@@ -394,7 +425,8 @@ async def upload_recording(
     logger.info(f"DB record created (ID: {new_recording.id}). Adding background task...")
 
     # Trigger Background Task for ASR
-    background_tasks.add_task(process_audio_background, new_recording.id, AsyncSessionLocal)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(process_audio_background, new_recording.id, AsyncSessionLocal)
 
     return new_recording
 
@@ -426,7 +458,7 @@ async def get_recording(recording_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{recording_id}/retry")
-async def retry_transcription(recording_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def retry_transcription(recording_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Recording).filter(Recording.id == recording_id))
     recording = result.scalars().first()
     if not recording:
@@ -445,7 +477,8 @@ async def retry_transcription(recording_id: int, background_tasks: BackgroundTas
     await db.commit()
 
     # Trigger Background Task
-    background_tasks.add_task(process_audio_background, recording.id, AsyncSessionLocal)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(process_audio_background, recording.id, AsyncSessionLocal)
 
     return {"status": "processing"}
 

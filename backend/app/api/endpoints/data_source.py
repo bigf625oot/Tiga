@@ -18,7 +18,7 @@ Data Source Endpoint
 from typing import Any, List, Optional
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body
+from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -258,7 +258,6 @@ async def preview_query(
 @router.get("/{id}/data")
 async def fetch_data(
     id: int,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(deps.get_db),
     limit: int = 1000,
     offset: int = 0,

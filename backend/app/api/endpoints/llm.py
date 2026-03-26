@@ -66,10 +66,9 @@ async def test_llm_connection(request: LLMTestRequest):
 
     # Set default base_url for known providers if not provided
     if not base_url:
-        if request.provider == "aliyun":
-            base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-        elif request.provider == "deepseek":
-            base_url = "https://api.deepseek.com"
+        from app.core.config import settings
+        default_urls = settings.LLM_PROVIDERS_CONFIG.get("default_base_urls", {})
+        base_url = default_urls.get(request.provider, "")
 
     # For local providers, base_url is usually required, e.g., http://localhost:11434/v1
 

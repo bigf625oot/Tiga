@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 @router.post("/", response_model=AsyncTaskCreateResponse, status_code=202)
 async def create_async_task(
     payload: AsyncTaskCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ):
@@ -39,7 +38,8 @@ async def create_async_task(
 
     await task_progress.publish_update(task.id, user_id or "anonymous")
 
-    background_tasks.add_task(process_task_background, task.id, task.task_type)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(process_task_background, task.id, task.task_type)
 
     return AsyncTaskCreateResponse(
         task_id=task.id,

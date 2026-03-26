@@ -51,46 +51,17 @@ async def fetch_mcp_tools(config: MCPServerConfig):
     """
     Connect to an MCP server and fetch available tools.
     """
-    logger.info(f"Fetching tools from MCP server: {config}")
-
-    # Try to import mcp (will fail in Python 3.9)
+    from app.services.platform.mcp.service import fetch_tools as service_fetch_tools
+    
     try:
-        # Check if we can simulate a connection or if we should return mock data
-        # In a real implementation with Python 3.10+, we would use the mcp library here.
-
-        # For demonstration purposes in this environment:
-        await asyncio.sleep(1)  # Simulate network delay
-
-        if config.transport_type == MCPTransportType.STDIO:
-            return [
-                MCPTool(
-                    name="read_file",
-                    description="Read contents of a file",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {"path": {"type": "string", "description": "File path"}},
-                        "required": ["path"],
-                    },
-                ),
-                MCPTool(
-                    name="write_file",
-                    description="Write content to a file",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
-                        "required": ["path", "content"],
-                    },
-                ),
-                MCPTool(name="list_directory", description="List files in a directory"),
-            ]
-        elif config.transport_type == MCPTransportType.SSE:
-            return [
-                MCPTool(name="weather_current", description="Get current weather"),
-                MCPTool(name="weather_forecast", description="Get weather forecast"),
-            ]
-
-        return []
-
+        tools = await service_fetch_tools(config)
+        return [
+            MCPTool(
+                name=t.name, 
+                description=t.description, 
+                inputSchema=t.inputSchema
+            ) for t in tools
+        ]
     except Exception as e:
         logger.error(f"Failed to fetch tools: {e}")
         raise HTTPException(status_code=500, detail=str(e))

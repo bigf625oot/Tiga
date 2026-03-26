@@ -33,7 +33,8 @@ async def create_task(
     db: AsyncSession = Depends(get_db)
 ):
     task = await crud_task.create(db, payload)
-    background_tasks.add_task(run_in_background, task.id, task.original_prompt)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(run_in_background, task.id, task.original_prompt)
     return task
 
 @router.get("/{task_id}", response_model=TaskResponse)

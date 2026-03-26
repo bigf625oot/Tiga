@@ -13,11 +13,12 @@ Health Check Endpoint
 """
 from typing import Any, Dict
 import time
+import asyncio
 
 from fastapi import APIRouter
 
 from app.core.config import settings
-from app.services.intelligence.knowledge.rag.knowledge_base import kb_service
+from app.services.intelligence.knowledge.rag.knowledge_base import kb_service   
 
 router = APIRouter()
 
@@ -26,6 +27,35 @@ router = APIRouter()
 async def health_check() -> Dict[str, Any]:
     return {"status": "ok", "ts": int(time.time())}
 
+
+def _check_qdrant(url, api_key, coll):
+    from qdrant_client import QdrantClient
+    client = QdrantClient(url=url, api_key=api_key) if url else QdrantClient()
+    client.get_collection(coll)
+    try:
+        return getattr(client.count(collection_name=coll), "count", None)
+    except Exception:
+        return None
+
+def _check_milvus(host, port, coll_name):
+    from pymilvus import Collection, connections
+    connections.connect("default", host=host, port=port)
+    coll = Collection(name=coll_name)
+    try:
+        return coll.num_entities
+    except Exception:
+        return None
+
+def _check_neo4j():
+    from app.services.intelligence.knowledge.rag.graph import _get_driver
+    driver = _get_driver()
+    with driver.session() as session:
+        session.run("RETURN 1")
+        try:
+            res = session.run("MATCH (n:Entity) RETURN count(n) AS c")
+            return res.single()[0]
+        except Exception:
+            return None
 
 @router.get("/retrieval")
 async def retrieval_health() -> Dict[str, Any]:
@@ -53,55 +83,34 @@ async def retrieval_health() -> Dict[str, Any]:
         if vb == "lancedb":
             import lancedb
 
-            out["vector"]["version"] = getattr(lancedb, "__version__", None)
+            out["vector"]["version"] = getattr(lancedb, "__version__", None)    
             # Try to access underlying table name
             tbl = getattr(kb_service.vector_db, "table_name", None)
             out["vector"]["collection"] = tbl
-            # Best-effort count: attempt to search all (may return empty), else None
-            try:
-                # LanceDB Python API doesn't always expose count; skip if not available
-                out["vector"]["ok"] = True
-            except Exception:
-                out["vector"]["ok"] = True
+            out["vector"]["ok"] = True
         elif vb == "qdrant":
-            from qdrant_client import QdrantClient
             from qdrant_client import __version__ as qv
-
             out["vector"]["version"] = qv
-            client = (
-                QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
-                if settings.QDRANT_URL
-                else QdrantClient()
-            )
             coll = settings.QDRANT_COLLECTION
             out["vector"]["collection"] = coll
             try:
-                client.get_collection(coll)
+                count = await asyncio.to_thread(_check_qdrant, settings.QDRANT_URL, settings.QDRANT_API_KEY, coll)
                 out["vector"]["ok"] = True
-                # Count points
-                try:
-                    res = client.count(collection_name=coll)
-                    out["vector"]["count"] = getattr(res, "count", None)
-                except Exception:
-                    out["vector"]["count"] = None
+                out["vector"]["count"] = count
             except Exception:
                 out["vector"]["ok"] = False
         elif vb == "milvus":
             import pymilvus
-
-            out["vector"]["version"] = getattr(pymilvus, "__version__", None)
-            from pymilvus import Collection, connections
-
+            out["vector"]["version"] = getattr(pymilvus, "__version__", None)   
             host = settings.MILVUS_HOST or "127.0.0.1"
             port = settings.MILVUS_PORT or 19530
-            connections.connect("default", host=host, port=port)
-            coll = Collection(name=settings.MILVUS_COLLECTION)
             out["vector"]["collection"] = settings.MILVUS_COLLECTION
-            out["vector"]["ok"] = True
             try:
-                out["vector"]["count"] = coll.num_entities
+                count = await asyncio.to_thread(_check_milvus, host, port, settings.MILVUS_COLLECTION)
+                out["vector"]["ok"] = True
+                out["vector"]["count"] = count
             except Exception:
-                out["vector"]["count"] = None
+                out["vector"]["ok"] = False
         else:
             out["vector"]["ok"] = True
     except Exception:
@@ -111,21 +120,14 @@ async def retrieval_health() -> Dict[str, Any]:
     try:
         if gb == "neo4j":
             import neo4j
-
-            out["graph"]["version"] = getattr(neo4j, "__version__", None)
-            from app.services.intelligence.knowledge.rag.graph import _get_driver
-
-            driver = _get_driver()
-            with driver.session() as session:
-                session.run("RETURN 1")
+            out["graph"]["version"] = getattr(neo4j, "__version__", None)       
+            try:
+                count = await asyncio.to_thread(_check_neo4j)
                 out["graph"]["ok"] = True
-                try:
-                    res = session.run("MATCH (n:Entity) RETURN count(n) AS c")
-                    out["graph"]["count"] = res.single()[0]
-                except Exception:
-                    out["graph"]["count"] = None
+                out["graph"]["count"] = count
+            except Exception:
+                out["graph"]["ok"] = False
         else:
-            # local graph is generated on demand; mark ok if service is loaded
             out["graph"]["ok"] = True
     except Exception:
         out["graph"]["ok"] = False
