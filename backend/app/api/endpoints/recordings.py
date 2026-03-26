@@ -20,7 +20,10 @@ import uuid
 import shutil
 import tempfile
 import json
-from pydub import AudioSegment
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=RuntimeWarning, module="pydub")
+    from pydub import AudioSegment
 import imageio_ffmpeg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select

@@ -56,7 +56,6 @@ class ExecutionEngine:
             model=model_instance,
             tools=tools,
             instructions=[system_prompt],
-            show_tool_calls=True,
             markdown=True
         )
 

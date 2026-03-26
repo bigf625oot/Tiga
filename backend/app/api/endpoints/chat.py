@@ -28,7 +28,7 @@ Chat Endpoints（/chat）
 import uuid
 from typing import List, Optional, Any, Dict
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -107,7 +107,12 @@ class ChatRequest(BaseModel):
 
 
 @router.post("/sessions/{session_id}/chat")
-async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat_session(
+    session_id: str, 
+    request: ChatRequest, 
+    background_tasks: BackgroundTasks, 
+    db: AsyncSession = Depends(get_db)
+):
     """
     统一聊天端点，根据意图路由到适当的处理程序。
     支持: Chat, Task, Team, Workflow, Data Query, KG QA.
@@ -164,6 +169,65 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
 
     # Use SSE
     async def sse_generator():
+        # --- TEST INTERCEPTOR FOR SYSTEMATIC DEBUGGING ---
+        if request.message.startswith("[TEST]"):
+            await crud_chat.create_message(db, session_id, "user", request.message)
+            test_type = request.message.split(" ")[1] if " " in request.message else ""
+            
+            if test_type == "EMPTY_THOUGHT":
+                # 场景：空 Thought 返回
+                yield format_sse_json("think", "")
+                yield format_sse_json("text", "这是没有思考过程的直接回复。")
+                yield format_sse_json("done", "[DONE]")
+                return
+                
+            elif test_type == "OUT_OF_ORDER":
+                # 场景：SSE 消息乱序
+                yield format_sse_json("text", "这是第一段正文。")
+                yield format_sse_json("call", {"tool": "search", "args": {"query": "test"}})
+                yield format_sse_json("text", "这是第二段正文。")
+                yield format_sse_json("result", {"tool": "search", "output": "搜索结果"})
+                yield format_sse_json("done", "[DONE]")
+                return
+                
+            elif test_type == "JSON_ESCAPE":
+                # 场景：JSON 转义字符攻击
+                # 包含极多 \n 和 " 等
+                malicious = "破坏性测试: \n \"\"\" {\"k\": \"v\\n\"} \r\n"
+                yield format_sse_json("text", malicious)
+                yield format_sse_json("done", "[DONE]")
+                return
+
+            elif test_type == "LONG_PLAN":
+                # 场景：Plan 描述过长
+                long_desc = "这是一个非常非常长的计划步骤描述，" * 10
+                yield format_sse_json("step", {"id": 1, "content": long_desc})
+                yield format_sse_json("text", "计划已生成。")
+                yield format_sse_json("done", "[DONE]")
+                return
+
+            elif test_type == "TOOL_ERROR":
+                # 场景：工具执行失败
+                yield format_sse_json("call", {"tool": "python", "args": {"code": "print(1/0)"}})
+                yield format_sse_json("result", {"tool": "python", "is_error": True, "output": "ZeroDivisionError: division by zero"})
+                yield format_sse_json("text", "执行失败。")
+                yield format_sse_json("done", "[DONE]")
+                return
+                
+            elif test_type == "RECURSIVE_THINK":
+                # 场景：递归思考
+                yield format_sse_json("think", "第一步：分析问题\n")
+                yield format_sse_json("think", "第二步：嵌套推导 -> a^2 + b^2 = c^2\n")
+                yield format_sse_json("text", "分析完毕。")
+                yield format_sse_json("done", "[DONE]")
+                return
+
+            # Default fallback for unhandled test types
+            yield format_sse_json("text", f"Test {test_type} executed.")
+            yield format_sse_json("done", "[DONE]")
+            return
+        # --- END TEST INTERCEPTOR ---
+
         # ── AgnoControlPlane 路径：支持所有模式 ──
         await crud_chat.create_message(db, session_id, "user", request.message)
 
@@ -239,6 +303,7 @@ async def chat_session(session_id: str, request: ChatRequest, db: AsyncSession =
 @router.post("/sessions/{session_id}/chat_multipart")
 async def chat_session_multipart(
     session_id: str,
+    background_tasks: BackgroundTasks,
     message: str = Form(...),
     stream: bool = Form(True),
     mode: Optional[str] = Form(None),
@@ -378,6 +443,8 @@ async def chat_session_multipart(
             yield format_sse_json(sse_event, chunk)
 
         yield "event: done\ndata: [DONE]\n\n"
+        
+        background_tasks.add_task(TitleGenerator.generate_title, session_id, db)
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
 

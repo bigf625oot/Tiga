@@ -139,7 +139,10 @@ async def _extract_media_asr_text(content: bytes, filename: str, file_url: str, 
     try:
         src_path.write_bytes(content)
         try:
-            from pydub import AudioSegment
+            import warnings
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=RuntimeWarning, module="pydub")
+                from pydub import AudioSegment
             import imageio_ffmpeg
             AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
             audio = AudioSegment.from_file(str(src_path))

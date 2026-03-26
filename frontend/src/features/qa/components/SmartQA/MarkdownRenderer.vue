@@ -15,6 +15,10 @@ const props = defineProps<{
   content: string;
 }>();
 
+const emit = defineEmits<{
+  (e: 'citation-click', index: number): void;
+}>();
+
 const { render, initHighlighter } = useMarkdown();
 const { toast } = useToast();
 
@@ -31,9 +35,20 @@ const renderedHtml = computed(() => {
   return render(props.content || '');
 });
 
-// 事件委托：处理代码块的一键复制
+// 事件委托：处理代码块的一键复制和引用点击
 const handleContentClick = async (e: MouseEvent) => {
   const target = e.target as HTMLElement;
+  
+  // 处理引用点击
+  const citationLink = target.closest('.citation-link');
+  if (citationLink) {
+    const index = citationLink.getAttribute('data-index');
+    if (index) {
+      emit('citation-click', parseInt(index, 10));
+    }
+    return;
+  }
+
   const copyBtn = target.closest('.copy-btn');
   
   if (copyBtn) {
@@ -71,7 +86,7 @@ const handleContentClick = async (e: MouseEvent) => {
   word-break: break-word;
 }
 .markdown-body p {
-  margin-bottom: 0.625rem;
+  margin-bottom: 1rem;
 }
 .markdown-body p:last-child {
   margin-bottom: 0;
@@ -86,16 +101,16 @@ const handleContentClick = async (e: MouseEvent) => {
 }
 .markdown-body ul {
   list-style-type: disc;
-  padding-left: 1.25rem;
-  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
 }
 .markdown-body ul li, .markdown-body ol li {
-  margin-bottom: 0.125rem;
+  margin-bottom: 0.25rem;
 }
 .markdown-body ol {
   list-style-type: decimal;
-  padding-left: 1.25rem;
-  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
 }
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
   font-weight: 600;
@@ -125,9 +140,9 @@ const handleContentClick = async (e: MouseEvent) => {
   position: relative;
   border-radius: 0.25rem;
   background-color: hsl(var(--muted));
-  padding: 0.1rem 0.3rem;
+  padding: 0.125rem 0.25rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: hsl(var(--primary));
 }
@@ -139,5 +154,41 @@ const handleContentClick = async (e: MouseEvent) => {
 :deep(.markdown-body pre code.shiki .line) {
   display: block;
   min-height: 1.5rem;
+}
+
+/* Table Styles */
+.markdown-body :deep(.table-wrapper) {
+  width: 100%;
+  overflow-x: auto;
+  margin: 1rem 0;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--card));
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+.markdown-body :deep(.table-wrapper table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+.markdown-body :deep(.table-wrapper th) {
+  background-color: hsl(var(--muted) / 0.5);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  color: hsl(var(--foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  white-space: nowrap;
+}
+.markdown-body :deep(.table-wrapper td) {
+  padding: 0.75rem 1rem;
+  color: hsl(var(--foreground) / 0.9);
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+}
+.markdown-body :deep(.table-wrapper tr:last-child td) {
+  border-bottom: none;
+}
+.markdown-body :deep(.table-wrapper tr:hover td) {
+  background-color: hsl(var(--muted) / 0.3);
 }
 </style>

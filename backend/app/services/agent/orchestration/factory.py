@@ -74,7 +74,6 @@ class AgentFactory:
                 "description": config.role or config.description,
                 "instructions": instructions or config.instructions or getattr(config, "system_prompt", []),
                 "tools": tools or getattr(config, "tools", []),
-                "show_tool_calls": True, # Force show_tool_calls to True so Agno passes tools to LLM
                 "markdown": kwargs.pop("markdown", True),
                 "reasoning": getattr(config, "reasoning", False) or getattr(getattr(config, "llm", None), "reasoning", False),
                 "monitoring": True,

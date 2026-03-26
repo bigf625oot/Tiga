@@ -134,8 +134,9 @@ class SingleExecutor(BaseExecutor):
                     async for event in execution_engine.execute_task(task, history_msgs):
                         # [Stream Adapter] 过滤内部状态，防止前端渲染抖动
                         yield event
-                        if event.get("type") == "content" and isinstance(event.get("content"), str):
-                            task_output += event.get("content")
+                        event_dict = event.to_dict() if hasattr(event, "to_dict") else event
+                        if isinstance(event_dict, dict) and event_dict.get("type") == "content" and isinstance(event_dict.get("content"), str):
+                            task_output += event_dict.get("content")
                             
                     # [Evaluation] 结果断言
                     eval_result = await evaluation_engine.evaluate_result(

@@ -52,9 +52,19 @@ class EvaluationEngine:
             content = response.content if hasattr(response, 'content') else response
             
             import json
+            import re
+            
+            # Clean up potential markdown formatting
+            cleaned_content = content.strip()
+            if cleaned_content.startswith("```"):
+                # Use regex to find content between ```json and ``` or just ``` and ```
+                match = re.search(r'```(?:json)?\s*(.*?)\s*```', cleaned_content, re.DOTALL)
+                if match:
+                    cleaned_content = match.group(1).strip()
+            
             # 这里简单做一下 JSON 解析，实际生产可以借助 pydantic Schema
             try:
-                result = json.loads(content)
+                result = json.loads(cleaned_content)
                 return {
                     "passed": result.get("passed", True),
                     "score": result.get("score", 10),
@@ -69,3 +79,39 @@ class EvaluationEngine:
         except Exception as e:
             logger.error(f"Evaluation failed: {e}")
             return {"passed": False, "score": 0, "feedback": f"Evaluation engine error: {e}"}
+
+    async def reflect(self, task_goal: str, execution_result: str, feedback: str) -> str:
+        """
+        基于失败的评估结果，生成针对下一步执行的改进建议（Reflection）。
+        """
+        if not self.llm_model:
+            from app.services.platform.llm.resolver import resolve_chat_llm_model
+            self.llm_model = await resolve_chat_llm_model(self.db)
+            
+        model_instance = ModelFactory.create_model(self.llm_model)
+        
+        reflector = Agent(
+            name="Reflector",
+            model=model_instance,
+            instructions=[
+                "You are an expert technical reflector.",
+                "Based on the task goal, execution result, and failure feedback, provide a concise and actionable hint on how to fix the issue in the next attempt.",
+                "Output ONLY the actionable hint."
+            ],
+            markdown=False
+        )
+
+        prompt = (
+            f"Task Goal: {task_goal}\n"
+            f"Execution Result: {execution_result}\n"
+            f"Failure Feedback: {feedback}\n\n"
+            "Provide actionable advice for the next execution attempt:"
+        )
+
+        try:
+            response = await reflector.arun(prompt)
+            content = response.content if hasattr(response, 'content') else response
+            return content.strip()
+        except Exception as e:
+            logger.error(f"Reflection failed: {e}")
+            return "Please review the previous failure and adjust the strategy."

@@ -102,14 +102,14 @@ export function useMarkdown() {
 
             // 返回一个包含语言和代码内容的自定义结构，方便后续组件化处理（如一键复制）
             return `
-                <div class="code-block-wrapper relative group my-4 rounded-md overflow-hidden border border-zinc-800 bg-[#0d1117]">
+                <div class="code-block-wrapper relative group my-4 rounded-lg overflow-hidden border border-zinc-800 bg-[#0d1117]">
                     <div class="code-block-header flex items-center justify-between px-4 py-1.5 bg-[#161b22] border-b border-zinc-800">
                         <span class="text-xs font-mono text-zinc-400">${lang}</span>
                         <button class="copy-btn opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-200" data-code="${escapeHtml(code).replace(/"/g, '&quot;')}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                         </button>
                     </div>
-                    <pre class="p-4 m-0 overflow-x-auto text-[13px] leading-relaxed custom-scrollbar text-gray-100 bg-[#0d1117]"><code class="shiki language-${lang}">${highlightedCode}</code></pre>
+                    <pre class="p-4 m-0 overflow-x-auto text-sm leading-relaxed custom-scrollbar text-gray-100 bg-[#0d1117]"><code class="shiki language-${lang}">${highlightedCode}</code></pre>
                 </div>
             `;
         };
@@ -138,6 +138,13 @@ export function useMarkdown() {
                 return `<img src="${href}" alt="${escapeHtml(token.text || '')}"${title} class="max-w-full rounded-md shadow-sm my-2" />`;
             };
         }
+
+        // 覆盖默认的 table 渲染以支持响应式横向滚动
+        const defaultTable = renderer.table.bind(renderer);
+        renderer.table = (token: Tokens.Table) => {
+            const html = defaultTable(token);
+            return `<div class="table-wrapper custom-scrollbar">\n${html}\n</div>`;
+        };
 
         return renderer;
     };

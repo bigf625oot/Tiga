@@ -1,23 +1,23 @@
 <template>
-  <div class="thinking-block w-full my-2">
-    <Collapsible v-model:open="isOpen" class="border-l-2 border-primary/20 bg-muted/20 rounded-r-lg overflow-hidden transition-all duration-300">
+  <div class="thinking-block w-full my-1">
+    <Collapsible v-model:open="isOpen" class="bg-transparent overflow-hidden transition-all duration-300">
       <!-- 头部开关 -->
       <CollapsibleTrigger as-child>
-        <button class="w-full flex items-center justify-between px-4 py-2 hover:bg-muted/40 transition-colors group outline-none">
+        <button class="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/30 transition-colors group outline-none rounded">
           <div class="flex items-center gap-2">
             <!-- 思考状态图标 -->
             <div class="relative w-4 h-4 flex items-center justify-center">
-              <Brain v-if="!isThinking" class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-              <Loader2 v-else class="w-3.5 h-3.5 text-primary animate-spin" />
+              <Brain v-if="!isThinking" class="w-3.5 h-3.5 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />
+              <Loader2 v-else class="w-3.5 h-3.5 text-muted-foreground/80 animate-spin" />
             </div>
 
-            <span class="text-xs font-medium" :class="isThinking ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'">
-              {{ isThinking ? '正在思考...' : `思考过程 (${timeSpent || '已完成'})` }}
+            <span class="text-[11px] font-medium tracking-tight" :class="isThinking ? 'text-muted-foreground/80' : 'text-muted-foreground/60 group-hover:text-muted-foreground'">
+              {{ isThinking ? 'Thought Process' : `Thought Process (${timeSpent || 'Complete'})` }}
             </span>
           </div>
 
           <ChevronDown
-            class="w-4 h-4 text-muted-foreground/50 transition-transform duration-200"
+            class="w-3.5 h-3.5 text-muted-foreground/40 transition-transform duration-200 group-hover:text-muted-foreground/60"
             :class="isOpen ? 'rotate-180' : ''"
           />
         </button>
@@ -27,8 +27,8 @@
       <CollapsibleContent>
         <div
           ref="contentRef"
-          class="px-4 pb-3 pt-1 text-sm text-muted-foreground font-mono leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap max-h-64 custom-scrollbar"
-        >{{ content }}<span v-if="isThinking" class="inline-block w-1.5 h-3.5 ml-1 bg-primary align-middle animate-pulse"></span>
+          class="px-3 pb-3 pt-1 text-[13px] text-muted-foreground/80 font-mono leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap max-h-64 custom-scrollbar border-l-2 border-border/40 ml-2.5 pl-4"
+        >{{ content }}<span v-if="isThinking" class="inline-block w-1.5 h-3.5 ml-1 bg-muted-foreground/50 align-middle animate-pulse"></span>
         </div>
       </CollapsibleContent>
     </Collapsible>

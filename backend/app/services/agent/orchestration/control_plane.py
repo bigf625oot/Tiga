@@ -133,6 +133,12 @@ class AgnoControlPlane:
 
             raw_stream = executor.execute(augmented_input, intent, db=db, session_id=session_id, **kwargs)
             async for chunk in raw_stream:
+                # 统一类型契约：将 StreamEvent 实体转化为字典，消除对象与字典的边界模糊 (P10 Determinism)
+                if hasattr(chunk, "to_dict"):
+                    chunk = chunk.to_dict()
+                elif hasattr(chunk, "__dict__") and not isinstance(chunk, dict):
+                    chunk = vars(chunk)
+                    
                 aggregator.consume(chunk)
                 yield chunk
 

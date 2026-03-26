@@ -86,10 +86,15 @@ export function useChatSession() {
               abortController.value = null;
           }
       } finally {
+          // Capture current state to avoid overwriting new requests
+          const currentAbortController = abortController.value;
           setTimeout(() => {
               isStopping.value = false;
-              isLoading.value = false;
-              isStreaming.value = false;
+              // Only reset if no new request has started
+              if (abortController.value === currentAbortController) {
+                  isLoading.value = false;
+                  isStreaming.value = false;
+              }
           }, 300);
       }
   };
@@ -167,6 +172,13 @@ export function useChatSession() {
     onStreamUpdate?: () => void
   ) => {
     if (isLoading.value) return;
+
+    if (isStreaming.value) {
+        stopGeneration();
+        // Give it a tiny tick to clean up state
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
     isLoading.value = true;
     loadingStatus.value = ''; // Reset status
     abortController.value = new AbortController();
@@ -324,14 +336,35 @@ export function useChatSession() {
                                   break;
                               }
 
-                              case 'tool_call': {
+                              case 'tool_call':
+                              case 'call': {
                                   workflowStore.handleAgentEvent(parsedData as AgentEvent);
+                                  if (!assistantMsg.tools) assistantMsg.tools = [];
+                                  const info = parsedData.content || parsedData;
+                                  assistantMsg.tools.push({
+                                      id: info.tool_call_id || Math.random().toString(),
+                                      name: info.tool || info.name || 'unknown_tool',
+                                      args: info.args || info.arguments || {},
+                                      status: 'running'
+                                  });
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               }
 
-                              case 'tool_output': {
+                              case 'tool_output':
+                              case 'result': {
                                   workflowStore.handleAgentEvent(parsedData as AgentEvent);
+                                  if (assistantMsg.tools) {
+                                      const info = parsedData.content || parsedData;
+                                      const toolName = info.tool || info.name;
+                                      const tool = [...assistantMsg.tools].reverse().find(t => t.name === toolName && t.status === 'running');
+                                      if (tool) {
+                                          tool.status = info.is_error ? 'error' : 'success';
+                                          tool.result = typeof (info.result || info.output) === 'string' 
+                                              ? (info.result || info.output) 
+                                              : JSON.stringify(info.result || info.output);
+                                      }
+                                  }
                                   if (onEvent) onEvent(eventType, parsedData);
                                   break;
                               }

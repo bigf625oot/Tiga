@@ -9,22 +9,22 @@
     <!-- Avatar -->
     <div 
       v-if="showAvatar" 
-      class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden mt-0 transition-all duration-300 hover:scale-105"
-      :class="isUser ? 'ml-4' : 'mr-4'"
+      class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden mt-1 transition-all duration-300 hover:scale-105 bg-background border border-border/50 shadow-sm"
+      :class="isUser ? 'ml-3' : 'mr-3'"
     >
-      <img :src="avatarSrc" :alt="avatarAlt" class="w-full h-full object-cover" />
+      <img :src="avatarSrc" :alt="avatarAlt" class="w-full h-full object-cover p-0.5" />
     </div>
 
     <!-- Message Content Wrapper -->
     <div 
-      class="flex flex-col max-w-[85%]" 
+      class="flex flex-col flex-1 min-w-0" 
       :class="[isUser ? 'items-end' : 'items-start']"
     >
       <!-- Sender Name & Time (Agent) -->
-      <div v-if="!isUser" class="flex items-center gap-2 mb-2 px-1">
-        <span class="text-xs font-medium text-muted-foreground/70">{{ agent?.name || 'Tiga' }}</span>
-        <span class="text-[10px] text-muted-foreground/50">{{ formatTime(message.timestamp) }}</span>
-        <span v-if="message.meta_data?.duration" class="text-[10px] text-muted-foreground/40">耗时 {{ formatDuration(message.meta_data.duration) }}</span>
+      <div v-if="!isUser" class="flex items-center gap-2 mb-1 px-1">
+        <span class="text-sm font-medium text-foreground/80">{{ agent?.name || 'Tiga' }}</span>
+        <span class="text-xs text-muted-foreground/40">{{ formatTime(message.timestamp) }}</span>
+        <span v-if="message.meta_data?.duration" class="text-xs text-muted-foreground/40">耗时 {{ formatDuration(message.meta_data.duration) }}</span>
       </div>
 
       <!-- Sender Name & Time (User - Optional, usually hidden or on right) -->
@@ -34,8 +34,8 @@
 
       <!-- Bubble -->
       <div 
-        class="relative px-4 py-3 text-sm leading-normal transition-all duration-200 shadow-sm"
-        :class="bubbleClasses"
+        class="relative text-sm leading-normal transition-all duration-200"
+        :class="[bubbleClasses, isUser ? 'shadow-sm' : '']"
       >
         <template v-if="isUser">
             <div v-if="isEditing" class="flex flex-col gap-2 min-w-[200px]">
@@ -55,7 +55,7 @@
         </template>
 
         <!-- Agent Mode: Rich Content -->
-        <div v-else class="agent-content flex flex-col gap-3">
+        <div v-else class="agent-content flex flex-col gap-2">
             
             <StreamSteps
                 v-if="showStreamSteps"
@@ -73,29 +73,29 @@
             </div>
 
             <!-- 0. Process Steps (New) -->
-            <div v-if="message.steps && message.steps.length > 0" class="border border-amber-200/40 dark:border-amber-900/40 rounded-xl overflow-hidden mb-2 bg-amber-50/40 dark:bg-amber-950/20 w-full shadow-sm">
+            <div v-if="message.steps && message.steps.length > 0" class="border border-border/40 rounded-md overflow-hidden mb-2 bg-muted/10 w-[90%] shadow-sm">
                 <button 
                     @click="isStepsExpanded = !isStepsExpanded"
-                    class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-amber-100/30 dark:hover:bg-amber-900/30 transition-colors group"
+                    class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-muted/30 transition-colors group"
                 >
-                    <div class="flex items-center gap-2 text-xs font-medium text-amber-700/80 dark:text-amber-500/90">
-                        <Brain class="w-3.5 h-3.5" />
-                        <span>思考链 ({{ message.steps.length }} 步)</span>
+                    <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground/80">
+                        <Activity class="w-3.5 h-3.5" />
+                        <span>Plan Steps ({{ message.steps.length }})</span>
                     </div>
                     <ChevronRight 
-                        class="w-3.5 h-3.5 text-amber-600/50 dark:text-amber-500/50 transition-transform duration-200 group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                        class="w-3.5 h-3.5 text-muted-foreground/40 transition-transform duration-200 group-hover:text-muted-foreground/70"
                         :class="isStepsExpanded ? 'rotate-90' : ''"
                     />
                 </button>
-                <div v-show="isStepsExpanded" class="bg-background/40 px-3 py-2 border-t border-amber-200/30 dark:border-amber-900/30">
+                <div v-show="isStepsExpanded" class="px-3 py-2 border-t border-border/40 bg-transparent">
                     <div class="space-y-3 relative">
-                        <div class="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-amber-200/50 dark:bg-amber-800/30"></div>
+                        <div class="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-border/40"></div>
                         <div v-for="(step, sIdx) in message.steps" :key="sIdx" class="flex gap-3 relative">
                             <div class="flex flex-col items-center pt-1.5 shrink-0 z-10">
-                                <div class="w-2.5 h-2.5 rounded-full bg-background border-2 border-amber-400/60 dark:border-amber-600/60 shadow-sm"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-background border-2 border-primary/50 shadow-sm"></div>
                             </div>
                             <div class="pb-1 min-w-0 flex-1">
-                                <div class="text-[11px] text-muted-foreground break-words whitespace-pre-wrap font-mono leading-relaxed">
+                                <div class="text-xs text-muted-foreground/80 break-words whitespace-pre-wrap font-mono leading-relaxed">
                                     {{ step.content }}
                                 </div>
                             </div>
@@ -147,8 +147,8 @@
                 </div>
 
                 <!-- Markdown Content (Table, Summary) -->
-                <div v-if="parsed.text" class="w-full mt-2">
-                    <MarkdownRenderer :content="parsed.text" />
+                <div v-if="parsed.text" class="w-full mt-1">
+                    <MarkdownRenderer :content="parsed.text" @citation-click="handleCitationClick" />
                 </div>
                 
                 <!-- Embedded Resources -->
@@ -167,7 +167,7 @@
                 <!-- SQL Section (Collapsed inside Summary) -->
                 <div v-if="parsed.sql" class="pt-2 border-t border-border" :class="chartOption ? 'm-4' : 'mt-4'">
                     <details class="group/sql">
-                        <summary class="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer hover:text-primary transition-colors select-none w-fit">
+                        <summary class="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors select-none w-fit">
                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                             </svg>
@@ -184,30 +184,30 @@
                                     </svg>
                                 </button>
                              </div>
-                             <pre class="!m-0 !p-2 !bg-transparent overflow-x-auto custom-scrollbar"><code class="text-primary/80 font-mono text-[10px] leading-4 whitespace-pre">{{ parsed.sql }}</code></pre>
+                             <pre class="!m-0 !p-2 !bg-transparent overflow-x-auto custom-scrollbar"><code class="text-primary/80 font-mono text-xs leading-4 whitespace-pre">{{ parsed.sql }}</code></pre>
                         </div>
                     </details>
                 </div>
             </div>
             
             <!-- 4. References (Footer) -->
-            <div v-if="hasReferences" class="mt-1 pt-2 border-t border-border/50">
-                <div class="flex items-center gap-2 mb-2">
-                    <svg class="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div v-if="hasReferences" class="mt-3 pt-3 border-t border-border/30">
+                <div class="flex items-center gap-1.5 mb-2.5">
+                    <svg class="w-3.5 h-3.5 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
-                    <span class="text-xs font-semibold text-muted-foreground">参考来源</span>
+                    <span class="text-xs font-medium text-muted-foreground/80 tracking-wide uppercase">信息/知识来源</span>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <div 
                         v-for="(ref, idx) in combinedSources" 
                         :key="idx"
-                        class="group/ref flex items-center gap-1.5 px-2 py-1 bg-muted/50 border border-border rounded text-[11px] text-muted-foreground cursor-pointer hover:bg-accent hover:border-primary/30 hover:shadow-sm hover:text-primary transition-all duration-200 max-w-[200px]"
+                        class="group/ref flex items-center gap-1.5 px-2.5 py-1 bg-muted/20 border border-border/40 rounded-md text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 hover:border-border/80 hover:text-foreground transition-all duration-200 max-w-[220px]"
                         @click="$emit('locate-node', ref)"
-                        :title="ref.title || 'Unknown Source'"
+                        :title="ref.title || '未知数据源'"
                     >
-                        <span class="font-mono text-muted-foreground group-hover/ref:text-primary/70 text-[9px]">{{ Number(idx) + 1 }}</span>
-                        <span class="truncate">{{ ref.title || 'Unknown Source' }}</span>
+                        <span class="font-mono text-muted-foreground/50 group-hover/ref:text-muted-foreground text-xs">{{ Number(idx) + 1 }}</span>
+                        <span class="truncate font-medium">{{ ref.title || '未知数据源' }}</span>
                     </div>
                 </div>
             </div>
@@ -221,48 +221,45 @@
             />
 
             <!-- 6. Streaming Cursor -->
-            <div v-if="isStreaming && isLast && (parsed.text || thinkingContent)" class="h-4 mt-1">
-                 <span class="inline-block w-2 h-4 bg-indigo-500/80 animate-pulse rounded-sm"></span>
+            <div v-if="isStreaming && isLast" class="h-4 mt-1 flex items-center">
+                 <span class="inline-block w-2 h-4 bg-foreground/60 animate-pulse rounded-[1px]"></span>
             </div>
 
         </div>
       </div>
 
       <!-- Actions (Outside Bubble) -->
-      <div class="flex items-center gap-2 mt-2" :class="isUser ? 'mr-1 justify-end' : 'ml-1'">
+      <div 
+        class="flex items-center gap-1.5 mt-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0" 
+        :class="isUser ? 'mr-1 justify-end' : 'ml-1'"
+      >
           <template v-if="isUser">
-              <button v-if="!isEditing" class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="编辑" @click="startEdit">
+              <button v-if="!isEditing" class="p-1 text-muted-foreground/40 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-all" title="编辑" @click="startEdit">
                   <Pencil class="w-3.5 h-3.5" />
               </button>
-              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
+              <button class="p-1 text-muted-foreground/40 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-all" title="复制" @click="copyText(message.content)">
                   <Copy class="w-3.5 h-3.5" />
-              </button>
-              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="重新发送" @click="$emit('resend-message', message)">
-                  <RotateCcw class="w-3.5 h-3.5" />
-              </button>
-              <button class="p-1 text-muted-foreground/60 hover:text-destructive transition-colors" title="删除" @click="$emit('delete-message', message)">
-                  <Trash2 class="w-3.5 h-3.5" />
               </button>
           </template>
           <template v-else>
-              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="引用" @click="$emit('quote-message', message.content)">
+              <button class="p-1 text-muted-foreground/40 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-all" title="复制" @click="copyText(message.content)">
+                  <Copy class="w-3.5 h-3.5" />
+              </button>
+              <button class="p-1 text-muted-foreground/40 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-all" title="引用" @click="$emit('quote-message', message.content)">
                   <Quote class="w-3.5 h-3.5" />
               </button>
               <button
-                  class="p-1 text-muted-foreground/60 hover:text-amber-500 transition-colors relative"
+                  class="p-1 text-muted-foreground/40 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-all relative"
                   title="摘录到秒记"
                   @click="handleExcerpt"
               >
                   <Bookmark class="w-3.5 h-3.5" :class="{'fill-current text-amber-500 animate-pulse': isExcerptionAnimating}" />
-                  <span v-if="isExcerptionAnimating" class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-amber-600 font-bold animate-out fade-out slide-out-to-top-2 duration-500">+1</span>
               </button>
-              <button class="p-1 text-muted-foreground/60 hover:text-indigo-600 transition-colors" title="复制" @click="copyText(message.content)">
-                  <Copy class="w-3.5 h-3.5" />
-              </button>
-              <button class="p-1 text-muted-foreground/60 hover:text-green-600 transition-colors" title="赞">
+              <div class="w-px h-3 bg-border/40 mx-0.5"></div>
+              <button class="p-1 text-muted-foreground/40 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-all" title="赞">
                   <ThumbsUp class="w-3.5 h-3.5" />
               </button>
-              <button class="p-1 text-muted-foreground/60 hover:text-red-600 transition-colors" title="踩">
+              <button class="p-1 text-muted-foreground/40 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all" title="踩">
                   <ThumbsDown class="w-3.5 h-3.5" />
               </button>
           </template>
@@ -402,12 +399,10 @@ const thinkingContent = computed<ThinkingContent | null>(() => {
 
 const bubbleClasses = computed(() => {
   if (props.isUser) {
-    return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm';
+    return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-3';
   } else {
-    // Use semantic colors for dark mode compatibility
-    // Light mode: bg-muted (~#F1F5F9) text-foreground
-    // Dark mode: bg-muted (Darker grey) text-foreground (White)
-    return 'bg-muted text-foreground rounded-xl border-none';
+    // TRAE style: transparent background, no border, plain text for AI
+    return 'bg-transparent text-foreground px-1 py-1';
   }
 });
 
@@ -439,14 +434,29 @@ const handleResourceClick = (id: string) => {
     emit('open-doc-space', id);
 };
 
+const handleCitationClick = (index: number) => {
+    const ref = combinedSources.value[index - 1];
+    if (ref) {
+        emit('locate-node', ref);
+    }
+};
+
 </script>
 
 <style scoped>
-.markdown-body { font-size: 14px; line-height: 1.6; color: hsl(var(--foreground)); }
-.markdown-body :deep(h3) { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: hsl(var(--foreground)); display: flex; align-items: center; gap: 8px; }
+.markdown-body { font-size: 14px; line-height: 1.5; color: hsl(var(--foreground)); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; }
+.markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: hsl(var(--foreground)); }
+.markdown-body :deep(h3) { font-size: 1.1em; display: flex; align-items: center; gap: 8px; }
 .markdown-body :deep(h3)::before { content: ''; display: inline-block; width: 4px; height: 16px; background: hsl(var(--primary)); border-radius: 2px; }
+.markdown-body :deep(p) { margin-bottom: 1em; }
 .markdown-body :deep(strong) { font-weight: 600; color: hsl(var(--foreground)); }
-.markdown-body :deep(img) { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; border: 1px solid hsl(var(--border)); }
+.markdown-body :deep(img) { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; border: 1px solid hsl(var(--border)/0.5); }
+.markdown-body :deep(ul) { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+.markdown-body :deep(ol) { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; }
+.markdown-body :deep(li) { margin-bottom: 0.25em; }
+.markdown-body :deep(blockquote) { border-left: 3px solid hsl(var(--border)); padding-left: 1em; color: hsl(var(--muted-foreground)); margin: 1em 0; }
+.markdown-body :deep(code) { background-color: hsl(var(--muted)); padding: 0.2em 0.4em; border-radius: 4px; font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+.markdown-body :deep(pre code) { background-color: transparent; padding: 0; color: inherit; }
 
 .user-markdown :deep(p) { margin: 0; }
 .user-markdown :deep(p + p) { margin-top: 0.75rem; }
@@ -458,19 +468,19 @@ const handleResourceClick = (id: string) => {
 .user-markdown :deep(li) { margin-bottom: 0.25rem; }
 .user-markdown :deep(pre) { 
     background-color: hsl(var(--primary-foreground) / 0.1); 
-    padding: 0.75rem; 
-    border-radius: 0.5rem; 
+    padding: 1rem; 
+    border-radius: calc(var(--radius) - 2px); 
     overflow-x: auto; 
     margin: 0.5rem 0;
     font-family: "Hack", monospace;
-    font-size: 0.9em;
+    font-size: 0.875rem;
 }
 .user-markdown :deep(code) { 
     background-color: hsl(var(--primary-foreground) / 0.15); 
     padding: 0.125rem 0.25rem; 
     border-radius: 0.25rem; 
     font-family: "Hack", monospace;
-    font-size: 0.9em;
+    font-size: 0.875rem;
 }
 .user-markdown :deep(pre code) {
     background-color: transparent;
@@ -478,50 +488,32 @@ const handleResourceClick = (id: string) => {
     font-size: 1em;
     color: inherit;
 }
+.user-markdown :deep(.table-wrapper) {
+    width: 100%;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid hsl(var(--primary-foreground) / 0.2);
+}
 .user-markdown :deep(table) {
     width: 100%;
     border-collapse: collapse;
-    margin: 0.5rem 0;
-    font-size: 0.9em;
+    font-size: 0.875rem;
 }
 .user-markdown :deep(th), .user-markdown :deep(td) {
-    border: 1px solid hsl(var(--primary-foreground) / 0.2);
-    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid hsl(var(--primary-foreground) / 0.2);
+    border-right: 1px solid hsl(var(--primary-foreground) / 0.2);
+    padding: 0.5rem 0.75rem;
+}
+.user-markdown :deep(th:last-child), .user-markdown :deep(td:last-child) {
+    border-right: none;
+}
+.user-markdown :deep(tr:last-child td) {
+    border-bottom: none;
 }
 .user-markdown :deep(th) {
     background-color: hsl(var(--primary-foreground) / 0.1);
     font-weight: 600;
-}
-
-/* Table Styles */
-.table-wrapper :deep(table) {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: 13px;
-    margin: 8px 0;
-    border: 1px solid hsl(var(--border));
-    border-radius: 8px;
-    overflow: hidden;
-}
-.table-wrapper :deep(th) {
-    background-color: hsl(var(--muted));
-    font-weight: 600;
     text-align: left;
-    padding: 10px 16px;
-    color: hsl(var(--muted-foreground));
-    border-bottom: 1px solid hsl(var(--border));
-}
-.table-wrapper :deep(td) {
-    padding: 10px 16px;
-    color: hsl(var(--foreground));
-    border-bottom: 1px solid hsl(var(--muted));
-    background-color: hsl(var(--card));
-}
-.table-wrapper :deep(tr:last-child td) {
-    border-bottom: none;
-}
-.table-wrapper :deep(tr:hover td) {
-    background-color: hsl(var(--muted) / 0.5);
 }
 </style>

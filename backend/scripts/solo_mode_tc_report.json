@@ -1,0 +1,69 @@
+{
+    "base": "http://127.0.0.1:8000/api/v1",
+    "cases": {
+        "TC-PL-01": {
+            "run": {
+                "session_id": "e4adaf3b-a8ff-4d39-bb33-4d59abb6be92",
+                "event_counts": {
+                    "total": 0,
+                    "plan_step": 0,
+                    "think": 0,
+                    "status": 0,
+                    "error": 0
+                }
+            },
+            "analysis": {
+                "step_granularity": {
+                    "ok": false,
+                    "steps_len": 0
+                },
+                "matrix_ref_in_step2": {
+                    "ok": false
+                },
+                "reasoning_path_correctness": {
+                    "ok": false,
+                    "think_snippet": ""
+                },
+                "plan_steps": [],
+                "tool_mentions": [],
+                "errors": []
+            }
+        },
+        "TC-PL-02": {
+            "run": {
+                "session_id": "d0162567-c6e1-46dc-9712-5f122cb20981",
+                "event_counts": {
+                    "total": 3,
+                    "plan_step": 0,
+                    "think": 0,
+                    "status": 2,
+                    "error": 1
+                }
+            },
+            "analysis": {
+                "tool_selection": {
+                    "ok": false,
+                    "tool_mentions": []
+                },
+                "dynamic_expansion": {
+                    "ok": false,
+                    "steps_len": 0,
+                    "has_weather": false,
+                    "has_shanghai": false,
+                    "has_modeling_hint": false
+                },
+                "think_snippet": "",
+                "plan_steps": [],
+                "errors": [
+                    {
+                        "t_ms": 6844,
+                        "data": {
+                            "type": "error",
+                            "content": "Execution engine encountered a critical failure: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.OperationalError) database is locked\n[SQL: UPDATE chat_sessions SET user_id=?, updated_at=CURRENT_TIMESTAMP WHERE chat_sessions.id = ?]\n[parameters: ('system_user', 'd0162567-c6e1-46dc-9712-5f122cb20981')]\n(Background on this error at: https://sqlalche.me/e/20/e3q8) (Background on this error at: https://sqlalche.me/e/20/7s2a)"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

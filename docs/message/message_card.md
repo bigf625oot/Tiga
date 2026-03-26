@@ -1,0 +1,1 @@
+测试下大模型消息回复的功能与交互体验，要能覆盖thought (思考)、 plan_step (规划步骤)、 tool (工具调用)、 web_search (网络搜索)、 kb_retrieval (知识库片段) 以及最终的 content 。

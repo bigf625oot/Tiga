@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class StreamEvent:
     """
-    统一的 SSE 事件载体 (取代原有的 Dict 裸传)
+    统一的 SSE 事件载体
     """
     type: str
     content: Any = ""

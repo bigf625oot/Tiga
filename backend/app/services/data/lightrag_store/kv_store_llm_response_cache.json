@@ -1,0 +1,322 @@
+{
+  "mix:keywords:4934f78d5db1f36706c79c560095f021": {
+    "return": "{\"high_level_keywords\": [\"\\u5927\\u6a21\\u578b\", \"\\u67b6\\u6784\"], \"low_level_keywords\": []}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "大模型架构",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774513010,
+    "update_time": 1774513010,
+    "_id": "mix:keywords:4934f78d5db1f36706c79c560095f021"
+  },
+  "mix:keywords:a653a47768358240bb07e0a848dec1c1": {
+    "return": "{\"high_level_keywords\": [\"\\u5927\\u6a21\\u578b\\u67b6\\u6784\", \"\\u6280\\u672f\\u6587\\u6863\"], \"low_level_keywords\": []}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "大模型架构 技术文档",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774513078,
+    "update_time": 1774513078,
+    "_id": "mix:keywords:a653a47768358240bb07e0a848dec1c1"
+  },
+  "mix:keywords:8e7992ff01eea8f1ea333197bda64e40": {
+    "return": "{\"high_level_keywords\": [\"\\u624b\\u673a\\u5bf9\\u6bd4\", \"\\u4e3b\\u8981\\u53c2\\u6570\", \"\\u667a\\u80fd\\u624b\\u673a\"], \"low_level_keywords\": [\"\\u82f9\\u679c iPhone 15\", \"\\u534e\\u4e3a Mate60\", \"\\u5904\\u7406\\u5668\", \"\\u5c4f\\u5e55\", \"\\u6444\\u50cf\\u5934\", \"\\u7535\\u6c60\", \"\\u4ef7\\u683c\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "对比苹果 iPhone 15 和 华为 Mate60 的主要参数：处理器、屏幕、摄像头、电池、价格",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520256,
+    "update_time": 1774520256,
+    "_id": "mix:keywords:8e7992ff01eea8f1ea333197bda64e40"
+  },
+  "mix:keywords:8b5f5a488723fe356f93a7861d3166b3": {
+    "return": "{\"high_level_keywords\": [\"\\u53d1\\u5e03\\u4ef7\\u683c\", \"\\u914d\\u7f6e\"], \"low_level_keywords\": [\"\\u534e\\u4e3a Mate60 \\u6807\\u51c6\\u7248\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "华为 Mate60 标准版 发布价格 配置",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520261,
+    "update_time": 1774520261,
+    "_id": "mix:keywords:8b5f5a488723fe356f93a7861d3166b3"
+  },
+  "mix:keywords:62da42699dfa12cfbb84df6d87d83d11": {
+    "return": "{\"high_level_keywords\": [\"\\u534e\\u4e3a Mate60\", \"\\u5b98\\u65b9\\u964d\\u4ef7\", \"\\u4f18\\u60e0\\u6d3b\\u52a8\"], \"low_level_keywords\": [\"\\u6807\\u51c6\\u7248\", \"128GB\", \"2024\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "华为 Mate60 标准版 128GB 是否有官方降价 或 优惠活动 2024",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520285,
+    "update_time": 1774520285,
+    "_id": "mix:keywords:62da42699dfa12cfbb84df6d87d83d11"
+  },
+  "mix:keywords:0533704debee97834afc99b02d062626": {
+    "return": "{\"high_level_keywords\": [\"\\u82f9\\u679c iPhone 15\", \"\\u53d1\\u5e03\\u4ef7\\u683c\", \"\\u5b98\\u65b9\\u552e\\u4ef7\"], \"low_level_keywords\": [\"\\u6807\\u51c6\\u7248\", \"128GB\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "苹果 iPhone 15 标准版 发布价格 128GB 官方售价",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520302,
+    "update_time": 1774520302,
+    "_id": "mix:keywords:0533704debee97834afc99b02d062626"
+  },
+  "mix:keywords:27a749f1533ab731dcbf287c6f32afe8": {
+    "return": "{\"high_level_keywords\": [\"\\u7cfb\\u7edf\\u751f\\u6001\\u5bf9\\u6bd4\", \"\\u667a\\u80fd\\u624b\\u673a\\u6bd4\\u8f83\", \"\\u64cd\\u4f5c\\u7cfb\\u7edf\\u5bf9\\u6bd4\"], \"low_level_keywords\": [\"\\u534e\\u4e3a Mate60\", \"\\u82f9\\u679c iPhone15\", \"\\u9e3f\\u8499\", \"iOS\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "华为 Mate60 与 苹果 iPhone15 系统生态对比 鸿蒙 vs iOS",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520313,
+    "update_time": 1774520313,
+    "_id": "mix:keywords:27a749f1533ab731dcbf287c6f32afe8"
+  },
+  "mix:keywords:39fc64462a4f5f1581e04bc53453802b": {
+    "return": "{\"high_level_keywords\": [\"\\u6444\\u50cf\\u5934\\u5bf9\\u6bd4\", \"\\u62cd\\u7167\\u529f\\u80fd\", \"\\u5f55\\u50cf\\u529f\\u80fd\"], \"low_level_keywords\": [\"\\u534e\\u4e3a Mate60\", \"\\u82f9\\u679c iPhone15\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "华为 Mate60 与 苹果 iPhone15 摄像头 对比 拍照 录像",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520325,
+    "update_time": 1774520325,
+    "_id": "mix:keywords:39fc64462a4f5f1581e04bc53453802b"
+  },
+  "mix:keywords:961c64482668d7af3f4aaaa74af44e3f": {
+    "return": "{\"high_level_keywords\": [\"\\u7535\\u6c60\\u7eed\\u822a\", \"\\u5145\\u7535\\u901f\\u5ea6\", \"\\u624b\\u673a\\u5bf9\\u6bd4\"], \"low_level_keywords\": [\"\\u534e\\u4e3a Mate60\", \"\\u82f9\\u679c iPhone15\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "华为 Mate60 与 苹果 iPhone15 电池续航 对比 充电速度",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520340,
+    "update_time": 1774520340,
+    "_id": "mix:keywords:961c64482668d7af3f4aaaa74af44e3f"
+  },
+  "mix:keywords:58909cab858d13493b2284cacbff1f09": {
+    "return": "{\"high_level_keywords\": [\"\\u5904\\u7406\\u5668\\u6027\\u80fd\\u5bf9\\u6bd4\", \"\\u667a\\u80fd\\u624b\\u673a\\u6bd4\\u8f83\", \"\\u6280\\u672f\\u89c4\\u683c\"], \"low_level_keywords\": [\"\\u534e\\u4e3a Mate60\", \"\\u82f9\\u679c iPhone15\", \"\\u9e92\\u9e9f9000S\", \"A17\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "华为 Mate60 与 苹果 iPhone15 处理器 性能对比 麒麟9000S vs A17",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520353,
+    "update_time": 1774520353,
+    "_id": "mix:keywords:58909cab858d13493b2284cacbff1f09"
+  },
+  "mix:keywords:b2a31a3c5b99dbc864b534962b36912e": {
+    "return": "{\"high_level_keywords\": [\"\\u534e\\u4e3a Mate60\", \"\\u4e8c\\u624b\\u5e02\\u573a\", \"\\u964d\\u4ef7\\u7248\\u672c\"], \"low_level_keywords\": [\"\\u6807\\u51c6\\u7248\", \"128GB\", \"5000\\u5143\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "华为 Mate60 标准版 128GB 是否有二手或降价版本低于5000元",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520365,
+    "update_time": 1774520365,
+    "_id": "mix:keywords:b2a31a3c5b99dbc864b534962b36912e"
+  },
+  "mix:keywords:2203a8e21364035c9bbde0a1626fad2c": {
+    "return": "{\"high_level_keywords\": [\"Apple iPhone 15\", \"Specifications\", \"Price\"], \"low_level_keywords\": [\"iPhone 15\", \"Tech specs\", \"Cost\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "Apple iPhone 15 specifications and price",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520640,
+    "update_time": 1774520640,
+    "_id": "mix:keywords:2203a8e21364035c9bbde0a1626fad2c"
+  },
+  "mix:keywords:ae88f304f7eec37895c8fa756a7f56b4": {
+    "return": "{\"high_level_keywords\": [\"Huawei Mate 60\", \"Specifications\", \"Price\"], \"low_level_keywords\": [\"Smartphone\", \"Tech specs\", \"Retail price\", \"Huawei\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "Huawei Mate 60 specifications and price",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520640,
+    "update_time": 1774520640,
+    "_id": "mix:keywords:ae88f304f7eec37895c8fa756a7f56b4"
+  },
+  "mix:keywords:c0fa4d0571978f541f78f92ebfd2c764": {
+    "return": "{\"high_level_keywords\": [\"Huawei Mate 60\", \"Price\"], \"low_level_keywords\": [\"China\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "Huawei Mate 60 price in China",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520647,
+    "update_time": 1774520647,
+    "_id": "mix:keywords:c0fa4d0571978f541f78f92ebfd2c764"
+  },
+  "mix:keywords:e1c4c92578bcf83cb8f810830ac46d60": {
+    "return": "{\"high_level_keywords\": [\"Apple iPhone 15\", \"Price\", \"China\"], \"low_level_keywords\": [\"iPhone 15\", \"Apple\", \"Retail price\", \"Chinese market\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "Apple iPhone 15 price in China",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520648,
+    "update_time": 1774520648,
+    "_id": "mix:keywords:e1c4c92578bcf83cb8f810830ac46d60"
+  },
+  "mix:keywords:b5f62d1410a32c4663c264bfab851293": {
+    "return": "{\"high_level_keywords\": [\"Huawei Mate 50\", \"Specifications\", \"Price\", \"China\"], \"low_level_keywords\": [\"Huawei\", \"Mate 50\", \"Smartphone\", \"Chinese market\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "Huawei Mate 50 specifications and price in China",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774520687,
+    "update_time": 1774520687,
+    "_id": "mix:keywords:b5f62d1410a32c4663c264bfab851293"
+  }
+}

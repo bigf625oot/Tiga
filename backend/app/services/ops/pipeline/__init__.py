@@ -1,5 +1,7 @@
 import sys
 import logging
+import contextlib
+import io
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -13,11 +15,12 @@ def is_dummy_pathway(module: Any) -> bool:
 
 # Try to import pathway
 try:
-    import pathway
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        import pathway
     if is_dummy_pathway(pathway):
         raise ImportError("Pathway dummy package detected")
 except ImportError:
-    logger.warning("Pathway package not found or is a dummy package. Using mock for Windows compatibility.")
+    logger.debug("Pathway package not found or is a dummy package. Using mock for Windows compatibility.")
     
     # Create a mock class for Table that supports basic operations to avoid crashes during definition
     class MockTable:
