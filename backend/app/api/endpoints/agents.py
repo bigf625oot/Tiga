@@ -139,7 +139,7 @@ async def delete_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     Delete an agent.
     """
     from app.services.agent.orchestration.service import agent_service
-    from app.crud.crud_agent import agent as crud_agent
+    from app.crud.agent import agent as crud_agent
     agent = await agent_service.get_agent_or_fail(db, agent_id)
     await crud_agent.delete(db, id=agent_id)
     return agent

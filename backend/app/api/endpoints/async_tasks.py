@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocke
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.crud.crud_async_task import async_task, async_task_log
+from app.crud.async_task import async_task, async_task_log
 from app.schemas.async_task import (
     AsyncTaskCreate,
     AsyncTaskResponse,

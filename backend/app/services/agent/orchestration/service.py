@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import EntityNotFoundException, ServiceException
 from app.core.i18n import _
-from app.crud.crud_agent import agent as crud_agent
+from app.crud.agent import agent as crud_agent
 from app.models.agent import Agent
 from app.models.user_script import UserScript
 from app.schemas.agent import AgentCreate, AgentUpdate, AgentClone

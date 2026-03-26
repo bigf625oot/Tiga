@@ -6,7 +6,7 @@ from agno.agent import Agent
 
 from app.models.llm_model import LLMModel
 from app.services.agent.schemas.intent import IntentResult
-from app.services.agent.executors.base_executor import BaseExecutor
+from app.services.agent.executors.base.base_executor import BaseExecutor
 from app.services.agent.components.memory_manager import DefaultMemoryManager
 from app.services.agent.utils.stream_adapter import AgnoStreamAdapter
 from app.services.agent.document.file_orchestrator import FileOrchestrator
@@ -25,7 +25,8 @@ except ImportError:
 
 class TeamExecutor(BaseExecutor):
     """
-    Team Executor.
+    [Orchestration] 多智能体协作执行器
+    Trade-offs: 基于动态角色分配(Leader-Worker)的微服务架构。提升了复杂域解决能力，但引入了 Agent 间通信开销与不可预测的耗时。
     """
 
     def __init__(
@@ -49,13 +50,13 @@ class TeamExecutor(BaseExecutor):
         session_id: str = kwargs.get("session_id")
         files: List[Any] = kwargs.get("files", [])
 
-        # 1. 团队初始化
+        # 1. [Topology Init] 动态构建协作网络
         await self._ensure_team_initialized(db, intent)
         if not self.team_agent:
             yield {"type": "error", "content": "Team initialization failed."}
             return
 
-        # 2. 上下文准备
+        # 2. [Context Injection] 上下文感知与边界约束
         input_text = self._enrich_input_with_intent(input_text, intent)
         
         images = []
@@ -66,12 +67,12 @@ class TeamExecutor(BaseExecutor):
                 input_text += f"\n\n[Uploaded Files Context]\n{file_results['context']}"
             images.extend(file_results.get("media", []))
 
-        # 3. 获取历史记忆
+        # 3. [Memory Bound] 获取并压缩历史记忆
         history_msgs = []
         if self.memory_manager:
             history_msgs = await self.memory_manager.get_compressed_context(session_id, current_query=input_text)
 
-        # 4. 执行流
+        # 4. [Execution Stream] 协作执行与流式事件适配
         yield {"type": "status", "content": _("Team collaborating...")}
         try:
             run_kwargs = {"messages": history_msgs, "stream": True, "yield_run_output": True}
@@ -79,7 +80,7 @@ class TeamExecutor(BaseExecutor):
                 run_kwargs["images"] = images
 
             async for chunk in self.team_agent.arun(input_text, **run_kwargs):
-                # 利用 AgnoStreamAdapter 处理复杂的多智能体流式事件 (如 agent_switch)
+                # 适配多智能体协议(如 agent_switch)至标准网关事件
                 async for event in self.stream_adapter.to_standard_events(chunk):
                     yield event
                     
@@ -148,7 +149,7 @@ class TeamExecutor(BaseExecutor):
             
             self.team_agent = await AgentFactory.create_team(team_config, llm_model=self.llm_model)
             
-            # E2B 挂载
+            # [Sandbox Mount] 代码隔离执行环境挂载
             if self.team_agent and self.team_agent.team:
                 for member in self.team_agent.team:
                     if member.name == "Developer" and HAS_E2B and settings.E2B_API_KEY:

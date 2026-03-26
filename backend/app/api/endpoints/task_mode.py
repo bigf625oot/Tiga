@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache
 from app.core.config import settings
-from app.crud.crud_task_mode import task_mode
+from app.crud.task_mode import task_mode
 from app.db.session import get_db
 from app.schemas.task_mode import (
     TaskBackupExport,

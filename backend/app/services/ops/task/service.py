@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.crud.crud_task import task as crud_task
-from app.crud.crud_task import sub_task as crud_sub_task
+from app.crud.task import task as crud_task
+from app.crud.task import sub_task as crud_sub_task
 from app.schemas.task import TaskUpdate
 from app.services.ops.task.splitter import TaskSplitter
 from app.services.ops.task.scheduler import Scheduler

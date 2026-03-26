@@ -7,7 +7,7 @@ from app.services.ops.pipeline.core.config import PathwayJobConfig, SourceConfig
 from app.services.ops.pipeline.core.models import DAGPipeline, DAGNode
 from app.services.ops.pipeline.core.engine import engine
 from app.services.ops.pipeline.core.exceptions import PathwayException
-from app.crud import crud_pathway
+from app.crud import pathway as crud_pathway
 from app.models.pathway import PathwayJobStatus
 from app.schemas.pathway import PipelineCreate, PipelineUpdate, PipelineResponse, PipelineRunResponse
 from app.services.ops.pipeline.connectors.source import get_source as get_source_connector

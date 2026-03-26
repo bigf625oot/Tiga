@@ -12,7 +12,8 @@ from app.services.agent.components.tool_registry import DefaultToolRegistry
 
 class BaseExecutor(ABC):
     """
-    Base Executor
+    [Core Abstraction] 全局执行器拓扑基类
+    Trade-offs: 采用模板方法模式而非策略模式，强制统一上下文注入与异常降级边界，牺牲部分灵活性以换取全链路执行边界的 100% 确定性。
     """
     
     def __init__(
@@ -41,14 +42,14 @@ class BaseExecutor(ABC):
         **kwargs
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        核心执行流：由子类实现具体的规划-执行-评估-反思大循环。
+        [Abstract Topology] 强制子类实现具体的执行拓扑（单体 FSM 或并发 DAG）。
         """
         pass
 
     async def _prepare_history(self, session_id: str, current_query: str = "") -> List[Dict[str, Any]]:
         """
-        通用辅助方法：通过 MemoryManager 加载并压缩历史消息。
-        供子类在准备执行上下文时复用。
+        [Context Bound] 历史记忆加载与强制截断。
+        Trade-offs: 前置上下文收敛边界，防止子类直接操作原始消息导致 Token 逃逸与 OOM。
         """
         if self.memory_manager:
             try:
@@ -59,7 +60,7 @@ class BaseExecutor(ABC):
 
     async def _update_status_safe(self, session_id: str, status: str) -> None:
         """
-        通用辅助方法：安全地更新任务状态。
+        [State Sync] 屏蔽底层状态机同步细节，确保分布式执行状态流转的最终一致性。
         """
         if self.state_manager:
             try:
@@ -69,7 +70,7 @@ class BaseExecutor(ABC):
 
     def _yield_error(self, message: str, exc: Optional[Exception] = None) -> Dict[str, Any]:
         """
-        通用辅助方法：格式化错误输出事件。
+        [Fallback Mechanism] 统一异常降级 Schema，保障上层网关的确定性解析。
         """
         err_msg = f"{message}: {str(exc)}" if exc else message
         self.logger.error(err_msg, exc_info=True if exc else False)

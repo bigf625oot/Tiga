@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.llm_model import LLMModel
 from app.models.workflow import Workflow
 from app.services.agent.schemas.intent import IntentResult
-from app.services.agent.executors.base_executor import BaseExecutor
+from app.services.agent.executors.base.base_executor import BaseExecutor
 from app.services.agent.components.memory_manager import DefaultMemoryManager
 from app.core.i18n import _
 
@@ -18,8 +18,8 @@ logger = logging.getLogger("eah.executors.workflow")
 
 class WorkflowExecutor(BaseExecutor):
     """
-    Workflow Executor for static DAG-based workflows.
-    Executes workflows via topological sort (Kahn's algorithm) for correct dependency ordering.
+    [DAG Orchestrator] 静态工作流执行器
+    Trade-offs: 基于有向无环图(DAG)静态编排，剥离 LLM 动态规划的不确定性。保证 100% 拓扑执行确定性，但丧失运行时自适应能力。
     """
 
     def __init__(
@@ -63,7 +63,7 @@ class WorkflowExecutor(BaseExecutor):
                     yield chunk
                 return
 
-            # Fallback to SingleExecutor if static workflow is not found
+            # [Fallback] 拓扑降级：静态配置缺失时回退至动态规划(SingleExecutor)
             logger.info("No static workflow config found, falling back to SingleExecutor.")
             yield {"type": "status", "content": _("No workflow found, delegating to task executor.")}
             from app.services.agent.executors.single_executor import SingleExecutor
@@ -93,9 +93,8 @@ class WorkflowExecutor(BaseExecutor):
         kwargs: Dict[str, Any],
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Kahn's topological sort + sequential node execution.
-        Node schema: {id, name, type, dependencies: [id, ...], config: {...}}
-        Why Kahn's: O(V+E) cycle detection built-in; avoids recursive DFS stack overflow on deep DAGs.
+        [Topological Sort] Kahn 算法节点调度
+        Trade-offs: 选择 O(V+E) 的 Kahn 算法替代 DFS，原生支持成环检测，彻底杜绝深层 DAG 导致的调用栈溢出。
         """
         node_map: Dict[str, Dict[str, Any]] = {str(n["id"]): n for n in nodes}
         in_degree: Dict[str, int] = {nid: 0 for nid in node_map}
@@ -169,7 +168,7 @@ class WorkflowExecutor(BaseExecutor):
         db: AsyncSession,
         kwargs: Dict[str, Any],
     ) -> str:
-        """Dispatch a single DAG node to ExecutionEngine."""
+        """[Node Dispatch] 将 DAG 节点转换为执行引擎标准任务。"""
         from app.services.agent.engines.execution_engine import ExecutionEngine
         from app.services.agent.schemas.plan import ExecutionTaskStep
 

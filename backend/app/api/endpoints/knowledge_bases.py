@@ -3,7 +3,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_knowledge_base import knowledge_base
+from app.crud.knowledge_base import knowledge_base
 from app.db.session import get_db
 from app.schemas.knowledge_base import KnowledgeBaseCreate, KnowledgeBaseResponse, KnowledgeBaseUpdate
 from app.models.knowledge import KnowledgeDocument, DocumentStatus

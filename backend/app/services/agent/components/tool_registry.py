@@ -9,7 +9,7 @@ logger = logging.getLogger("eah.components.tools")
 @dataclass(slots=True)
 class ToolDefinition:
     """
-    强类型领域实体，避免使用裸字典 (Primitive Obsession) 传递工具定义。
+    Why: 强类型领域实体，拒绝裸字典 (Primitive Obsession) 传递，确保元数据内存布局确定性。
     """
     name: str
     func: Callable
@@ -17,9 +17,7 @@ class ToolDefinition:
     roles: Set[str] = field(default_factory=set)
 
     def to_schema(self) -> Dict[str, Any]:
-        """
-        根据函数签名动态反射生成符合 LLM 规范的 Function Schema。
-        """
+        """Why: 动态反射生成 Schema，解耦底层 LLM 规范要求。"""
         sig = inspect.signature(self.func)
         properties = {}
         required = []
@@ -28,7 +26,7 @@ class ToolDefinition:
             if param_name in ("self", "cls", "kwargs", "args"):
                 continue
 
-            param_type = "string"  # 默认降级为 string
+            param_type = "string"
             if param.annotation is int:
                 param_type = "integer"
             elif param.annotation is float:
@@ -61,14 +59,11 @@ class ToolDefinition:
 
 class DefaultToolRegistry:
     """
-    Tool Registry: 生产级工具注册中心
-    - 提供按 Role 路由的策略 (build_from_hint)
-    - 提供反射 Schema 生成机制
-    - 抹平底层 ExecutionEngine 对工具实例的调用假设
+    Why: 隔离底层引擎对工具实例的调用假设，提供基于 Role 的上下文防污染路由。
     """
 
     def __init__(self, db: Optional[Any] = None):
-        # 预留 db，但不强制强耦合 AsyncSession，便于单元测试与独立演进
+        # Why: 预留 DB 但不强耦合，保障核心注册表的单元测试隔离性。
         self.db = db
         self._tools: Dict[str, ToolDefinition] = {}
 
@@ -79,9 +74,7 @@ class DefaultToolRegistry:
         description: str,
         roles: Optional[List[str]] = None,
     ) -> None:
-        """
-        注册工具。允许绑定特定角色 (Role)，以实现细粒度的工具分配 (RBAC for Tools)。
-        """
+        """Why: 支持 Role 绑定，实现细粒度的工具分配 (RBAC)，控制上下文爆炸。"""
         self._tools[name] = ToolDefinition(
             name=name,
             func=func,
@@ -91,35 +84,24 @@ class DefaultToolRegistry:
         logger.debug(f"Tool registered: {name} (Roles: {roles or 'ALL'})")
 
     def get_tool(self, name: str) -> Optional[Callable]:
-        """获取单个工具函数"""
         tool_def = self._tools.get(name)
         return tool_def.func if tool_def else None
 
     def get_all_tools(self) -> List[Callable]:
-        """
-        向 ExecutionEngine 暴露的接口：获取全部可用工具实例（函数指针）。
-        """
         return [t.func for t in self._tools.values()]
 
     def build_from_hint(self, role: str) -> List[Callable]:
-        """
-        向 ExecutionEngine 暴露的接口：根据角色 (Role) 或 Hint 分配专属工具。
-        Why: 防止大模型被过多无关工具干扰 (Context Window Pollution)。
-        """
+        """Why: 按角色动态裁剪工具集，避免大模型 Context Window Pollution。"""
         if not role:
             return self.get_all_tools()
 
         role = role.lower()
         matched = []
         for t in self._tools.values():
-            # 如果工具未绑定任何角色（全局可用），或明确包含了请求的角色，则分发
             if not t.roles or role in [r.lower() for r in t.roles]:
                 matched.append(t.func)
 
         return matched if matched else self.get_all_tools()
 
     def get_all_tool_schemas(self) -> List[Dict[str, Any]]:
-        """
-        返回当前注册表内所有工具的 OpenAPI Schema（基于 inspect 动态反射）。
-        """
         return [t.to_schema() for t in self._tools.values()]

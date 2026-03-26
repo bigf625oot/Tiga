@@ -34,13 +34,13 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_agent import agent as crud_agent
-from app.crud.crud_chat import chat as crud_chat
+from app.crud.agent import agent as crud_agent
+from app.crud.chat import chat as crud_chat
 from app.db.session import get_db
 from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatSessionUpdate
 from app.core.sse import format_sse_json
-from app.services.media.chat_attachments import ingest_chat_file, normalize_doc_ids
-from app.services.eah_agent.core.agent_title_generator import TitleGenerator
+from app.services.domain.media.chat_attachments import ingest_chat_file, normalize_doc_ids
+from app.services.agent.utils.title_generator import TitleGenerator
 from app.models.knowledge import KnowledgeDocument
 
 router = APIRouter()
@@ -113,8 +113,8 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
     支持: Chat, Task, Team, Workflow, Data Query, KG QA.
     """
     # New Control Plane
-    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
-    from app.services.llm.resolver import resolve_chat_llm_model
+    from app.services.agent.orchestration.control_plane import AgnoControlPlane
+    from app.services.platform.llm.resolver import resolve_chat_llm_model
     
     # Get active model for ControlPlane
     # In a real scenario, we might resolve this better or pass None to let ControlPlane resolve default
@@ -254,8 +254,8 @@ async def chat_session_multipart(
     files: Optional[List[UploadFile]] = File(None),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
-    from app.services.llm.resolver import resolve_chat_llm_model
+    from app.services.agent.orchestration.control_plane import AgnoControlPlane
+    from app.services.platform.llm.resolver import resolve_chat_llm_model
 
     llm_model = await resolve_chat_llm_model(db)
     control_plane = AgnoControlPlane(llm_model=llm_model)
@@ -394,7 +394,7 @@ async def resume_stream(
     前端断线后携带 agent_run_id 和最后一条事件的 Redis ID 调用此接口，
     服务端从 Redis Stream 中重放该位置之后的所有事件。
     """
-    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
+    from app.services.agent.orchestration.control_plane import AgnoControlPlane
     
     control_plane = AgnoControlPlane()
 

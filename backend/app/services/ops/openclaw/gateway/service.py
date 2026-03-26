@@ -32,7 +32,7 @@ from app.models.chat import ChatSession, ChatMessage
 from app.services.ops.openclaw.gateway.tools import OpenClawTools
 from app.services.ops.openclaw.task.parser import parse_task_intent
 from app.services.ops.openclaw.task.execution import task_worker
-from app.crud.crud_openclaw_task import OpenClawTaskCRUD
+from app.crud.openclaw_task import OpenClawTaskCRUD
 from app.db.session import AsyncSessionLocal
 
 from app.services.ops.openclaw.gateway.dispatch import DispatchService

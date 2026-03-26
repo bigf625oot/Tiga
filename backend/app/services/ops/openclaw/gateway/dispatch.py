@@ -199,7 +199,7 @@ class DispatchService:
         try:
             logger.error(f"[失败日志] 任务={task_id} 节点={node_id} 阶段={phase.value} 类型={err_type.value} 消息={message}")
             
-            from app.crud.crud_openclaw_task import OpenClawTaskCRUD
+            from app.crud.openclaw_task import OpenClawTaskCRUD
             await OpenClawTaskCRUD.update_task_status_with_optimistic_lock(
                 db, task_id, "PENDING", "FAILED", 
                 json.dumps({"phase": phase.value, "type": err_type.value, "msg": message})

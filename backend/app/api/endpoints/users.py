@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from app.services.platform.storage.service import storage_service
 from app.services.platform.notification.email import send_reset_password_email
 from app.db.session import get_db
-from app.crud.crud_user import user as crud_user, role as crud_role, department as crud_department
+from app.crud.user import user as crud_user, role as crud_role, department as crud_department
 from app.schemas.user import User, UserCreate, UserUpdate, UserPage, Role, RoleCreate, RoleUpdate, Department
 
 router = APIRouter()

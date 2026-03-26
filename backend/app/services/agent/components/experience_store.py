@@ -50,8 +50,7 @@ class DefaultExperienceStore:
             },
         )
         self.db.add(msg)
-        await self.db.flush()  # Why flush not commit: experience records are written within the executor's transaction.
-        # Committing mid-execution would expose a partial state to concurrent readers.
+        await self.db.flush()  # Why: 依赖外层 Executor 的事务边界，避免 commit 导致并发读取到中间状态 (脏读)
         logger.info("experience_saved session_id=%s is_success=%s", session_id, bool(is_success))
 
     async def retrieve_relevant_experience(

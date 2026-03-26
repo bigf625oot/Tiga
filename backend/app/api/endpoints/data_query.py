@@ -24,6 +24,10 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
+from sqlalchemy import select
+
+from app.db.session import AsyncSessionLocal
+from app.models.system_config import SystemConfig
 from app.services.domain.chatbi.vanna.models import (
     DataQueryMessageResponse,
     DataQuerySessionCreate,
@@ -40,7 +44,7 @@ from app.services.intelligence.nlu.classifier import IntentClassifier, QueryInte
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-CONFIG_FILE = "vanna_config.json"
+CONFIG_KEY = "chatbi_db_config"
 
 # In-memory job status store (Simple implementation)
 conversion_jobs = {}
@@ -208,11 +212,22 @@ async def query_data(request: VannaRequest):
 @router.post("/config/save")
 async def save_config(config: DbConnectionConfig):
     """
-    Save the database configuration to a file.
+    Save the database configuration to the system_configs table.
     """
     try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(config.model_dump(), f)
+        config_data = config.model_dump()
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(SystemConfig).filter(SystemConfig.key == CONFIG_KEY)
+            )
+            sys_config = result.scalars().first()
+            if sys_config:
+                sys_config.value = config_data
+                sys_config.version += 1
+            else:
+                sys_config = SystemConfig(key=CONFIG_KEY, value=config_data, version=1)
+                session.add(sys_config)
+            await session.commit()
             
         # If this is the current config, update the permission validator immediately
         if data_query_service.current_db_config:
@@ -237,16 +252,19 @@ async def save_config(config: DbConnectionConfig):
 @router.get("/config")
 async def get_config():
     """
-    Load the current database configuration from the service or file.
+    Load the current database configuration from the service or database.
     """
     if data_query_service.current_db_config:
         return data_query_service.current_db_config.model_dump()
         
     try:
-        import os
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, "r") as f:
-                return json.load(f)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(SystemConfig).filter(SystemConfig.key == CONFIG_KEY)
+            )
+            sys_config = result.scalars().first()
+            if sys_config and sys_config.value:
+                return sys_config.value
     except Exception as e:
         logger.error(f"Failed to load config: {e}")
         

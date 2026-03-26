@@ -7,7 +7,7 @@ from agno.agent import Agent
 
 from app.models.llm_model import LLMModel
 from app.services.agent.schemas.intent import IntentResult
-from app.services.agent.executors.light_base_executor import LightBaseExecutor
+from app.services.agent.executors.base.light_base_executor import LightBaseExecutor
 from app.services.agent.components.memory_manager import DefaultMemoryManager
 from app.services.agent.orchestration.builder import AgentAssembler
 from app.services.agent.utils.stream_adapter import AgnoStreamAdapter
@@ -17,8 +17,8 @@ logger = logging.getLogger("eah.executors.fast")
 
 class FastExecutor(LightBaseExecutor):
     """
-    Lightweight executor optimized for low-latency, high-reliability QA.
-    Bypasses complex planning and reflection overhead to guarantee a fast deterministic execution path.
+    [Strategy] 极速 QA 执行器
+    Trade-offs: 旁路重型规划与反思，采用并发上下文组装，以 O(1) 拓扑实现极低延迟。
     """
 
     SYSTEM_INSTRUCTIONS: List[str] = [
@@ -98,7 +98,7 @@ class FastExecutor(LightBaseExecutor):
             yield self._yield_error("Internal processing error", e)
 
     async def _prepare_agent(self, db: AsyncSession, session_id: str, kwargs: Any) -> Agent:
-        """Resolves and constructs the Agent instance with injected configurations."""
+        """[Dependency Injection] 动态挂载 Agent 配置。"""
         agent_id = kwargs.get("agent_id")
         reasoning = kwargs.get("enable_reasoning", False)
         search = kwargs.get("enable_search", True)
@@ -111,7 +111,7 @@ class FastExecutor(LightBaseExecutor):
         )
 
     async def _handle_incoming_files(self, session_id: str, files: List[Any]) -> Tuple[str, List[Any]]:
-        """Executes parallel parsing and embedding of incoming files to minimize I/O latency."""
+        """[Performance] 并发解析文件，消除串行 I/O 耗时瓶颈。"""
         if not files:
             return "", []
 
@@ -133,7 +133,7 @@ class FastExecutor(LightBaseExecutor):
         return "\n\n".join(contexts), media
 
     def _augment_input(self, text: str, intent: Optional[IntentResult]) -> str:
-        """Injects structural NLU context (entities, time) into the raw input to narrow the LLM's reasoning scope."""
+        """[NLU Augmentation] 将意图参数注入 Prompt，物理限制 LLM 的推理上下文边界。"""
         if not intent or not intent.parameters:
             return text
         

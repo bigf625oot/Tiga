@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
     from app.db.session import AsyncSessionLocal
 
     try:
-        from app.crud.crud_task_mode import task_mode as crud_task_mode
+        from app.crud.task_mode import task_mode as crud_task_mode
 
         async with AsyncSessionLocal() as db:
             await crud_task_mode.purge_expired_logs(db)

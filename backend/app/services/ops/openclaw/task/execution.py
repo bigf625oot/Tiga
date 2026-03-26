@@ -20,7 +20,7 @@ from typing import Dict, Any
 
 from sqlalchemy import select
 from app.models.openclaw_task import OpenClawTask
-from app.crud.crud_openclaw_task import OpenClawTaskCRUD
+from app.crud.openclaw_task import OpenClawTaskCRUD
 from app.core.logger import logger
 
 class OpenClawTaskWorker:

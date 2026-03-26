@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.llm_model import LLMModel
 from app.services.agent.schemas.intent import IntentResult
-from app.services.agent.executors.base_executor import BaseExecutor
+from app.services.agent.executors.base.base_executor import BaseExecutor
 from app.services.agent.components.memory_manager import DefaultMemoryManager
 from app.services.agent.components.state_manager import DefaultStateManager
 from app.services.agent.components.plan_validator import DefaultPlanValidator
@@ -28,10 +28,8 @@ logger = logging.getLogger("eah.executors.single")
 
 class SingleExecutor(BaseExecutor):
     """
-    Single Executor (Monolithic Loop)
-    An upgraded version of plan_handler.py and PlanAgent.
-    Integrates the full lifecycle: Planning -> Execution -> Evaluation -> Reflection.
-    Introduces Harness mode with retry mechanisms and reflection loops.
+    [State Machine] 全生命周期执行器 (Plan -> Execute -> Evaluate -> Reflect)
+    Trade-offs: 采用单体大循环与有限重试策略(Harness)。牺牲执行速度，换取高容错与多步任务的闭环能力。
     """
     
     MAX_RETRIES = 3
@@ -68,7 +66,7 @@ class SingleExecutor(BaseExecutor):
         yield {"type": "status", "content": _("Orchestrating autonomous planning environment...")}
 
         try:
-            # 1. 鍑嗗涓婁笅鏂囧拰鏂囦欢
+            # 1. [Context Topology] 并发加载上下文拓扑
             setup_tasks = [
                 asyncio.create_task(FileOrchestrator.process_batch(files, session_id)),
                 asyncio.create_task(self._prepare_history(session_id, current_query=input_text))
@@ -84,11 +82,11 @@ class SingleExecutor(BaseExecutor):
             if file_context:
                 yield {"type": "status", "content": _("Contextualized with {} files.").format(len(files))}
                 
-            # 鏇存柊鐘舵€佷负 planning
+            # [State Sync] 状态流转: planning
             if self.state_manager:
                 await self.state_manager.update_status(session_id, "planning")
 
-            # 2. 瑙勫垝闃舵 (Planning)
+            # 2. [Planning Phase] 动态任务拆解
             yield {"type": "status", "content": _("Generating execution plan...")}
             
             planning_engine = PlanningEngine(db=db, llm_model=self.llm_model)
@@ -98,7 +96,7 @@ class SingleExecutor(BaseExecutor):
                 context=file_context
             )
             
-            # 浣跨敤 PlanValidator 鏍￠獙璁″垝
+            # [Validation] 强制计划确定性校验，阻断不合规规划
             if self.plan_validator:
                 plan_dict = {"tasks": [t.dict() for t in plan_manifest.tasks]}
                 is_valid, error_msg = await self.plan_validator.validate(plan_dict, {})
@@ -111,18 +109,18 @@ class SingleExecutor(BaseExecutor):
                 "content": json.dumps({"reasoning": plan_manifest.reasoning, "tasks": [t.dict() for t in plan_manifest.tasks]})
             }
 
-            # 鏇存柊鐘舵€佷负 executing
+            # [State Sync] 状态流转: executing
             if self.state_manager:
                 await self.state_manager.update_status(session_id, "executing")
 
-            # 3. 鎵ц涓庤瘎浼伴樁娈?(Execution & Evaluation)
+            # 3. [Execution & Evaluation Phase] 采用有限状态机管理重试机制
             execution_engine = ExecutionEngine(db=db, tool_registry=self.tool_registry, llm_model=self.llm_model)
             evaluation_engine = EvaluationEngine(db=db, llm_model=self.llm_model)
             
             execution_logs = []
             all_success = True
             
-            # 绠€鍗曢『搴忔墽琛岋紙甯︽湁閲嶈瘯涓庡弽鎬濇満鍒讹級
+            # [Harness Loop] 带有自我修正的执行循环
             for task in plan_manifest.tasks:
                 yield {"type": "status", "content": _(f"Executing task: {task.title}")}
                 yield {"type": "execute_start", "content": task.description}
@@ -134,12 +132,12 @@ class SingleExecutor(BaseExecutor):
                         
                     task_output = ""
                     async for event in execution_engine.execute_task(task, history_msgs):
-                        # 杩囨护鎺夊唴閮ㄤ骇鐢熺殑鏅€?status 浠ュ厤鍒峰睆锛屾垨鑰呴€夋嫨閫忎紶
+                        # [Stream Adapter] 过滤内部状态，防止前端渲染抖动
                         yield event
                         if event.get("type") == "content" and isinstance(event.get("content"), str):
                             task_output += event.get("content")
                             
-                    # 璇勪及褰撳墠浠诲姟
+                    # [Evaluation] 结果断言
                     eval_result = await evaluation_engine.evaluate_result(
                         task_goal=task.description,
                         execution_result=task_output,
@@ -152,7 +150,7 @@ class SingleExecutor(BaseExecutor):
                         succeeded = True
                         break
                     
-                    # 濡傛灉鏈€氳繃锛岃繘琛屽弽鎬濆苟鍑嗗涓嬩竴娆￠噸璇?
+                    # [Reflection Loop] 未通过则触发动态修正提示注入
                     if attempt < self.MAX_RETRIES - 1:
                         yield {"type": "status", "content": _("Task failed evaluation, reflecting...")}
                         hint = await evaluation_engine.reflect(
@@ -161,7 +159,7 @@ class SingleExecutor(BaseExecutor):
                             feedback=eval_result.get("feedback", "")
                         )
                         yield {"type": "reflect", "content": hint}
-                        # 娉ㄥ叆鍙嶆€濇彁绀虹粰涓嬩竴娆℃墽琛?
+                        # 注入反思提示供下一次执行修正上下文
                         task.reflection = hint
                     else:
                         yield {"type": "subtask_failed", "content": eval_result.get("feedback", "Max retries reached")}
@@ -172,7 +170,7 @@ class SingleExecutor(BaseExecutor):
                     all_success = False
                     break
             
-            # 4. 鍙嶆€濋樁娈?(Reflection)
+            # 4. [Reflection Phase] 经验沉淀与全局反思
             if self.state_manager:
                 await self.state_manager.update_status(session_id, "reflecting")
                 

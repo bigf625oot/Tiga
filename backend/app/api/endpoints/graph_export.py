@@ -25,8 +25,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.core.security import decrypt_password
-from app.crud.crud_data_source import data_source as crud_data_source
-from app.crud.crud_graph_export import graph_export_config
+from app.crud.data_source import data_source as crud_data_source
+from app.crud.graph_export import graph_export_config
 from app.db.session import get_db
 from app.schemas.graph_export import (
     AIGenerateRequest,

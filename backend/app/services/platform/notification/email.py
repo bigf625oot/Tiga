@@ -1,6 +1,6 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from app.db.session import AsyncSessionLocal
-from app.crud.crud_system_config import system_config as crud_system_config
+from app.crud.system_config import system_config as crud_system_config
 from app.schemas.system_config import BasicSettingsConfig
 from typing import List, Optional
 import logging
