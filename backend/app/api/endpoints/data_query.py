@@ -19,8 +19,9 @@ import json
 import logging
 import time
 import uuid
+from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, Body
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
@@ -58,7 +59,11 @@ def update_job_status(job_id, status, progress, message):
     }
 
 @router.post("/connect")
-async def connect_database(request: Request, config: DbConnectionConfig = None, source_id: int = None):
+async def connect_database(
+    request: Request, 
+    config: Optional[DbConnectionConfig] = Body(None), 
+    source_id: Optional[int] = Body(None)
+):
     """
     Connect to a database using the provided configuration OR source_id.
     Executes the blocking connection logic in a separate thread to avoid blocking the event loop.
@@ -224,14 +229,11 @@ async def query_data(request: VannaRequest):
                     evt = "text" 
                 
                 # Send as SSE
-                # We send the content directly as data, or the whole object?
-                # SmartQA expects data to be JSON.
-                # If evt=think, it expects data to be string or object.
-                # If evt=text, it expects data to be string.
-                yield f"event: {evt}\ndata: {json.dumps(content, ensure_ascii=False)}\n\n"
+                # We send the whole object so the frontend can display thinking steps properly.
+                yield f"event: {evt}\ndata: {chunk}\n\n"
             except Exception:
                 # Fallback for non-JSON chunks
-                yield f"event: text\ndata: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                yield f"event: text\ndata: {json.dumps({'content': chunk, 'type': 'text'}, ensure_ascii=False)}\n\n"
 
     # 2. Route based on intent
     # Fallback to existing SQL flow (SQL_QUERY or RAG_QUERY)

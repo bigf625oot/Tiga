@@ -207,6 +207,22 @@ class SmartDataQueryService:
             conn_str = f"mysql+pymysql://{user}:{safe_password}@{safe_host}:{port}/{database}"
             if config.charset:
                 connect_args["charset"] = config.charset
+        elif config.type == "clickhouse":
+            user = config.user or "default"
+            password = config.password or ""
+            host = config.host or "localhost"
+            port = config.port or 8123
+            database = config.database or "default"
+            conn_str = f"clickhouse+clickhouse_connect://{user}:{password}@{host}:{port}/{database}"
+        elif config.type == "snowflake":
+            user = config.user or ""
+            password = config.password or ""
+            host = config.host or ""
+            database = config.database or ""
+            db_schema = config.db_schema or "PUBLIC"
+            conn_str = f"snowflake://{user}:{password}@{host}/{database}/{db_schema}"
+        else:
+            raise ValueError(f"Unsupported database type: {config.type}")
 
         return conn_str, connect_args
 
@@ -280,10 +296,15 @@ class SmartDataQueryService:
             
             password = decrypt_field(source.password_encrypted) if source.password_encrypted else None
             
+            # For database sources, the actual db engine type is usually stored in config['type']
+            db_type = source.type
+            if source.type == "database" and source.config and "type" in source.config:
+                db_type = source.config["type"]
+            
             # Map DataSource fields to DbConnectionConfig
-            return DbConnectionConfig(
+            db_config = DbConnectionConfig(
                 name=source.name,
-                type=source.type,
+                type=db_type,
                 host=source.host,
                 port=source.port,
                 database=source.database,
@@ -294,6 +315,23 @@ class SmartDataQueryService:
                 timeout=30,
                 pool_size=5
             )
+            
+            # Additional config mapping
+            if source.config:
+                if "path" in source.config:
+                    db_config.path = source.config["path"]
+                if "ssl" in source.config:
+                    db_config.ssl = source.config["ssl"]
+                if "charset" in source.config:
+                    db_config.charset = source.config["charset"]
+                if "timeout" in source.config:
+                    db_config.timeout = source.config["timeout"]
+                if "allowed_tables" in source.config:
+                    db_config.allowed_tables = source.config["allowed_tables"]
+                if "sensitive_fields" in source.config:
+                    db_config.sensitive_fields = source.config["sensitive_fields"]
+            
+            return db_config
         finally:
             db.close()
 

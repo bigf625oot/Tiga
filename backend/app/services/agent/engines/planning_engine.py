@@ -64,7 +64,7 @@ class PlanningEngine:
         """
         logger.info(f"Initiating planning for session: {session_id}")
         agent = await self._ensure_agent()
-        agent.response_model = TaskPlan
+        agent.output_schema = TaskPlan
 
         base_prompt = (
             f"User Goal: {user_goal}\n"

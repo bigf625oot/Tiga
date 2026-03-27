@@ -8,7 +8,7 @@
               <SheetTrigger as-child>
                 <Button
                   variant="outline"
-                  class="group relative h-20 w-8 hover:w-12 rounded-l-2xl rounded-r-none border-y border-l border-border/60 border-r-0 shadow-[-4px_0_24px_rgba(0,0,0,0.08)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] p-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xl hover:bg-background overflow-visible"
+                  class="group relative h-20 w-8 hover:w-12 rounded-l-2xl rounded-r-none border-y border-l border-border/60 border-r-0 shadow-[-4px_0_24px_rgba(0,0,0,0.08)] transition-all duration-300 ease-spring p-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xl hover:bg-background overflow-visible"
                 >
                   <div class="absolute left-[3px] top-1/2 -translate-y-1/2 w-[3px] h-8 bg-muted-foreground/30 rounded-full transition-all duration-300 group-hover:h-12 group-hover:bg-primary"></div>
 

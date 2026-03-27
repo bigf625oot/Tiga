@@ -51,6 +51,7 @@
     "lucide-vue-next": "^0.577.0",
     "mammoth": "^1.11.0",
     "marked": "^17.0.1",
+    "mermaid": "^11.13.0",
     "monaco-editor": "^0.55.1",
     "pinia": "^2.1.7",
     "radix-vue": "^1.9.17",

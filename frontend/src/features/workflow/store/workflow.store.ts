@@ -233,6 +233,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
             status: task.status,
             progress: task.progress,
             logs: task.logs,
+            output: task.output,       // ← 节点卡片显示输出字符数需要
             description: task.description,
             toolCalls: task.toolCalls,
             children: task.children,
@@ -241,7 +242,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
         };
 
         if (existingNodeIndex !== -1) {
-            graph.value.nodes[existingNodeIndex].data = nodeData;
+            // 必须替换整个节点对象而非原地 mutate data，
+            // VueFlow 通过 object identity 追踪变更：同一引用会被跳过，导致节点视觉不刷新。
+            graph.value.nodes[existingNodeIndex] = {
+                ...graph.value.nodes[existingNodeIndex],
+                data: nodeData,
+            };
         } else {
             const taskIndex = tasks.value.findIndex(t => t.id === task.id);
             const y = (taskIndex !== -1 ? taskIndex : graph.value.nodes.length) * 160;
@@ -584,6 +590,11 @@ export const useWorkflowStore = defineStore('workflow', () => {
                 });
             });
 
+            // 规划完成后立即将所有 pending 任务写入 graph（含 edges），
+            // 避免等到 task_started 才逐一注册节点导致 edges 无法渲染
+            graph.value = { nodes: [], edges: [] };
+            tasks.value.forEach(t => updateGraph(t));
+
             if (planData.reasoning) {
                 addLog(`规划思路: ${planData.reasoning}`, 'info', 'plan');
             }
@@ -871,6 +882,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         artifacts,
         executeBuffer,
         graph,
+        selectedTaskId,   // ← 节点点击 → 详情导航的响应式句柄
         initWorkflow,
         runWorkflow,
         stopWorkflow,

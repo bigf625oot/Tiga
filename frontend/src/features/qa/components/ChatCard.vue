@@ -9,7 +9,7 @@
     <!-- Avatar -->
     <div 
       v-if="showAvatar" 
-      class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden mt-1 transition-all duration-300 hover:scale-105 bg-background border border-border/50 shadow-sm"
+      class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden mt-1 transition-all duration-300 hover:scale-105 bg-background"
       :class="isUser ? 'ml-3' : 'mr-3'"
     >
       <img :src="avatarSrc" :alt="avatarAlt" class="w-full h-full object-cover p-0.5" />
@@ -77,7 +77,7 @@
             />
 
             <!-- 0. Empty State / Initial Loading -->
-            <div v-if="!parsed.text && !parsed.sql && !thinkingContent && !chartOption && !message.steps?.length && (!showStreamSteps) && isStreaming && isLast" class="flex items-center gap-2 py-1">
+            <div v-if="!parsed.text && !parsed.sql && !thinkingContent && !chartOption && (!showStepsContent) && (!showStreamSteps) && isStreaming && isLast" class="flex items-center gap-2 py-1">
                 <span class="relative flex h-2.5 w-2.5">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
@@ -86,14 +86,14 @@
             </div>
 
             <!-- 0. Process Steps (New) -->
-            <div v-if="message.steps && message.steps.length > 0" class="border border-border/40 rounded-md overflow-hidden mb-2 bg-muted/10 w-[90%] shadow-sm">
+            <div v-if="showStepsContent" class="border border-border/40 rounded-md overflow-hidden mb-2 bg-muted/10 w-[90%] shadow-sm">
                 <button 
                     @click="isStepsExpanded = !isStepsExpanded"
                     class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-muted/30 transition-colors group"
                 >
                     <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground/80">
                         <Activity class="w-3.5 h-3.5" />
-                        <span>Plan Steps ({{ message.steps.length }})</span>
+                        <span>Plan Steps ({{ message.steps?.length || 0 }})</span>
                     </div>
                     <ChevronRight 
                         class="w-3.5 h-3.5 text-muted-foreground/40 transition-transform duration-200 group-hover:text-muted-foreground/70"
@@ -126,7 +126,7 @@
 
             <!-- 1.5. Tools Status (新加入的工具流状态) -->
             <ToolStatus 
-                v-if="message.tools && message.tools.length > 0" 
+                v-if="showToolsContent" 
                 :tools="message.tools" 
             />
 
@@ -381,8 +381,20 @@ const showStreamSteps = computed(() => {
     );
     if (!hasExecutionEvents) return false;
     
-    // 不在 quick 模式下展示执行记录
-    if (props.currentModeId === 'quick') return false;
+    // 不在 quick 模式和秒懂模式(auto)下展示执行记录
+    if (props.currentModeId === 'quick' || !props.currentModeId || props.currentModeId === 'auto') return false;
+    return true;
+});
+
+const showStepsContent = computed(() => {
+    if (!props.message.steps || props.message.steps.length === 0) return false;
+    if (props.currentModeId === 'quick' || !props.currentModeId || props.currentModeId === 'auto') return false;
+    return true;
+});
+
+const showToolsContent = computed(() => {
+    if (!props.message.tools || props.message.tools.length === 0) return false;
+    if (props.currentModeId === 'quick' || !props.currentModeId || props.currentModeId === 'auto') return false;
     return true;
 });
 

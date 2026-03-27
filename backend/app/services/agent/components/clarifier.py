@@ -28,9 +28,8 @@ class IntentClarifier:
                 "4. 如果判断为模糊，请直接输出一句友好、专业的反问句（clarification_question），引导用户提供缺失的信息。",
                 "5. 你的响应必须是严格的 JSON 格式。"
             ],
-            response_model=ClarificationResult,
-            markdown=False,
-            show_tool_calls=False
+            output_schema=ClarificationResult,
+            markdown=False
         )
 
     async def check_ambiguity(self, input_text: str, context: str = "") -> ClarificationResult:

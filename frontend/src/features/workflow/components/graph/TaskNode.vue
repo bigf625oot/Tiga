@@ -1,203 +1,182 @@
 <template>
-  <div class="task-node group relative rounded-xl border bg-card text-card-foreground shadow-sm w-[280px] transition-all duration-300 hover:shadow-md"
-       :class="cardBorderClass">
-       
-    <!-- Top Progress Bar for Running State -->
-    <div v-if="data.status === 'running'" class="absolute top-0 left-0 h-[3px] bg-blue-500/10 w-full overflow-hidden rounded-t-xl">
-      <div class="h-full bg-blue-500 animate-pulse" :style="{ width: `${data.progress || 100}%` }"></div>
+  <!--
+    概览卡片：任务名称 + 状态 + 工具调用次数 + 输出字符数
+    完整执行详情通过点击进入 TaskPanel 的 Detail 视图查看
+    w-[260px] 固定宽度确保 DAG 布局一致性
+  -->
+  <div
+    class="task-node group relative rounded-xl border bg-card shadow-sm w-[260px]
+           cursor-pointer select-none
+           transition-all duration-200 hover:shadow-md hover:-translate-y-px"
+    :class="cardBorderClass"
+  >
+    <!-- running 状态顶部进度条 -->
+    <div v-if="data.status === 'running'"
+         class="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl overflow-hidden bg-blue-500/10">
+      <div class="h-full bg-blue-500 animate-pulse" style="width: 60%"></div>
     </div>
 
-    <Handle type="target" position="top" class="w-2.5 h-2.5 border-2 border-background !bg-muted-foreground/30 transition-colors group-hover:!bg-muted-foreground/60" />
+    <!-- VueFlow 连接锚点 — target(入) -->
+    <Handle type="target" position="top"
+            class="!w-2.5 !h-2.5 !border-2 !border-background !bg-muted-foreground/30
+                   transition-colors group-hover:!bg-primary/50" />
 
-    <!-- Node Header -->
-    <div class="p-3 border-b border-border/40 flex items-start gap-3 bg-muted/10 rounded-t-xl">
-      <!-- Status Icon -->
-      <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-sm" :class="iconContainerClass">
-        <component :is="statusIcon" :class="['w-4 h-4', iconColorClass]" :spin="data.status === 'running'" />
+    <!-- ── 卡片 Header: 状态图标 + 任务名 + 耗时 ── -->
+    <!-- px-4(16px) pt-3(12px) pb-2(8px) gap-3(12px) ← spacing.scale -->
+    <div class="px-4 pt-3 pb-2 flex items-start gap-3">
+      <!-- 状态图标圆圈 — w-6 h-6(24px) rounded-full ← spacing + borderRadius tokens -->
+      <div class="flex-none mt-0.5 w-6 h-6 rounded-full flex items-center justify-center"
+           :class="iconBgClass">
+        <component :is="statusIcon"
+                   :class="['w-3 h-3 flex items-center', iconColorClass]"
+                   :spin="data.status === 'running'" />
       </div>
-      
-      <!-- Title & Status -->
-      <div class="flex-1 min-w-0 pt-0.5">
-        <h4 class="font-semibold text-[13px] truncate text-foreground leading-tight mb-1">{{ data.label }}</h4>
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-medium flex items-center gap-1.5" :class="statusTextColorClass">
-            <span class="w-1.5 h-1.5 rounded-full" :class="statusDotClass"></span>
-            {{ statusText }}
-          </span>
-          <span v-if="elapsedTime" class="text-[10px] text-muted-foreground/80 font-mono">{{ elapsedTime }}</span>
-        </div>
+
+      <!-- 任务名 + 状态文字 -->
+      <div class="flex-1 min-w-0">
+        <!-- text-sm(14px) font-semibold(600) leading-tight(1.4) ← typography tokens -->
+        <p class="text-sm font-semibold text-foreground truncate leading-tight">
+          {{ data.label }}
+        </p>
+        <!-- text-xs(12px) font-medium(500) ← typography tokens -->
+        <p class="text-xs font-medium mt-0.5 leading-tight" :class="statusTextClass">
+          {{ statusText }}
+        </p>
       </div>
+
+      <!-- 耗时角标 — text-xs(12px) ← typography.fontSizes.xs -->
+      <span v-if="elapsedTime"
+            class="flex-none text-xs font-mono text-muted-foreground/70 mt-0.5 tabular-nums">
+        {{ elapsedTime }}
+      </span>
     </div>
 
-    <!-- Node Body -->
-    <div class="p-3 flex flex-col gap-3" v-if="data.description || (data.toolCalls && data.toolCalls.length > 0)">
-      <!-- Description -->
-      <div v-if="data.description" class="text-xs text-muted-foreground leading-relaxed line-clamp-2" :title="data.description">
-        {{ data.description }}
+    <!-- 分隔线 — border-border/40 ← color token -->
+    <div class="mx-4 h-px bg-border/40"></div>
+
+    <!-- ── 指标行: 工具调用次数 + 输出字符数 ── -->
+    <!-- px-4(16px) py-2(8px) gap-3(12px) ← spacing.scale -->
+    <div class="px-4 py-2 flex items-center gap-3">
+      <!-- 工具调用次数 — text-xs(12px) text-muted-foreground ← typography + color tokens -->
+      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <ToolOutlined class="text-[11px]" />
+        <span>{{ data.toolCalls?.length || 0 }} 次调用</span>
       </div>
 
-      <!-- Tools list -->
-      <div v-if="data.toolCalls && data.toolCalls.length > 0" class="flex flex-col gap-1.5">
-        <div class="flex items-center gap-1.5 mb-0.5">
-          <AppstoreOutlined class="text-[10px] text-muted-foreground" />
-          <span class="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Tools</span>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <div v-for="(tool, idx) in data.toolCalls" :key="idx" 
-               class="flex flex-col bg-muted/20 border border-border/60 rounded-md overflow-hidden transition-colors hover:bg-muted/40">
-            
-            <!-- Tool Header -->
-            <div class="flex items-center justify-between px-2 py-1.5">
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="truncate font-mono text-[11px] font-medium text-foreground/80">{{ tool.tool_name }}</span>
-              </div>
-              <component :is="getToolStatusIcon(tool.status)" 
-                         :class="['shrink-0 text-[11px]', getToolStatusColor(tool.status)]" 
-                         :spin="tool.status === 'running'" />
-            </div>
+      <!-- 输出字符数 -->
+      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <FileTextOutlined class="text-[11px]" />
+        <span>{{ outputSummary }}</span>
+      </div>
 
-            <!-- Tool Args (e.g., Query) -->
-            <div v-if="tool.tool_args && getSearchQuery(tool)" class="px-2 pb-1.5 pt-0">
-               <div class="text-[9px] font-mono text-muted-foreground/80 bg-background/50 px-1.5 py-0.5 rounded truncate border border-border/30">
-                 > {{ getSearchQuery(tool) }}
-               </div>
-            </div>
-
-            <!-- Search Results Preview -->
-            <div v-if="getSearchResults(tool).length > 0" class="px-2 pb-2 pt-1 border-t border-border/30 bg-background/30">
-              <div class="text-[9px] text-muted-foreground mb-1 font-medium flex items-center gap-1">
-                <LinkOutlined /> Sources:
-              </div>
-              <div class="flex flex-col gap-1">
-                <a v-for="(res, i) in getSearchResults(tool)" :key="i"
-                   :href="res.url || res.link" target="_blank"
-                   class="group/link flex flex-col gap-0.5 no-underline block hover:bg-muted p-1 rounded-sm border border-transparent hover:border-border/50 transition-colors">
-                  <div class="text-[10px] text-blue-600 dark:text-blue-400 font-medium truncate group-hover/link:underline leading-tight">
-                    {{ res.title || res.name || res.url || 'Untitled Source' }}
-                  </div>
-                  <div v-if="res.content || res.snippet" class="text-[9px] text-muted-foreground/70 line-clamp-1 leading-tight" :title="res.content || res.snippet">
-                    {{ res.content || res.snippet }}
-                  </div>
-                </a>
-              </div>
-            </div>
-
-          </div>
-        </div>
+      <!-- hover 时显示"查看详情"提示 -->
+      <div class="ml-auto flex items-center gap-0.5 text-primary
+                  opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <span class="text-xs font-medium">详情</span>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+        </svg>
       </div>
     </div>
 
-    <Handle type="source" position="bottom" class="w-2.5 h-2.5 border-2 border-background !bg-muted-foreground/30 transition-colors group-hover:!bg-muted-foreground/60" />
+    <!-- VueFlow 连接锚点 — source(出) -->
+    <Handle type="source" position="bottom"
+            class="!w-2.5 !h-2.5 !border-2 !border-background !bg-muted-foreground/30
+                   transition-colors group-hover:!bg-primary/50" />
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { Handle } from '@vue-flow/core';
-import { 
-  CheckCircleOutlined, 
-  SyncOutlined, 
-  ClockCircleOutlined, 
+import {
+  CheckCircleOutlined,
+  SyncOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
   ToolOutlined,
-  AppstoreOutlined
+  FileTextOutlined,
 } from '@ant-design/icons-vue';
 
 const props = defineProps(['data']);
 
+// ── 状态样式映射 ──
 const cardBorderClass = computed(() => {
   switch (props.data.status) {
     case 'completed': return 'border-green-500/40 ring-1 ring-green-500/10';
-    case 'running': return 'border-blue-500/50 ring-1 ring-blue-500/20';
-    case 'failed': return 'border-red-500/50 ring-1 ring-red-500/20';
-    default: return 'border-border/80 border-dashed';
+    case 'running':   return 'border-blue-500/50 ring-1 ring-blue-500/20';
+    case 'failed':    return 'border-red-500/50 ring-1 ring-red-500/20';
+    default:          return 'border-border/60 border-dashed';
   }
 });
 
-const iconContainerClass = computed(() => {
+const iconBgClass = computed(() => {
   switch (props.data.status) {
-    case 'completed': return 'bg-green-500/10 border-green-500/20';
-    case 'running': return 'bg-blue-500/10 border-blue-500/20';
-    case 'failed': return 'bg-red-500/10 border-red-500/20';
-    default: return 'bg-muted border-border/50';
+    case 'completed': return 'bg-green-500/10';
+    case 'running':   return 'bg-blue-500/10';
+    case 'failed':    return 'bg-red-500/10';
+    default:          return 'bg-muted';
   }
 });
 
 const iconColorClass = computed(() => {
   switch (props.data.status) {
-    case 'completed': return 'text-green-600 dark:text-green-500';
-    case 'running': return 'text-blue-600 dark:text-blue-500';
-    case 'failed': return 'text-red-600 dark:text-red-500';
-    default: return 'text-muted-foreground';
+    case 'completed': return 'text-green-500';
+    case 'running':   return 'text-blue-500';
+    case 'failed':    return 'text-red-500';
+    default:          return 'text-muted-foreground';
   }
 });
 
-const statusTextColorClass = computed(() => {
+const statusTextClass = computed(() => {
   switch (props.data.status) {
     case 'completed': return 'text-green-600 dark:text-green-500';
-    case 'running': return 'text-blue-600 dark:text-blue-500';
-    case 'failed': return 'text-red-600 dark:text-red-500';
-    default: return 'text-muted-foreground';
+    case 'running':   return 'text-blue-600 dark:text-blue-500';
+    case 'failed':    return 'text-red-600 dark:text-red-500';
+    default:          return 'text-muted-foreground';
   }
 });
 
-const statusDotClass = computed(() => {
+const statusText = computed(() => {
   switch (props.data.status) {
-    case 'completed': return 'bg-green-500';
-    case 'running': return 'bg-blue-500 animate-pulse';
-    case 'failed': return 'bg-red-500';
-    default: return 'bg-muted-foreground';
+    case 'completed': return '已完成';
+    case 'running':   return '执行中...';
+    case 'failed':    return '执行失败';
+    default:          return '等待中';
   }
 });
 
 const statusIcon = computed(() => {
   switch (props.data.status) {
     case 'completed': return CheckCircleOutlined;
-    case 'running': return SyncOutlined;
-    case 'failed': return CloseCircleOutlined;
-    default: return ClockCircleOutlined;
+    case 'running':   return SyncOutlined;
+    case 'failed':    return CloseCircleOutlined;
+    default:          return ClockCircleOutlined;
   }
 });
 
-const statusText = computed(() => {
-  switch (props.data.status) {
-    case 'completed': return 'Success';
-    case 'running': return 'Running...';
-    case 'failed': return 'Failed';
-    default: return 'Pending';
-  }
-});
-
+// ── 耗时 ──
 const elapsedTime = computed(() => {
   if (!props.data.startTime) return '';
-  const end = props.data.endTime || Date.now();
-  const ms = end - props.data.startTime;
+  const ms = (props.data.endTime || Date.now()) - props.data.startTime;
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+  return `${Math.floor(ms / 60000)}m${Math.floor((ms % 60000) / 1000)}s`;
 });
 
-const getToolStatusIcon = (status) => {
-  switch (status) {
-    case 'completed': return CheckCircleOutlined;
-    case 'failed': return CloseCircleOutlined;
-    case 'running': return SyncOutlined;
-    default: return ClockCircleOutlined;
+// ── 输出摘要: 优先显示 output 字符数，降级到日志条数 ──
+const outputSummary = computed(() => {
+  const len = (props.data.output || '').length;
+  if (len > 0) {
+    if (len < 1000) return `${len} 字符`;
+    return `${(len / 1000).toFixed(1)}K 字符`;
   }
-};
-
-const getToolStatusColor = (status) => {
-  switch (status) {
-    case 'completed': return 'text-green-500';
-    case 'failed': return 'text-red-500';
-    case 'running': return 'text-blue-500 animate-spin';
-    default: return 'text-muted-foreground';
-  }
-};
+  const logCount = props.data.logs?.length || 0;
+  if (logCount > 0) return `${logCount} 条日志`;
+  return '暂无输出';
+});
 </script>
 
 <style scoped>
-.task-node {
-  transform: translateZ(0);
-}
+.task-node { transform: translateZ(0); }
 </style>
