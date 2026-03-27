@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import type {
     AgentEvent, AgentExecutionPlan, AgentToolCallInfo,
-    AgentObservationInfo, AgentArtifactCard,
+    AgentObservationInfo, AgentArtifactCard, AgentTaskStartInfo,
 } from '@/features/qa/types';
 
 export interface TaskToolCall {
@@ -155,15 +155,28 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     watch([tasks, logs, documents, currentStep], () => {
         if (sessionId.value) {
+            // localStorage 作为高频实时镜像（内存速度，无锁竞争）
             localStorage.setItem(`workflow-${sessionId.value}`, JSON.stringify({
                 tasks: tasks.value,
                 logs: logs.value,
                 documents: documents.value,
                 currentStep: currentStep.value
             }));
-            debouncedSave();
+            // Streaming 期间 tasks/logs 高频变更（每个 SSE 事件），
+            // 若此时触发 PUT 请求会造成 SQLite 并发写锁竞争（database is locked）。
+            // 策略：isRunning 时只写 localStorage，流结束后通过 isRunning watcher 统一持久化。
+            if (!isRunning.value) {
+                debouncedSave();
+            }
         }
     }, { deep: true });
+
+    // 工作流结束时触发一次权威持久化，确保最终状态落地后端
+    watch(isRunning, (running) => {
+        if (!running && sessionId.value) {
+            debouncedSave();
+        }
+    });
 
     const addLog = (message: string, level: WorkflowLog['level'] = 'info', step?: string) => {
         logs.value.push({
@@ -687,11 +700,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
     // ── AgentEvent 协议（NexusExecutor 路径）──
 
     const initFromAgentPlan = (plan: AgentExecutionPlan) => {
-        tasks.value = plan.tasks.map(t => ({
-            id: t.id,
-            name: t.title,
-            description: t.description,
-            status: t.status as WorkflowTask['status'],
+        tasks.value = plan.tasks.map((t: any) => ({
+            // 兼容 id / task_id 两种 key（不同后端路径差异）
+            id: t.id || t.task_id || `plan-${Math.random().toString(16).slice(2)}`,
+            // 兼容 title / name 两种字段（后端历史差异）
+            name: t.title || t.name || t.id || t.task_id || '未命名任务',
+            description: t.description || '',
+            status: (t.status as WorkflowTask['status']) || 'pending',
             progress: 0,
             logs: [],
             output: '',
@@ -708,18 +723,38 @@ export const useWorkflowStore = defineStore('workflow', () => {
         switch (event.type) {
             // task_start：pending/running/completed/failed 状态变更
             case 'task_start': {
-                const info = event.content as { task_id: string; title?: string; status: string };
-                const task = tasks.value.find(t => t.id === info.task_id);
-                if (task) {
-                    task.status = info.status as WorkflowTask['status'];
-                    if (info.status === 'running') task.startTime = Date.now();
-                    if (info.status === 'completed' || info.status === 'failed') {
-                        task.endTime = Date.now();
-                        task.progress = 100;
-                    }
-                    if (info.title) task.logs.push(info.title);
+                const info = event.content as AgentTaskStartInfo;
+                let task = tasks.value.find(t => t.id === info.task_id);
+
+                if (!task) {
+                    // 兜底创建：plan_created 未到达或 task_id 与 plan 不对齐时，
+                    // 动态建立任务条目，与 handleTaskStarted（legacy 路径）行为对齐。
+                    task = {
+                        id: info.task_id,
+                        name: info.title || info.task_id,
+                        status: 'pending',
+                        progress: 0,
+                        logs: [],
+                        output: '',
+                        toolCalls: [],
+                    };
+                    tasks.value.push(task);
                     updateGraph(task);
                 }
+
+                const prevStatus = task.status;
+                task.status = info.status as WorkflowTask['status'];
+                // 只在状态首次转入 running 时记录 startTime，避免重复触发覆盖
+                if (info.status === 'running' && prevStatus !== 'running') {
+                    task.startTime = Date.now();
+                }
+                if ((info.status === 'completed' || info.status === 'failed') && prevStatus === 'running') {
+                    task.endTime = Date.now();
+                    task.progress = 100;
+                }
+                // 用 title 补全 name（plan_created 阶段名称可能比 task_start 更精准）
+                if (info.title && task.name !== info.title) task.name = info.title;
+                updateGraph(task);
                 break;
             }
 
@@ -833,6 +868,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         updatePlanFromBackend,
         updateToolStatus,
         handleWorkflowEvent,
+        handleTaskStarted,
         initFromAgentPlan,
         handleAgentEvent
     };

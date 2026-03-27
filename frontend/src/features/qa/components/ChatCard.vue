@@ -56,10 +56,23 @@
 
         <!-- Agent Mode: Rich Content -->
         <div v-else class="agent-content flex flex-col gap-2">
-            
+
+            <!-- Solo mode: TRAE-style execution panel (bypasses all legacy blocks) -->
+            <SoloTaskCard
+                v-if="currentModeId === 'solo'"
+                :message="message"
+                :is-last="isLast"
+                :is-streaming="isStreaming"
+                @locate-node="$emit('locate-node', $event)"
+                @resend-message="$emit('resend-message', $event)"
+            />
+
+            <!-- Non-solo modes: original rendering pipeline -->
+            <template v-else>
+
             <StreamSteps
                 v-if="showStreamSteps"
-                :events="message.stream_events"
+                :events="message.stream_events ?? []"
                 :is-streaming="isStreaming && isLast"
             />
 
@@ -225,6 +238,7 @@
                  <span class="inline-block w-2 h-4 bg-foreground/60 animate-pulse rounded-[1px]"></span>
             </div>
 
+            </template><!-- end v-else (non-solo) -->
         </div>
       </div>
 
@@ -277,6 +291,7 @@ import GenericResourceCard from './GenericResourceCard.vue';
 import { useMessageParser } from '../composables/useMessageParser';
 import { useChartOptions } from '../composables/useChart';
 import { useMarkdown, isHighlighterReady } from '../composables/useMarkdown';
+import type { Message } from '../types';
 
 // 新引入的 UI 组件
 import ThinkingBlock from './SmartQA/ThinkingBlock.vue';
@@ -284,17 +299,27 @@ import ToolStatus from './SmartQA/ToolStatus.vue';
 import MarkdownRenderer from './SmartQA/MarkdownRenderer.vue';
 import ErrorCallout from './SmartQA/ErrorCallout.vue';
 import StreamSteps from './SmartQA/StreamSteps.vue';
+import SoloTaskCard from './SmartQA/SoloTaskCard.vue';
 
-const props = defineProps({
-  message: { type: Object, required: true },
-  type: { type: String, default: 'knowledge_qa' },
-  isUser: { type: Boolean, default: false },
-  showAvatar: { type: Boolean, default: true },
-  showMeta: { type: Boolean, default: false },
-  agent: { type: Object, default: null },
-  isLast: { type: Boolean, default: false },
-  isStreaming: { type: Boolean, default: false },
-  currentModeId: { type: String, default: null }
+const props = withDefaults(defineProps<{
+  message: Message;
+  type?: string;
+  isUser?: boolean;
+  showAvatar?: boolean;
+  showMeta?: boolean;
+  agent?: Record<string, any> | null;
+  isLast?: boolean;
+  isStreaming?: boolean;
+  currentModeId?: string | null;
+}>(), {
+  type: 'knowledge_qa',
+  isUser: false,
+  showAvatar: true,
+  showMeta: false,
+  agent: null,
+  isLast: false,
+  isStreaming: false,
+  currentModeId: null,
 });
 
 const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
