@@ -2456,5 +2456,27 @@
     "create_time": 1774593697,
     "update_time": 1774593697,
     "_id": "global:query:688af4d02a6f23dbee7c5ef6aeee57a4"
+  },
+  "mix:query:39246b073ebc6834100a5ccdda9bda24": {
+    "return": "大模型架构主要指以**大型基础模型**（如LLM/VLM）为核心构建的技术体系，其核心架构与应用特点如下：\n\n1. **核心技术组成**  \n   - **大型语言模型(LLM)**：作为决策中枢，负责任务规划、语言生成与多智能体调度，具备零样本推理能力[1]。  \n   - **视觉语言模型(VLM)**：结合视觉与语言处理，提供跨模态理解能力，但需依赖对齐的视觉编码器增强零样本识别[3]。  \n   - **模块化设计**：如mplug-owl等框架通过模块化赋能LLM实现多模态融合，支持灵活的功能扩展[2]。\n\n2. **关键架构特性**  \n   - **端到端系统**：整合LLM/VLM作为输入编码器，结合强化学习或模仿学习策略，实现从感知到执行的闭环[1][5]。  \n   - **记忆与反馈机制**：通过提示工程优化记忆管理，并引入环境反馈调整输出（如LM-Nav系统结合CLIP提升导航精度）[3]。  \n   - **多智能体协作**：以GPT-4等模型为中央协调器，实现多代理任务分配与协同（如“美食世界”游戏场景）[1]。\n\n3. **应用挑战**  \n   - **幻觉效应**：大型基础模型可能输出不符合现实的结果，需通过智能体AI系统进行校正[5]。  \n   - **数据依赖性**：语言模型需海量文本训练，视觉模型依赖高质量跨模态数据，存在成本与泛化瓶颈[3][5]。  \n\n该架构正推动智能体AI向多模态、自适应方向发展，但需进一步解决伦理对齐与实时交互等难题[1][5]。",
+    "cache_type": "query",
+    "chunk_id": null,
+    "original_prompt": "大模型架构",
+    "queryparam": {
+      "mode": "mix",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "hl_keywords": "大模型, 架构",
+      "ll_keywords": "",
+      "user_prompt": "",
+      "enable_rerank": false
+    },
+    "create_time": 1774600376,
+    "update_time": 1774600376,
+    "_id": "mix:query:39246b073ebc6834100a5ccdda9bda24"
   }
 }

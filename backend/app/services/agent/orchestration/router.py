@@ -95,12 +95,42 @@ class ModeRouter:
             DefaultExperienceStore,
             DefaultToolRegistry
         )
+        from app.services.agent.orchestration.builder import AgentAssembler
 
         memory_manager = DefaultMemoryManager(db=db, llm_model=self.llm_model)
         state_manager = DefaultStateManager(db=db)
         plan_validator = DefaultPlanValidator()
         experience_store = DefaultExperienceStore(db=db)
-        tool_registry = DefaultToolRegistry()
+        tool_registry = DefaultToolRegistry(db=db)
+        
+        # 将 Assembler 中装配出的工具注册到 registry
+        agent_id = kwargs.get("agent_id")
+        session_id = kwargs.get("session_id")
+        enable_search = kwargs.get("enable_search", True)
+        
+        try:
+            assembler = AgentAssembler(db, agent_id)
+            await assembler._load_essential_data()
+            await assembler._assemble_toolset(session_id=session_id, enable_search=enable_search)
+            
+            for tool in assembler.ctx.tools:
+                # Agno Toolkit 适配
+                if hasattr(tool, "tools") and isinstance(tool.tools, dict):
+                    for name, func in tool.tools.items():
+                        tool_registry.register_tool(
+                            name=name,
+                            func=func,
+                            description=getattr(func, "__doc__", "") or f"Tool {name}",
+                        )
+                # 原生 Function 或 Callable
+                elif callable(tool):
+                    tool_registry.register_tool(
+                        name=getattr(tool, "__name__", str(tool)),
+                        func=tool,
+                        description=getattr(tool, "__doc__", "") or f"Tool {tool}",
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to pre-assemble tools for registry: {e}")
 
         # 根据意图进行分发
         if intent_key in ("chat", "data_query", "kg_qa"):

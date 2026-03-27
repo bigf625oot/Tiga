@@ -291,9 +291,10 @@
                                     <h4 class="font-semibold text-sm text-foreground">角色设定</h4>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <Button v-if="!isReadOnly" variant="ghost" size="sm" class="h-6 px-2 text-xs gap-1.5 text-muted-foreground hover:text-primary" title="AI 优化">
-                                        <Wand2 class="w-3.5 h-3.5" />
-                                        <span class="sr-only sm:not-sr-only sm:inline">优化</span>
+                                    <Button v-if="!isReadOnly" @click="handleOptimizePrompt" :disabled="isOptimizingPrompt || !form.system_prompt" variant="ghost" size="sm" class="h-6 px-2 text-xs gap-1.5 text-muted-foreground hover:text-primary" title="AI 优化">
+                                        <Wand2 v-if="!isOptimizingPrompt" class="w-3.5 h-3.5" />
+                                        <Loader2 v-else class="w-3.5 h-3.5 animate-spin" />
+                                        <span class="sr-only sm:not-sr-only sm:inline">{{ isOptimizingPrompt ? '优化中...' : '优化' }}</span>
                                     </Button>
                                     <Button variant="ghost" size="icon" class="h-6 w-6 text-muted-foreground hover:text-primary" title="复制内容">
                                         <Copy class="w-3.5 h-3.5" />
@@ -981,6 +982,41 @@ const toolSearchQuery = ref('');
 const iconInput = ref(null);
 const importInput = ref(null);
 const scriptsEditorRef = ref(null);
+const isOptimizingPrompt = ref(false);
+
+const handleOptimizePrompt = async () => {
+    if (!form.value.system_prompt) return;
+    isOptimizingPrompt.value = true;
+    try {
+        const response = await fetch('/api/v1/agents/actions/optimize_prompt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                system_prompt: form.value.system_prompt,
+                name: form.value.name,
+                description: form.value.description
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to optimize prompt');
+        }
+        
+        const data = await response.json();
+        if (data.optimized_prompt) {
+            form.value.system_prompt = data.optimized_prompt;
+            message.success('角色设定优化成功');
+        }
+    } catch (error) {
+        console.error('Error optimizing prompt:', error);
+        message.error('优化失败，请稍后重试');
+    } finally {
+        isOptimizingPrompt.value = false;
+    }
+};
 
 const providerLogoErrors = ref({});
 

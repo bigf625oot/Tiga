@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import asyncio
 from typing import AsyncGenerator, Dict, Any, Optional, List, Tuple
 
@@ -85,7 +85,8 @@ class FastExecutor(LightBaseExecutor):
                 messages=history_msgs,
                 images=media_objs,
                 instructions=instructions,
-                stream=True
+                stream=True,
+                stream_events=True
             ):
                 async for event in self.stream_adapter.to_standard_events(chunk):
                     yield event

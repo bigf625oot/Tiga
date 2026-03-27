@@ -65,7 +65,7 @@ class ExecutionEngine:
         prompt = f"Context:\n{context_str}\n\nExecute the task."
 
         adapter = AgnoStreamAdapter()
-        raw_stream = agent.arun(prompt, stream=True)
+        raw_stream = agent.arun(prompt, stream=True, stream_events=True)
         
         async for chunk in raw_stream:
             async for event in adapter.to_standard_events(chunk):

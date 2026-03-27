@@ -25,10 +25,11 @@ Agent Endpoints
 - 删除智能体
 - 克隆智能体
 """
-from typing import List
+from typing import List, Optional
 import shutil
 from pathlib import Path
 import uuid
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -145,3 +146,57 @@ async def delete_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     agent = await agent_service.get_agent_or_fail(db, agent_id)
     await crud_agent.delete(db, id=agent_id)
     return agent
+
+
+class PromptOptimizeRequest(BaseModel):
+    system_prompt: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+@router.post("/actions/optimize_prompt", summary=_("Optimize agent system prompt"))
+async def optimize_prompt(request: PromptOptimizeRequest):
+    """
+    Optimize the system prompt of an agent using an LLM.
+    """
+    from app.services.platform.llm.factory import ModelFactory
+    from app.core.config import settings
+    from agno.agent import Agent
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        llm_model = ModelFactory.resolve_default_llm_model(settings)
+        model = ModelFactory.create_model(llm_model)
+        
+        system_message = (
+            "You are an expert prompt engineer. Your task is to optimize the provided system prompt "
+            "to make it more effective, clear, and professional for an AI agent. "
+            "If a name or description is provided, use them to better understand the context. "
+            "Return ONLY the optimized prompt text without any explanations, markdown blocks, or quotes around it."
+        )
+        
+        agent = Agent(
+            model=model,
+            system_prompt=system_message,
+        )
+        
+        user_message = f"Please optimize this prompt:\n\n{request.system_prompt}"
+        if request.name:
+            user_message += f"\n\nAgent Name: {request.name}"
+        if request.description:
+            user_message += f"\n\nAgent Description: {request.description}"
+            
+        response = agent.run(user_message)
+        optimized_prompt = response.content.strip()
+        
+        if optimized_prompt.startswith('```') and optimized_prompt.endswith('```'):
+            lines = optimized_prompt.split('\n')
+            if len(lines) > 2:
+                optimized_prompt = '\n'.join(lines[1:-1]).strip()
+                if optimized_prompt.startswith('markdown'):
+                    optimized_prompt = optimized_prompt[8:].strip()
+                    
+        return {"optimized_prompt": optimized_prompt}
+    except Exception as e:
+        logger.error(f"Failed to optimize prompt: {e}")
+        raise HTTPException(status_code=500, detail="Failed to optimize prompt")
