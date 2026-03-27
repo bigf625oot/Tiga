@@ -5,7 +5,16 @@ export function useChartOptions() {
     
     const processOption = (rawOption: any) => {
         if (!rawOption) return null;
-        const option = JSON.parse(JSON.stringify(rawOption));
+        
+        let option;
+        try {
+            // Secure clone: prevents prototype pollution and discards any executable functions
+            // JSON.stringify will safely strip out functions like `formatter: () => {}`
+            option = JSON.parse(JSON.stringify(rawOption));
+        } catch (e) {
+            console.error('Invalid chart option format', e);
+            return null;
+        }
         
         // Modern Color Palette
         option.color = [

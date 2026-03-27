@@ -43,117 +43,110 @@ export function useMessageParser(contentRef: Ref<string>) {
             resources: []
         };
 
-        // Helper to extract block and remove from raw
-        // Returns the extracted content
-        const extractBlock = (regex: RegExp, type: 'think' | 'sql' | 'chart') => {
-            let extracted = '';
-            let match;
-            
-            // Loop to find all occurrences and remove them one by one
-            // We use a loop because removing a block changes the string indices for subsequent matches if we used matchAll
-            // Also, replace(regex, '') with global flag can be tricky with stateful regexes
-            while ((match = raw.match(regex)) !== null) {
-                const fullMatch = match[0];
-                const content = match[1];
-
-                if (type === 'think') {
-                    extracted += content + '\n';
-                    // Check if this specific block is partial (unclosed)
-                    if (!fullMatch.endsWith('</think>')) {
-                        // Mark as partial if any block is unclosed (usually the last one)
-                         if (!result.think) result.think = { raw: '', html: '', isPartial: true };
-                         else result.think.isPartial = true;
-                    }
-                } else if (type === 'sql') {
-                    // For SQL, we usually only want the last one or merge them?
-                    // Let's take the last valid one for now, or merge if multiple?
-                    // Typically Vanna returns one SQL. Let's overwrite.
-                    result.sql = content.trim();
-                } else if (type === 'chart') {
-                    try {
-                        result.chartConfig = JSON.parse(content.trim());
-                    } catch (e) {
-                        console.error('Chart JSON parse error', e);
-                    }
-                }
-
-                // Remove the matched block from raw
-                // Use slice to be safe against special chars in fullMatch
-                const startIndex = match.index!;
-                raw = raw.slice(0, startIndex) + raw.slice(startIndex + fullMatch.length);
-            }
-            
-            return extracted;
-        };
-
-        // 1. Extract Think Blocks
-        // Regex: Non-greedy match for content. 
-        // Handles unclosed tags at end of string via (?:<\/think>|$)
-        const thinkContent = extractBlock(/<think>([\s\S]*?)(?:<\/think>|$)/, 'think');
-        if (thinkContent) {
-            result.think = {
-                raw: thinkContent.trim() || '正在思考...',
-                html: '', // Not used by ThinkingBlock, skip expensive render during stream
-                isPartial: result.think?.isPartial || false
-            };
-        }
-
-        // 2. Extract Chart Blocks
-        // Regex: ::: echarts {json} :::
-        extractBlock(/::: echarts\s*([\s\S]*?):::/, 'chart');
-
-        // 3. Extract SQL Blocks
-        // Regex: ```sql ... ```
-        // Note: We use [\s\S]*? for non-greedy multiline match
-        extractBlock(/```sql\s*([\s\S]*?)```/, 'sql');
-
-        // 4. Extract Resources (DocCard & FileCard)
-        // This part needs to be careful not to disrupt the text flow if we want to keep them in place?
-        // Original logic extracted them but kept text? No, original logic pushed to resources array.
-        // Let's keep the original logic for resources but adapt to the new raw
-        
-        const resourceRegex = /((?:\[DocCard:.*?\]\(.*?\))|(?:(?:::|::: )file[\s\S]*?(?:::|:::)))/g;
-        let match;
+        // One-Pass State Machine Parser
+        // Instead of multiple regex passes and O(N^2) string slicing, we scan the string once
+        let currentPos = 0;
+        const len = raw.length;
         const textParts: string[] = [];
-        let lastIndex = 0;
 
-        while ((match = resourceRegex.exec(raw)) !== null) {
-            // Text before match
-            if (match.index > lastIndex) {
-                textParts.push(raw.substring(lastIndex, match.index));
+        while (currentPos < len) {
+            // Find the next potential tag or block
+            const nextThink = raw.indexOf('<think>', currentPos);
+            const nextChart = raw.indexOf('::: echarts', currentPos);
+            const nextSql = raw.indexOf('```sql', currentPos);
+            const nextDoc = raw.indexOf('[DocCard:', currentPos);
+            const nextFile = raw.indexOf('::: file', currentPos);
+            const nextFileSpace = raw.indexOf(':::  file', currentPos); // handle typo with space
+
+            // Collect all valid next positions
+            const candidates = [
+                { type: 'think', pos: nextThink },
+                { type: 'chart', pos: nextChart },
+                { type: 'sql', pos: nextSql },
+                { type: 'doc', pos: nextDoc },
+                { type: 'file', pos: nextFile !== -1 ? nextFile : nextFileSpace }
+            ].filter(c => c.pos !== -1).sort((a, b) => a.pos - b.pos);
+
+            if (candidates.length === 0) {
+                // No more blocks, push remaining text
+                textParts.push(raw.slice(currentPos));
+                break;
             }
 
-            const token = match[0];
-            if (token.startsWith('[')) {
-                const docM = token.match(/\[DocCard:\s*(.*?)\]\((.*?)\)/);
-                if (docM) {
-                    result.resources.push({
-                        type: 'doc',
-                        data: { title: docM[1], id: docM[2] }
-                    });
-                }
-            } else {
-                const fileM = token.match(/::: ?file([\s\S]*?):::/);
-                if (fileM) {
-                    try {
-                        const fileData = JSON.parse(fileM[1]);
-                        result.resources.push({
-                            type: 'file',
-                            data: fileData
-                        });
-                    } catch (e) {
-                        console.error('File JSON parse error', e);
+            const nextBlock = candidates[0];
+
+            // Push text before the block
+            if (nextBlock.pos > currentPos) {
+                textParts.push(raw.slice(currentPos, nextBlock.pos));
+            }
+
+            if (nextBlock.type === 'think') {
+                const startContent = nextBlock.pos + 7; // length of '<think>'
+                const endTag = raw.indexOf('</think>', startContent);
+                
+                if (endTag !== -1) {
+                    const content = raw.slice(startContent, endTag);
+                    if (!result.think) result.think = { raw: content + '\n', html: '', isPartial: false };
+                    else result.think.raw += content + '\n';
+                    currentPos = endTag + 8; // length of '</think>'
+                } else {
+                    // Unclosed think block (streaming)
+                    const content = raw.slice(startContent);
+                    if (!result.think) result.think = { raw: content + '\n', html: '', isPartial: true };
+                    else {
+                        result.think.raw += content + '\n';
+                        result.think.isPartial = true;
                     }
+                    currentPos = len;
+                }
+            } else if (nextBlock.type === 'chart') {
+                const match = raw.slice(nextBlock.pos).match(/^:::\s*echarts\s*([\s\S]*?):::/);
+                if (match) {
+                    try {
+                        result.chartConfig = JSON.parse(match[1].trim());
+                    } catch (e) { console.error('Chart JSON parse error', e); }
+                    currentPos = nextBlock.pos + match[0].length;
+                } else {
+                    // If it doesn't match the closing tag, just treat as text and move forward
+                    textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 11));
+                    currentPos = nextBlock.pos + 11;
+                }
+            } else if (nextBlock.type === 'sql') {
+                const match = raw.slice(nextBlock.pos).match(/^```sql\s*([\s\S]*?)```/);
+                if (match) {
+                    result.sql = match[1].trim();
+                    currentPos = nextBlock.pos + match[0].length;
+                } else {
+                    textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 6));
+                    currentPos = nextBlock.pos + 6;
+                }
+            } else if (nextBlock.type === 'doc') {
+                const match = raw.slice(nextBlock.pos).match(/^\[DocCard:\s*(.*?)\]\((.*?)\)/);
+                if (match) {
+                    result.resources.push({ type: 'doc', data: { title: match[1], id: match[2] } });
+                    currentPos = nextBlock.pos + match[0].length;
+                } else {
+                    textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 9));
+                    currentPos = nextBlock.pos + 9;
+                }
+            } else if (nextBlock.type === 'file') {
+                const match = raw.slice(nextBlock.pos).match(/^:::\s*file([\s\S]*?):::/);
+                if (match) {
+                    try {
+                        result.resources.push({ type: 'file', data: JSON.parse(match[1]) });
+                    } catch (e) { console.error('File JSON parse error', e); }
+                    currentPos = nextBlock.pos + match[0].length;
+                } else {
+                    textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 8));
+                    currentPos = nextBlock.pos + 8;
                 }
             }
-            lastIndex = resourceRegex.lastIndex;
-        }
-        
-        if (lastIndex < raw.length) {
-            textParts.push(raw.substring(lastIndex));
         }
 
-        // 5. Remaining Text
+        if (result.think && result.think.raw) {
+            result.think.raw = result.think.raw.trim() || '正在思考...';
+        }
+
         result.text = textParts.join('').trim();
         result.html = ''; // Skipping render here to avoid performance issues during streaming
 

@@ -73,7 +73,4 @@ watch(() => props.isThinking, (newVal, oldVal) => {
 .thinking-block {
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 }
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 </style>

@@ -87,9 +87,9 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import BaseIcon from '@/shared/components/atoms/BaseIcon';
-import type { Agent, Session, Team } from '../../types';
+import type { Agent, Session, Team } from '../../../types';
 import dayjs from 'dayjs';
-import { MODES } from '../../constants';
+import { MODES } from '../../../constants';
 import { Edit2, Check, X, Bookmark } from 'lucide-vue-next';
 
 const props = defineProps<{

@@ -216,12 +216,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { CheckCircle2, XCircle, Link2, FileText, ExternalLink } from 'lucide-vue-next';
-import type { Message } from '../../types';
+import type { Message, StreamEventItem } from '../../../types';
 import ToolCallPanel from './ToolCallPanel.vue';
-import ThinkingBlock from './ThinkingBlock.vue';
-import ErrorCallout from './ErrorCallout.vue';
-import ChartFrame from '../../../analytics/components/ChartFrame.vue';
-import { useChartOptions } from '../../composables/useChart';
+import ThinkingBlock from '../chat/ThinkingBlock.vue';
+import ErrorCallout from '../common/ErrorCallout.vue';
+import ChartFrame from '../../../../analytics/components/ChartFrame.vue';
+import { useChartOptions } from '../../../composables/useChart';
+import { formatDuration, formatFileSize } from '../../../utils/dateUtils';
 
 // ── Props & emits ───────────────────────────────────────────────────
 const props = defineProps<{
@@ -285,12 +286,6 @@ const artifactLinks = computed<ArtifactLink[]>(() => {
 
   return result;
 });
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 // ── Thinking content ─────────────────────────────────────────────────
 const thinkingContent = computed(() => {
@@ -422,14 +417,6 @@ const statusPillClass = computed(() => {
   if (hasError.value) return 'text-destructive border-destructive/30 bg-destructive/8';
   return 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/8';
 });
-
-// ── Utilities ────────────────────────────────────────────────────────
-const formatDuration = (ms?: number) => {
-  if (!ms) return '';
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60000)}m${Math.floor((ms % 60000) / 1000)}s`;
-};
 
 </script>
 

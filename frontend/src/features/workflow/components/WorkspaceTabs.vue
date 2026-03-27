@@ -21,7 +21,7 @@
         <TaskPanel
           ref="taskPanelRef"
           embedded
-          :showEmbeddedHeader="true"
+          :showEmbeddedHeader="false"
           :sessionId="sessionId"
           :agentName="agentName"
           :isWorkflowMode="isWorkflowMode"

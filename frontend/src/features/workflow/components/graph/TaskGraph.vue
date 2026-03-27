@@ -7,6 +7,8 @@
       :max-zoom="4"
       :fit-view-on-init="true"
       :node-types="nodeTypes"
+      @node-click="onNodeClick"
+      @pane-click="onPaneClick"
     >
       <Background pattern-color="#aaa" gap="8" />
       <Controls />
@@ -43,6 +45,15 @@ const elements = computed({
     // Optional: handle changes if graph is interactive
   }
 });
+
+const onNodeClick = (event) => {
+  store.selectedTaskId = event.node.id;
+};
+
+const onPaneClick = () => {
+  // Optional: clear selection on pane click
+  // store.selectedTaskId = null;
+};
 
 watch(() => store.graph.nodes.length, () => {
   setTimeout(() => {

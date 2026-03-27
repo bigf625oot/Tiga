@@ -291,15 +291,16 @@ import GenericResourceCard from './GenericResourceCard.vue';
 import { useMessageParser } from '../composables/useMessageParser';
 import { useChartOptions } from '../composables/useChart';
 import { useMarkdown, isHighlighterReady } from '../composables/useMarkdown';
+import { formatTime, formatDuration } from '../utils/dateUtils';
 import type { Message } from '../types';
 
 // 新引入的 UI 组件
-import ThinkingBlock from './SmartQA/ThinkingBlock.vue';
-import ToolStatus from './SmartQA/ToolStatus.vue';
-import MarkdownRenderer from './SmartQA/MarkdownRenderer.vue';
-import ErrorCallout from './SmartQA/ErrorCallout.vue';
-import StreamSteps from './SmartQA/StreamSteps.vue';
-import SoloTaskCard from './SmartQA/SoloTaskCard.vue';
+import ThinkingBlock from './SmartQA/chat/ThinkingBlock.vue';
+import ToolStatus from './SmartQA/workflow/ToolStatus.vue';
+import MarkdownRenderer from './SmartQA/common/MarkdownRenderer.vue';
+import ErrorCallout from './SmartQA/common/ErrorCallout.vue';
+import StreamSteps from './SmartQA/workflow/StreamSteps.vue';
+import SoloTaskCard from './SmartQA/workflow/SoloTaskCard.vue';
 
 const props = withDefaults(defineProps<{
   message: Message;
@@ -446,12 +447,6 @@ const avatarSrc = computed(() => {
 const avatarAlt = computed(() => (props.isUser ? 'user' : 'agent'));
 
 // Methods
-const formatTime = (ts: any) => dayjs(ts).format('YYYY-MM-DD HH:mm');
-const formatDuration = (ms?: number) => {
-    if (!ms) return '';
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
-};
 const copyText = (text: string) => navigator.clipboard.writeText(text || '');
 
 const handleResourceClick = (id: string) => {

@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useMarkdown, isHighlighterReady } from '../../composables/useMarkdown';
+import { useMarkdown, isHighlighterReady } from '../../../composables/useMarkdown';
 import { useToast } from '@/components/ui/toast/use-toast';
 
 const props = defineProps<{

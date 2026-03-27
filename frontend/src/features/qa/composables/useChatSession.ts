@@ -2,10 +2,9 @@ import { ref } from 'vue';
 import { chatService } from '../services/chatService';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import { useToast } from '@/components/ui/toast/use-toast';
+import { createEventDispatcher } from './modes/eventDispatcher';
 import type {
   Session, Message, Attachment, ModeType, StreamEventItem,
-  AgentEvent, AgentExecutionPlan, AgentToolCallInfo, AgentObservationInfo,
-  AgentArtifactCard,
 } from '../types';
 
 /**
@@ -306,257 +305,18 @@ export function useChatSession() {
                               appendStreamEvent(assistantMsg, eventType, parsedData);
                           }
 
-                          switch (eventType) {
-                              // ── NexusExecutor 新协议 ──────────────────────────────────
-                              case 'meta':
-                                  if (parsedData?.agent_run_id) agentRunId.value = parsedData.agent_run_id;
-                                  if (parsedData?.msg_type) assistantMsg.type = parsedData.msg_type;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
+                          // 策略注册表与动态分发
+                          const handlers = createEventDispatcher(
+                              currentSession.value?.mode,
+                              assistantMsg,
+                              workflowStore,
+                              normalizeThink,
+                              agentRunId
+                          );
 
-                              case 'thought': {
-                                  const thoughtText = typeof parsedData.content === 'string' ? parsedData.content : '';
-                                  assistantMsg.reasoning = (assistantMsg.reasoning || '') + thoughtText;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'plan_created': {
-                                  // 兼容后端两种 payload 布局：
-                                  //   格式 A（AgentEvent 标准）: { type, content: { plan_id, tasks: [...] } }
-                                  //   格式 B（直接展开）:        { type, plan_id, tasks: [...] }
-                                  // 同时兼容 tasks / steps 两种 key 名（历史字段差异）
-                                  const inner = (parsedData.content ?? parsedData) as any;
-                                  const taskList: any[] = inner?.tasks ?? inner?.steps ?? [];
-                                  if (taskList.length > 0) {
-                                      workflowStore.initFromAgentPlan({
-                                          ...inner,
-                                          tasks: taskList,
-                                      } as AgentExecutionPlan);
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'task_start': {
-                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'tool_call':
-                              case 'call': {
-                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
-                                  if (!assistantMsg.tools) assistantMsg.tools = [];
-                                  const info = parsedData.content || parsedData;
-                                  assistantMsg.tools.push({
-                                      id: info.tool_call_id || Math.random().toString(),
-                                      name: info.tool || info.name || 'unknown_tool',
-                                      args: info.args || info.arguments || {},
-                                      status: 'running'
-                                  });
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'tool_output':
-                              case 'result': {
-                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
-                                  if (assistantMsg.tools) {
-                                      const info = parsedData.content || parsedData;
-                                      const toolName = info.tool || info.name;
-                                      const tool = [...assistantMsg.tools].reverse().find(t => t.name === toolName && t.status === 'running');
-                                      if (tool) {
-                                          tool.status = info.is_error ? 'error' : 'success';
-                                          tool.result = typeof (info.result || info.output) === 'string' 
-                                              ? (info.result || info.output) 
-                                              : JSON.stringify(info.result || info.output);
-                                      }
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'artifact': {
-                                  workflowStore.handleAgentEvent(parsedData as AgentEvent);
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              // ── 后端实际协议事件（与 AgentEvent 字段名不同）──────────────
-                              case 'plan': {
-                                  // 后端: { type:'plan', content: '{ "reasoning":..., "tasks":[...] }' }
-                                  // content 是 JSON 字符串，必须先 parse 再取 tasks
-                                  try {
-                                      const planRaw = parsedData.content;
-                                      const planData = typeof planRaw === 'string'
-                                          ? JSON.parse(planRaw)
-                                          : (planRaw ?? parsedData);
-                                      const taskList: any[] = planData?.tasks ?? planData?.steps ?? [];
-                                      if (taskList.length > 0) {
-                                          workflowStore.initFromAgentPlan({
-                                              ...planData,
-                                              tasks: taskList,
-                                          } as AgentExecutionPlan);
-
-                                          // Bug Fix #1: SoloTaskCard.execSteps 依赖 message.steps 而非 Store。
-                                          // plan 事件只写 Store 不写 message，导致左侧步骤时间线永远为空。
-                                          // 将 taskList 同步到 assistantMsg.steps，统一数据源。
-                                          if (!assistantMsg.steps) assistantMsg.steps = [];
-                                          taskList.forEach((t: any, idx: number) => {
-                                              assistantMsg.steps!.push({
-                                                  step: idx,
-                                                  content: t.title || t.name || t.description || `步骤 ${idx + 1}`,
-                                                  id: t.id || t.task_id || String(idx),
-                                              } as any);
-                                          });
-                                      }
-                                  } catch (e) {
-                                      console.warn('[useChatSession] plan event parse failed', e);
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'execute_start': {
-                                  // 后端: { type:'execute_start', content: '任务描述' }
-                                  // 找第一个 pending 任务标记为 running（顺序执行协议）
-                                  const pendingTask = workflowStore.tasks.find((t: any) => t.status === 'pending');
-                                  if (pendingTask) {
-                                      // Bug Fix #2: 原来使用 'task_started' 走 handleEvent 路由，
-                                      // 但 handleTaskStarted 内部逻辑与 initFromAgentPlan 建立的任务
-                                      // 结构存在 id 查找不一致风险。直接调用专属处理器，保证链路确定性。
-                                      workflowStore.handleTaskStarted({
-                                          task_id: pendingTask.id,
-                                          task_name: pendingTask.name,
-                                      });
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'subtask_done': {
-                                  // 后端: { type:'subtask_done', content: '完整任务输出（markdown）' }
-                                  // 1. 将最终输出写入任务的 output 字段
-                                  // 2. 将任务标记为 completed（触发文档保存逻辑）
-                                  // 3. 用权威输出覆盖流式累积的 assistantMsg.content
-                                  const rawContent = parsedData.content;
-                                  const finalOutput = typeof rawContent === 'string'
-                                      ? rawContent
-                                      : (rawContent != null ? JSON.stringify(rawContent) : '');
-                                  const runningTask = workflowStore.tasks.find((t: any) => t.status === 'running');
-                                  if (runningTask) {
-                                      // 先写 output，handleTaskCompleted 会读取它保存为文档
-                                      workflowStore.handleWorkflowEvent({
-                                          type: 'task_content',
-                                          task_id: runningTask.id,
-                                          content: finalOutput,
-                                      });
-                                      workflowStore.handleWorkflowEvent({
-                                          type: 'task_completed',
-                                          task_id: runningTask.id,
-                                      });
-                                  }
-                                  // 流式 text 事件逐 token 累积，但可能包含前缀噪音；
-                                  // subtask_done 给出的是后端归整后的权威版本，用它覆盖。
-                                  // Bug Fix #3: 原条件 `if (finalOutput)` 在内容为空字符串时会跳过赋值，
-                                  // 导致 text 流中的噪音内容残留在 assistantMsg.content 里。
-                                  // 改为无条件覆盖：只要 subtask_done 到达，content 就以后端为准。
-                                  assistantMsg.content = finalOutput;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'status': {
-                                  // 后端: { type:'status', content: '执行阶段说明文字' }
-                                  // 写入工作流日志供 LogDrawer 展示，不影响消息内容
-                                  const statusText = typeof parsedData.content === 'string'
-                                      ? parsedData.content
-                                      : JSON.stringify(parsedData.content ?? '');
-                                  if (statusText) workflowStore.addLog(statusText, 'info');
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'summary': {
-                                  const summaryText = typeof parsedData.content === 'string' ? parsedData.content : '';
-                                  if (summaryText) {
-                                      assistantMsg.content = summaryText;
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              // ── AgnoControlPlane 路径（chat/quick 模式）─────────────────
-                              case 'text': {
-                                  let textChunk = parsedData;
-                                  if (typeof textChunk !== 'string') {
-                                      textChunk = textChunk.content || normalizeThink(textChunk);
-                                  }
-                                  assistantMsg.content = (assistantMsg.content || '') + textChunk;
-                                  workflowStore.appendOutput(textChunk);
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'think': {
-                                  let thinking = parsedData;
-                                  if (typeof thinking !== 'string') {
-                                      thinking = thinking.content || normalizeThink(thinking);
-                                  }
-                                  assistantMsg.reasoning = (assistantMsg.reasoning || '') + thinking;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'sources':
-                                  assistantMsg.sources = parsedData;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-
-                              case 'error': {
-                                  let errorText = parsedData;
-                                  if (typeof errorText !== 'string') {
-                                      errorText = errorText.content || errorText.message || errorText.detail || normalizeThink(errorText);
-                                  }
-                                  assistantMsg.content = (assistantMsg.content || '') + `\n**错误**: ${errorText}`;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-                              }
-
-                              case 'file':
-                                  assistantMsg.content = (assistantMsg.content || '') + `\n::: file\n${JSON.stringify(parsedData)}\n:::\n`;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-
-                              case 'image':
-                                  if (parsedData?.url) {
-                                      assistantMsg.content = (assistantMsg.content || '') + `\n![生成图片](${parsedData.url})\n`;
-                                  }
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-
-                              case 'step':
-                                  if (!assistantMsg.steps) assistantMsg.steps = [];
-                                  assistantMsg.steps.push(parsedData);
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-
-                              case 'chart':
-                                  assistantMsg.chart_config = parsedData;
-                                  if (onEvent) onEvent(eventType, parsedData);
-                                  break;
-
-                              // 遗留兼容
-                              case 'plan_step':
-                              case 'task_started':
-                              case 'task_content':
-                              case 'task_completed':
-                              case 'task_failed':
-                              case 'task_tool_call':
-                              case 'artifacts':
-                                  workflowStore.handleWorkflowEvent(parsedData);
-                                  break;
+                          if (handlers[eventType]) {
+                              handlers[eventType](parsedData);
+                              if (onEvent) onEvent(eventType, parsedData);
                           }
                       } catch (e) {
                           console.warn('Failed to parse SSE event data', e);

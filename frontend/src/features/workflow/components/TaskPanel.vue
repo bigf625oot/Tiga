@@ -2,31 +2,24 @@
   <div class="h-full flex flex-col bg-background relative font-sans">
 
     <!-- ── 3.1 任务概览 Header ── -->
-    <div class="flex-none border-b border-border bg-background/95 backdrop-blur-sm">
+    <div v-if="showEmbeddedHeader && (store.isRunning || store.tasks.length > 0)" class="flex-none border-b border-border bg-background/95 backdrop-blur-sm">
       <!-- Tab Nav -->
       <div class="flex items-center gap-1 px-3 pt-2 pb-0">
-        <button
-          v-for="v in VIEWS"
-          :key="v.id"
-          @click="activeView = v.id"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-t-md transition-all border-b-2"
-          :class="activeView === v.id
-            ? 'border-primary text-primary bg-primary/5'
-            : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'"
-        >
-          <component :is="v.icon" class="w-3.5 h-3.5" />
-          {{ v.label }}
-        </button>
-      </div>
-
-      <!-- Task Overview (only in tasks view) -->
-      <div v-if="activeView === 'tasks'" class="px-4 py-3 space-y-2">
         <!-- Goal title -->
-        <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start justify-between gap-3 flex-1">
           <h3 class="text-sm font-semibold text-foreground line-clamp-2 leading-tight flex-1">
             {{ goalTitle || (store.isRunning ? '任务执行中...' : '等待任务分配') }}
           </h3>
           <div class="flex items-center gap-2 flex-none">
+            <!-- View Switcher -->
+            <div class="flex gap-1 bg-muted/50 p-1 rounded-md mr-2" v-if="store.tasks.length > 0">
+              <button v-for="view in ['graph', 'markdown', 'code', 'results']" :key="view"
+                      @click="activeView = view"
+                      class="px-2 py-1 text-[10px] font-medium rounded transition-colors capitalize"
+                      :class="activeView === view ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'">
+                {{ view }}
+              </button>
+            </div>
             <!-- Status badge -->
             <span v-if="store.isRunning"
               class="inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium animate-pulse">
@@ -66,254 +59,29 @@
     </div>
 
     <!-- ── Main Content Area ── -->
-    <div class="flex-1 overflow-hidden relative flex">
-
-      <!-- Tasks Timeline View -->
-      <div v-if="activeView === 'tasks'" class="flex-1 flex overflow-hidden">
-
-        <!-- Left: Timeline Steps -->
-        <div class="w-64 flex-none border-r border-border flex flex-col overflow-hidden bg-muted/20">
-          <div class="flex-1 overflow-y-auto py-3 custom-scrollbar">
-            <!-- Empty state -->
-            <div v-if="store.tasks.length === 0 && !store.isRunning"
-              class="flex flex-col items-center justify-center py-12 px-4 text-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                <svg class="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                </svg>
-              </div>
-              <p class="text-xs text-muted-foreground font-mono">等待任务分配...</p>
-            </div>
-
-            <!-- Waiting for plan -->
-            <div v-else-if="store.tasks.length === 0 && store.isRunning"
-              class="flex flex-col items-center justify-center py-12 px-4 gap-3">
-              <div class="relative w-8 h-8">
-                <div class="absolute inset-0 border-t-2 border-primary rounded-full animate-spin"></div>
-                <div class="absolute inset-1.5 border-r-2 border-primary/40 rounded-full animate-[spin_1.5s_linear_infinite_reverse]"></div>
-              </div>
-              <p class="text-xs text-muted-foreground font-mono">规划中...</p>
-            </div>
-
-            <!-- Step Timeline -->
-            <div v-else class="px-3 space-y-0.5">
-              <div
-                v-for="(task, idx) in store.tasks"
-                :key="task.id"
-                class="relative flex items-start gap-2.5 group cursor-pointer rounded-lg px-2 py-2.5 transition-all"
-                :class="[
-                  selectedStepId === task.id
-                    ? 'bg-primary/8 ring-1 ring-primary/20'
-                    : 'hover:bg-muted/60',
-                ]"
-                @click="selectedStepId = task.id"
-              >
-                <!-- Vertical line connector -->
-                <div v-if="idx < store.tasks.length - 1"
-                  class="absolute left-[19px] top-[28px] bottom-0 w-px bg-border z-0"
-                />
-
-                <!-- Step status indicator -->
-                <div class="relative flex-none z-10 mt-0.5">
-                  <!-- Running: pulse -->
-                  <span v-if="task.status === 'running'"
-                    class="relative inline-flex w-5 h-5 items-center justify-center">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60"></span>
-                    <span class="relative inline-flex w-3 h-3 rounded-full bg-primary"></span>
-                  </span>
-                  <!-- Completed: green check -->
-                  <span v-else-if="task.status === 'completed'"
-                    class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-green-500/15 text-green-500">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                    </svg>
-                  </span>
-                  <!-- Failed: red X -->
-                  <span v-else-if="task.status === 'failed'"
-                    class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-500/15 text-red-500">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </span>
-                  <!-- Pending: grey dot -->
-                  <span v-else
-                    class="inline-flex w-5 h-5 items-center justify-center">
-                    <span class="w-2.5 h-2.5 rounded-full bg-muted-foreground/30 border border-muted-foreground/20"></span>
-                  </span>
-                </div>
-
-                <!-- Step info -->
-                <div class="flex-1 min-w-0 pt-0.5">
-                  <div class="flex items-center justify-between gap-1">
-                    <p class="text-xs font-medium text-foreground truncate leading-tight"
-                      :class="task.status === 'running' ? 'text-primary' : ''">
-                      {{ task.name }}
-                    </p>
-                    <span class="text-[9px] font-mono text-muted-foreground/60 flex-none">
-                      {{ idx + 1 }}
-                    </span>
-                  </div>
-                  <!-- Elapsed time -->
-                  <p v-if="task.startTime" class="text-[10px] text-muted-foreground font-mono mt-0.5">
-                    {{ formatElapsed(task.startTime, task.endTime) }}
-                  </p>
-                  <!-- Tool call mini badges -->
-                  <div v-if="task.toolCalls && task.toolCalls.length > 0" class="flex flex-wrap gap-1 mt-1">
-                    <span v-for="(tc, ti) in task.toolCalls.slice(0, 3)" :key="ti"
-                      class="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded font-mono border"
-                      :class="{
-                        'border-primary/30 bg-primary/5 text-primary': tc.status === 'running',
-                        'border-green-500/30 bg-green-500/5 text-green-700': tc.status === 'completed',
-                        'border-red-500/30 bg-red-500/5 text-red-600': tc.status === 'failed',
-                      }">
-                      <span v-if="tc.status === 'running'" class="w-1 h-1 rounded-full bg-primary animate-pulse"></span>
-                      {{ tc.tool_name }}
-                    </span>
-                    <span v-if="task.toolCalls.length > 3"
-                      class="text-[9px] text-muted-foreground font-mono">
-                      +{{ task.toolCalls.length - 3 }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Resource monitor footer (PRD §3.4) -->
-          <div v-if="store.isRunning" class="flex-none border-t border-border px-3 py-2 flex items-center gap-3 bg-muted/10">
-            <div class="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
-              <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-              <span>CPU {{ cpuUsage }}%</span>
-            </div>
-            <div class="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
-              <span>MEM {{ memoryUsage }}M</span>
-            </div>
-          </div>
+    <div class="flex-1 overflow-hidden relative flex flex-col">
+      <!-- Empty State -->
+      <div v-if="!store.isRunning && store.tasks.length === 0 && !store.artifacts?.length && activeView === 'graph'" class="flex-1 h-full w-full flex flex-col items-center justify-center bg-muted/5 text-muted-foreground gap-4">
+        <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-muted/40 to-muted/10 flex items-center justify-center border border-border/50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+          <Network class="w-8 h-8 text-muted-foreground/40 drop-shadow-sm stroke-[1.5]" />
+          <!-- 装饰性光晕点 -->
+          <div class="absolute -top-1 -right-1 w-3 h-3 bg-primary/20 rounded-full blur-[2px]"></div>
+          <div class="absolute -bottom-2 -left-2 w-4 h-4 bg-muted-foreground/10 rounded-full blur-[3px]"></div>
         </div>
-
-        <!-- Right: Sandbox Detail (PRD §3.3) -->
-        <div class="flex-1 flex flex-col overflow-hidden bg-slate-950">
-          <!-- Detail header -->
-          <div class="flex-none flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-900/80">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full"
-                :class="{
-                  'bg-primary animate-pulse': selectedStep?.status === 'running',
-                  'bg-green-400': selectedStep?.status === 'completed',
-                  'bg-red-400': selectedStep?.status === 'failed',
-                  'bg-slate-500': !selectedStep || selectedStep.status === 'pending',
-                }">
-              </span>
-              <span class="text-xs text-slate-300 font-mono truncate">
-                {{ selectedStep ? selectedStep.name : '选择左侧步骤查看详情' }}
-              </span>
-            </div>
-            <div v-if="selectedStep?.startTime" class="flex items-center gap-3 text-[10px] font-mono text-slate-500">
-              <span>{{ formatElapsed(selectedStep.startTime, selectedStep.endTime) }}</span>
-              <span v-if="selectedStep.toolCalls?.length"
-                class="text-primary/80">{{ selectedStep.toolCalls.length }} tools</span>
-            </div>
-          </div>
-
-          <!-- No step selected -->
-          <div v-if="!selectedStep" class="flex-1 flex flex-col items-center justify-center text-slate-600 gap-3">
-            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            <p class="text-xs font-mono">← 选择步骤</p>
-          </div>
-
-          <!-- Step detail content -->
-          <div v-else class="flex-1 flex flex-col overflow-hidden">
-            <!-- Tool calls section -->
-            <div v-if="selectedStep.toolCalls && selectedStep.toolCalls.length > 0"
-              class="flex-none border-b border-slate-800 px-4 py-2 flex flex-wrap gap-2">
-              <span class="text-[10px] font-mono text-slate-500 mr-1">TOOLS:</span>
-              <span
-                v-for="(tc, ti) in selectedStep.toolCalls"
-                :key="ti"
-                class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-mono border"
-                :class="{
-                  'border-blue-500/40 bg-blue-500/10 text-blue-300': tc.status === 'running',
-                  'border-green-500/40 bg-green-500/10 text-green-300': tc.status === 'completed',
-                  'border-red-500/40 bg-red-500/10 text-red-300': tc.status === 'failed',
-                }">
-                <span v-if="tc.status === 'running'" class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-                <svg v-else-if="tc.status === 'completed'" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                </svg>
-                <svg v-else-if="tc.status === 'failed'" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-                <span>{{ tc.tool_name }}</span>
-                <span v-if="tc.tool_args && Object.keys(tc.tool_args).length > 0"
-                  class="text-slate-500 truncate max-w-[120px]">
-                  ({{ formatArgs(tc.tool_args) }})
-                </span>
-              </span>
-            </div>
-
-            <!-- Terminal output (PRD §3.3 — stdout) -->
-            <div class="flex-1 overflow-hidden flex flex-col">
-              <div class="flex-none flex items-center gap-2 px-4 py-1.5 bg-slate-900 border-b border-slate-800">
-                <div class="flex gap-1.5">
-                  <span class="w-2.5 h-2.5 rounded-full bg-red-500/70"></span>
-                  <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/70"></span>
-                  <span class="w-2.5 h-2.5 rounded-full bg-green-500/70"></span>
-                </div>
-                <span class="text-[10px] font-mono text-slate-500 ml-1">stdout / log</span>
-                <div class="ml-auto flex items-center gap-2">
-                  <span v-if="selectedStep.status === 'running'"
-                    class="text-[9px] font-mono text-blue-400 animate-pulse">● LIVE</span>
-                  <button
-                    @click="copyOutput(selectedStep)"
-                    class="text-[10px] font-mono text-slate-500 hover:text-slate-300 transition-colors"
-                    title="复制输出">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <div
-                ref="terminalOutputRef"
-                class="flex-1 overflow-y-auto p-4 font-mono text-[11px] leading-relaxed custom-scrollbar-dark"
-              >
-                <!-- Logs lines -->
-                <div v-if="selectedStep.logs && selectedStep.logs.length > 0">
-                  <div
-                    v-for="(line, i) in selectedStep.logs"
-                    :key="i"
-                    class="whitespace-pre-wrap break-all"
-                    :class="isErrorLine(line) ? 'text-red-400' : isWarningLine(line) ? 'text-yellow-400' : isSuccessLine(line) ? 'text-green-400' : 'text-slate-300'"
-                  >{{ line }}</div>
-                </div>
-                <!-- Output (LLM content) -->
-                <div v-else-if="selectedStep.output"
-                  class="whitespace-pre-wrap break-all text-slate-300">{{ selectedStep.output }}</div>
-                <!-- Empty -->
-                <div v-else class="text-slate-600 italic text-xs">
-                  {{ selectedStep.status === 'running' ? '等待输出...' : '无输出记录' }}
-                </div>
-
-                <!-- Blinking cursor when running -->
-                <span v-if="selectedStep.status === 'running'"
-                  class="inline-block w-2 h-3.5 bg-primary/80 animate-pulse ml-0.5 align-text-bottom" />
-              </div>
-            </div>
-          </div>
+        <div class="text-center">
+          <p class="text-sm font-medium text-foreground mb-1">等待任务分配</p>
+          <p class="text-xs max-w-[200px]">系统正在分析您的需求，即将在此生成工作流图谱并开始执行任务。</p>
         </div>
       </div>
 
       <!-- Graph View -->
-      <div v-else-if="activeView === 'graph'" key="graph" class="flex-1 h-full w-full overflow-hidden">
-        <TaskGraph />
+      <div v-show="activeView === 'graph' && (store.isRunning || store.tasks.length > 0 || store.artifacts?.length)" key="graph" class="flex-1 h-full w-full overflow-hidden bg-muted/5">
+        <TaskGraph v-if="activeView === 'graph' || store.tasks.length > 0" />
       </div>
 
       <!-- Code View -->
       <ArtifactEditor
-        v-else-if="activeView === 'code'"
+        v-show="activeView === 'code'"
         key="code"
         :value="taskContent"
         :language="detectLanguage(currentTask)"
@@ -321,9 +89,22 @@
         class="flex-1 h-full w-full"
       />
 
+      <!-- Markdown Output View -->
+      <div v-show="activeView === 'markdown'" key="markdown" class="flex-1 h-full w-full overflow-y-auto p-6 bg-background custom-scrollbar">
+        <div class="max-w-3xl mx-auto prose prose-sm dark:prose-invert">
+          <div class="mb-6 flex items-center gap-2 border-b border-border pb-2">
+            <h3 class="text-lg font-semibold m-0 p-0 text-foreground">{{ currentTask ? currentTask.name : '执行结果' }}</h3>
+            <span v-if="currentTask?.status === 'completed'" class="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-600 border border-green-500/20">已完成</span>
+            <span v-else-if="currentTask?.status === 'failed'" class="px-2 py-0.5 rounded text-[10px] bg-red-500/10 text-red-600 border border-red-500/20">执行失败</span>
+          </div>
+          <div v-if="taskContent" v-html="renderMarkdown(taskContent)"></div>
+          <div v-else class="text-muted-foreground italic text-sm">暂无文本输出内容</div>
+        </div>
+      </div>
+
       <!-- Results / Sandbox View -->
       <SandboxResultViewer
-        v-else-if="activeView === 'results'"
+        v-show="activeView === 'results'"
         key="results"
         :code="currentTask ? taskContent : ''"
         :language="currentTask ? detectLanguage(currentTask) : 'python'"
@@ -333,12 +114,8 @@
       />
 
       <!-- Terminal View -->
-      <div v-else-if="activeView === 'terminal'" key="terminal" class="flex-1 h-full w-full bg-slate-900">
-        <SandboxTerminal
-          ref="terminalRef"
-          theme="dark"
-          :readOnly="false"
-        />
+      <div v-show="activeView === 'terminal'" key="terminal" class="flex-1 h-full w-full bg-slate-900">
+        <!-- Optional SandboxTerminal could go here if needed -->
       </div>
     </div>
 
@@ -413,10 +190,9 @@ import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import ArtifactEditor from '@/features/workflow/components/editor/ArtifactEditor.vue';
 import SandboxResultViewer from '@/features/sandbox/components/SandboxResultViewer.vue';
 import LogDrawer from '@/features/workflow/components/drawer/LogDrawer.vue';
-import SandboxTerminal from '@/features/sandbox/components/SandboxTerminal.vue';
 import TaskGraph from './graph/TaskGraph.vue';
+import { Network } from 'lucide-vue-next';
 import {
-  AppstoreOutlined,
   CodeOutlined,
   PlayCircleOutlined,
   StopOutlined,
@@ -424,6 +200,7 @@ import {
   ApartmentOutlined
 } from '@ant-design/icons-vue';
 import { markRaw } from 'vue';
+import { marked } from 'marked';
 
 defineProps({
   embedded: { type: Boolean, default: false },
@@ -434,51 +211,82 @@ defineProps({
   attachmentsCount: { type: Number, default: 0 }
 });
 
-// ── Views config ──
-const VIEWS = [
-  { id: 'tasks', label: '执行详情', icon: markRaw(AppstoreOutlined) },
-  { id: 'graph', label: '任务图', icon: markRaw(ApartmentOutlined) },
-  { id: 'code', label: '代码', icon: markRaw(CodeOutlined) },
-  { id: 'results', label: '沙箱', icon: markRaw(PlayCircleOutlined) },
-];
-
 const store = useWorkflowStore();
-const activeView = ref('tasks');
+const activeView = ref('graph');
 const isLogDrawerOpen = ref(false);
-const terminalRef = ref(null);
-const terminalOutputRef = ref(null);
 
-// ── Step selection ──
-const selectedStepId = ref(null);
+// ── Display Data ──
+const currentTask = computed(() => {
+  if (store.selectedTaskId) {
+    return store.tasks.find(t => t.id === store.selectedTaskId) || null;
+  }
+  return store.tasks.find(t => t.status === 'running') || store.tasks[store.tasks.length - 1] || null;
+});
 
-const selectedStep = computed(() =>
-  selectedStepId.value ? store.tasks.find(t => t.id === selectedStepId.value) : null
-);
+const taskContent = computed(() => {
+  if (currentTask.value) {
+    return currentTask.value.output || currentTask.value.logs.join('\n') || '';
+  }
+  return store.executeBuffer || '';
+});
 
-// Auto-select running task
-watch(() => store.tasks.map(t => t.status), () => {
-  const runningTask = store.tasks.find(t => t.status === 'running');
-  if (runningTask) selectedStepId.value = runningTask.id;
-}, { deep: false });
+const renderMarkdown = (text) => {
+  if (!text) return '';
+  return marked(text);
+};
 
-// Auto-select first task when plan arrives
-watch(() => store.tasks.length, (newLen, oldLen) => {
-  if (oldLen === 0 && newLen > 0 && !selectedStepId.value) {
-    selectedStepId.value = store.tasks[0].id;
+// ── Context-Aware View Switching ──
+watch(() => [currentTask.value?.status, store.artifacts.length, taskContent.value], ([status, artifactCount, content]) => {
+  if (!currentTask.value) return;
+
+  // 1. If task is running and has code, show code view
+  if (status === 'running') {
+    const lang = detectLanguage(currentTask.value);
+    if (lang === 'python' || lang === 'json' || lang === 'vue') {
+       activeView.value = 'code';
+    } else {
+       activeView.value = 'graph';
+    }
+  }
+
+  // 2. If task completed
+  if (status === 'completed') {
+    if (artifactCount > 0) {
+      // Check if artifacts are visual (image, html, pdf)
+      const hasVisualArtifacts = store.artifacts.some(a => ['image', 'html', 'pdf'].includes(a.type));
+      if (hasVisualArtifacts) {
+        activeView.value = 'results';
+      } else {
+        activeView.value = 'markdown'; // Switch to output view if just files
+      }
+    } else if (content) {
+      // If there is textual output, switch to markdown view so user can read it
+      const lang = detectLanguage(currentTask.value);
+      if (lang === 'python' || lang === 'json' || lang === 'vue') {
+        activeView.value = 'code';
+      } else {
+        activeView.value = 'markdown';
+      }
+    } else {
+      activeView.value = 'graph';
+    }
   }
 });
 
-// Auto-scroll terminal when logs update
-watch(
-  () => selectedStep.value?.logs?.length,
-  () => {
-    nextTick(() => {
-      if (terminalOutputRef.value) {
-        terminalOutputRef.value.scrollTop = terminalOutputRef.value.scrollHeight;
-      }
-    });
+// Watch for manual selection from graph to switch view
+watch(() => store.selectedTaskId, (newId) => {
+  if (newId) {
+     const task = store.tasks.find(t => t.id === newId);
+     if (task && (task.output || task.logs.length > 0)) {
+        const lang = detectLanguage(task);
+        if (lang === 'python' || lang === 'json' || lang === 'vue') {
+          activeView.value = 'code';
+        } else {
+          activeView.value = 'markdown';
+        }
+     }
   }
-);
+});
 
 // ── Goal title (derived from first log or first task description) ──
 const goalTitle = computed(() => {
@@ -490,33 +298,6 @@ const goalTitle = computed(() => {
 
 // ── Current running task ──
 const currentRunningTask = computed(() => store.tasks.find(t => t.status === 'running'));
-
-// ── Current task for code view ──
-const currentTask = computed(() => store.tasks.find(t => t.status === 'running') || store.tasks[store.tasks.length - 1] || null);
-
-const taskContent = computed(() => {
-  if (currentTask.value) {
-    return currentTask.value.output || currentTask.value.logs.join('\n') || '';
-  }
-  return store.executeBuffer || '';
-});
-
-// ── Resource metrics (simulated, PRD §3.4) ──
-const cpuUsage = ref(12);
-const memoryUsage = ref(248);
-let metricsInterval;
-watch(() => store.isRunning, (running) => {
-  if (running) {
-    metricsInterval = setInterval(() => {
-      cpuUsage.value = Math.floor(Math.random() * 30) + 10;
-      memoryUsage.value = Math.floor(Math.random() * 100) + 200;
-    }, 2000);
-  } else {
-    clearInterval(metricsInterval);
-    cpuUsage.value = 5;
-    memoryUsage.value = 180;
-  }
-});
 
 // ── Helpers ──
 const formatElapsed = (startTime, endTime) => {
@@ -579,7 +360,7 @@ const openLogDrawer = () => { isLogDrawerOpen.value = true; };
 defineExpose({ openLogDrawer });
 
 onMounted(() => {});
-onBeforeUnmount(() => { clearInterval(metricsInterval); });
+onBeforeUnmount(() => { });
 </script>
 
 <style scoped>

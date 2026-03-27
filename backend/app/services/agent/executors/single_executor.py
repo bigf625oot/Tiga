@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import logging
 import asyncio
 import json
@@ -14,6 +14,7 @@ from app.services.agent.components.state_manager import DefaultStateManager
 from app.services.agent.components.plan_validator import DefaultPlanValidator
 from app.services.agent.components.experience_store import DefaultExperienceStore
 from app.services.agent.components.tool_registry import DefaultToolRegistry
+from app.services.agent.components.clarifier import IntentClarifier
 
 # Engines
 from app.services.agent.engines.planning_engine import PlanningEngine
@@ -82,11 +83,31 @@ class SingleExecutor(BaseExecutor):
             if file_context:
                 yield {"type": "status", "content": _("Contextualized with {} files.").format(len(files))}
                 
-            # [State Sync] 状态流转: planning
+            # --- [Pre-Planning Gatekeeper: Clarification Check] ---
+            # P10 \u7ea7\u9632\u5fa1\uff1a\u5728\u8fdb\u5165\u9ad8\u6602\u7684 Planning Phase \u4e4b\u524d\uff0c\u901a\u8fc7\u8f7b\u91cf\u7ea7\u6a21\u578b\u8fdb\u884c\u610f\u56fe\u6258\u5e95\u6f84\u6e05
+            # \u5982\u679c intent \u8bc6\u522b\u7f6e\u4fe1\u5ea6\u504f\u4f4e\uff0c\u6216\u7528\u6237\u8f93\u5165\u672c\u8eab\u5b58\u5728\u9ad8\u5ea6\u6b67\u4e49\uff0c\u5219\u89e6\u53d1\u53cd\u95ee\u77ed\u8def
+            if intent.confidence < 0.85:
+                yield {"type": "status", "content": _("Checking task ambiguity...")}
+                clarifier = IntentClarifier(llm_model=self.llm_model)
+                clarification_result = await clarifier.check_ambiguity(input_text, context=file_context)
+                
+                if clarification_result.is_ambiguous and clarification_result.clarification_question:
+                    # \u89e6\u53d1\u53cd\u95ee\u6d41\uff0c\u66f4\u65b0\u72b6\u6001\u673a\u5e76\u7ec8\u6b62\u672c\u6b21 Executor \u751f\u6210\u5668\uff0c\u7b49\u5f85\u7528\u6237\u8865\u5145\u4fe1\u606f
+                    if self.state_manager:
+                        await self.state_manager.update_status(session_id, "clarifying")
+                    yield {
+                        "type": "clarify", 
+                        "content": clarification_result.clarification_question,
+                        "reasoning": clarification_result.reasoning
+                    }
+                    return  # \u76f4\u63a5\u77ed\u8def\uff0c\u9632\u6b62\u9003\u9038\u5230 PlanningEngine
+            # ------------------------------------------------------
+                
+            # [State Sync] \u72b6\u6001\u6d41\u8f6c: planning
             if self.state_manager:
                 await self.state_manager.update_status(session_id, "planning")
 
-            # 2. [Planning Phase] 动态任务拆解
+            # 2. [Planning Phase] \u52a8\u6001\u4efb\u52a1\u62c6\u89e3
             yield {"type": "status", "content": _("Generating execution plan...")}
             
             planning_engine = PlanningEngine(db=db, llm_model=self.llm_model)

@@ -61,6 +61,7 @@ class TaskStep(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.pending)
     description: str = Field(default="")
     assigned_role: str = Field(default="")
+    dependencies: List[str] = Field(default_factory=list, description="依赖的前置任务 ID 列表")
 
 
 class ExecutionPlan(BaseModel):

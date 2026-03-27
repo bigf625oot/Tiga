@@ -29,15 +29,13 @@ class AliyunOSSStorage(StorageProvider):
         # Configure connection settings to handle SSL/EOF errors
         # https://help.aliyun.com/document_detail/32026.html
         import requests
-        req_session = requests.Session()
         # 增加重试次数并关闭严格的 SSL 证书校验，防止 SSLEOFError
         adapter = requests.adapters.HTTPAdapter(max_retries=3)
-        req_session.mount('http://', adapter)
-        req_session.mount('https://', adapter)
-        # 在底层 requests session 关闭 SSL 验证
-        req_session.verify = False 
         
-        session = oss2.Session(session=req_session)
+        session = oss2.Session(adapter=adapter)
+        # 在底层 requests session 关闭 SSL 验证
+        session.session.verify = False 
+        
         self.bucket = oss2.Bucket(auth, self.endpoint.strip(), self.bucket_name.strip(), session=session)
         logger.info(f"Initialized Aliyun OSS Storage (Bucket: {self.bucket_name})")
 

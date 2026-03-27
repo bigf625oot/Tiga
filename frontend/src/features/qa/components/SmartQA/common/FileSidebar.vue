@@ -260,7 +260,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
 
-import type { Attachment } from '../../types';
+import type { Attachment } from '../../../types';
 
 const props = defineProps<{
   isOpen: boolean;

@@ -75,7 +75,7 @@
                   <FileOutput class="w-3 h-3 text-primary shrink-0" />
                   <span class="truncate font-medium">{{ item.raw?.content?.file_name || item.content }}</span>
                   <span v-if="item.raw?.content?.file_size" class="text-muted-foreground shrink-0">
-                    {{ formatSize(item.raw.content.file_size) }}
+                    {{ formatFileSize(item.raw.content.file_size) }}
                   </span>
                 </div>
 
@@ -109,7 +109,8 @@ import { computed, ref, watch } from 'vue';
 import { Activity, ChevronDown, Loader2, Wrench, FileOutput } from 'lucide-vue-next';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import type { StreamEventItem } from '../../types';
+import type { StreamEventItem } from '../../../types';
+import { formatFileSize } from '../../../utils/dateUtils';
 
 const props = defineProps<{
   events: StreamEventItem[];
@@ -156,30 +157,18 @@ const labelOf = (event: string): string => {
   return map[event] || event;
 };
 
-// 时间线节点颜色
-const dotClass = (event: string): string => {
-  if (event === 'thought') return 'border-indigo-400/60 dark:border-indigo-600/60';
-  if (event === 'tool_call') return 'border-blue-400/70 dark:border-blue-600/60';
-  if (event === 'tool_output') return 'border-green-400/70 dark:border-green-600/60';
-  if (event === 'artifact') return 'border-purple-400/70 dark:border-purple-600/60';
-  if (event === 'summary') return 'border-amber-400/70 dark:border-amber-600/60';
-  if (event === 'error') return 'border-red-400/70 dark:border-red-600/60';
-  return 'border-indigo-400/60 dark:border-indigo-600/60';
+// 时间线节点与标签颜色配置提取
+const EVENT_COLORS: Record<string, { dot: string, badge: string }> = {
+  thought: { dot: 'border-indigo-400/60 dark:border-indigo-600/60', badge: 'text-indigo-600/70 border-indigo-300/40' },
+  tool_call: { dot: 'border-blue-400/70 dark:border-blue-600/60', badge: 'text-blue-600 border-blue-300/50' },
+  tool_output: { dot: 'border-green-400/70 dark:border-green-600/60', badge: 'text-green-600 border-green-300/50' },
+  artifact: { dot: 'border-purple-400/70 dark:border-purple-600/60', badge: 'text-purple-600 border-purple-300/50' },
+  summary: { dot: 'border-amber-400/70 dark:border-amber-600/60', badge: 'text-amber-600 border-amber-300/50' },
+  error: { dot: 'border-red-400/70 dark:border-red-600/60', badge: 'text-red-600 border-red-300/50' },
+  default: { dot: 'border-indigo-400/60 dark:border-indigo-600/60', badge: 'text-indigo-600/70 border-indigo-300/40' }
 };
 
-// Badge 颜色
-const badgeClass = (event: string): string => {
-  if (event === 'tool_call') return 'text-blue-600 border-blue-300/50';
-  if (event === 'tool_output') return 'text-green-600 border-green-300/50';
-  if (event === 'artifact') return 'text-purple-600 border-purple-300/50';
-  if (event === 'summary') return 'text-amber-600 border-amber-300/50';
-  if (event === 'error') return 'text-red-600 border-red-300/50';
-  return 'text-indigo-600/70 border-indigo-300/40';
-};
+const dotClass = (event: string): string => (EVENT_COLORS[event] || EVENT_COLORS.default).dot;
+const badgeClass = (event: string): string => (EVENT_COLORS[event] || EVENT_COLORS.default).badge;
 
-const formatSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-};
 </script>

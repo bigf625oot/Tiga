@@ -353,7 +353,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Upload, Paperclip, Trash2, Search, Loader2, FileText, RefreshCw, ArrowUpDown, SearchX, X, File as FileIcon, FileUp, Clock, FolderUp, FileArchive } from 'lucide-vue-next';
-import type { KnowledgeDoc } from '../../types';
+import { MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES } from '../../../constants';
+import type { KnowledgeDoc } from '../../../types';
 
 const props = defineProps<{
   open: boolean;

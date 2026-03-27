@@ -17,7 +17,8 @@ def is_dummy_pathway(module: Any) -> bool:
 try:
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         import pathway
-    if is_dummy_pathway(pathway):
+        is_dummy = is_dummy_pathway(pathway)
+    if is_dummy:
         raise ImportError("Pathway dummy package detected")
 except ImportError:
     logger.debug("Pathway package not found or is a dummy package. Using mock for Windows compatibility.")

@@ -76,6 +76,11 @@ export function useAttachments() {
       toast({ description: '不支持的文件类型!', variant: 'destructive' });
       return false;
     }
+
+    // Optimization: Create an object URL immediately to avoid loading file content into memory
+    // Useful for image previews without blocking the main thread with FileReader
+    (file as any).previewUrl = URL.createObjectURL(file);
+
     localFileList.value = [...localFileList.value, file];
     return false;
   };
@@ -83,6 +88,10 @@ export function useAttachments() {
   const removeLocalFile = (file: File) => {
     const index = localFileList.value.indexOf(file);
     if (index > -1) {
+        // Cleanup memory pointer
+        if ((file as any).previewUrl) {
+            URL.revokeObjectURL((file as any).previewUrl);
+        }
         const newFileList = localFileList.value.slice();
         newFileList.splice(index, 1);
         localFileList.value = newFileList;

@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import AutoTaskPanel from '../AutoTaskPanel.vue';
+import AutoTaskPanel from '../../AutoTaskPanel.vue';
 import WorkspaceTabs from '@/features/workflow/components/WorkspaceTabs.vue';
 
 defineProps<{

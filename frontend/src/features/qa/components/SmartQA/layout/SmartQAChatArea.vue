@@ -60,17 +60,8 @@
         <!-- Input Area (Centered) -->
         <SmartQAInput
           large
+          v-bind="$props"
           v-model="inputValue"
-          :is-loading="isLoading"
-          :is-task-running="isTaskRunning"
-          :is-stopping="isStopping"
-          :selected-attachments="selectedAttachments"
-          :current-agent="currentAgent"
-          :selected-agent-id="selectedAgentId"
-          :agent-list="agentList"
-          :current-mode-id="currentModeId"
-          :embedded="embedded"
-          :is-network-search-enabled="isNetworkSearchEnabled"
           :quoted-message="quotedMessage"
           @update:is-network-search-enabled="$emit('update:isNetworkSearchEnabled', $event)"
           @update:selectedAgentId="$emit('update:selectedAgentId', $event)"
@@ -192,17 +183,8 @@
            </div>
 
            <SmartQAInput
+              v-bind="$props"
               v-model="inputValue"
-              :is-loading="isLoading"
-              :is-task-running="isTaskRunning"
-              :is-stopping="isStopping"
-              :selected-attachments="selectedAttachments"
-              :current-agent="currentAgent"
-              :selected-agent-id="selectedAgentId"
-              :agent-list="agentList"
-              :current-mode-id="currentModeId"
-              :embedded="embedded"
-              :is-network-search-enabled="isNetworkSearchEnabled"
               :quoted-message="quotedMessage"
               @update:is-network-search-enabled="$emit('update:isNetworkSearchEnabled', $event)"
               @update:selectedAgentId="$emit('update:selectedAgentId', $event)"
@@ -223,14 +205,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { Check, X, Zap, ArrowRight } from 'lucide-vue-next';
-import TechAnimation from '../TechAnimation.vue';
-import MessageList from '../MessageList.vue';
-import SmartQAInput from './SmartQAInput.vue';
-import SmartQAIntroFlipCards from './SmartQAIntroFlipCards.vue';
+import TechAnimation from '../../TechAnimation.vue';
+import MessageList from '../../MessageList.vue';
+import SmartQAInput from '../chat/SmartQAInput.vue';
+import SmartQAIntroFlipCards from '../chat/SmartQAIntroFlipCards.vue';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { Agent, Message, Attachment, UserScript, ModeConfig, Team } from '../../types';
+import { getTheme } from '../../../constants/theme';
+import type { Agent, Message, Attachment, UserScript, ModeConfig, Team } from '../../../types';
 
 const props = defineProps<{
   messages: Message[];
@@ -327,74 +310,4 @@ const handleSelectEntrance = (next: 'auto' | 'manual') => {
   }
 };
 
-const themeConfig = {
-  blue: {
-    activeBorder: 'border-blue-500 dark:border-blue-500',
-    activeRing: 'ring-blue-200 dark:ring-blue-900',
-    activeBg: 'bg-gradient-to-b from-blue-50/80 to-white/80 dark:from-blue-950/30 dark:to-background/80 backdrop-blur-md',
-    iconBg: 'bg-blue-100 dark:bg-blue-900/50',
-    iconText: 'text-blue-600 dark:text-blue-300',
-    titleText: 'text-blue-700 dark:text-blue-300',
-    checkBg: 'bg-blue-500 dark:bg-blue-500',
-    hoverBorder: 'hover:border-blue-200 dark:hover:border-blue-800',
-    hoverShadow: 'hover:shadow-blue-500/10 dark:hover:shadow-blue-900/20',
-  },
-  green: {
-    activeBorder: 'border-emerald-500 dark:border-emerald-500',
-    activeRing: 'ring-emerald-200 dark:ring-emerald-900',
-    activeBg: 'bg-gradient-to-b from-emerald-50/80 to-white/80 dark:from-emerald-950/30 dark:to-background/80 backdrop-blur-md',
-    iconBg: 'bg-emerald-100 dark:bg-emerald-900/50',
-    iconText: 'text-emerald-600 dark:text-emerald-300',
-    titleText: 'text-emerald-700 dark:text-emerald-300',
-    checkBg: 'bg-emerald-500 dark:bg-emerald-500',
-    hoverBorder: 'hover:border-emerald-200 dark:hover:border-emerald-800',
-    hoverShadow: 'hover:shadow-emerald-500/10 dark:hover:shadow-emerald-900/20',
-  },
-  purple: {
-    activeBorder: 'border-purple-500 dark:border-purple-500',
-    activeRing: 'ring-purple-200 dark:ring-purple-900',
-    activeBg: 'bg-gradient-to-b from-purple-50/80 to-white/80 dark:from-purple-950/30 dark:to-background/80 backdrop-blur-md',
-    iconBg: 'bg-purple-100 dark:bg-purple-900/50',
-    iconText: 'text-purple-600 dark:text-purple-300',
-    titleText: 'text-purple-700 dark:text-purple-300',
-    checkBg: 'bg-purple-500 dark:bg-purple-500',
-    hoverBorder: 'hover:border-purple-200 dark:hover:border-purple-800',
-    hoverShadow: 'hover:shadow-purple-500/10 dark:hover:shadow-purple-900/20',
-  },
-  orange: {
-    activeBorder: 'border-orange-500 dark:border-orange-500',
-    activeRing: 'ring-orange-200 dark:ring-orange-900',
-    activeBg: 'bg-gradient-to-b from-orange-50/80 to-white/80 dark:from-orange-950/30 dark:to-background/80 backdrop-blur-md',
-    iconBg: 'bg-orange-100 dark:bg-orange-900/50',
-    iconText: 'text-orange-600 dark:text-orange-300',
-    titleText: 'text-orange-700 dark:text-orange-300',
-    checkBg: 'bg-orange-500 dark:bg-orange-500',
-    hoverBorder: 'hover:border-orange-200 dark:hover:border-orange-800',
-    hoverShadow: 'hover:shadow-orange-500/10 dark:hover:shadow-orange-900/20',
-  },
-  rose: {
-    activeBorder: 'border-rose-500 dark:border-rose-500',
-    activeRing: 'ring-rose-200 dark:ring-rose-900',
-    activeBg: 'bg-gradient-to-b from-rose-50/80 to-white/80 dark:from-rose-950/30 dark:to-background/80 backdrop-blur-md',
-    iconBg: 'bg-rose-100 dark:bg-rose-900/50',
-    iconText: 'text-rose-600 dark:text-rose-300',
-    titleText: 'text-rose-700 dark:text-rose-300',
-    checkBg: 'bg-rose-500 dark:bg-rose-500',
-    hoverBorder: 'hover:border-rose-200 dark:hover:border-rose-800',
-    hoverShadow: 'hover:shadow-rose-500/10 dark:hover:shadow-rose-900/20',
-  },
-  slate: {
-    activeBorder: 'border-slate-500 dark:border-slate-500',
-    activeRing: 'ring-slate-200 dark:ring-slate-800',
-    activeBg: 'bg-gradient-to-b from-slate-50/80 to-white/80 dark:from-slate-950/30 dark:to-background/80 backdrop-blur-md',
-    iconBg: 'bg-slate-100 dark:bg-slate-800',
-    iconText: 'text-slate-600 dark:text-slate-300',
-    titleText: 'text-slate-700 dark:text-slate-300',
-    checkBg: 'bg-slate-500 dark:bg-slate-500',
-    hoverBorder: 'hover:border-slate-200 dark:hover:border-slate-700',
-    hoverShadow: 'hover:shadow-slate-500/10 dark:hover:shadow-slate-900/20',
-  }
-};
-
-const getTheme = (color: string = 'blue') => themeConfig[color as keyof typeof themeConfig] || themeConfig.blue;
 </script>

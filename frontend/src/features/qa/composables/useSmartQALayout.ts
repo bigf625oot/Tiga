@@ -72,6 +72,7 @@ export function useSmartQALayout() {
   let resizeStartX = 0;
   let resizeStartRatio = DEFAULT_SPLIT_RATIO;
   let rafId: number | null = null;
+  let abortController: AbortController | null = null;
 
   const onResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
@@ -95,8 +96,10 @@ export function useSmartQALayout() {
         cancelAnimationFrame(rafId);
         rafId = null;
     }
-    window.removeEventListener('mousemove', onResizeMove);
-    window.removeEventListener('mouseup', stopResize);
+    if (abortController) {
+        abortController.abort();
+        abortController = null;
+    }
     writeSplitRatio(splitRatio.value);
   };
 
@@ -108,18 +111,23 @@ export function useSmartQALayout() {
     isResizing = true;
     resizeStartX = e.clientX;
     resizeStartRatio = splitRatio.value;
-    window.addEventListener('mousemove', onResizeMove);
-    window.addEventListener('mouseup', stopResize);
+    
+    // Use AbortController for deterministic event cleanup
+    abortController = new AbortController();
+    window.addEventListener('mousemove', onResizeMove, { signal: abortController.signal });
+    window.addEventListener('mouseup', stopResize, { signal: abortController.signal });
   };
+
+  const globalAbortController = new AbortController();
 
   onMounted(() => {
     splitRatio.value = readSplitRatio();
     updateIsDesktop();
-    window.addEventListener('resize', updateIsDesktop);
+    window.addEventListener('resize', updateIsDesktop, { signal: globalAbortController.signal });
   });
 
   onBeforeUnmount(() => {
-    window.removeEventListener('resize', updateIsDesktop);
+    globalAbortController.abort();
     stopResize();
   });
 

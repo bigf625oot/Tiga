@@ -266,7 +266,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
-import type { Agent, Attachment, Team } from '../../types';
+import type { Agent, Attachment, Team } from '../../../types';
 
 const props = defineProps<{
   modelValue: string;
@@ -426,24 +426,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 10px;
-}
-.custom-scrollbar:hover::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted));
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
-}
-
 @keyframes ripple {
   0% {
     transform: scale(0);

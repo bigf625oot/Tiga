@@ -66,13 +66,7 @@ import {
   Code2, Wrench, BookOpen, Calculator, Zap
 } from 'lucide-vue-next';
 
-interface ToolCall {
-  id: string;
-  name: string;
-  args?: Record<string, any>;
-  result?: string;
-  status: 'running' | 'success' | 'error';
-}
+import type { ToolCall } from '../../../types';
 
 const props = defineProps<{
   toolCall: ToolCall;

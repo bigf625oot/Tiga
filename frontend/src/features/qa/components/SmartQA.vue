@@ -26,36 +26,10 @@
           class="flex flex-col min-w-0 flex-1 bg-background/50 backdrop-blur-sm relative transition-all duration-150"
           :style="leftPaneStyle">
           <SmartQAChatArea
+            v-bind="chatAreaProps"
+            v-on="chatAreaEvents"
             v-model="input"
-            :messages="messages"
-            :modes="MODES"
-            :current-mode-id="currentModeId"
-            :embedded="embedded"
-            :is-loading="isLoading"
-            :is-streaming="isStreaming"
-            :is-task-running="isTaskRunning"
-            :is-stopping="isStopping"
-            :loading-status="loadingStatus"
-            :selected-attachments="selectedAttachments"
-            :current-agent="currentAgent"
-            :selected-agent-id="selectedAgentId"
-            :agent-list="currentModeId === 'team' ? teams : agents"
-            :user-scripts="userScripts"
             v-model:is-network-search-enabled="isNetworkSearchEnabled"
-            @update:selectedAgentId="selectedAgentId = $event"
-            @send="onSendMessage"
-            @stop="onStop"
-            @select-mode="handleModeSelect"
-            @send-script="onSendScript"
-            @locate-node="handleLocateNode"
-            @open-doc-space="handleOpenDocSpace"
-            @open-attachment="attachmentModalVisible = true"
-            @remove-attachment="removeAttachment"
-            @add-attachment="addLocalAttachments"
-            @excerpt-message="handleExcerptMessage"
-            @delete-message="handleDeleteMessage"
-            @resend-message="handleResendMessage"
-            @edit-message="handleEditMessage"
           />
         </div>
 
@@ -115,36 +89,10 @@
 
         <div class="flex-1 flex flex-col h-full relative min-w-0">
           <SmartQAChatArea
+            v-bind="chatAreaProps"
+            v-on="chatAreaEvents"
             v-model="input"
-            :messages="messages"
-            :modes="MODES"
-            :current-mode-id="currentModeId"
-            :embedded="embedded"
-            :is-loading="isLoading"
-            :is-streaming="isStreaming"
-            :is-task-running="isTaskRunning"
-            :is-stopping="isStopping"
-            :loading-status="loadingStatus"
-            :selected-attachments="selectedAttachments"
-            :current-agent="currentAgent"
-            :selected-agent-id="selectedAgentId"
-            :agent-list="currentModeId === 'team' ? teams : agents"
-            :user-scripts="userScripts"
             v-model:is-network-search-enabled="isNetworkSearchEnabled"
-            @update:selectedAgentId="selectedAgentId = $event"
-            @send="onSendMessage"
-            @stop="onStop"
-            @select-mode="handleModeSelect"
-            @send-script="onSendScript"
-            @locate-node="handleLocateNode"
-            @open-doc-space="handleOpenDocSpace"
-            @open-attachment="attachmentModalVisible = true"
-            @remove-attachment="removeAttachment"
-            @add-attachment="addLocalAttachments"
-            @excerpt-message="handleExcerptMessage"
-            @delete-message="handleDeleteMessage"
-            @resend-message="handleResendMessage"
-            @edit-message="handleEditMessage"
           />
         </div>
       </div>
@@ -185,12 +133,12 @@ import { useToast } from '@/components/ui/toast/use-toast';
 import DynamicGridBackground from '@/shared/components/molecules/DynamicGridBackground.vue';
 
 // Subcomponents
-import SmartQAHeader from './SmartQA/SmartQAHeader.vue';
-import SmartQAChatArea from './SmartQA/SmartQAChatArea.vue';
-import SmartQATaskPanel from './SmartQA/SmartQATaskPanel.vue';
-import AttachmentDialog from './SmartQA/AttachmentDialog.vue';
-import FileSidebar from './SmartQA/FileSidebar.vue';
-import MemoDrawer, { type Memo } from './SmartQA/MemoDrawer.vue';
+import SmartQAHeader from './SmartQA/layout/SmartQAHeader.vue';
+import SmartQAChatArea from './SmartQA/layout/SmartQAChatArea.vue';
+import SmartQATaskPanel from './SmartQA/workflow/SmartQATaskPanel.vue';
+import AttachmentDialog from './SmartQA/common/AttachmentDialog.vue';
+import FileSidebar from './SmartQA/common/FileSidebar.vue';
+import MemoDrawer, { type Memo } from './SmartQA/common/MemoDrawer.vue';
 
 // Composables
 import { useChatSession } from '../composables/useChatSession';
@@ -777,6 +725,40 @@ const updateMemo = (id: string, content: string) => {
   if (memo) {
     memo.content = content;
   }
+};
+
+const chatAreaProps = computed(() => ({
+  messages: messages.value,
+  modes: MODES,
+  currentModeId: currentModeId.value,
+  embedded: props.embedded,
+  isLoading: isLoading.value,
+  isStreaming: isStreaming.value,
+  isTaskRunning: isTaskRunning.value,
+  isStopping: isStopping.value,
+  loadingStatus: loadingStatus.value,
+  selectedAttachments: selectedAttachments.value,
+  currentAgent: currentAgent.value,
+  selectedAgentId: selectedAgentId.value,
+  agentList: currentModeId.value === 'team' ? teams.value : agents.value,
+  userScripts: userScripts.value,
+}));
+
+const chatAreaEvents = {
+  'update:selectedAgentId': (val: string) => { selectedAgentId.value = val; },
+  'send': onSendMessage,
+  'stop': onStop,
+  'select-mode': handleModeSelect,
+  'send-script': onSendScript,
+  'locate-node': handleLocateNode,
+  'open-doc-space': handleOpenDocSpace,
+  'open-attachment': () => { attachmentModalVisible.value = true; },
+  'remove-attachment': removeAttachment,
+  'add-attachment': addLocalAttachments,
+  'excerpt-message': handleExcerptMessage,
+  'delete-message': handleDeleteMessage,
+  'resend-message': handleResendMessage,
+  'edit-message': handleEditMessage,
 };
 
 // Lifecycle

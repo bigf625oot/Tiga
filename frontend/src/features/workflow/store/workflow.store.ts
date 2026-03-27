@@ -232,13 +232,19 @@ export const useWorkflowStore = defineStore('workflow', () => {
             label: task.name,
             status: task.status,
             progress: task.progress,
-            logs: task.logs
+            logs: task.logs,
+            description: task.description,
+            toolCalls: task.toolCalls,
+            children: task.children,
+            startTime: task.startTime,
+            endTime: task.endTime
         };
 
         if (existingNodeIndex !== -1) {
             graph.value.nodes[existingNodeIndex].data = nodeData;
         } else {
-            const y = graph.value.nodes.length * 100;
+            const taskIndex = tasks.value.findIndex(t => t.id === task.id);
+            const y = (taskIndex !== -1 ? taskIndex : graph.value.nodes.length) * 160;
             graph.value.nodes.push({
                 id: task.id,
                 type: 'custom',
@@ -247,19 +253,23 @@ export const useWorkflowStore = defineStore('workflow', () => {
             });
         }
 
-        if (task.dependencies) {
-            task.dependencies.forEach(depId => {
-                const edgeId = `e-${depId}-${task.id}`;
-                if (!graph.value.edges.find(e => e.id === edgeId)) {
-                    graph.value.edges.push({
+        // Update edges: strictly follow backend dependencies
+        const newEdges: any[] = [];
+        tasks.value.forEach((t) => {
+            if (t.dependencies && t.dependencies.length > 0) {
+                t.dependencies.forEach(depId => {
+                    const edgeId = `e-${depId}-${t.id}`;
+                    newEdges.push({
                         id: edgeId,
                         source: depId,
-                        target: task.id,
-                        animated: true
+                        target: t.id,
+                        animated: t.status === 'running' || t.status === 'pending',
+                        style: { stroke: t.status === 'completed' ? '#22c55e' : '#94a3b8', strokeWidth: 2 }
                     });
-                }
-            });
-        }
+                });
+            }
+        });
+        graph.value.edges = newEdges;
     };
 
     const updateTaskStatus = (stepName: string, status: WorkflowTask['status'], output?: string) => {
@@ -711,6 +721,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
             logs: [],
             output: '',
             toolCalls: [],
+            dependencies: t.dependencies?.map(String) || [],
         }));
         tasks.value.forEach(t => updateGraph(t));
         if (plan.reasoning) {
@@ -779,7 +790,11 @@ export const useWorkflowStore = defineStore('workflow', () => {
                 const task = event.task_id ? tasks.value.find(t => t.id === event.task_id) : undefined;
                 if (task) {
                     const tc = [...task.toolCalls].reverse().find(tc => tc.tool_name === info.tool && tc.status === 'running');
-                    if (tc) tc.status = info.is_error ? 'failed' : 'completed';
+                    if (tc) {
+                        tc.status = info.is_error ? 'failed' : 'completed';
+                        // Capture output to display search results or other tool outputs
+                        tc.result = typeof info.output === 'string' ? info.output : JSON.stringify(info.output);
+                    }
                     info.logs?.forEach(line => task.logs.push(line));
                     updateGraph(task);
                 }
