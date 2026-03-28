@@ -106,12 +106,28 @@ class AgentAssembler:
     async def build(self, **overrides) -> AgnoAgent:
         """核心构建流"""
         try:
-            await self._load_essential_data()
+            if not self.ctx.agent_model:
+                await self._load_essential_data()
             
             await self._assemble_toolset(
                 session_id=overrides.get("session_id"),
                 enable_search=overrides.get("enable_search")
             )
+            
+            # Inject intent-based tools directly into ctx.tools to avoid modifying DB model
+            intent = overrides.get("intent")
+            if intent:
+                intent_key = intent.intent.value if hasattr(intent.intent, "value") else str(intent.intent)
+                if intent_key in ("data_query", "kg_qa"):
+                    # check if data_toolkit is already loaded
+                    has_data_tool = any(getattr(t, "name", "") == "data_toolkit" for t in self.ctx.tools)
+                    if not has_data_tool:
+                        from app.services.agent.tools.libs.data_toolkit import DataToolkit
+                        dt = DataToolkit()
+                        self.ctx.tools.append(dt)
+                        snippet = dt.get_system_prompt_snippet()
+                        if snippet:
+                            self.ctx.instruction_builder.with_file_skill(snippet)
             
             final_instructions = self._orchestrate_instructions()
             
@@ -155,64 +171,12 @@ class AgentAssembler:
         model_cfg = self.ctx.agent_model.model_config or {}
         search_flag = enable_search if enable_search is not None else model_cfg.get("enable_search", True)
         
-        # 1. 加载默认工具 (Session/Search 等)
-        # Force enable search for Quick/Chat mode if the user requests it or by default
+        # 1. 加载所有工具 (基于 CapabilityRegistry)
         self.ctx.tools = await default_tools.load_tools(
             self.ctx.agent_model, self.db, session_id, enable_search=search_flag
         )
         
-        # Explicitly ensure DuckDuckGo is added if search_flag is True and not already in tools
-        if search_flag:
-            has_ddg = False
-            for t in self.ctx.tools:
-                if hasattr(t, '_name') and 'duckduckgo' in t._name.lower():
-                    has_ddg = True
-                    break
-                elif hasattr(t, '__name__') and 'duckduckgo' in t.__name__.lower():
-                    has_ddg = True
-                    break
-                    
-            if not has_ddg:
-                try:
-                    from app.services.agent.tools.libs.duckduckgo import DuckDuckGoTools
-                    self.ctx.tools.append(DuckDuckGoTools())
-                except ImportError:
-                    pass
-
-        # 2. 异步加载技能工具 (Skills are semi-static)
-        # TODO: 从 agent_model.skills_config 解析启用的技能，目前暂将所有加载的技能放入
-        skills_cfg = self.ctx.agent_model.skills_config or {}
-        if skills_cfg:  # 如果需要更细粒度的控制，这里可以根据配置过滤
-            sm = await AgentAssembler.get_skills_manager()
-            if sm:
-                self.ctx.tools.extend(sm.get_tools())
-                # 注入技能相关的 prompt
-                snippet = sm.get_system_prompt_snippet()
-                if snippet:
-                    self.ctx.instruction_builder.with_file_skill(snippet)
-
-        # 3. 加载动态工具 (ToolFactory)
-        tools_cfg = getattr(self.ctx.agent_model, "tools_config", [])
-        if tools_cfg:
-            ToolFactory.initialize()
-            for tc in tools_cfg:
-                # 兼容旧配置：这里假设 tc 可以通过 .get() 或者直接作为对象访问
-                if isinstance(tc, dict):
-                    enabled = tc.get("enabled", True)
-                    name = tc.get("name")
-                    config = tc.get("config", {})
-                else:
-                    enabled = getattr(tc, "enabled", True)
-                    name = getattr(tc, "name", None)
-                    config = getattr(tc, "config", {})
-                
-                if not enabled or not name:
-                    continue
-                t_inst = ToolFactory.create_tool(name, resolve_secret_refs(config))
-                if t_inst:
-                    self.ctx.tools.append(t_inst)
-        
-        # 4. 提取带有契约的工具指令
+        # 2. 提取带有契约的工具指令 (统一接口处理)
         for tool in self.ctx.tools:
             if isinstance(tool, ToolWithPrompt):
                 try:
@@ -274,7 +238,7 @@ class AgentAssembler:
             "memory": overrides.get("memory"),
             "storage": overrides.get("storage"),
             "knowledge": overrides.get("knowledge"),
-            "show_tool_calls": model.show_tool_calls,
+            "show_tool_calls": False,  # Force disable raw text tool calls in stream
         }
 
     async def _finalize_instance(self, params: Dict[str, Any]) -> AgnoAgent:

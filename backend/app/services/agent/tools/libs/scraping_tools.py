@@ -25,6 +25,7 @@ try:
     from agno.tools.crawl4ai import Crawl4AiTools as AgnoCrawl4AiTools
 except ImportError:
     class AgnoCrawl4AiTools(Toolkit):
+        is_available = False
         def __init__(self, *args, **kwargs):
             raise ImportError("crawl4ai is required for Crawl4AiTools.")
 

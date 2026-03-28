@@ -24,7 +24,8 @@
         <ArtifactEditor
             v-if="currentDoc"
             :value="currentDoc.content"
-            language="markdown"
+            :language="currentDoc.type === 'python' ? 'python' : (currentDoc.type || 'markdown')"
+            :file-type="currentDoc.type"
             :read-only="true"
             class="h-full w-full"
         />

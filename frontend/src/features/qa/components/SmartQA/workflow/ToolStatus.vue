@@ -48,9 +48,14 @@
                     {{ tool.name }}
                   </span>
                 </div>
-                <span class="text-[9px] text-muted-foreground/60">
-                  {{ tool.status === 'running' ? 'Running' : (tool.status === 'error' ? 'Failed' : 'Success') }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span v-if="tool.duration !== undefined" class="text-[9px] text-muted-foreground/40 font-mono">
+                    {{ (tool.duration / 1000).toFixed(1) }}s
+                  </span>
+                  <span class="text-[9px] text-muted-foreground/60">
+                    {{ tool.status === 'running' ? 'Running' : (tool.status === 'error' ? 'Failed' : 'Success') }}
+                  </span>
+                </div>
               </div>
 
               <!-- 参数输入 (折叠) -->
@@ -87,6 +92,8 @@ export interface ToolExecution {
   args: any;
   status: 'running' | 'success' | 'error';
   result?: string;
+  startTime?: number;
+  duration?: number;
 }
 
 const props = defineProps<{

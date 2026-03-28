@@ -1068,7 +1068,9 @@ const defaultSkillsConfig = {
     environment: { type: 'local', image: 'python:3.9-slim' },
     python: { enabled: false, safe_mode: true, allowed_modules: [] },
     filesystem: { enabled: false, base_dir: '/tmp', allow_write: false },
-    browser: { enabled: false, headless: true, search_engine: 'duckduckgo' }
+    browser: { enabled: false, headless: true, search_engine: 'duckduckgo' },
+    file_skills: { enabled: false, path: 'app/data/skills' },
+    allowed: []
 };
 
 const defaultTools = ref([]);
@@ -1917,7 +1919,13 @@ watch(activeToolTab, () => {
     toolSearchQuery.value = '';
 });
 
-const skillTools = computed(() => form.value.tools_config.filter(t => typeof t === 'object'));
+const skillTools = computed(() => {
+    const allowed = form.value.skills_config?.allowed || [];
+    return allowed.map(item => {
+        if (typeof item === 'string') return { name: item, version: '1.0', type: 'skill' };
+        return { id: item?.id, name: item?.name, version: item?.version || '1.0', type: 'skill' };
+    }).filter(t => !!t.name);
+});
 const pendingScripts = ref([]);
 
 const useTemplate = async () => {
@@ -2152,8 +2160,16 @@ const viewMcpTools = async (mcp) => {
 };
 
 const removeSkill = (tool) => {
-    const index = form.value.tools_config.findIndex(t => t === tool || (typeof t === 'object' && t.name === tool.name && t.type === 'skill'));
-    if (index > -1) form.value.tools_config.splice(index, 1);
+    const allowed = form.value.skills_config?.allowed || [];
+    const toolId = typeof tool === 'object' ? tool.id : null;
+    const toolName = typeof tool === 'string' ? tool : tool.name;
+    const idx = allowed.findIndex(item => {
+        if (typeof item === 'string') return item === toolName;
+        if (toolId) return item?.id === toolId;
+        return item?.name === toolName;
+    });
+    if (idx > -1) allowed.splice(idx, 1);
+    form.value.skills_config.allowed = [...allowed];
 };
 
 const openToolSelector = (tab = 'mcp') => {
@@ -2192,11 +2208,11 @@ const isToolSelected = (tool) => {
     if (tool.type === 'mcp') {
         return form.value.mcp_config.some(m => m.name === tool.name);
     } else {
-        return form.value.tools_config.some(t => {
-            if (typeof t === 'string') return t === tool.name;
-            // Distinguish between dynamic tools (no type or type='tool') and skills (type='skill')
-            // Market skills have type='skill'
-            return t.name === tool.name && t.type === 'skill';
+        const allowed = form.value.skills_config?.allowed || [];
+        return allowed.some(item => {
+            if (typeof item === 'string') return item === tool.name;
+            if (item?.id && tool.id) return item.id === tool.id;
+            return item?.name === tool.name;
         });
     }
 };
@@ -2216,13 +2232,21 @@ const selectToolFromMarket = (tool) => {
         form.value.mcp_config.push(config);
         message.success(`已添加 MCP 服务: ${tool.name}`);
     } else {
-        form.value.tools_config.push({
-            type: 'skill',
-            id: tool.id,
-            name: tool.name,
-            content: tool.content,
-            version: tool.version
+        if (!form.value.skills_config) form.value.skills_config = { ...defaultSkillsConfig };
+        const allowed = form.value.skills_config.allowed || [];
+        const exists = allowed.some(item => {
+            if (typeof item === 'string') return item === tool.name;
+            if (item?.id && tool.id) return item.id === tool.id;
+            return item?.name === tool.name;
         });
+        if (!exists) {
+            allowed.push({ id: tool.id, name: tool.name, version: tool.version });
+            form.value.skills_config.allowed = [...allowed];
+        }
+        // Auto-enable file skills when user selects any
+        const fsCfg = form.value.skills_config.file_skills || { enabled: false, path: 'app/data/skills' };
+        fsCfg.enabled = true;
+        form.value.skills_config.file_skills = fsCfg;
         message.success(`已添加技能: ${tool.name}`);
     }
 };

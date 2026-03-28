@@ -129,7 +129,8 @@ app.add_middleware(
 
 # 挂载上传目录以本地访问
 # 修复：使用绝对路径 backend/data/storage 作为上传目录
-BACKEND_DIR = Path(__file__).resolve().parents[1]  # backend/
+# parents[0]=app, parents[1]=backend
+BACKEND_DIR = Path(__file__).resolve().parents[1]
 UPLOADS_DIR = BACKEND_DIR / "data" / "storage"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")

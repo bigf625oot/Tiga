@@ -34,7 +34,7 @@
 
       <!-- Bubble -->
       <div 
-        class="relative text-sm leading-normal transition-all duration-200"
+        class="relative text-sm leading-normal transition-all duration-200 max-w-full min-w-0"
         :class="[bubbleClasses, isUser ? 'shadow-sm' : '']"
       >
         <template v-if="isUser">
@@ -55,7 +55,7 @@
         </template>
 
         <!-- Agent Mode: Rich Content -->
-        <div v-else class="agent-content flex flex-col gap-2">
+        <div v-else class="agent-content flex flex-col gap-2 min-w-0 max-w-full">
 
             <!-- Solo mode: TRAE-style execution panel (bypasses all legacy blocks) -->
             <SoloTaskCard
@@ -394,7 +394,6 @@ const showStepsContent = computed(() => {
 
 const showToolsContent = computed(() => {
     if (!props.message.tools || props.message.tools.length === 0) return false;
-    if (props.currentModeId === 'quick' || !props.currentModeId || props.currentModeId === 'auto') return false;
     return true;
 });
 

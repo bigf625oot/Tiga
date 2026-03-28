@@ -54,20 +54,21 @@
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea class="flex-1 p-6">
-          <div v-if="tasks.length === 0 && !isLoading" class="flex flex-col items-center justify-center h-[40vh] text-muted-foreground opacity-60">
-            <img src="/Placeholder/null.svg" alt="暂无任务" class="w-12 h-12 mb-4" />
-            <p class="text-sm">当前没有运行中的任务</p>
-          </div>
+        <ScrollArea class="flex-1 min-h-0">
+          <div class="p-6">
+            <div v-if="tasks.length === 0 && !isLoading" class="flex flex-col items-center justify-center h-[40vh] text-muted-foreground opacity-60">
+              <img src="/Placeholder/null.svg" alt="暂无任务" class="w-12 h-12 mb-4" />
+              <p class="text-sm">当前没有运行中的任务</p>
+            </div>
 
-          <div v-else-if="isLoading && tasks.length === 0" class="flex flex-col items-center justify-center h-[40vh] text-muted-foreground">
-            <Loader2 class="w-8 h-8 animate-spin mb-4" />
-            <p class="text-sm">加载中...</p>
-          </div>
+            <div v-else-if="isLoading && tasks.length === 0" class="flex flex-col items-center justify-center h-[40vh] text-muted-foreground">
+              <Loader2 class="w-8 h-8 animate-spin mb-4" />
+              <p class="text-sm">加载中...</p>
+            </div>
 
-          <div v-else class="space-y-4">
-            <div
-              v-for="task in tasks"
+            <div v-else class="space-y-4">
+              <div
+                v-for="task in tasks"
               :key="task.id"
               class="p-4 rounded-xl border border-border/50 bg-card shadow-sm transition-all hover:shadow-md group relative overflow-hidden"
               :class="{
@@ -141,6 +142,7 @@
               <p v-if="task.msg" class="text-[10px] text-muted-foreground mt-1 truncate">
                 {{ task.msg }}
               </p>
+            </div>
             </div>
           </div>
         </ScrollArea>

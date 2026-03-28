@@ -276,7 +276,11 @@ async def chat_session(
                 sse_event = event_type
                 chunk_data = chunk
 
-            cp_stream_events.append({"type": sse_event, "content": chunk_data})
+            cp_stream_events.append({
+                "event": sse_event,
+                "content": chunk_data,
+                "raw": chunk
+            })
             yield format_sse_json(sse_event, chunk_data)
 
         # 持久化助手消息

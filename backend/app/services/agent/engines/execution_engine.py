@@ -62,17 +62,39 @@ class ExecutionEngine:
         # 转换上下文为字符串或者传递给 agent
         # (实际实现中可能需要将 context 转换给 agent.run)
         context_str = "\n".join([str(c) for c in context]) if context else ""
-        prompt = f"Context:\n{context_str}\n\nExecute the task."
+        prompt = f"Context:\n{context_str}\n\nTask Goal:\n{task.description}\n\nExecute the task directly. Do NOT repeat the plan. Do NOT output meta-commentary."
 
         adapter = AgnoStreamAdapter()
         raw_stream = agent.arun(prompt, stream=True, stream_events=True)
         
         async for chunk in raw_stream:
             async for event in adapter.to_standard_events(chunk):
-                yield event
+                # 注入 task_id 确保前端能将工具调用和日志关联到特定节点
+                if hasattr(event, "data") and event.data is None:
+                    event.data = {}
+                elif getattr(event, "data", None) is None:
+                    try:
+                        event.data = {}
+                    except Exception:
+                        pass
+                
+                # Try to safely attach task_id to the event dict representation
+                event_dict = event.to_dict() if hasattr(event, "to_dict") else vars(event)
+                if "task_id" not in event_dict:
+                    event_dict["task_id"] = task.task_id
+                    
+                # We need to make sure the yielded event is still a dict or StreamEvent that retains task_id
+                if hasattr(event, "to_dict"):
+                    # Create a new event or just yield dict
+                    yield event_dict
+                else:
+                    yield event
                 
         async for event in adapter.flush():
-            yield event
+            event_dict = event.to_dict() if hasattr(event, "to_dict") else vars(event)
+            if "task_id" not in event_dict:
+                event_dict["task_id"] = task.task_id
+            yield event_dict
 
     def _resolve_tools_for_role(self, role: str) -> List[Any]:
         """

@@ -59,7 +59,7 @@ class Agent(Base):
     # --- 4. Framework Toggles ---
     enable_react = Column(Boolean, default=True)
     enable_cot = Column(Boolean, default=True)
-    show_tool_calls = Column(Boolean, default=True)
+    show_tool_calls = Column(Boolean, default=False)
     enable_markdown = Column(Boolean, default=True)
 
     # --- 5. Capabilities ---

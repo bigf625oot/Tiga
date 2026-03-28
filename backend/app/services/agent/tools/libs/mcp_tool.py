@@ -1,6 +1,11 @@
 import json
 import logging
 import inspect
+from pathlib import Path
+
+# parents[0]=libs, parents[1]=tools, parents[2]=agent, parents[3]=services, parents[4]=app, parents[5]=backend
+BACKEND_DIR = Path(__file__).resolve().parents[5]
+MCP_SERVERS_CONFIG_PATH = BACKEND_DIR / "data" / "mcp" / "mcp_servers.json"
 from typing import List, Dict, Any
 from agno.tools import Toolkit
 from app.services.platform.mcp.ws_client import MCPClient

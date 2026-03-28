@@ -19,12 +19,23 @@ export function createBaseHandlers(
             if (data?.msg_type) assistantMsg.type = data.msg_type;
         },
         thought: (data) => {
-            const thoughtText = typeof data.content === 'string' ? data.content : '';
+            let thoughtText = data;
+            if (typeof thoughtText !== 'string') {
+                const rawContent = thoughtText.content;
+                thoughtText = typeof rawContent === 'object' && rawContent !== null 
+                    ? JSON.stringify(rawContent, null, 2) 
+                    : (rawContent || normalizeThink(thoughtText));
+            }
             assistantMsg.reasoning = (assistantMsg.reasoning || '') + thoughtText;
         },
-        error: (data) => {
+        error: (data: any) => {
             let errorText = data;
-            if (typeof errorText !== 'string') errorText = errorText.content || errorText.message || errorText.detail || normalizeThink(errorText);
+            if (typeof errorText !== 'string') {
+                const rawContent = errorText.content || errorText.message || errorText.detail;
+                errorText = typeof rawContent === 'object' && rawContent !== null 
+                    ? JSON.stringify(rawContent, null, 2) 
+                    : (rawContent || normalizeThink(errorText));
+            }
             assistantMsg.content = (assistantMsg.content || '') + `\n**错误**: ${errorText}`;
         },
     };

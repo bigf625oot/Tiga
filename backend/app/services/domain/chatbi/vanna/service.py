@@ -821,7 +821,7 @@ class SmartDataQueryService:
 
     def get_tables(self) -> List[str]:
         if not self.vanna_core.sql_runner:
-            raise Exception("数据库未连接")
+            return []
         try:
             return self.vanna_core.sql_runner.get_tables()
         except Exception as e:
@@ -949,5 +949,8 @@ class SmartDataQueryService:
         except Exception as e:
             logger.error(f"转换图谱任务失败: {e}")
             update_status_callback(job_id, "failed", 0, f"转换失败: {str(e)}")
+            # 抛出异常触发 Saga 的全局补偿逻辑
+            # 不可吞没异常，必须让 SagaOrchestrator 感知以保证状态流转的确定性 (Determinism)
+            raise
 
 data_query_service = SmartDataQueryService.get_instance()

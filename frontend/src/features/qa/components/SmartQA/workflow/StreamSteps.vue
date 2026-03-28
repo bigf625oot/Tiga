@@ -73,27 +73,27 @@
                 <div v-else-if="item.event === 'artifact'"
                   class="flex items-center gap-2 text-[11px] border border-border rounded-lg px-2 py-1 bg-muted/40 min-w-0 max-w-full">
                   <FileOutput class="w-3 h-3 text-primary shrink-0" />
-                  <span class="truncate font-medium">{{ item.raw?.content?.file_name || item.content }}</span>
-                  <span v-if="item.raw?.content?.file_size" class="text-muted-foreground shrink-0">
-                    {{ formatFileSize(item.raw.content.file_size) }}
+                  <span class="truncate font-medium">{{ item.raw?.content?.file_name || (typeof item.content === 'object' && item.content !== null ? (item.content as any).file_name : item.content) }}</span>
+                  <span v-if="item.raw?.content?.file_size || (typeof item.content === 'object' && item.content !== null && (item.content as any).file_size)" class="text-muted-foreground shrink-0">
+                    {{ formatFileSize(item.raw?.content?.file_size || (item.content as any).file_size) }}
                   </span>
                 </div>
 
                 <!-- summary：总结陈词 -->
                 <div v-else-if="item.event === 'summary'"
                   class="text-[11px] text-foreground/90 font-medium break-words whitespace-pre-wrap leading-relaxed min-w-0">
-                  {{ item.content }}
+                  {{ typeof item.content === 'string' ? item.content : JSON.stringify(item.content) }}
                 </div>
 
                 <!-- error：报错 -->
                 <div v-else-if="item.event === 'error'"
                   class="text-[11px] text-red-500/90 break-words whitespace-pre-wrap font-mono leading-relaxed min-w-0">
-                  {{ item.content }}
+                  {{ typeof item.content === 'string' ? item.content : JSON.stringify(item.content) }}
                 </div>
 
                 <!-- 其他 -->
                 <div v-else class="text-[11px] text-muted-foreground break-words whitespace-pre-wrap font-mono leading-relaxed min-w-0">
-                  {{ item.content }}
+                  {{ typeof item.content === 'string' ? item.content : JSON.stringify(item.content) }}
                 </div>
               </div>
             </div>

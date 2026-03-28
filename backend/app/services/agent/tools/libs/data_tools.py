@@ -26,6 +26,7 @@ try:
     from agno.tools.newspaper4k import Newspaper4kTools as AgnoNewspaper4kTools
 except ImportError:
     class AgnoNewspaper4kTools(Toolkit):
+        is_available = False
         def __init__(self, *args, **kwargs):
             raise ImportError("newspaper4k is required for Newspaper4kTools.")
 

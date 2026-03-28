@@ -27,7 +27,8 @@ class VannaCore:
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
             # Default to backend/data/vanna_lancedb
-            backend_dir = Path(__file__).resolve().parents[4]
+            # parents[0]=vanna, parents[1]=chatbi, parents[2]=domain, parents[3]=services, parents[4]=app, parents[5]=backend
+            backend_dir = Path(__file__).resolve().parents[5]
             db_path = str(backend_dir / "data" / "vanna_lancedb")
             
         self.db = lancedb.connect(db_path)

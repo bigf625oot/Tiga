@@ -99,6 +99,9 @@ async def get_tables():
     Get all table names from the connected database and basic stats.
     """
     try:
+        if not data_query_service.vanna_core.sql_runner:
+            return {"tables": [], "stats": {"table_count": 0, "total_records": 0}}
+            
         tables = await run_in_threadpool(data_query_service.get_tables)
         # Fetch stats (total records)
         # We run this in threadpool too as it might be slow
@@ -140,10 +143,7 @@ async def convert_table_to_graph(table_name: str):
     saga = SagaOrchestrator(f"Table_To_Graph_{job_id}")
 
     async def step_convert(ctx):
-        # We need to run the potentially blocking conversion in a thread
-        import asyncio
-        result = await asyncio.to_thread(
-            data_query_service.convert_table_to_graph_task,
+        await data_query_service.convert_table_to_graph_task(
             job_id,
             table_name,
             update_job_status

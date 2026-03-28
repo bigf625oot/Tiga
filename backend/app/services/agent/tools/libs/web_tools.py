@@ -46,7 +46,11 @@ class WebsiteTools(AgnoWebsiteTools):
         def patched_get(*args, **kwargs):
             headers = kwargs.get('headers', {})
             if 'User-Agent' not in headers:
-                headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                # 针对 SEC.gov 等对爬虫有特殊 UA 要求的网站进行自适应
+                if 'sec.gov' in url.lower():
+                    headers['User-Agent'] = 'TigaDataResearch tiga@example.com'
+                else:
+                    headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
                 headers['Accept-Language'] = 'en-US,en;q=0.5'
                 headers['Sec-Fetch-Dest'] = 'document'
@@ -60,14 +64,29 @@ class WebsiteTools(AgnoWebsiteTools):
         try:
             httpx.get = patched_get
             relevant_docs = website.read(url=url)
-            return json.dumps([doc.to_dict() for doc in relevant_docs])
+            
+            MAX_CHARS = 20000
+            current_chars = 0
+            docs_list = []
+            for doc in relevant_docs:
+                if current_chars >= MAX_CHARS:
+                    break
+                d = doc.to_dict()
+                if 'content' in d and isinstance(d['content'], str):
+                    rem = MAX_CHARS - current_chars
+                    if len(d['content']) > rem:
+                        d['content'] = d['content'][:rem] + "\n...[Content Truncated]..."
+                    current_chars += len(d['content'])
+                docs_list.append(d)
+            return json.dumps(docs_list, ensure_ascii=False)
         except Exception:
             # 应对高级反爬机制的降级策略：回退至带头部伪装的 requests 抓取
             import requests
             from bs4 import BeautifulSoup
             try:
+                ua = 'TigaDataResearch tiga@example.com' if 'sec.gov' in url.lower() else 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': ua,
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
                     'Sec-Fetch-Dest': 'document',
@@ -82,33 +101,42 @@ class WebsiteTools(AgnoWebsiteTools):
                 for unwanted in soup.find_all(["script", "style", "nav", "header", "footer"]):
                     unwanted.decompose()
                 text = soup.get_text(strip=True, separator=" ")
-                return json.dumps([{"name": url, "id": url, "meta_data": {"url": url}, "content": text}])
+                if len(text) > 20000:
+                    text = text[:20000] + "\n...[Content Truncated]..."
+                return json.dumps([{"name": url, "id": url, "meta_data": {"url": url}, "content": text}], ensure_ascii=False)
             except Exception as inner_e:
                 # 第二级降级：使用 Jina AI 阅读器处理动态渲染或强反爬网站
                 try:
                     jina_url = f"https://r.jina.ai/{url}"
                     jina_res = requests.get(jina_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
                     if jina_res.status_code == 200:
-                        return json.dumps([{"name": url, "id": url, "meta_data": {"url": url, "source": "jina"}, "content": jina_res.text}])
+                        jina_text = jina_res.text
+                        if len(jina_text) > 20000:
+                            jina_text = jina_text[:20000] + "\n...[Content Truncated]..."
+                        return json.dumps([{"name": url, "id": url, "meta_data": {"url": url, "source": "jina"}, "content": jina_text}], ensure_ascii=False)
                 except Exception:
                     pass
                     
                 # 第三级兜底：基于标准库的直接探测，规避 requests 特征被拦截
                 try:
                     import urllib.request
-                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                    ua = 'TigaDataResearch tiga@example.com' if 'sec.gov' in url.lower() else 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    req = urllib.request.Request(url, headers={'User-Agent': ua})
                     with urllib.request.urlopen(req, timeout=10) as resp:
                         if resp.status == 200:
                             html = resp.read().decode('utf-8', errors='ignore')
                             soup = BeautifulSoup(html, "html.parser")
                             for unwanted in soup.find_all(["script", "style", "nav", "header", "footer"]):
                                 unwanted.decompose()
-                            return json.dumps([{"name": url, "id": url, "meta_data": {"url": url}, "content": soup.get_text(strip=True, separator=" ")}])
+                            text = soup.get_text(strip=True, separator=" ")
+                            if len(text) > 20000:
+                                text = text[:20000] + "\n...[Content Truncated]..."
+                            return json.dumps([{"name": url, "id": url, "meta_data": {"url": url}, "content": text}], ensure_ascii=False)
                 except Exception:
                     pass
 
                 # 以文本形式返回异常信息，保持容错性避免 Agent 崩溃
-                return f"Error reading website {url}. The site may be blocking scrapers (403 Forbidden). Details: {str(inner_e)}"
+                return f"Error reading website {url}. The site may be blocking scrapers (403 Forbidden). Details: {str(inner_e)}。请告诉用户：无法直接访问该链接，请提供具体内容文本或更换链接。**不要**尝试使用其他工具(如知识库)去搜索无关的PDF或内容。"
         finally:
             httpx.get = original_get
 

@@ -3,9 +3,8 @@ from typing import Optional
 from pathlib import Path
 
 # Paths Configuration
-# Assuming this file is in backend/app/services/rag/config/
-# parents[0]=config, parents[1]=rag, parents[2]=services, parents[3]=app, parents[4]=backend
-BACKEND_DIR = Path(__file__).resolve().parents[4]
+# parents[0]=config, parents[1]=rag, parents[2]=knowledge, parents[3]=intelligence, parents[4]=services, parents[5]=app, parents[6]=backend
+BACKEND_DIR = Path(__file__).resolve().parents[6]
 DATA_DIR = BACKEND_DIR / "data"
 LANCEDB_DIR = DATA_DIR / "lancedb"
 LIGHTRAG_DIR = DATA_DIR / "lightrag_store"

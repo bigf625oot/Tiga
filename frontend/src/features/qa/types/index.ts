@@ -126,7 +126,9 @@ export type AgentEventType =
   | 'plan_created'
   | 'task_start'
   | 'tool_call'
+  | 'call'
   | 'tool_output'
+  | 'result'
   | 'artifact'
   | 'summary';
 

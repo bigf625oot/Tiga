@@ -157,11 +157,22 @@ async def run_workflow_stream(request: WorkflowRunRequest, db: AsyncSession = De
                 **request.params
             ):
                 if event is not None:
-                    # 将字典直接包装为 data 发送，不改变 type，前端靠 type 字段路由
+                    # 将字典包装为 SSE 格式，包含 event 标识和 data 载荷，防止前端漏接异常
                     import json
-                    event_data = json.dumps(event, ensure_ascii=False) if isinstance(event, dict) else event
-                    yield f"data: {event_data}\n\n"
-            yield "data: [DONE]\n\n"
+                    if isinstance(event, dict):
+                        event_type = event.get("type", "message")
+                        # 兼容前端处理，把 content 转为 text
+                        if event_type == "content":
+                            sse_event = "text"
+                        elif event_type == "think":
+                            sse_event = "think"
+                        else:
+                            sse_event = event_type
+                        event_data = json.dumps(event, ensure_ascii=False)
+                        yield f"event: {sse_event}\ndata: {event_data}\n\n"
+                    else:
+                        yield f"event: message\ndata: {event}\n\n"
+            yield "event: done\ndata: [DONE]\n\n"
             
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as e:

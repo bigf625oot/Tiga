@@ -164,7 +164,7 @@
             </section>
 
             <!-- 日志 (无 output 时的降级展示) -->
-            <section v-else-if="selectedTask.logs?.length > 0">
+            <section v-else-if="parsedLogs.length > 0">
               <h4 class="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5 leading-tight">
                 <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -173,14 +173,16 @@
                 执行日志
               </h4>
               <!-- rounded-md bg-muted/20 border p-3(12px) ← radius + color + spacing tokens -->
-              <div class="rounded-md bg-muted/20 border border-border/50 p-3 space-y-0.5 max-h-48 overflow-y-auto custom-scrollbar">
-                <p v-for="(line, i) in selectedTask.logs" :key="i"
-                   class="text-xs font-mono text-muted-foreground leading-relaxed break-all"
-                   :class="{
-                     'text-red-500':   /error|exception|traceback|failed/i.test(line),
-                     'text-green-600 dark:text-green-500': /success|done|completed|✓|✅/i.test(line),
-                     'text-yellow-600 dark:text-yellow-400': /warning|warn/i.test(line),
-                   }">{{ line }}</p>
+            <div class="rounded-md bg-muted/20 border border-solid  border-border/50 p-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <div class="text-xs font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">
+                  <template v-for="log in parsedLogs" :key="log.id">
+                    <span :class="{
+                       'text-red-500': log.type === 'error',
+                       'text-green-600 dark:text-green-500': log.type === 'success',
+                       'text-yellow-600 dark:text-yellow-400': log.type === 'warning',
+                     }">{{ log.text }}</span>
+                  </template>
+                </div>
               </div>
             </section>
 
@@ -375,6 +377,24 @@ const selectedTask = computed(() =>
 const goBack = () => {
   store.selectedTaskId = null;
 };
+
+// ── 日志解析 (计算属性，避免模板内每次渲染都执行正则) ──
+const parsedLogs = computed(() => {
+  if (!selectedTask.value?.logs) return [];
+  return selectedTask.value.logs.map((line, index) => {
+    const strLine = String(line);
+    let type = 'default';
+    if (/error|exception|traceback|failed/i.test(strLine)) type = 'error';
+    else if (/success|done|completed|✓|✅/i.test(strLine)) type = 'success';
+    else if (/warning|warn/i.test(strLine)) type = 'warning';
+    
+    return {
+      id: index,
+      text: typeof line === 'object' ? JSON.stringify(line, null, 2) : strLine,
+      type
+    };
+  });
+});
 
 // ── Mermaid 渲染 ──
 // outputRef 指向 task-output-prose 容器；任务 completed 后扫描 .mermaid 节点并渲染

@@ -163,6 +163,40 @@ class AgnoStreamAdapter:
                 return
 
             # 4. Agno/Pydantic 对象事件
+            event_type = getattr(chunk, "event", None)
+            if isinstance(event_type, str):
+                # 拦截底层的工具调用事件，避免将其转换为文本输出污染对话流
+                if event_type == "ToolCallStarted":
+                    tools = getattr(chunk, "tools", [])
+                    if tools and isinstance(tools, list):
+                        for tool in tools:
+                            yield StreamEvent(
+                                type="call",
+                                content={
+                                    "tool": getattr(tool, "tool_name", "worker"),
+                                    "args": getattr(tool, "tool_args", {})
+                                }
+                            )
+                    return
+                elif event_type in ("ToolCallCompleted", "ToolCallError"):
+                    tools = getattr(chunk, "tools", [])
+                    if tools and isinstance(tools, list):
+                        for tool in tools:
+                            error_msg = getattr(tool, "tool_call_error", None)
+                            yield StreamEvent(
+                                type="result",
+                                content={
+                                    "tool": getattr(tool, "tool_name", "worker"),
+                                    "output": getattr(tool, "result", ""),
+                                    "is_error": bool(error_msg) or event_type == "ToolCallError",
+                                    "logs": [error_msg] if error_msg else []
+                                }
+                            )
+                    return
+                elif event_type in ("RunStarted", "RunCompleted", "ModelRequestStarted", "ModelRequestCompleted", "RunContentCompleted", "RunIntermediateContent"):
+                    # Safe to ignore these purely internal lifecycle events to prevent noise and duplicates
+                    return
+
             reasoning = getattr(chunk, "thinking", None) or getattr(chunk, "reasoning", None)
             if isinstance(reasoning, str) and reasoning:
                 yield StreamEvent(type="think", content=reasoning)

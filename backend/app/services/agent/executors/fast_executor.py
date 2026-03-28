@@ -48,7 +48,7 @@ class FastExecutor(LightBaseExecutor):
         
         # 1. Concurrent Context Assembly (Agent, History, Files)
         setup_tasks = [
-            asyncio.create_task(self._prepare_agent(db, session_id, kwargs)),
+            asyncio.create_task(self._prepare_agent(db, session_id, kwargs, intent)),
             asyncio.create_task(self._prepare_history(session_id, current_query=input_text)),
             asyncio.create_task(self._handle_incoming_files(session_id, files))
         ]
@@ -78,6 +78,12 @@ class FastExecutor(LightBaseExecutor):
         # 3. Contextual Augmentation
         augmented_input = self._augment_input(input_text, intent)
 
+        # [P10 Determinism] Quick 模式物理隔离：短路 RAG 和外部工具
+        is_quick_mode = intent and intent.intent == "quick"
+        if is_quick_mode:
+            instructions.append("CRITICAL: You are in QUICK mode. Answer directly and concisely based ONLY on your internal knowledge. Do NOT use tools. Do NOT search the web. Do NOT write long paragraphs.")
+            agent.tools = []  # 强制卸载所有工具
+
         # 4. Streaming Execution
         try:
             async for chunk in agent.arun(
@@ -98,7 +104,7 @@ class FastExecutor(LightBaseExecutor):
             logger.error(f"FastExecutor execution failed: {e}", exc_info=True)
             yield self._yield_error("Internal processing error", e)
 
-    async def _prepare_agent(self, db: AsyncSession, session_id: str, kwargs: Any) -> Agent:
+    async def _prepare_agent(self, db: AsyncSession, session_id: str, kwargs: Any, intent: Optional[IntentResult] = None) -> Agent:
         """[Dependency Injection] 动态挂载 Agent 配置。"""
         agent_id = kwargs.get("agent_id")
         reasoning = kwargs.get("enable_reasoning", False)
@@ -108,7 +114,8 @@ class FastExecutor(LightBaseExecutor):
         return await assembler.build(
             session_id=session_id,
             reasoning_override=reasoning,
-            enable_search=search
+            enable_search=search,
+            intent=intent
         )
 
     async def _handle_incoming_files(self, session_id: str, files: List[Any]) -> Tuple[str, List[Any]]:

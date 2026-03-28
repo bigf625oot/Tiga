@@ -20,7 +20,7 @@ class AgentBase(BaseModel):
     # Framework Toggles
     enable_react: bool = Field(True, description=_("Enable ReACT reasoning and acting"))
     enable_cot: bool = Field(True, description=_("Enable Chain of Thought"))
-    show_tool_calls: bool = Field(True, description=_("Show tool call trace in output"))
+    show_tool_calls: bool = Field(False, description=_("Show tool call trace in output"))
     enable_markdown: bool = Field(True, description=_("Force Markdown output rendering"))
     
     # Pydantic V2 restriction: Cannot use 'model_config' as field name. Use alias.

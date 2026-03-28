@@ -81,6 +81,15 @@ class AgentFactory:
                 **kwargs,
             }
 
+            # --- Anti-Corruption Layer (防腐层) ---
+            app_db = agent_payload.pop("db", None)
+            
+            # 如果上层传递了专用于 Agno 的 storage，需要映射为 Agno 新版的 db 参数
+            if "storage" in agent_payload:
+                agno_storage = agent_payload.pop("storage")
+                if agno_storage:
+                    agent_payload["db"] = agno_storage
+
             # 过滤 Agno 构造函数参数，防止 SDK 升级引发异常
             agent = Agent(**filter_init_kwargs(Agent.__init__, agent_payload))
             

@@ -1,0 +1,1 @@
+Agent 启动 → 注入基础工具 → 注入 Skills executor → ✅ 遍历已配置 skills → 将每个 skill 的 tool definition 注入 model context → 模型可规划调用

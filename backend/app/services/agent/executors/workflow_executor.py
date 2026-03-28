@@ -138,9 +138,11 @@ class WorkflowExecutor(BaseExecutor):
             )
 
             yield {"type": "status", "content": _("Executing node: {} ({})").format(node_name, node_type)}
+            yield {"type": "task_start", "task_id": nid, "title": node_name, "status": "running"}
 
             try:
-                result_text = await self._execute_node(
+                result_text = ""
+                async for event in self._execute_node_stream(
                     nid=nid,
                     node_name=node_name,
                     node_type=node_type,
@@ -149,15 +151,20 @@ class WorkflowExecutor(BaseExecutor):
                     upstream_context=upstream_context,
                     db=db,
                     kwargs=kwargs,
-                )
+                ):
+                    yield event
+                    if isinstance(event, dict) and event.get("type") == "content":
+                        result_text += event.get("content", "")
+                        
                 node_outputs[nid] = result_text
-                yield {"type": "content", "content": result_text}
+                yield {"type": "task_start", "task_id": nid, "status": "completed"}
             except Exception as e:
                 logger.error(f"Node {node_name} ({nid}) failed: {e}", exc_info=True)
+                yield {"type": "task_start", "task_id": nid, "status": "failed"}
                 yield {"type": "error", "content": f"Node '{node_name}' failed: {e}"}
                 return
 
-    async def _execute_node(
+    async def _execute_node_stream(
         self,
         nid: str,
         node_name: str,
@@ -167,8 +174,8 @@ class WorkflowExecutor(BaseExecutor):
         upstream_context: str,
         db: AsyncSession,
         kwargs: Dict[str, Any],
-    ) -> str:
-        """[Node Dispatch] 将 DAG 节点转换为执行引擎标准任务。"""
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """[Node Dispatch] 将 DAG 节点转换为执行引擎标准任务，并流式输出。"""
         from app.services.agent.engines.execution_engine import ExecutionEngine
         from app.services.agent.schemas.plan import ExecutionTaskStep
 
@@ -187,11 +194,8 @@ class WorkflowExecutor(BaseExecutor):
         )
 
         context = [{"role": "system", "content": upstream_context}] if upstream_context else []
-        result_parts = []
         async for chunk in engine.execute_task(task_step, context):
-            if chunk.get("type") == "content":
-                result_parts.append(chunk.get("content", ""))
-        return "".join(result_parts)
+            yield chunk
 
     async def _load_workflow(self, db: AsyncSession, intent: IntentResult, kwargs: Dict[str, Any]) -> Optional[Workflow]:
         task_params = getattr(intent, "parameters", None) or {}

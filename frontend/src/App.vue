@@ -523,6 +523,7 @@ const EtlPipelineList = defineAsyncComponent(() => import('@/features/data_etl/E
 const EditorLayout = defineAsyncComponent(() => import('@/features/etl_editor/EditorLayout.vue'));
 const SystemSettings = defineAsyncComponent(() => import('@/features/data_etl/SystemSettings.vue'));
 const SmartTeam = defineAsyncComponent(() => import('@/features/team/components/SmartTeam.vue'));
+const ChatDemo = defineAsyncComponent(() => import('@/features/chat/components/ChatView.vue'));
 
 // Setup Axios
 const api = axios.create({
@@ -586,7 +587,8 @@ const componentMap: Record<string, any> = {
     'etl_pipeline': EditorLayout,
     'etl_settings': SystemSettings,
     'list': RecordingList,
-    'detail': RecordingDetail
+    'detail': RecordingDetail,
+    'chat_demo': ChatDemo
 };
 
 const currentViewComponent = computed(() => {
@@ -774,6 +776,7 @@ interface SidebarItem {
 }
 
 const agentSidebarItems: SidebarItem[] = [
+    { id: 'chat_demo', label: '消息卡片 Demo', icon: Box },
     { id: 'model', label: '模型管理', icon: Cpu },
     { id: 'service_market', label: '工具市场', icon: LayoutGrid },
     { id: 'agent', label: '智能体中心', icon: Box },

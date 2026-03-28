@@ -2,8 +2,13 @@ import inspect
 import time
 import weakref
 from dataclasses import asdict
+from pathlib import Path
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+
+# parents[0]=mcp, parents[1]=tools, parents[2]=agent, parents[3]=services, parents[4]=app, parents[5]=backend
+BACKEND_DIR = Path(__file__).resolve().parents[5]
+MCP_SERVERS_CONFIG_PATH = BACKEND_DIR / "data" / "mcp" / "mcp_servers.json"
 
 from agno.tools import Toolkit
 from agno.tools.function import Function

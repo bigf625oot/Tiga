@@ -31,10 +31,9 @@ _CHAT_PATTERNS = [
     r"^(什么是|who is|what is|how does|为什么|怎么|如何|解释|介绍).{0,50}[？?]?$",
     r"(翻译|总结|摘要|概括).{0,20}(这段|以下|下面|上面)",
     r"(现在|今天|当前|最新|最近).{0,10}(天气|新闻|股价|汇率|价格)",
-    r"^(帮我查|搜索|查一下|找一下).{0,40}$",
     # 英文
     r"^(what|who|when|where|why|how)\b.{0,60}[?]?$",
-    r"\b(search|look up|find|summarize|translate)\b",
+    r"\b(summarize|translate)\b",
 ]
 
 _TASK_RE = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in _TASK_PATTERNS]
@@ -59,12 +58,12 @@ def _heuristic_classify(message: str) -> Optional[IntentResult]:
                 parameters={},
             )
 
-    # 消息很短（< 15 字）且不包含明显任务指令，通常是简单问答
-    if len(message.strip()) < 15:
+    # 消息很短（< 4 字）且不包含明显任务指令，通常是简单问答 (如 "你好", "在吗")
+    if len(message.strip()) < 4:
         return IntentResult(
             intent="chat",
             confidence=0.7,
-            reasoning="Short message heuristic (<15 chars)",
+            reasoning="Short message heuristic (<4 chars)",
             parameters={},
         )
     return None
@@ -114,26 +113,26 @@ class ModeRouter:
             await assembler._assemble_toolset(session_id=session_id, enable_search=enable_search)
             
             for tool in assembler.ctx.tools:
-                # Agno Toolkit 适配
-                if hasattr(tool, "tools") and isinstance(tool.tools, dict):
-                    for name, func in tool.tools.items():
-                        tool_registry.register_tool(
-                            name=name,
-                            func=func,
-                            description=getattr(func, "__doc__", "") or f"Tool {name}",
-                        )
-                # 原生 Function 或 Callable
-                elif callable(tool):
+                if callable(tool):
                     tool_registry.register_tool(
                         name=getattr(tool, "__name__", str(tool)),
                         func=tool,
                         description=getattr(tool, "__doc__", "") or f"Tool {tool}",
                     )
+                else:
+                    # Toolkit instance
+                    name = getattr(tool, "name", getattr(tool, "_name", str(tool)))
+                    desc = getattr(tool, "description", getattr(tool, "_description", f"Toolkit {name}"))
+                    tool_registry.register_tool(
+                        name=name,
+                        func=tool,
+                        description=desc,
+                    )
         except Exception as e:
             logger.warning(f"Failed to pre-assemble tools for registry: {e}")
 
         # 根据意图进行分发
-        if intent_key in ("chat", "data_query", "kg_qa"):
+        if intent_key in ("chat", "quick", "data_query", "kg_qa"):
             from app.services.agent.executors.fast_executor import FastExecutor
             executor = FastExecutor(llm_model=self.llm_model, memory_manager=memory_manager)
 
@@ -194,9 +193,16 @@ class ModeRouter:
             nlu_service = NluService(self.llm_model)
             return await asyncio.wait_for(nlu_service.analyze(user_input), timeout=6.0)
         except Exception as e:
-            logger.warning(f"NLU failed or timed out: {e}. Falling back to chat (Fast track).")
+            logger.warning(f"NLU failed or timed out: {e}. Falling back safely based on context.")
+            
+            # P10 确定性修复：不硬编码 fallback 到 chat。如果当前是在明确的上下文或指令下，应保留其意图。
+            # 如果请求中带有明确的 task 或 plan 相关参数，回退到 task；否则默认 chat。
+            fallback_intent = "chat"
+            if kwargs.get("agent_id") or "plan" in user_input.lower() or "task" in user_input.lower():
+                fallback_intent = "task"
+                
             return IntentResult(
-                intent="chat",
+                intent=fallback_intent,
                 confidence=0.0,
                 reasoning=f"Router fallback: {e}",
                 parameters={},
@@ -204,7 +210,7 @@ class ModeRouter:
 
     def _get_forced_intent(self, kwargs: Dict) -> Optional[str]:
         mode_map = {
-            "quick": "chat", "chat": "chat",
+            "quick": "quick", "chat": "chat",
             "plan": "task", "task": "task", "solo": "task",
             "team": "team",
             "flow": "workflow", "workflow": "workflow",

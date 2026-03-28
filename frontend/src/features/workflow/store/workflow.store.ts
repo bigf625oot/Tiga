@@ -48,6 +48,13 @@ export interface WorkflowDocument {
     id: string;
     title: string;
     content: string;
+    /**
+     * @description 文档的 MIME/语言类型（如 markdown, json, python 等）。
+     * @trade_off 设为可选（`?`）而非必填，是基于对存量本地化状态（LocalStorage `workflow-${sid}`）
+     * 的平滑兼容（向后兼容）。下游渲染层需对 `undefined` 状态做默认降级处理（如默认 'markdown'），
+     * 以保证分布式及多版本迭代下的架构确定性。
+     */
+    type?: string;
     step?: string;
     createdAt: number;
 }
@@ -192,12 +199,14 @@ export const useWorkflowStore = defineStore('workflow', () => {
         const runningTask = tasks.value.find(t => t.status === 'running');
         if (runningTask) {
             runningTask.logs.push(output);
+            runningTask.output = (runningTask.output || '') + output;
             updateGraph(runningTask);
             return;
         }
         const lastTask = tasks.value[tasks.value.length - 1];
         if (lastTask) {
             lastTask.logs.push(output);
+            lastTask.output = (lastTask.output || '') + output;
             updateGraph(lastTask);
             return;
         }
@@ -340,6 +349,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
             if (output) {
                 task.logs.push(output);
+                // 修复大模型流式文本未正确归入 output 导致在日志区降级展示碎片的 bug
+                if (typeof output === 'string') {
+                    task.output = (task.output || '') + output;
+                } else {
+                    task.output = (task.output || '') + JSON.stringify(output) + '\n';
+                }
             }
 
             updateGraph(task);
@@ -503,11 +518,20 @@ export const useWorkflowStore = defineStore('workflow', () => {
             // Save output as document if non-empty
             const content = (task.output || '').trim();
             if (content) {
+                let docType = 'markdown';
+                let docContent = content;
+                const match = content.match(/^```(\w+)\s*([\s\S]*?)```$/);
+                if (match) {
+                    docType = match[1];
+                    docContent = match[2].trim();
+                }
+
                 const title = deriveDocumentTitle(content) || task.name;
                 documents.value.unshift({
                     id: `doc-${Date.now()}-${Math.random().toString(16).slice(2)}`,
                     title,
-                    content,
+                    content: docContent,
+                    type: docType,
                     step: task.name,
                     createdAt: Date.now()
                 });
@@ -620,6 +644,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
                         id: `doc-${Date.now()}-${Math.random().toString(16).slice(2)}`,
                         title,
                         content,
+                        type: 'markdown', // 补充显式类型，增强下游确定性
                         step: 'execute',
                         createdAt: Date.now()
                     });
@@ -780,31 +805,37 @@ export const useWorkflowStore = defineStore('workflow', () => {
                 break;
             }
 
-            // tool_call：工具调用开始
-            case 'tool_call': {
+            // tool_call / call：工具调用开始
+            case 'tool_call':
+            case 'call': {
                 const info = event.content as AgentToolCallInfo;
                 const taskId = event.task_id || info.task_id;
                 const task = taskId ? tasks.value.find(t => t.id === taskId) : undefined;
                 if (task) {
                     task.toolCalls.push({
-                        tool_name: info.tool,
-                        tool_args: info.args,
+                        tool_name: info.tool || (info as any).name || 'unknown_tool',
+                        tool_args: info.args || (info as any).arguments || {},
                         status: 'running',
                     });
                 }
                 break;
             }
 
-            // tool_output：工具执行结果 + 日志
-            case 'tool_output': {
+            // tool_output / result：工具执行结果 + 日志
+            case 'tool_output':
+            case 'result': {
                 const info = event.content as AgentObservationInfo;
-                const task = event.task_id ? tasks.value.find(t => t.id === event.task_id) : undefined;
+                const taskId = event.task_id || info.task_id;
+                const task = taskId ? tasks.value.find(t => t.id === taskId) : undefined;
                 if (task) {
-                    const tc = [...task.toolCalls].reverse().find(tc => tc.tool_name === info.tool && tc.status === 'running');
+                    const toolName = info.tool || (info as any).name;
+                    const tc = [...task.toolCalls].reverse().find(tc => tc.tool_name === toolName && tc.status === 'running');
                     if (tc) {
                         tc.status = info.is_error ? 'failed' : 'completed';
                         // Capture output to display search results or other tool outputs
-                        tc.result = typeof info.output === 'string' ? info.output : JSON.stringify(info.output);
+                        tc.result = typeof (info.output || (info as any).result) === 'string' 
+                            ? (info.output || (info as any).result) 
+                            : JSON.stringify(info.output || (info as any).result);
                     }
                     info.logs?.forEach(line => task.logs.push(line));
                     updateGraph(task);

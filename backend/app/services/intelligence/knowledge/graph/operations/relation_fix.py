@@ -2,6 +2,7 @@ import networkx as nx
 import os
 import shutil
 import logging
+from pathlib import Path
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
@@ -17,9 +18,14 @@ logger = logging.getLogger(__name__)
 
 class RelationFixService:
     def __init__(self):
-        self.graph_path = str(LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml")
-        self.backup_dir = str(DATA_DIR / "backups")
-        self.log_file = str(DATA_DIR / "relation_fix.log")
+        # parents[0]=operations, parents[1]=graph, parents[2]=knowledge, parents[3]=intelligence, parents[4]=services, parents[5]=app, parents[6]=backend
+        backend_dir = Path(__file__).resolve().parents[6]
+        data_dir = backend_dir / "data"
+        lightrag_dir = data_dir / "lightrag_store"
+        
+        self.graph_path = str(lightrag_dir / "graph_chunk_entity_relation.graphml")
+        self.backup_dir = str(data_dir / "backups")
+        self.log_file = str(data_dir / "relation_fix.log")
 
         if not os.path.exists(self.backup_dir):
             os.makedirs(self.backup_dir)

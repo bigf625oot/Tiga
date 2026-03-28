@@ -1,5 +1,5 @@
 <template>
-  <div class="tool-call-panel rounded-md border overflow-hidden transition-all duration-200"
+  <div class="tool-call-panel rounded-md border overflow-hidden transition-all duration-200 min-w-0"
        :class="panelBorderClass">
     <!-- Header row: always visible -->
     <button
@@ -39,19 +39,19 @@
     <!-- Expanded body: input args + output -->
     <div v-if="isExpanded" class="border-t" :class="panelDividerClass">
       <!-- Input -->
-      <div v-if="hasArgs" class="px-3 py-2 bg-muted/5">
+      <div v-if="hasArgs" class="px-3 py-2 bg-muted/5 min-w-0">
         <div class="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/40 mb-1.5">输入参数</div>
-        <pre class="text-[11px] font-mono text-foreground/70 overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar">{{ formattedArgs }}</pre>
+        <pre class="text-[11px] font-mono text-foreground/70 overflow-x-auto whitespace-pre-wrap break-words leading-relaxed custom-scrollbar">{{ formattedArgs }}</pre>
       </div>
 
       <!-- Output -->
-      <div v-if="toolCall.result !== undefined" class="px-3 py-2 border-t"
+      <div v-if="toolCall.result !== undefined" class="px-3 py-2 border-t min-w-0"
            :class="toolCall.status === 'error' ? 'border-destructive/10 bg-destructive/5' : 'border-border/20 bg-emerald-500/5'">
         <div class="text-[10px] uppercase tracking-widest font-semibold mb-1.5"
              :class="toolCall.status === 'error' ? 'text-destructive/50' : 'text-emerald-600/50 dark:text-emerald-400/50'">
           {{ toolCall.status === 'error' ? '错误信息' : '执行结果' }}
         </div>
-        <pre class="text-[11px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar"
+        <pre class="text-[11px] font-mono overflow-x-auto whitespace-pre-wrap break-words leading-relaxed custom-scrollbar"
              :class="toolCall.status === 'error' ? 'text-destructive/80' : 'text-foreground/65'">{{ formatOutput(toolCall.result) }}</pre>
       </div>
     </div>
@@ -66,7 +66,13 @@ import {
   Code2, Wrench, BookOpen, Calculator, Zap
 } from 'lucide-vue-next';
 
-import type { ToolCall } from '../../../types';
+export interface ToolCall {
+  id: string;
+  name: string;
+  args?: Record<string, any>;
+  result?: string;
+  status: 'running' | 'success' | 'error';
+}
 
 const props = defineProps<{
   toolCall: ToolCall;

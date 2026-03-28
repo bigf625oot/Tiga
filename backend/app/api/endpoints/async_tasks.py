@@ -39,7 +39,7 @@ async def create_async_task(
     await task_progress.publish_update(task.id, user_id or "anonymous")
 
     from app.core.worker_pool import task_pool
-    await task_pool.submit_task(process_task_background, task.id, task.task_type)
+    await task_pool.submit_task(process_task_background, task.id, task.task_type, user_id or "anonymous")
 
     return AsyncTaskCreateResponse(
         task_id=task.id,
@@ -48,7 +48,7 @@ async def create_async_task(
     )
 
 
-async def process_task_background(task_id: str, task_type: str):
+async def process_task_background(task_id: str, task_type: str, user_id: str = "system"):
     from app.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
@@ -57,7 +57,7 @@ async def process_task_background(task_id: str, task_type: str):
                 db, task_id, 10, "RUNNING", "开始处理", "initializing"
             )
             await task_progress.set_progress(task_id, 10, "RUNNING", "开始处理", "initializing")
-            await task_progress.publish_update(task_id, "system")
+            await task_progress.publish_update(task_id, user_id)
 
             await async_task_log.create(db, task_id, 10, "RUNNING", "开始处理", "initializing")
 
@@ -66,7 +66,7 @@ async def process_task_background(task_id: str, task_type: str):
                     db, task_id, i, "RUNNING", f"处理中... {i}%", f"step_{i}"
                 )
                 await task_progress.set_progress(task_id, i, "RUNNING", f"处理中... {i}%", f"step_{i}")
-                await task_progress.publish_update(task_id, "system")
+                await task_progress.publish_update(task_id, user_id)
                 await async_task_log.create(db, task_id, i, "RUNNING", f"处理中", f"step_{i}")
                 import asyncio
                 await asyncio.sleep(0.5)
@@ -78,7 +78,7 @@ async def process_task_background(task_id: str, task_type: str):
                 result={"download_url": f"/uploads/{task_id}.zip"}
             )
             await task_progress.set_progress(task_id, 100, "SUCCESS", "任务完成", "completed")
-            await task_progress.publish_update(task_id, "system")
+            await task_progress.publish_update(task_id, user_id)
 
         except Exception as e:
             logger.error(f"Task {task_id} failed: {e}")
@@ -87,7 +87,7 @@ async def process_task_background(task_id: str, task_type: str):
                 error_message=str(e)
             )
             await task_progress.set_progress(task_id, 0, "FAILED", f"任务失败: {str(e)}", "error")
-            await task_progress.publish_update(task_id, "system")
+            await task_progress.publish_update(task_id, user_id)
 
 
 @router.get("/", response_model=AsyncTaskListResponse)

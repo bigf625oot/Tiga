@@ -84,6 +84,8 @@ pytest-asyncio
 pytest-cov
 
 # --- Added by Agent ---
+newspaper4k>=0.9.0
+crawl4ai>=0.8.0
 fastapi-mail
 pyjwt
 numba==0.60.0

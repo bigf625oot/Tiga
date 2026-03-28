@@ -26,16 +26,16 @@
         </div>
     </div>
 
-    <div class="flex-1 flex overflow-hidden">
+    <div class="flex-1 flex overflow-hidden min-h-0">
         <!-- Editor Area (Left) -->
         <div class="h-full border-r border-border transition-all duration-300" 
-             :class="isReadOnly ? 'w-0 overflow-hidden border-none' : 'w-1/2'">
+             :class="showEditorOnly ? 'w-full border-none' : (isReadOnly ? 'w-0 overflow-hidden border-none' : 'w-1/2')">
             
             <vue-monaco-editor
-                v-if="!isReadOnly && !showDiff"
+                v-if="(!isReadOnly || showEditorOnly) && !showDiff"
                 v-model:value="localValue"
-                language="markdown"
-                :options="editorOptions"
+                :language="computedLanguage"
+                :options="{...editorOptions, readOnly: isReadOnly}"
                 class="h-full w-full"
                 @mount="handleMount"
             />
@@ -44,7 +44,7 @@
                 v-else-if="showDiff"
                 :original="originalValue"
                 :modified="localValue"
-                language="markdown"
+                :language="computedLanguage"
                 :options="{ ...editorOptions, readOnly: true }"
                 class="h-full w-full"
             />
@@ -52,7 +52,7 @@
         
         <!-- Preview Area (Right/Full) -->
         <div class="h-full overflow-y-auto bg-background custom-scrollbar transition-all duration-300 relative"
-             :class="isReadOnly ? 'w-full' : 'w-1/2'">
+             :class="showEditorOnly ? 'w-0 overflow-hidden border-none p-0' : (isReadOnly ? 'w-full' : 'w-1/2')">
              
             <div v-if="rendering" class="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
                 <div class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
@@ -122,8 +122,17 @@ const emit = defineEmits(['update:value', 'run']);
 const { isLightMode } = useTheme();
 
 const localValue = ref(props.value);
-const isReadOnly = ref(props.readOnly);
+const isReadOnly = computed(() => props.readOnly);
 const showDiff = ref(false);
+
+const isCodeType = computed(() => {
+    const codeTypes = ['python', 'javascript', 'typescript', 'sql', 'json', 'code'];
+    return codeTypes.includes(props.fileType?.toLowerCase()) || codeTypes.includes(props.language?.toLowerCase());
+});
+
+const showEditorOnly = computed(() => isCodeType.value);
+const computedLanguage = computed(() => isCodeType.value && props.language !== 'markdown' ? props.language : 'markdown');
+
 const editorRef = shallowRef();
 const parsedBlocks = ref([]);
 const rendering = ref(false);

@@ -63,10 +63,11 @@ When asked to "crawl" or "automate", you MUST use these tools.""")
     def get_sandbox_prompt() -> str:
         return _("""## Sandbox Capabilities
 You have access to a secure E2B sandbox (Python/Shell).
-1. Use `run_code` for calculations or data processing.
-2. Use `run_shell` to install packages or run system commands.
+1. Use `run_code` for calculations, data processing, or file generation.
+2. Use `run_shell` to install packages or run system commands. (e.g., `pip install python-docx` if you need to generate Word files).
 3. Manage files via `read_file`/`write_file`.
-Always verify the environment with `list_files` if needed.""")
+Always verify the environment with `list_files` if needed.
+CRITICAL: If the user asks you to generate a specific file format (like .docx, .xlsx, .pdf) that requires external libraries, you MUST use `run_shell` to install the required libraries (like python-docx, openpyxl, etc.) FIRST, and then write the Python script to generate the file. Do NOT tell the user that you cannot generate the file due to environment restrictions. You HAVE the capability to install any python package you need.""")
 
     @staticmethod
     def get_knowledge_prompt() -> str:
@@ -94,7 +95,7 @@ Proceed autonomously unless critical confirmation is needed.""")
 
 class InstructionComposer:
     """
-    P10 级指令编排器。
+    指令编排器。
     职责：收集不同维度的指令，按分类排序去重，生成最终 System Prompt。
     """
 

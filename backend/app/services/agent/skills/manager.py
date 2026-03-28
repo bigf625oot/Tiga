@@ -24,8 +24,9 @@ class Skills:
         loaders: List of SkillLoader instances to load skills from.
     """
 
-    def __init__(self, loaders: List[SkillLoader]):
+    def __init__(self, loaders: List[SkillLoader], allowed_skills: Optional[set[str]] = None):
         self.loaders = loaders
+        self.allowed_skills = allowed_skills
         self._skills: Dict[str, Skill] = {}
         self._load_skills()
 
@@ -39,6 +40,8 @@ class Skills:
             try:
                 skills = loader.load()
                 for skill in skills:
+                    if self.allowed_skills is not None and skill.name not in self.allowed_skills:
+                        continue
                     if skill.name in self._skills:
                         log_warning(f"Duplicate skill name '{skill.name}', overwriting with newer version")
                     self._skills[skill.name] = skill

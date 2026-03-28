@@ -13,6 +13,15 @@ class DataToolkit(Toolkit):
         self.register(self.generate_kg_chart)
         self.register(self.query_database)
 
+    def get_system_prompt_snippet(self) -> str:
+        return """
+【数据与图谱查询指引】
+当用户询问关于数据库、表格数据、订单统计、或者需要图表展示时：
+1. 优先调用 `query_database` 工具，将用户的自然语言问题直接传递给工具，它会自动生成 SQL、执行查询并返回数据和图表配置。
+2. 如果用户明确询问图谱关系或复杂实体网络图，调用 `generate_kg_chart` 工具。
+3. 获得工具返回的 JSON 结果后，请将 `data_summary` 总结给用户，如果结果中包含 `chart` 或 `sql`，请保留原样或按要求输出，以便前端渲染。
+"""
+
     async def generate_kg_chart(self, question: str) -> str:
         """
         根据自然语言问题生成知识图谱相关的图表配置。

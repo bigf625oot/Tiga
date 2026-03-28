@@ -1,5 +1,5 @@
 <template>
-  <div class="solo-task-card w-full flex flex-col gap-2.5">
+  <div class="solo-task-card w-full flex flex-col gap-2.5 min-w-0">
 
     <!-- ── 1. Task status header (PRD §3.1 Task Header) ────────────── -->
     <div class="flex items-center gap-2.5">
@@ -45,20 +45,20 @@
     <!-- ── 3. Mini Execution Logs (PRD §2.2) ────────────────────────── -->
     <!-- status 事件推送的阶段说明，单行紧凑摘要，可点击定位到右侧 -->
     <div v-if="miniLogs.length > 0"
-         class="flex flex-col gap-1 pl-0.5">
+         class="flex flex-col gap-1 pl-0.5 min-w-0">
       <div
         v-for="log in miniLogs"
         :key="log.id"
-        class="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 cursor-default group"
+        class="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 cursor-default group min-w-0"
       >
         <span class="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0 group-last:bg-primary/50 group-last:animate-pulse"></span>
-        <span class="truncate leading-relaxed font-mono">{{ log.text }}</span>
+        <span class="truncate leading-relaxed font-mono min-w-0 flex-1">{{ typeof log.text === 'string' ? log.text : JSON.stringify(log.text) }}</span>
       </div>
     </div>
 
     <!-- ── 4. Execution step timeline (PRD §2.2 + §3.2) ─────────────── -->
-    <div v-if="execSteps.length > 0" class="steps-timeline relative flex flex-col mt-0.5">
-      <div v-for="(step, idx) in execSteps" :key="step.id" class="step-row relative flex gap-3">
+    <div v-if="execSteps.length > 0" class="steps-timeline relative flex flex-col mt-0.5 min-w-0">
+      <div v-for="(step, idx) in execSteps" :key="step.id" class="step-row relative flex gap-3 min-w-0">
 
         <!-- Vertical connector -->
         <div
@@ -80,15 +80,16 @@
         <!-- Step body -->
         <div class="flex-1 min-w-0 pb-3.5">
           <!-- Step title + elapsed -->
-          <div class="flex items-baseline justify-between gap-2 mb-1.5">
-            <div class="text-[13px] font-medium leading-snug"
+          <div class="flex items-baseline justify-between gap-2 mb-1.5 min-w-0">
+            <div class="text-[13px] font-medium leading-snug truncate flex-1"
                  :class="{
                    'text-foreground/90': step.status === 'running',
                    'text-muted-foreground/55': step.status === 'done',
                    'text-destructive/80': step.status === 'error',
                    'text-muted-foreground/35': step.status === 'pending',
-                 }">
-              {{ step.title }}
+                 }"
+                 :title="typeof step.title === 'string' ? step.title : JSON.stringify(step.title)">
+              {{ typeof step.title === 'string' ? step.title : JSON.stringify(step.title) }}
             </div>
             <span v-if="step.elapsed" class="text-[10px] text-muted-foreground/35 font-mono flex-shrink-0">
               {{ step.elapsed }}
@@ -108,7 +109,7 @@
     </div>
 
     <!-- ── 5. Orphan tool calls (no plan steps) ──────────────────────── -->
-    <div v-if="orphanToolCalls.length > 0" class="flex flex-col gap-1.5 pl-[26px]">
+    <div v-if="orphanToolCalls.length > 0" class="flex flex-col gap-1.5 pl-[26px] min-w-0">
       <ToolCallPanel v-for="tc in orphanToolCalls" :key="tc.id" :tool-call="tc" />
     </div>
 
@@ -135,14 +136,14 @@
       </div>
 
       <!-- Artifact link cards -->
-      <div v-if="artifactLinks.length > 0" class="flex flex-col gap-2">
+      <div v-if="artifactLinks.length > 0" class="flex flex-col gap-2 min-w-0">
         <a
           v-for="(art, i) in artifactLinks"
           :key="i"
           :href="art.url"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center gap-3 px-3 py-2.5 bg-muted/20 border border-border/40 rounded-lg hover:bg-muted/40 hover:border-border/70 transition-all group/artifact no-underline"
+          class="flex items-center gap-3 px-3 py-2.5 bg-muted/20 border border-border/40 rounded-lg hover:bg-muted/40 hover:border-border/70 transition-all group/artifact no-underline min-w-0"
         >
           <!-- File-type icon badge -->
           <div class="flex-shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
@@ -305,7 +306,8 @@ const miniLogs = computed(() => {
   const result: { id: string; text: string }[] = [];
   for (const ev of events) {
     if (ev.event === 'status' && ev.content) {
-      result.push({ id: ev.id, text: String(ev.content) });
+      const text = typeof ev.content === 'string' ? ev.content : JSON.stringify(ev.content);
+      result.push({ id: ev.id, text });
     }
   }
   // 运行中只显示最新 3 条，避免挤占空间；结束后全量展示
@@ -356,9 +358,14 @@ function computeExecution() {
       else if (hasRunningTool || (isRunning.value && isLastStep && stepTools.length === 0)) status = 'running';
       else if (!isRunning.value || !isLastStep) status = 'done';
 
+      let title = s.content || s.description || s.title || `步骤 ${idx + 1}`;
+      if (typeof title !== 'string') {
+          title = JSON.stringify(title);
+      }
+
       return {
         id: String(s.step ?? s.id ?? idx),
-        title: s.content || s.description || s.title || `步骤 ${idx + 1}`,
+        title,
         status,
         toolCalls: stepTools,
         elapsed: undefined, // 后端未下发耗时时留空

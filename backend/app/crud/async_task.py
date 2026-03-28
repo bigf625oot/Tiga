@@ -12,7 +12,6 @@ class CRUDAsyncTask:
             name=obj_in.name,
             task_type=obj_in.task_type,
             priority=obj_in.priority,
-            context=obj_in.context,
             user_id=user_id,
         )
         db.add(db_obj)

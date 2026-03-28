@@ -70,6 +70,7 @@ class SandboxTools(Toolkit):
                                     
                                     # Save to UPLOADS_DIR for frontend access
                                     from pathlib import Path
+                                    # parents[0]=libs, parents[1]=tools, parents[2]=agent, parents[3]=services, parents[4]=app, parents[5]=backend
                                     backend_dir = Path(__file__).resolve().parents[5]
                                     uploads_dir = backend_dir / "data" / "storage"
                                     uploads_dir.mkdir(parents=True, exist_ok=True)

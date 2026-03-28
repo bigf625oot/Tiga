@@ -1,6 +1,6 @@
 <template>
-  <div class="thinking-block w-full my-1">
-    <Collapsible v-model:open="isOpen" class="bg-transparent overflow-hidden transition-all duration-300">
+  <div class="thinking-block w-full my-1 min-w-0">
+    <Collapsible v-model:open="isOpen" class="bg-transparent overflow-hidden transition-all duration-300 min-w-0">
       <!-- 头部开关 -->
       <CollapsibleTrigger as-child>
         <button class="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/30 transition-colors group outline-none rounded">
@@ -27,7 +27,7 @@
       <CollapsibleContent>
         <div
           ref="contentRef"
-          class="px-3 pb-3 pt-1 text-[13px] text-muted-foreground/80 font-mono leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap max-h-64 custom-scrollbar border-l-2 border-border/40 ml-2.5 pl-4"
+          class="px-3 pb-3 pt-1 text-[13px] text-muted-foreground/80 font-mono leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap break-words max-h-64 custom-scrollbar border-l-2 border-border/40 ml-2.5 pl-4"
         >{{ content }}<span v-if="isThinking" class="inline-block w-1.5 h-3.5 ml-1 bg-muted-foreground/50 align-middle animate-pulse"></span>
         </div>
       </CollapsibleContent>

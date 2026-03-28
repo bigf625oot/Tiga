@@ -25,19 +25,19 @@ class StorageService:
     def _init_provider(self):
         storage_type = (settings.STORAGE_TYPE or "local").lower()
         
+        # parents[0]=storage, parents[1]=platform, parents[2]=services, parents[3]=app, parents[4]=backend
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+        upload_dir = os.path.join(backend_dir, "data", "storage")
+
         try:
             if storage_type == "aliyun_oss":
                 self.provider = AliyunOSSStorage()
             elif storage_type == "s3":
                 self.provider = S3Storage()
             else:
-                backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-                upload_dir = os.path.join(backend_dir, "data", "storage")
                 self.provider = LocalStorage(upload_dir)
         except Exception as e:
             logger.error(f"Failed to initialize storage provider {storage_type}: {e}. Falling back to local.")
-            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-            upload_dir = os.path.join(backend_dir, "data", "storage")
             self.provider = LocalStorage(upload_dir)
 
     async def upload_file(self, file_obj: BinaryIO, object_name: str) -> bool:

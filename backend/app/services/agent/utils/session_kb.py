@@ -29,6 +29,7 @@ class SessionKnowledgeManager:
     def __init__(self, session_id: str, base_dir: Optional[str] = None):
         if base_dir is None:
             # Default to backend/data/sessions
+            # parents[0]=utils, parents[1]=agent, parents[2]=services, parents[3]=app, parents[4]=backend
             backend_dir = Path(__file__).resolve().parents[4]
             base_dir = str(backend_dir / "data" / "sessions")
             

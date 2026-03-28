@@ -114,6 +114,7 @@ export function useChatSession() {
     const obj = data as any;
 
     if (typeof obj.content === 'string' && obj.content.trim()) return truncate(obj.content.trim());
+    if (typeof obj.content === 'object' && obj.content !== null) return truncate(JSON.stringify(obj.content));
     if (typeof obj.message === 'string' && obj.message.trim()) return truncate(obj.message.trim());
     if (typeof obj.desc === 'string' && obj.desc.trim()) return truncate(obj.desc.trim());
 
@@ -125,6 +126,8 @@ export function useChatSession() {
     if (eventType === 'sources' && Array.isArray(obj)) return `${obj.length} sources`;
     if (eventType === 'plan_step' && Array.isArray(obj)) return `${obj.length} steps`;
     if (eventType === 'done') return 'done';
+    
+    if (typeof obj === 'object' && obj !== null) return truncate(JSON.stringify(obj));
 
     return truncate(normalize(obj));
   };
@@ -317,6 +320,18 @@ export function useChatSession() {
                           if (handlers[eventType]) {
                               handlers[eventType](parsedData);
                               if (onEvent) onEvent(eventType, parsedData);
+                          } else {
+                              // Fallback for unknown events or default 'message' to prevent silent swallowing
+                              const fallbackContent = parsedData.content || parsedData.message || parsedData.detail;
+                              if (fallbackContent) {
+                                  if (eventType === 'error') {
+                                      assistantMsg.content = (assistantMsg.content || '') + `\n\n**系统错误**: ${fallbackContent}\n`;
+                                  } else if (eventType === 'message' || eventType === 'text') {
+                                      assistantMsg.content = (assistantMsg.content || '') + fallbackContent;
+                                  } else {
+                                      assistantMsg.content = (assistantMsg.content || '') + `\n\n**[${eventType}]**: ${fallbackContent}\n`;
+                                  }
+                              }
                           }
                       } catch (e) {
                           console.warn('Failed to parse SSE event data', e);

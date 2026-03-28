@@ -12,12 +12,20 @@ class ToolDefinition:
     Why: 强类型领域实体，拒绝裸字典 (Primitive Obsession) 传递，确保元数据内存布局确定性。
     """
     name: str
-    func: Callable
+    func: Any  # Can be a Callable or a Toolkit instance
     description: str
     roles: Set[str] = field(default_factory=set)
 
     def to_schema(self) -> Dict[str, Any]:
         """Why: 动态反射生成 Schema，解耦底层 LLM 规范要求。"""
+        if not callable(self.func):
+            # If it's a Toolkit, we might not need to parse schema here, or we can just return a placeholder
+            return {
+                "type": "toolkit",
+                "name": self.name,
+                "description": self.description
+            }
+
         sig = inspect.signature(self.func)
         properties = {}
         required = []
@@ -70,7 +78,7 @@ class DefaultToolRegistry:
     def register_tool(
         self,
         name: str,
-        func: Callable,
+        func: Any,
         description: str,
         roles: Optional[List[str]] = None,
     ) -> None:
@@ -83,14 +91,14 @@ class DefaultToolRegistry:
         )
         logger.debug(f"Tool registered: {name} (Roles: {roles or 'ALL'})")
 
-    def get_tool(self, name: str) -> Optional[Callable]:
+    def get_tool(self, name: str) -> Optional[Any]:
         tool_def = self._tools.get(name)
         return tool_def.func if tool_def else None
 
-    def get_all_tools(self) -> List[Callable]:
+    def get_all_tools(self) -> List[Any]:
         return [t.func for t in self._tools.values()]
 
-    def build_from_hint(self, role: str) -> List[Callable]:
+    def build_from_hint(self, role: str) -> List[Any]:
         """Why: 按角色动态裁剪工具集，避免大模型 Context Window Pollution。"""
         if not role:
             return self.get_all_tools()

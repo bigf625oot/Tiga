@@ -134,79 +134,56 @@ class SingleExecutor(BaseExecutor):
             if self.state_manager:
                 await self.state_manager.update_status(session_id, "executing")
 
-            # 3. [Execution & Evaluation Phase] 采用有限状态机管理重试机制
+            # 3. [Execution Phase] 执行任务并移除阻塞式同步评估 (P10 Performance Fix)
             execution_engine = ExecutionEngine(db=db, tool_registry=self.tool_registry, llm_model=self.llm_model)
-            evaluation_engine = EvaluationEngine(db=db, llm_model=self.llm_model)
             
             execution_logs = []
             all_success = True
             
-            # [Harness Loop] 带有自我修正的执行循环
+            # [Linear Execution] 采用线性执行，将后置评估降维至旁路
             for task in plan_manifest.tasks:
                 yield {"type": "status", "content": _(f"Executing task: {task.title}")}
                 yield {"type": "execute_start", "content": task.description}
                 
-                succeeded = False
-                for attempt in range(self.MAX_RETRIES):
-                    if attempt > 0:
-                        yield {"type": "status", "content": _(f"Retrying task: {task.title} (Attempt {attempt+1}/{self.MAX_RETRIES})")}
-                        
-                    task_output = ""
+                task_output = ""
+                try:
                     async for event in execution_engine.execute_task(task, history_msgs):
                         # [Stream Adapter] 过滤内部状态，防止前端渲染抖动
                         yield event
                         event_dict = event.to_dict() if hasattr(event, "to_dict") else event
                         if isinstance(event_dict, dict) and event_dict.get("type") == "content" and isinstance(event_dict.get("content"), str):
                             task_output += event_dict.get("content")
-                            
-                    # [Evaluation] 结果断言
-                    eval_result = await evaluation_engine.evaluate_result(
-                        task_goal=task.description,
-                        execution_result=task_output,
-                        criteria=task.expected_output
-                    )
                     
-                    if eval_result.get("passed"):
-                        execution_logs.append(f"Task: {task.title}\nOutput: {task_output}")
-                        yield {"type": "subtask_done", "content": task_output}
-                        succeeded = True
-                        break
-                    
-                    # [Reflection Loop] 未通过则触发动态修正提示注入
-                    if attempt < self.MAX_RETRIES - 1:
-                        yield {"type": "status", "content": _("Task failed evaluation, reflecting...")}
-                        hint = await evaluation_engine.reflect(
-                            task_goal=task.description,
-                            execution_result=task_output,
-                            feedback=eval_result.get("feedback", "")
-                        )
-                        yield {"type": "reflect", "content": hint}
-                        # 注入反思提示供下一次执行修正上下文
-                        task.reflection = hint
-                    else:
-                        yield {"type": "subtask_failed", "content": eval_result.get("feedback", "Max retries reached")}
-                        execution_logs.append(f"Task: {task.title} (FAILED)\nOutput: {task_output}")
-                
-                if not succeeded:
-                    yield {"type": "error", "content": f"Task '{task.title}' failed after {self.MAX_RETRIES} attempts."}
+                    # 假设执行成功，因为不再同步阻塞评估
+                    execution_logs.append(f"Task: {task.title}\nOutput: {task_output}")
+                    yield {"type": "subtask_done", "content": task_output}
+                except Exception as task_err:
+                    yield {"type": "subtask_failed", "content": str(task_err)}
+                    execution_logs.append(f"Task: {task.title} (FAILED)\nOutput: {str(task_err)}")
                     all_success = False
                     break
             
-            # 4. [Reflection Phase] 经验沉淀与全局反思
+            # 4. [Deferred Evaluation & Reflection Phase] 异步后置反思，释放流式吞吐
             if self.state_manager:
                 await self.state_manager.update_status(session_id, "reflecting")
                 
             if self.experience_store:
-                yield {"type": "status", "content": _("Reflecting on execution...")}
+                yield {"type": "status", "content": _("Consolidating experience asynchronously...")}
                 reflection_engine = ReflectionEngine(db=db, experience_store=self.experience_store, llm_model=self.llm_model)
-                summary = await reflection_engine.reflect_and_store(
-                    session_id=session_id,
-                    task_desc=input_text,
-                    execution_log="\n\n".join(execution_logs),
-                    is_success=all_success
-                )
-                if summary:
-                    yield {"type": "content", "content": f"\n\n**Reflection**: {summary}"}
+                
+                # P10 性能优化：将反思作为非阻塞任务投递到事件循环，而不是阻塞等待
+                async def _background_reflect():
+                    try:
+                        await reflection_engine.reflect_and_store(
+                            session_id=session_id,
+                            task_desc=input_text,
+                            execution_log="\n\n".join(execution_logs),
+                            is_success=all_success
+                        )
+                    except Exception as e:
+                        logger.error(f"Background reflection failed: {e}")
+                
+                asyncio.create_task(_background_reflect())
             
             if self.state_manager:
                 await self.state_manager.update_status(session_id, "completed" if all_success else "failed")

@@ -36,11 +36,23 @@ class StreamAggregator:
         self.content = []
         self.reasoning = []
         self.tool_calls = {}
+        self.stream_events = []
 
     def consume(self, chunk: Dict[str, Any]):
-        ctype = chunk.get("type")
+        ctype = chunk.get("type", "message")
         content = chunk.get("content")
         
+        # 将内部事件类型映射为前端期望的 SSE 事件类型，并收集以供持久化
+        sse_event = ctype
+        if ctype == "content":
+            sse_event = "text"
+            
+        self.stream_events.append({
+            "event": sse_event,
+            "content": content if content is not None else chunk,
+            "raw": chunk
+        })
+
         if ctype == "content" and isinstance(content, str):
             self.content.append(content)
         elif ctype == "think" and isinstance(content, str):
@@ -53,12 +65,12 @@ class StreamAggregator:
                     tid = t.get("tool_call_id") or f"unknown_{time.time()}"
                     self.tool_calls[tid] = t
 
-    def finalize(self) -> Tuple[str, str, List[Dict[str, Any]]]:
-        return "".join(self.content), "".join(self.reasoning), list(self.tool_calls.values())
+    def finalize(self) -> Tuple[str, str, List[Dict[str, Any]], List[Dict[str, Any]]]:
+        return "".join(self.content), "".join(self.reasoning), list(self.tool_calls.values()), self.stream_events
 
 class AgnoControlPlane:
     """
-    P10 级智能体控制平面：基于协程编排的异步引擎。
+    智能体控制平面：基于协程编排的异步引擎。
     采用了策略模式处理业务逻辑，并发模型处理 I/O 密集型任务。
     """
 
@@ -148,10 +160,10 @@ class AgnoControlPlane:
         finally:
             # Step 7: 非阻塞持久化 — 使用新 session 避免请求 session 关闭竞态
             # 持有 task 引用防止被 GC 提前回收
-            content, reasoning, tools = aggregator.finalize()
-            if persist_assistant_message and (content or reasoning):
+            content, reasoning, tools, stream_events = aggregator.finalize()
+            if persist_assistant_message and (content or reasoning or stream_events):
                 _persist_task = asyncio.create_task(self._finalize_session_safe(
-                    ctx.session_id, ctx.start_time, ctx.intent, content, reasoning, tools
+                    ctx.session_id, ctx.start_time, ctx.intent, content, reasoning, tools, stream_events
                 ))
                 # Attach to event loop's running tasks set to survive caller scope
                 asyncio.get_event_loop().call_soon(lambda: None)  # yield point ensures task is scheduled
@@ -168,9 +180,14 @@ class AgnoControlPlane:
             # 严格限时 NLU，不能让分析影响响应速度
             return await asyncio.wait_for(nlu_service.analyze(ctx.user_input), timeout=6.0)
         except Exception as e:
-            logger.warning(f"NLU failed or timed out: {e}. Falling back to chat.")
+            logger.warning(f"NLU failed or timed out: {e}. Falling back safely.")
+            
+            fallback_intent = "chat"
+            if ctx.kwargs.get("agent_id"):
+                fallback_intent = "task"
+                
             return IntentResult(
-                intent="chat",
+                intent=fallback_intent,
                 confidence=0.0,
                 reasoning=f"Control plane fallback: {e}",
                 parameters={},
@@ -242,6 +259,7 @@ class AgnoControlPlane:
         content: str,
         reasoning: str,
         tools: List[Dict[str, Any]],
+        stream_events: List[Dict[str, Any]] = None,
     ):
         """收尾工作：用独立 session 保存回复，避免与请求 session 生命周期冲突"""
         from app.db.session import AsyncSessionLocal
@@ -249,16 +267,20 @@ class AgnoControlPlane:
         try:
             async with AsyncSessionLocal() as db:
                 history = SessionHistory(db)
+                meta_data = {
+                    "duration_ms": duration,
+                    "intent": intent.intent.value if isinstance(intent.intent, Enum) else str(intent.intent) if intent else "unknown",
+                }
+                if stream_events:
+                    meta_data["stream_events"] = stream_events
+                    
                 await history.add_message(
                     session_id,
                     "assistant",
                     content,
                     reasoning_content=reasoning,
                     tool_calls=tools if tools else None,
-                    meta_data={
-                        "duration_ms": duration,
-                        "intent": intent.intent.value if isinstance(intent.intent, Enum) else str(intent.intent) if intent else "unknown",
-                    }
+                    meta_data=meta_data
                 )
             logger.debug(f"Session {session_id} persisted in {duration}ms")
         except Exception as e:
@@ -273,7 +295,7 @@ class AgnoControlPlane:
     def _get_forced_intent(self, kwargs: Dict) -> Optional[str]:
         """从请求参数中提取强制意图或模式"""
         mode_map = {
-            "quick": "chat", "chat": "chat",
+            "quick": "quick", "chat": "chat",
             "plan": "task", "task": "task", "solo": "task",
             "team": "team",
             "flow": "workflow", "workflow": "workflow",

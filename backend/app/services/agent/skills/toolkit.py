@@ -1,7 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Iterable, Set
+import json
 from agno.tools import Toolkit
 from .skill import Skill
 from .loaders.local import LocalSkills
+from .loaders.memory import InMemorySkills
 from .manager import Skills as SkillsManager
 
 class SkillToolkit(Toolkit):
@@ -13,10 +15,17 @@ class SkillToolkit(Toolkit):
     _label = "扩展技能 (Skills)"
     _description = "访问和执行扩展技能包"
     
-    def __init__(self, skills_path: str = "app/data/skills"):
+    def __init__(
+        self,
+        skills_path: str = "app/data/skills",
+        allowed_skills: Optional[Iterable[str]] = None,
+        skills: Optional[List[Skill]] = None,
+    ):
         super().__init__(name="skills")
         self.skills_path = skills_path
         self.manager: Optional[SkillsManager] = None
+        self.allowed: Optional[Set[str]] = set(allowed_skills) if allowed_skills else None
+        self._preloaded_skills = skills
         self._initialize_manager()
 
     def _initialize_manager(self):
@@ -26,17 +35,18 @@ class SkillToolkit(Toolkit):
         if not path.is_absolute():
             path = Path.cwd() / path
             
+        loaders = []
+        if self._preloaded_skills is not None:
+            loaders.append(InMemorySkills(self._preloaded_skills))
         if path.exists():
-            loader = LocalSkills(path=str(path))
-            self.manager = SkillsManager(loaders=[loader])
-            # Register the tools provided by the manager
-            for tool in self.manager.get_tools():
-                # The manager returns agno.tools.function.Function objects
-                # We need to register their entrypoints
-                self.register(tool.entrypoint)
-        else:
-            # If path doesn't exist, we just don't register any tools
-            pass
+            loaders.append(LocalSkills(path=str(path)))
+        if not loaders:
+            return
+        self.manager = SkillsManager(loaders=loaders, allowed_skills=self.allowed)
+
+        # Register standard tools from manager directly
+        for tool in self.manager.get_tools():
+            self.register(tool)
 
     def get_system_prompt_snippet(self) -> str:
         """Get the system prompt snippet for skills."""
