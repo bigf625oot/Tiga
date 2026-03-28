@@ -10,7 +10,9 @@ export type BlockType =
   | 'terminal' 
   | 'search' 
   | 'visualization' 
-  | 'confirmation';
+  | 'confirmation'
+  | 'sandbox'
+  | 'kb_retrieval';
 
 export interface ChatMessage {
   id: string;
@@ -92,8 +94,46 @@ export interface ConfirmationBlock {
 
 export interface VisualizationBlock {
   type: 'visualization';
-  vis_type: 'mermaid' | 'recharts';
+  vis_type: 'mermaid' | 'recharts' | 'echarts';
   data: string;
+}
+
+export interface ResourceBlock {
+  type: 'resource';
+  resource_type: 'doc' | 'file';
+  data: any;
+}
+
+export interface ErrorBlock {
+  type: 'error';
+  message: string;
+  can_retry: boolean;
+}
+
+export interface SandboxBlock {
+  type: 'sandbox';
+  status: 'pending' | 'running' | 'success' | 'error';
+  code: string;
+  output?: string;
+}
+
+export interface KbRetrievalBlock {
+  type: 'kb_retrieval';
+  query: string;
+  status: 'searching' | 'completed';
+  results: any[];
+}
+
+export interface ReferencesBlock {
+  type: 'references';
+  sources: any[];
+}
+
+export interface SoloLayoutBlock {
+  type: 'solo_layout';
+  original_message: any; // Temporarily passing original message to reuse SoloTaskCard component logic, or fully map it
+  is_last: boolean;
+  is_streaming: boolean;
 }
 
 export type ContentBlock = 
@@ -106,4 +146,10 @@ export type ContentBlock =
   | ActionBlock
   | SearchBlock
   | ConfirmationBlock
-  | VisualizationBlock;
+  | VisualizationBlock
+  | ResourceBlock
+  | ErrorBlock
+  | SandboxBlock
+  | KbRetrievalBlock
+  | ReferencesBlock
+  | SoloLayoutBlock;

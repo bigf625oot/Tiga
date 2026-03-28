@@ -1122,7 +1122,6 @@ const fetchAvailableTools = async () => {
                 'youtube': '专业数据',
 
                 // 3. 效率办公
-                'n8n': '效率办公',
                 // Future: notion, slack, email, google_calendar
 
                 // 4. 开发工具
@@ -1162,7 +1161,6 @@ const fetchAvailableTools = async () => {
         defaultTools.value = [
             { label: '网络搜索 (DuckDuckGo)', value: 'duckduckgo', desc: '网络搜索工具，支持实时信息检索', category: '基础工具' },
             { label: '计算器', value: 'calculator', desc: '数学计算工具，支持复杂运算', category: '基础工具' },
-            { label: 'N8N 工作流', value: 'n8n', desc: '工作流自动化，连接外部服务', category: '效率办公' },
             { label: 'GitHub', value: 'github', desc: '代码仓库管理工具', category: '开发工具' },
             { label: 'YouTube', value: 'youtube', desc: '视频内容解析工具', category: '专业数据' },
             { label: 'Exa 搜索', value: 'exa', desc: 'AI 驱动的语义搜索引擎', category: '基础工具' },

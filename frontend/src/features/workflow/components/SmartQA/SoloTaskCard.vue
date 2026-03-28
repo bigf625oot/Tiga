@@ -36,10 +36,9 @@
     </div>
 
     <!-- ── 2. Thinking (PRD §2.1 Thought Chain) ─────────────────────── -->
-    <ThinkingBlock
+    <ThoughtAccordion
       v-if="thinkingContent"
-      :content="thinkingContent.raw"
-      :is-thinking="thinkingContent.isPartial"
+      :block="{ type: 'thought', content: thinkingContent.raw, state: thinkingContent.isPartial ? 'thinking' : 'collapsed' }"
     />
 
     <!-- ── 3. Mini Execution Logs (PRD §2.2) ────────────────────────── -->
@@ -98,10 +97,11 @@
 
           <!-- Tool calls (PRD §2.3 Tool Invocation) -->
           <div v-if="step.toolCalls.length > 0" class="flex flex-col gap-1.5">
-            <ToolCallPanel
+            <ToolStatusCard
               v-for="tc in step.toolCalls"
               :key="tc.id"
-              :tool-call="tc"
+              :tool-call="{ type: 'tool_call', call_id: tc.id, tool_name: tc.name, arguments: tc.args || {}, state: tc.status === 'error' ? 'error' : (tc.status === 'running' ? 'running' : 'success') }"
+              :tool-result="tc.result ? { type: 'tool_result', call_id: tc.id, content: typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result), is_error: tc.status === 'error' } : undefined"
             />
           </div>
         </div>
@@ -110,7 +110,12 @@
 
     <!-- ── 5. Orphan tool calls (no plan steps) ──────────────────────── -->
     <div v-if="orphanToolCalls.length > 0" class="flex flex-col gap-1.5 pl-[26px] min-w-0">
-      <ToolCallPanel v-for="tc in orphanToolCalls" :key="tc.id" :tool-call="tc" />
+      <ToolStatusCard
+        v-for="tc in orphanToolCalls"
+        :key="tc.id"
+        :tool-call="{ type: 'tool_call', call_id: tc.id, tool_name: tc.name, arguments: tc.args || {}, state: tc.status === 'error' ? 'error' : (tc.status === 'running' ? 'running' : 'success') }"
+        :tool-result="tc.result ? { type: 'tool_result', call_id: tc.id, content: typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result), is_error: tc.status === 'error' } : undefined"
+      />
     </div>
 
     <!-- ── 6. Global waiting placeholder ─────────────────────────────── -->
@@ -125,7 +130,7 @@
 
     <!-- ── 7. Deliverables / Artifacts (PRD §2.4) ─────────────────────── -->
     <!-- 不直接渲染最终生成内容，仅展示沙箱产出文件或其他交付物的链接卡片 -->
-    <template v-if="artifactLinks.length > 0 || isRunning">
+    <template v-if="artifactLinks.length > 0 || inlineCodeBlocks.length > 0 || isRunning">
 
       <!-- Divider (only when execution context exists above) -->
       <div v-if="execSteps.length > 0 || orphanToolCalls.length > 0"
@@ -136,10 +141,10 @@
       </div>
 
       <!-- Artifact link cards -->
-      <div v-if="artifactLinks.length > 0" class="flex flex-col gap-2 min-w-0">
+      <div v-if="artifactLinks.length > 0 || inlineCodeBlocks.length > 0" class="flex flex-col gap-2 min-w-0">
         <a
           v-for="(art, i) in artifactLinks"
-          :key="i"
+          :key="'art-'+i"
           :href="art.url"
           target="_blank"
           rel="noopener noreferrer"
@@ -163,6 +168,29 @@
           <!-- Open-in-new icon -->
           <ExternalLink class="w-3.5 h-3.5 text-muted-foreground/30 group-hover/artifact:text-primary/60 flex-shrink-0 transition-colors" />
         </a>
+
+        <!-- Inline Code Blocks as Artifacts -->
+        <div
+          v-for="(code, i) in inlineCodeBlocks"
+          :key="'code-'+i"
+          @click="openCodeArtifact(code)"
+          class="flex items-center gap-3 px-3 py-2.5 bg-muted/20 border border-border/40 rounded-lg hover:bg-muted/40 hover:border-border/70 transition-all group/artifact cursor-pointer min-w-0"
+        >
+          <div class="flex-shrink-0 w-8 h-8 rounded-md bg-indigo-500/10 flex items-center justify-center">
+            <Code2 class="w-4 h-4 text-indigo-500/70" />
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <p class="text-[13px] font-medium text-foreground/80 truncate group-hover/artifact:text-foreground transition-colors">
+              {{ code.language.toUpperCase() }} 代码块片段
+            </p>
+            <p class="text-[11px] text-muted-foreground/50 mt-0.5 font-mono">
+              {{ code.lines }} 行代码 · 点击预览
+            </p>
+          </div>
+
+          <Maximize2 class="w-3.5 h-3.5 text-muted-foreground/30 group-hover/artifact:text-indigo-500/60 flex-shrink-0 transition-colors" />
+        </div>
       </div>
 
       <!-- Streaming placeholder (no artifacts produced yet) -->
@@ -216,14 +244,16 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CheckCircle2, XCircle, Link2, FileText, ExternalLink } from 'lucide-vue-next';
-import type { Message, StreamEventItem } from '../../../types';
-import ToolCallPanel from './ToolCallPanel.vue';
-import ThinkingBlock from '../chat/ThinkingBlock.vue';
-import ErrorCallout from '../common/ErrorCallout.vue';
-import ChartFrame from '../../../../analytics/components/ChartFrame.vue';
-import { useChartOptions } from '../../../composables/useChart';
-import { formatDuration, formatFileSize } from '../../../utils/dateUtils';
+import { CheckCircle2, XCircle, Link2, FileText, ExternalLink, Code2, Maximize2 } from 'lucide-vue-next';
+import type { Message, StreamEventItem } from '../../../qa/types';
+import ThoughtAccordion from '../../../chat/components/ThoughtAccordion.vue';
+import ToolStatusCard from '../../../chat/components/ToolStatusCard.vue';
+import PlanBlock from '../../../chat/components/PlanBlock.vue';
+import ErrorCallout from '../../../qa/components/SmartQA/common/ErrorCallout.vue';
+import ChartFrame from '../../../analytics/components/ChartFrame.vue';
+import { useChartOptions } from '../../../qa/composables/useChart';
+import { formatDuration, formatFileSize } from '../../../qa/utils/dateUtils';
+import { useArtifact } from '../../../chat/context/ArtifactContext';
 
 // ── Props & emits ───────────────────────────────────────────────────
 const props = defineProps<{
@@ -235,6 +265,41 @@ const props = defineProps<{
 const emit = defineEmits(['locate-node', 'resend-message']);
 
 const { processOption } = useChartOptions();
+const artifactContext = useArtifact();
+
+// ── Code block parser ────────────────────────────────────────────────
+// Extract code blocks from markdown message content to show as artifacts
+const inlineCodeBlocks = computed(() => {
+  if (!props.message.content) return [];
+  const content = props.message.content;
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  const blocks: { language: string; content: string; lines: number }[] = [];
+  
+  let match;
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    const lang = match[1] || 'text';
+    const code = match[2].trim();
+    // Only capture blocks that are long enough to warrant an artifact view
+    const lines = code.split('\n').length;
+    if (lines >= 5 && ['vue', 'html', 'javascript', 'typescript', 'python', 'json', 'sql'].includes(lang.toLowerCase())) {
+      blocks.push({
+        language: lang,
+        content: code,
+        lines
+      });
+    }
+  }
+  return blocks;
+});
+
+const openCodeArtifact = (code: { language: string; content: string }) => {
+  artifactContext.openArtifact({
+    type: code.language as any,
+    content: code.content,
+    language: code.language,
+    title: `生成代码 (${code.language})`
+  });
+};
 
 // ── Derived flags ───────────────────────────────────────────────────
 const isRunning = computed(() => props.isStreaming && props.isLast);

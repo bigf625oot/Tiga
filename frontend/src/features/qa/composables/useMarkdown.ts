@@ -181,6 +181,13 @@ export function useMarkdown() {
             }
         });
 
+        // Pre-process for document cards before markdown parsing to handle markdown bolding etc
+        // Convert `**doc#6**: 《...》` or `doc#6: 《...》` or `• doc#6: 《...》` into a custom tag that we can parse later
+        // It's possible the text includes newlines or dashes, so let's be more flexible.
+        inputText = inputText.replace(/(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?[:：]?\s*《([^》]+)》/gi, (match, docId, title) => {
+            return `\n\n<document-card doc-id="${docId}" title="${escapeHtml(title)}"></document-card>\n\n`;
+        });
+
         // Parse markdown
         const renderer = createRenderer(allowHtml);
         const markedOptions = { ...baseMarkedOptions, renderer };
@@ -191,6 +198,9 @@ export function useMarkdown() {
         html = html.replace(/\[(\d+)\]/g, (match: string, p1: string) => {
             return `<span class="citation-link cursor-pointer text-indigo-600 hover:underline font-medium mx-0.5" data-index="${p1}">[${p1}]</span>`;
         });
+        
+        // Remove paragraph tags around document-card if marked wrapped them
+        html = html.replace(/<p>\s*(<document-card[^>]*><\/document-card>)\s*<\/p>/gi, '$1');
 
         return html;
     };

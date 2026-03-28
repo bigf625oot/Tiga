@@ -446,6 +446,9 @@
        </DialogContent>
     </Dialog>
 
+    <!-- Global Artifact Editor Popup -->
+    <GlobalArtifactEditor />
+
     <!-- 全局任务中心 -->
     <TaskCenter />
   </div>
@@ -476,6 +479,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue';
 import LanguageToggle from '@/components/LanguageToggle.vue';
 import AgentIcon from '@/shared/components/atoms/AgentIcon/AgentIcon.vue';
 import TaskCenter from '@/components/TaskCenter.vue';
+import { useArtifactProvider, ArtifactContextKey } from '@/features/chat/context/ArtifactContext';
 
 // Icons
 import {
@@ -499,6 +503,9 @@ const { isLightMode } = useTheme();
 const { toast } = useToast();
 const { t } = useI18n();
 
+// Initialize Artifact Provider globally
+useArtifactProvider();
+
 // Async Components
 const RecordingList = defineAsyncComponent(() => import('@/features/recording/components/RecordingList.vue'));
 const RecordingDetail = defineAsyncComponent(() => import('@/features/recording/components/RecordingDetail.vue'));
@@ -516,7 +523,7 @@ const DatabaseManagement = defineAsyncComponent(() => import('@/features/system/
 const AgentManagement = defineAsyncComponent(() => import('@/features/agent/components/AgentManagement.vue'));
 const ServiceMarket = defineAsyncComponent(() => import('@/features/agent/components/ServiceMarket.vue'));
 const AgentFlow = defineAsyncComponent(() => import('@/features/agent/components/AgentFlow.vue'));
-const WorkflowManagement = defineAsyncComponent(() => import('@/features/workflow/components/WorkflowManagement.vue'));
+
 const DataDashboard = defineAsyncComponent(() => import('@/features/data_etl/DataDashboard.vue'));
 const DataSourceManagement = defineAsyncComponent(() => import('@/features/data_etl/DataSourceManagement.vue'));
 const EtlPipelineList = defineAsyncComponent(() => import('@/features/data_etl/EtlPipelineList.vue'));
@@ -524,6 +531,7 @@ const EditorLayout = defineAsyncComponent(() => import('@/features/etl_editor/Ed
 const SystemSettings = defineAsyncComponent(() => import('@/features/data_etl/SystemSettings.vue'));
 const SmartTeam = defineAsyncComponent(() => import('@/features/team/components/SmartTeam.vue'));
 const ChatDemo = defineAsyncComponent(() => import('@/features/chat/components/ChatView.vue'));
+const GlobalArtifactEditor = defineAsyncComponent(() => import('@/features/workflow/components/editor/GlobalArtifactEditor.vue'));
 
 // Setup Axios
 const api = axios.create({
@@ -580,7 +588,6 @@ const componentMap: Record<string, any> = {
     'agent': AgentManagement,
     'service_market': ServiceMarket,
     'agent_flow': AgentFlow,
-    'workflow': WorkflowManagement,
     'data_dashboard': DataDashboard,
     'data_source': DataSourceManagement,
     'etl_list': EtlPipelineList,

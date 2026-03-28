@@ -132,7 +132,7 @@
 
         <!-- Sticky Input Area positioned at bottom overlaying the list -->
         <!-- Use z-30 to ensure input area is above message list -->
-        <div class="flex-none w-full px-4 pt-4 pb-6 z-30 bg-background shrink-0 relative border-t border-border/20 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.2)]">
+        <div class="flex-none w-full px-4 pt-4 pb-6 z-30 bg-background shrink-0 relative  dark:shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.2)]">
           <div class="max-w-4xl mx-auto relative group/footer">
            <!-- Mode Toggle Trigger (Visible on hover or if no modes shown) -->
            <div v-if="!isModeBarVisible" class="absolute -top-8 left-0 w-full flex justify-center opacity-0 group-hover/footer:opacity-100 transition-opacity duration-300 pointer-events-none group-hover/footer:pointer-events-auto">

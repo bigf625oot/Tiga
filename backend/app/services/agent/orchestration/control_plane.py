@@ -170,20 +170,27 @@ class AgnoControlPlane:
 
     async def _resolve_intent(self, ctx: OrchestrationContext) -> IntentResult:
         """带强制逻辑与超时回退的意图识别"""
-        # 处理强制指定的模式
-        forced = self._get_forced_intent(ctx.kwargs)
-        if forced:
-            return IntentResult(intent=forced, confidence=1.0, reasoning="Forced intent override.", parameters={})
+        mode_hint = self._get_forced_intent(ctx.kwargs)
+        # P10 护城河：即使有强制模式（如 task），如果用户只是想闲聊或问问题，也应该灵活降级，避免重度执行。
+        # 因此，我们将 forced 作为 mode_hint 传递给 NLU 服务，而不是直接 bypass。
 
         try:
             nlu_service = NluService(self.llm_model)
             # 严格限时 NLU，不能让分析影响响应速度
-            return await asyncio.wait_for(nlu_service.analyze(ctx.user_input), timeout=6.0)
+            return await asyncio.wait_for(
+                nlu_service.analyze(
+                    ctx.user_input, 
+                    mode_hint=mode_hint, 
+                    session_id=ctx.session_id, 
+                    db=ctx.db
+                ), 
+                timeout=8.0
+            )
         except Exception as e:
             logger.warning(f"NLU failed or timed out: {e}. Falling back safely.")
             
-            fallback_intent = "chat"
-            if ctx.kwargs.get("agent_id"):
+            fallback_intent = mode_hint or "chat"
+            if not mode_hint and ctx.kwargs.get("agent_id"):
                 fallback_intent = "task"
                 
             return IntentResult(

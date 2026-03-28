@@ -143,7 +143,29 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      typography: (theme) => ({
+        DEFAULT: {
+          css: {
+            pre: {
+              backgroundColor: 'transparent',
+              padding: '0',
+              margin: '0',
+            },
+            code: {
+              backgroundColor: 'transparent',
+              padding: '0',
+              margin: '0',
+            },
+            'code::before': {
+              content: '""',
+            },
+            'code::after': {
+              content: '""',
+            },
+          },
+        },
+      }),
     },
   },
-  plugins: [animate],
+  plugins: [animate, require('@tailwindcss/typography')],
 }

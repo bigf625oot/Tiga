@@ -145,12 +145,22 @@
             <!-- 有 output 时渲染 markdown；无 output 有 logs 时显示日志 -->
             <section v-if="selectedTask.output">
               <!-- section label: text-xs(12px) font-medium(500) — 无 uppercase/tracking，CJK 适配 -->
-              <h4 class="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5 leading-tight">
-                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                任务输出
+              <h4 class="text-xs font-medium text-muted-foreground mb-2 flex items-center justify-between leading-tight">
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  任务输出
+                </div>
+                <button 
+                  v-if="hasCodeArtifact(selectedTask.output)"
+                  @click="openTaskArtifact(selectedTask.output)"
+                  class="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors px-1.5 py-0.5 rounded bg-primary/10"
+                >
+                  <Code2 class="w-3 h-3" />
+                  预览代码产物
+                </button>
               </h4>
               <!-- rounded-lg bg-muted/30 border p-4(16px) ← radius + color + spacing tokens -->
               <div ref="outputRef"
@@ -330,7 +340,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import LogDrawer from '@/features/workflow/components/drawer/LogDrawer.vue';
 import TaskGraph from './graph/TaskGraph.vue';
-import { Network } from 'lucide-vue-next';
+import { Network, Code2 } from 'lucide-vue-next';
 import {
   CheckCircleOutlined,
   SyncOutlined,
@@ -341,6 +351,7 @@ import {
 } from '@ant-design/icons-vue';
 import { marked } from 'marked';
 import mermaid from 'mermaid';
+import { useArtifact } from '@/features/chat/context/ArtifactContext';
 
 // ── Mermaid 初始化 (模块级，仅执行一次) ──
 // theme: neutral 在亮/暗两种模式下均可接受；fontFamily:inherit 跟随系统字体
@@ -364,6 +375,7 @@ defineProps({
 
 const store = useWorkflowStore();
 const isLogDrawerOpen = ref(false);
+const artifactContext = useArtifact();
 
 // ── Master → Detail 导航 ──
 // selectedTask 为 null → DAG 视图；有值 → 详情视图
@@ -595,6 +607,29 @@ const renderMarkdown = (text) => {
         return `<div class="mermaid-wrap"><div class="mermaid">${mermaidCode}</div></div>`;
       }
     );
+};
+
+// ── Code Artifact Support ──
+const hasCodeArtifact = (text) => {
+  if (!text) return false;
+  // 检查是否包含支持的语言代码块且行数大于 5
+  const match = text.match(/```(vue|html|javascript|typescript|python|json|sql)?\n([\s\S]*?)```/i);
+  if (!match) return false;
+  return match[2].trim().split('\n').length >= 5;
+};
+
+const openTaskArtifact = (text) => {
+  if (!text) return;
+  const match = text.match(/```(vue|html|javascript|typescript|python|json|sql)?\n([\s\S]*?)```/i);
+  if (match) {
+    const lang = (match[1] || 'text').toLowerCase();
+    artifactContext.openArtifact({
+      type: lang, 
+      content: match[2].trim(),
+      language: lang,
+      title: `任务产物 (${lang})`
+    });
+  }
 };
 
 const openLogDrawer = () => { isLogDrawerOpen.value = true; };

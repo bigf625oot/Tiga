@@ -3,32 +3,72 @@
     <!-- Toolbar -->
     <div class="h-10 border-b border-border flex items-center px-4 justify-between bg-muted/50">
         <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Code Editor</span>
-            <span v-if="isReadOnly" class="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">READ ONLY</span>
+            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">代码编辑器</span>
+            <span v-if="isReadOnly" class="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">只读</span>
         </div>
         <div class="flex items-center gap-2">
             <button 
                 class="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-muted text-muted-foreground transition-colors"
                 @click="toggleDiff"
-                title="Toggle Diff View"
+                :title="showDiff ? '隐藏差异对比' : '显示差异对比'"
             >
                 <component :is="showDiff ? 'EyeInvisibleOutlined' : 'DiffOutlined'" />
-                {{ showDiff ? 'Hide Diff' : 'Show Diff' }}
+                {{ showDiff ? '隐藏对比' : '显示对比' }}
             </button>
             <button 
                 class="text-xs flex items-center gap-1 px-2 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition-colors border border-indigo-500/20"
                 @click="runSelection"
-                title="Run Selected Code"
+                title="运行选中的代码 (未选中则运行全部)"
             >
                 <PlayCircleOutlined />
-                Run Selection
+                运行代码
             </button>
         </div>
     </div>
 
     <div class="flex-1 flex overflow-hidden min-h-0">
-        <!-- Editor Area (Left) -->
-        <div class="h-full border-r border-border transition-all duration-300" 
+        <!-- Preview Area (Left/Full) -->
+        <div class="h-full overflow-y-auto bg-background custom-scrollbar transition-all duration-300 relative"
+             :class="showEditorOnly ? 'w-0 overflow-hidden border-none p-0' : (isReadOnly ? 'w-full' : 'w-1/2')">
+             
+            <div v-if="rendering" class="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
+                <div class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+
+            <div class="p-8 markdown-body">
+                <template v-for="(block, index) in parsedBlocks" :key="block.id">
+                    <!-- HTML Content -->
+                    <div v-if="block.type === 'html'" v-html="block.content"></div>
+                    
+                    <!-- Vue Component Preview -->
+                    <div v-else-if="block.type === 'vue'" class="my-6 border border-border rounded-lg overflow-hidden bg-card shadow-sm transition-all hover:shadow-md">
+                        <div class="px-4 py-2 border-b border-border bg-muted/50 flex justify-between items-center">
+                            <span class="text-xs font-medium text-muted-foreground">Vue 实时预览</span>
+                        </div>
+                        
+                        <div class="p-6 bg-card relative">
+                            <ErrorBoundary>
+                                <component :is="block.component" v-if="block.component" />
+                                <div v-else class="text-amber-500 text-sm">正在编译组件...</div>
+                            </ErrorBoundary>
+                        </div>
+                    </div>
+                </template>
+                
+                <div v-if="parsedBlocks.length === 0 && !localValue" class="flex flex-col items-center justify-center h-full min-h-[300px] text-muted-foreground select-none absolute inset-0">
+                    <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-4 border border-border">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-muted">
+                            <path d="M16 18L22 12L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 6L2 12L8 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <p class="text-sm font-medium text-muted-foreground">等待 LLM 生成代码...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor Area (Right) -->
+        <div class="h-full border-l border-border transition-all duration-300" 
              :class="showEditorOnly ? 'w-full border-none' : (isReadOnly ? 'w-0 overflow-hidden border-none' : 'w-1/2')">
             
             <vue-monaco-editor
@@ -49,61 +89,12 @@
                 class="h-full w-full"
             />
         </div>
-        
-        <!-- Preview Area (Right/Full) -->
-        <div class="h-full overflow-y-auto bg-background custom-scrollbar transition-all duration-300 relative"
-             :class="showEditorOnly ? 'w-0 overflow-hidden border-none p-0' : (isReadOnly ? 'w-full' : 'w-1/2')">
-             
-            <div v-if="rendering" class="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
-                <div class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-
-            <div class="p-8 markdown-body">
-                <template v-for="(block, index) in parsedBlocks" :key="block.id">
-                    <!-- HTML Content -->
-                    <div v-if="block.type === 'html'" v-html="block.content"></div>
-                    
-                    <!-- Vue Component Preview -->
-                    <div v-else-if="block.type === 'vue'" class="my-6 border border-border rounded-lg overflow-hidden bg-card shadow-sm transition-all hover:shadow-md">
-                        <div class="px-4 py-2 border-b border-border bg-muted/50 flex justify-between items-center">
-                            <span class="text-xs font-medium text-muted-foreground">Vue Preview</span>
-                            <div class="flex gap-2">
-                                <button class="text-xs text-muted-foreground hover:text-primary transition-colors" @click="block.showCode = !block.showCode">
-                                    {{ block.showCode ? '隐藏代码' : '查看代码' }}
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="p-6 bg-card relative">
-                            <ErrorBoundary>
-                                <component :is="block.component" v-if="block.component" />
-                                <div v-else class="text-amber-500 text-sm">正在编译组件...</div>
-                            </ErrorBoundary>
-                        </div>
-                        
-                        <div v-if="block.showCode" class="border-t border-border bg-muted/50 p-4 overflow-x-auto">
-                            <pre class="text-xs m-0 font-mono text-muted-foreground">{{ block.rawCode }}</pre>
-                        </div>
-                    </div>
-                </template>
-                
-                <div v-if="parsedBlocks.length === 0 && !localValue" class="flex flex-col items-center justify-center h-full min-h-[300px] text-muted-foreground select-none absolute inset-0">
-                    <div class="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-4 border border-border">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-muted">
-                            <path d="M16 18L22 12L16 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 6L2 12L8 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <p class="text-sm font-medium text-muted-foreground">等待 LLM 生成代码...</p>
-                </div>
-            </div>
-        </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, shallowRef, defineComponent, onErrorCaptured, h, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, shallowRef, defineComponent, onErrorCaptured, h, onBeforeUnmount } from 'vue';
 import { VueMonacoEditor, VueMonacoDiffEditor } from '@guolao/vue-monaco-editor';
 import { marked } from 'marked';
 import { compile } from 'vue';
@@ -150,9 +141,6 @@ const runSelection = () => {
     if (selectedText) {
         emit('run', selectedText);
     } else {
-        // Run all if nothing selected? Or show warning?
-        // Let's run all for now or maybe just the current block?
-        // For now, just emit all if empty
         emit('run', localValue.value);
     }
 };
@@ -249,19 +237,9 @@ const compileVueBlock = async (code) => {
         let componentOptions = {};
         // Convert export default to module.exports for sandbox
         let sandboxedScript = scriptContent.replace('export default', 'module.exports =');
-        if (!sandboxedScript.includes('module.exports')) {
-             // Try to find "return" or just wrap object
-             // Assuming user writes "export default" most of the time
-        }
         
-        try {
-            const rawOptions = runInSandbox(sandboxedScript);
-            componentOptions = rawOptions || {};
-        } catch (e) {
-            // Fallback for simple object definition
-            // componentOptions = {};
-            throw e;
-        }
+        const rawOptions = runInSandbox(sandboxedScript);
+        componentOptions = rawOptions || {};
 
         // Inject Render Function
         if (render) {
@@ -283,17 +261,6 @@ const compileVueBlock = async (code) => {
                 document.head.removeChild(styleEl);
                 if (originalUnmount) originalUnmount.call(this);
             };
-            
-            // Add scopeId to component (Vue internal) or use attrs
-            // Since we use runtime compiler, we might need to patch render or attrs
-            // For simplicity, we just inject global style for now or use specific selector strategy
-            // But requirement asks for scoped.
-            // Let's refine:
-            // Actually, we can just inject the style as is if user uses scoped, 
-            // but we need the compiler to add scopeId to elements.
-            // Runtime compiler 'compile' doesn't support scopeId out of the box easily without SFC compiler.
-            // We will just inject style globally for this demo to ensure it works, 
-            // or use a unique class wrapper if possible.
         }
 
         const component = defineComponent(componentOptions);

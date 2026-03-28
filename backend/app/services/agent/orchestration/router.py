@@ -18,7 +18,8 @@ _TASK_PATTERNS = [
     r"帮我(完成|实现|开发|制作|搭建|构建|创建|写一个|生成)",
     r"(制定|规划|设计|制作)(一?个?)(方案|计划|流程|步骤|大纲|报告)",
     r"(分步|逐步|一步一步|step.?by.?step)",
-    r"(完整的|系统的|全面的).{0,10}(分析|报告|方案|计划)",
+    r"(完整的|系统的|全面的|详细的|深入的)?.{0,10}(分析|报告|方案|计划|调研|总结|综述)",
+    r"请?(分析|预测|评估).{0,20}(舆情|数据|代码|趋势|走势|市场|竞品)",
     r"(先.{1,10}然后.{1,10}最后|首先.{1,10}接着.{1,10}最终)",
     # 英文
     r"\b(create|build|implement|develop|design|generate)\b.{0,20}\b(plan|step|workflow)\b",
@@ -82,7 +83,12 @@ class ModeRouter:
         进行意图分析并返回目标执行器 (Executor) 以及意图结果。
         若调用方已解析意图（如 AgnoControlPlane），直接传入 resolved_intent 跳过重复 NLU 调用。
         """
-        intent = resolved_intent if resolved_intent is not None else await self._resolve_intent(user_input, kwargs)
+        intent = resolved_intent if resolved_intent is not None else await self._resolve_intent(
+            user_input, 
+            kwargs, 
+            session_id=kwargs.get("session_id"), 
+            db=db
+        )
         intent_key = intent.intent.value if isinstance(intent.intent, Enum) else str(intent.intent)
         logger.info(f"Routing request based on intent: {intent_key}")
 
@@ -176,29 +182,44 @@ class ModeRouter:
 
         return executor, intent
 
-    async def _resolve_intent(self, user_input: str, kwargs: Dict[str, Any]) -> IntentResult:
+    async def _resolve_intent(self, user_input: str, kwargs: Dict[str, Any], session_id: str = None, db: AsyncSession = None) -> IntentResult:
         """解析用户意图"""
         import asyncio
         
-        forced = self._get_forced_intent(kwargs)
-        if forced:
-            return IntentResult(intent=forced, confidence=1.0, reasoning="Forced intent override.", parameters={})
+        mode_hint = self._get_forced_intent(kwargs)
 
-        # 零延迟启发式预判拦截
+        # 零延迟启发式预判拦截 (仅用于无历史状态时)
         heuristic_intent = _heuristic_classify(user_input)
+
+        # 智能跃迁：即使用户处于 quick 模式，如果明确输入了重型任务指令，自动跃迁至 task 模式
+        if mode_hint == "quick" and heuristic_intent and heuristic_intent.intent == "task":
+            logger.info(f"Upgrading quick mode to task mode based on heuristic: {heuristic_intent.reasoning}")
+            return heuristic_intent
+
+        if mode_hint:
+            return IntentResult(intent=mode_hint, confidence=1.0, reasoning="Forced intent override.", parameters={})
+
         if heuristic_intent:
             return heuristic_intent
 
         try:
             nlu_service = NluService(self.llm_model)
-            return await asyncio.wait_for(nlu_service.analyze(user_input), timeout=6.0)
+            return await asyncio.wait_for(
+                nlu_service.analyze(
+                    user_input, 
+                    mode_hint=mode_hint, 
+                    session_id=session_id, 
+                    db=db
+                ), 
+                timeout=8.0
+            )
         except Exception as e:
             logger.warning(f"NLU failed or timed out: {e}. Falling back safely based on context.")
             
             # P10 确定性修复：不硬编码 fallback 到 chat。如果当前是在明确的上下文或指令下，应保留其意图。
             # 如果请求中带有明确的 task 或 plan 相关参数，回退到 task；否则默认 chat。
-            fallback_intent = "chat"
-            if kwargs.get("agent_id") or "plan" in user_input.lower() or "task" in user_input.lower():
+            fallback_intent = mode_hint or "chat"
+            if not mode_hint and (kwargs.get("agent_id") or "plan" in user_input.lower() or "task" in user_input.lower()):
                 fallback_intent = "task"
                 
             return IntentResult(

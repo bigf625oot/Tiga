@@ -56,189 +56,21 @@
 
         <!-- Agent Mode: Rich Content -->
         <div v-else class="agent-content flex flex-col gap-2 min-w-0 max-w-full">
-
-            <!-- Solo mode: TRAE-style execution panel (bypasses all legacy blocks) -->
-            <SoloTaskCard
-                v-if="currentModeId === 'solo'"
-                :message="message"
-                :is-last="isLast"
-                :is-streaming="isStreaming"
-                @locate-node="$emit('locate-node', $event)"
-                @resend-message="$emit('resend-message', $event)"
-            />
-
-            <!-- Non-solo modes: original rendering pipeline -->
-            <template v-else>
-
-            <StreamSteps
-                v-if="showStreamSteps"
-                :events="message.stream_events ?? []"
-                :is-streaming="isStreaming && isLast"
-            />
-
-            <!-- 0. Empty State / Initial Loading -->
-            <div v-if="!parsed.text && !parsed.sql && !thinkingContent && !chartOption && (!showStepsContent) && (!showStreamSteps) && isStreaming && isLast" class="flex items-center gap-2 py-1">
+            <div v-if="isStreaming && isLast && !message.content && !message.reasoning && (!message.steps || message.steps.length === 0) && (!message.tools || message.tools.length === 0)" class="flex items-center gap-2 py-1">
                 <span class="relative flex h-2.5 w-2.5">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
                 </span>
                 <span class="text-xs text-muted-foreground/60 font-medium animate-pulse">正在生成回复...</span>
             </div>
-
-            <!-- 0. Process Steps (New) -->
-            <div v-if="showStepsContent" class="border border-border/40 rounded-md overflow-hidden mb-2 bg-muted/10 w-[90%] shadow-sm">
-                <button 
-                    @click="isStepsExpanded = !isStepsExpanded"
-                    class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-muted/30 transition-colors group"
-                >
-                    <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground/80">
-                        <Activity class="w-3.5 h-3.5" />
-                        <span>Plan Steps ({{ message.steps?.length || 0 }})</span>
-                    </div>
-                    <ChevronRight 
-                        class="w-3.5 h-3.5 text-muted-foreground/40 transition-transform duration-200 group-hover:text-muted-foreground/70"
-                        :class="isStepsExpanded ? 'rotate-90' : ''"
-                    />
-                </button>
-                <div v-show="isStepsExpanded" class="px-3 py-2 border-t border-border/40 bg-transparent">
-                    <div class="space-y-3 relative">
-                        <div class="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-border/40"></div>
-                        <div v-for="(step, sIdx) in message.steps" :key="sIdx" class="flex gap-3 relative">
-                            <div class="flex flex-col items-center pt-1.5 shrink-0 z-10">
-                                <div class="w-2.5 h-2.5 rounded-full bg-background border-2 border-primary/50 shadow-sm"></div>
-                            </div>
-                            <div class="pb-1 min-w-0 flex-1">
-                                <div class="text-xs text-muted-foreground/80 break-words whitespace-pre-wrap font-mono leading-relaxed">
-                                    {{ step.content }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 1. Thinking Process -->
-            <ThinkingBlock 
-                v-if="thinkingContent" 
-                :content="thinkingContent.raw" 
-                :is-thinking="thinkingContent.isPartial"
-            />
-
-            <!-- 1.5. Tools Status (新加入的工具流状态) -->
-            <ToolStatus 
-                v-if="showToolsContent" 
-                :tools="message.tools" 
-            />
-
-            <!-- 2. Chart (Visual Priority) -->
-            <div v-if="chartOption" class="w-full bg-card rounded-lg border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                 <div class="p-4 py-2 border-b border-border bg-muted/50 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-foreground flex items-center gap-2">
-                        <svg class="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                        </svg>
-                        数据可视化
-                    </span>
-                 </div>
-                 <div class="h-64 w-full relative bg-card">
-                    <ChartFrame :option="chartOption" />
-                 </div>
-            </div>
-
-            <!-- 3. Data Summary (Text + Table + SQL) -->
-            <div 
-                v-if="parsed.text || parsed.sql" 
-                class="w-full group/summary"
-                :class="chartOption ? 'bg-card rounded-lg border border-border shadow-sm p-4' : ''"
-            >
-                <!-- Title (Optional, only if chart exists to separate sections) -->
-                <div v-if="chartOption" class="mb-2 pb-2 border-b border-border flex items-center gap-2">
-                     <svg class="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                     </svg>
-                     <span class="text-xs font-semibold text-muted-foreground">数据详情</span>
-                </div>
-
-                <!-- Markdown Content (Table, Summary) -->
-                <div v-if="parsed.text" class="w-full mt-1">
-                    <MarkdownRenderer :content="parsed.text" @citation-click="handleCitationClick" />
-                </div>
-                
-                <!-- Embedded Resources -->
-                <div v-if="parsed.resources.length > 0" class="flex flex-col gap-2" :class="chartOption ? 'm-4' : 'mt-4'">
-                    <GenericResourceCard 
-                        v-for="(res, idx) in parsed.resources" 
-                        :key="idx"
-                        :type="res.type"
-                        :id="res.data.id"
-                        :title="res.data.title || res.data.name || 'Unknown Resource'"
-                        :meta="res.data.size"
-                        @click="handleResourceClick"
-                    />
-                </div>
-
-                <!-- SQL Section (Collapsed inside Summary) -->
-                <div v-if="parsed.sql" class="pt-2 border-t border-border" :class="chartOption ? 'm-4' : 'mt-4'">
-                    <details class="group/sql">
-                        <summary class="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors select-none w-fit">
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                            </svg>
-                            <span>查看查询 SQL</span>
-                            <svg class="w-2.5 h-2.5 transform group-open/sql:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </summary>
-                        <div class="mt-2 relative rounded bg-muted/50 border border-border">
-                             <div class="absolute top-1 right-1">
-                                <button @click.stop="copyText(parsed.sql)" class="p-1 text-muted-foreground hover:text-primary transition-colors" title="复制 SQL">
-                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                             </div>
-                             <pre class="!m-0 !p-2 !bg-transparent overflow-x-auto custom-scrollbar"><code class="text-primary/80 font-mono text-xs leading-4 whitespace-pre">{{ parsed.sql }}</code></pre>
-                        </div>
-                    </details>
-                </div>
-            </div>
             
-            <!-- 4. References (Footer) -->
-            <div v-if="hasReferences" class="mt-3 pt-3 border-t border-border/30">
-                <div class="flex items-center gap-1.5 mb-2.5">
-                    <svg class="w-3.5 h-3.5 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                    <span class="text-xs font-medium text-muted-foreground/80 tracking-wide uppercase">信息/知识来源</span>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <div 
-                        v-for="(ref, idx) in combinedSources" 
-                        :key="idx"
-                        class="group/ref flex items-center gap-1.5 px-2.5 py-1 bg-muted/20 border border-border/40 rounded-md text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 hover:border-border/80 hover:text-foreground transition-all duration-200 max-w-[220px]"
-                        @click="$emit('locate-node', ref)"
-                        :title="ref.title || '未知数据源'"
-                    >
-                        <span class="font-mono text-muted-foreground/50 group-hover/ref:text-muted-foreground text-xs">{{ Number(idx) + 1 }}</span>
-                        <span class="truncate font-medium">{{ ref.title || '未知数据源' }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. Error Alert -->
-            <ErrorCallout 
-                v-if="message.error" 
-                :message="message.error" 
-                :can-retry="true"
-                @retry="$emit('resend-message', message)"
+            <MessageRenderer 
+                v-else
+                :message="adaptedMessage" 
+                @locate-node="$emit('locate-node', $event)"
+                @open-doc-space="$emit('open-doc-space', $event)"
+                @resend-message="$emit('resend-message', message)"
             />
-
-            <!-- 6. Streaming Cursor -->
-            <div v-if="isStreaming && isLast" class="h-4 mt-1 flex items-center">
-                 <span class="inline-block w-2 h-4 bg-foreground/60 animate-pulse rounded-[1px]"></span>
-            </div>
-
-            </template><!-- end v-else (non-solo) -->
         </div>
       </div>
 
@@ -283,24 +115,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, ref, watch, nextTick } from 'vue';
+import { computed, ref, watch } from 'vue';
 import dayjs from 'dayjs';
 import { Activity, Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2, Pencil, RotateCcw } from 'lucide-vue-next';
-import ChartFrame from '../../analytics/components/ChartFrame.vue';
-import GenericResourceCard from './GenericResourceCard.vue';
-import { useMessageParser } from '../composables/useMessageParser';
-import { useChartOptions } from '../composables/useChart';
 import { useMarkdown, isHighlighterReady } from '../composables/useMarkdown';
 import { formatTime, formatDuration } from '../utils/dateUtils';
 import type { Message } from '../types';
 
 // 新引入的 UI 组件
-import ThinkingBlock from './SmartQA/chat/ThinkingBlock.vue';
-import ToolStatus from './SmartQA/workflow/ToolStatus.vue';
-import MarkdownRenderer from './SmartQA/common/MarkdownRenderer.vue';
-import ErrorCallout from './SmartQA/common/ErrorCallout.vue';
-import StreamSteps from './SmartQA/workflow/StreamSteps.vue';
-import SoloTaskCard from './SmartQA/workflow/SoloTaskCard.vue';
+import SoloTaskCard from '../../workflow/components/SmartQA/SoloTaskCard.vue';
+import MessageRenderer from '../../chat/components/MessageRenderer.vue';
+import { adaptMessageToBlocks } from '../../chat/utils/MessageAdapter';
 
 const props = withDefaults(defineProps<{
   message: Message;
@@ -357,8 +182,6 @@ const handleExcerpt = () => {
 
 // Composables
 const contentRef = computed(() => props.message?.content || '');
-const { parsed } = useMessageParser(contentRef);
-const { processOption } = useChartOptions();
 const { render } = useMarkdown();
 const userHtml = computed(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -366,73 +189,13 @@ const userHtml = computed(() => {
     return render(contentRef.value, { allowHtml: false });
 });
 
+const adaptedMessage = computed(() => adaptMessageToBlocks(props.message, props.isStreaming, props.isLast, props.currentModeId ?? undefined));
+
 watch(() => props.message.steps, (newVal, oldVal) => {
     if (newVal && newVal.length > 0 && (!oldVal || oldVal.length === 0)) {
         isStepsExpanded.value = true;
     }
 }, { deep: true });
-
-// Computed
-const showStreamSteps = computed(() => {
-    if (!props.message.stream_events || props.message.stream_events.length === 0) return false;
-    // Filter out pure generation events to see if there's any actual execution trace
-    const hasExecutionEvents = props.message.stream_events.some((e: any) => 
-        !['thought', 'text', 'think'].includes(e.event)
-    );
-    if (!hasExecutionEvents) return false;
-    
-    // 不在 quick 模式和秒懂模式(auto)下展示执行记录
-    if (props.currentModeId === 'quick' || !props.currentModeId || props.currentModeId === 'auto') return false;
-    return true;
-});
-
-const showStepsContent = computed(() => {
-    if (!props.message.steps || props.message.steps.length === 0) return false;
-    if (props.currentModeId === 'quick' || !props.currentModeId || props.currentModeId === 'auto') return false;
-    return true;
-});
-
-const showToolsContent = computed(() => {
-    if (!props.message.tools || props.message.tools.length === 0) return false;
-    return true;
-});
-
-type ThinkingContent = {
-    raw: string;
-    html: string;
-    isPartial: boolean;
-};
-
-const thinkingContent = computed<ThinkingContent | null>(() => {
-    // 1. Parsed from content <think> tags (highest priority)
-    if (parsed.value.think) {
-        return parsed.value.think;
-    }
-
-    // 2. Explicit reasoning field (from stream)
-    if (props.message.reasoning) {
-        // PERF: Don't call render() during streaming — ThinkingBlock uses `raw` only.
-        // render() (Shiki+marked) blocks the main thread and runs on every token.
-        // Only compute html after streaming completes.
-        const isActive = props.isStreaming && props.isLast;
-        return {
-            raw: props.message.reasoning,
-            html: '', // HTML is not used by ThinkingBlock anyway
-            isPartial: isActive,
-        };
-    }
-
-    // 3. Metadata reasoning (from history)
-    if (props.message.meta_data && props.message.meta_data.reasoning) {
-        return {
-            raw: props.message.meta_data.reasoning,
-            html: '', // Not used
-            isPartial: false // History defaults to collapsed
-        };
-    }
-
-    return null;
-});
 
 const bubbleClasses = computed(() => {
   if (props.isUser) {
@@ -443,14 +206,6 @@ const bubbleClasses = computed(() => {
   }
 });
 
-const chartOption = computed(() => {
-    // Prefer parsed chart config from markdown, fallback to prop
-    const config = parsed.value.chartConfig || props.message.chart_config;
-    return processOption(config);
-});
-
-const hasReferences = computed(() => props.message.sources && props.message.sources.length > 0);
-const combinedSources = computed(() => props.message.sources || []);
 const avatarSrc = computed(() => {
   if (props.isUser) return '/user/hair.svg';
   return props.agent?.icon || props.agent?.icon_url || '/tiga.svg';
@@ -459,18 +214,6 @@ const avatarAlt = computed(() => (props.isUser ? 'user' : 'agent'));
 
 // Methods
 const copyText = (text: string) => navigator.clipboard.writeText(text || '');
-
-const handleResourceClick = (id: string) => {
-    // Simple routing logic based on ID format or just emit
-    emit('open-doc-space', id);
-};
-
-const handleCitationClick = (index: number) => {
-    const ref = combinedSources.value[index - 1];
-    if (ref) {
-        emit('locate-node', ref);
-    }
-};
 
 </script>
 

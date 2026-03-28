@@ -27,5 +27,11 @@ export const knowledgeService = {
     });
     if (!res.ok) throw new Error('Failed to retry processing');
     return res.json();
+  },
+
+  async getDocumentContent(docId: string | number): Promise<{content: string, filename: string}> {
+    const res = await fetch(`/api/v1/knowledge/${docId}/content`);
+    if (!res.ok) throw new Error('Failed to fetch document content');
+    return res.json();
   }
 };

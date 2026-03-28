@@ -40,8 +40,8 @@
       :templates="templates"
       @create-task="handleCreateTask"
       @refresh-activities="fetchActivities"
-      @run-task="(msg) => $emit('run-task', msg)"
-      @open-session="(sid) => $emit('open-session', sid)"
+      @run-task="(msg: string) => $emit('run-task', msg)"
+      @open-session="(sid: string) => $emit('open-session', sid)"
     />
 
     <!-- NODES TAB -->
@@ -87,6 +87,7 @@ import TaskManagement from './TaskManagement.vue';
 import NodeList from './NodeList.vue';
 import NodeDetail from './NodeDetail.vue';
 import GatewayInfo from './GatewayInfo.vue';
+
 
 const emit = defineEmits(['close', 'run-task', 'open-session']);
 

@@ -18,7 +18,7 @@ from app.api.endpoints import (
     recordings,
     render_data,
     user_script,
-    workflow,
+
     agent_workflow,
     skills,
     service_categories,
@@ -62,7 +62,6 @@ api_router.include_router(knowledge_bases.router, prefix="/knowledge-bases", tag
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
 api_router.include_router(teams.router, prefix="/teams", tags=["teams"])
 api_router.include_router(mcp.router, prefix="/mcp", tags=["mcp"])
-api_router.include_router(workflow.router, prefix="/workflows", tags=["workflows"])
 api_router.include_router(agent_workflow.router, prefix="/agent-workflows", tags=["agent-workflows"])
 api_router.include_router(render_data.router, tags=["render_data"])
 api_router.include_router(user_script.router, tags=["user_script"])

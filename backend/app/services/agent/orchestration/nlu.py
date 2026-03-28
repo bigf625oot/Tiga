@@ -1,66 +1,133 @@
 import logging
 import asyncio
 from typing import Optional, Any, Dict
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.llm_model import LLMModel
 from app.services.agent.schemas.intent import IntentResult
-from app.services.intelligence.nlu.classifier import IntentClassifier, QueryIntent
+from app.services.platform.llm.factory import ModelFactory
+from agno.agent import Agent
 
 logger = logging.getLogger("eah.core.nlu")
 
 class NluService:
     """
-    Agent NLU Service: Translates natural language into agent intents.
-    Returns IntentResult which the ModeRouter uses to route requests.
+    Agent NLU Service: Translates natural language into agent intents,
+    taking into account user input, current mode hint, and conversation history.
     """
     def __init__(self, llm_model: Optional[LLMModel] = None):
         self.llm_model = llm_model
 
-    async def analyze(self, user_input: str) -> IntentResult:
+    async def analyze(
+        self, 
+        user_input: str, 
+        mode_hint: Optional[str] = None, 
+        session_id: Optional[str] = None, 
+        db: Optional[AsyncSession] = None
+    ) -> IntentResult:
         """
         Analyzes user input and returns an IntentResult.
-        Default intents for Agent: "chat", "task", "team", "workflow", "data_query", "kg_qa"
+        Supported intents for Agent: "chat", "task", "team", "workflow", "data_query", "kg_qa"
         """
         try:
-            classifier = IntentClassifier.get_instance()
-            result = await classifier.classify_detailed(user_input)
-            
-            # Map QueryIntent to Agent Intent
-            intent_map = {
-                QueryIntent.SQL_QUERY: "data_query",
-                QueryIntent.STRUCTURED_QUERY: "data_query",
-                QueryIntent.KG_QUERY: "kg_qa",
-                QueryIntent.RAG_QUERY: "chat",
-                QueryIntent.UNKNOWN: "chat"
-            }
-            
-            # Additional heuristic for Agent intents
-            lower_input = user_input.lower()
-            agent_intent = "chat"
-            
-            if any(w in lower_input for w in ["任务", "执行", "计划", "task", "plan", "execute"]):
-                agent_intent = "task"
-            elif any(w in lower_input for w in ["团队", "协作", "team", "collaborate"]):
-                agent_intent = "team"
-            elif any(w in lower_input for w in ["工作流", "流程", "workflow", "flow"]):
-                agent_intent = "workflow"
-            else:
-                agent_intent = intent_map.get(result.intent, "chat")
-                
-            parameters = {}
-            if result.parameters:
-                parameters = result.parameters.model_dump(exclude_none=True)
+            history_context = ""
+            if db and session_id:
+                try:
+                    from app.services.agent.components import DefaultMemoryManager
+                    mm = DefaultMemoryManager(db=db)
+                    hist = await mm.get_history(session_id, limit=6)
+                    if hist:
+                        history_lines = []
+                        for msg in hist:
+                            role = msg.get("role", "unknown") if isinstance(msg, dict) else getattr(msg, "role", "unknown")
+                            content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
+                            if role and content:
+                                history_lines.append(f"{role}: {content[:200]}")
+                        if history_lines:
+                            history_context = "Recent Conversation History:\n" + "\n".join(history_lines)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch history for NLU: {e}")
 
-            return IntentResult(
-                intent=agent_intent,
-                confidence=result.confidence,
-                reasoning=result.reasoning or "Heuristic mapped",
-                parameters=parameters
+            # If we don't have a model, fallback to heuristics
+            if not self.llm_model:
+                return self._fallback_heuristic(user_input, mode_hint)
+
+            # Create an Agno Agent for intent classification
+            model_instance = ModelFactory.create_model(self.llm_model)
+            
+            instructions = f"""You are an expert Intent Classifier for an AI assistant.
+Your task is to classify the user's latest message into one of the following exact intent categories:
+
+- "chat": General conversation, greetings, simple Q&A, explanations, summarizing text. No complex multi-step execution needed.
+- "task": The user wants to execute a complex task, write code, build a project, create a plan, or execute step-by-step actions.
+- "team": The user explicitly wants a team of multiple specialized agents to collaborate.
+- "workflow": The user explicitly wants to run a predefined DAG or workflow.
+- "data_query": The user is asking to query a database, write SQL, or look up structured data.
+- "kg_qa": The user is asking about knowledge graph relationships or trends.
+
+Current Mode Hint: {mode_hint or "None (Auto Mode)"}
+(If a hint is provided, lean towards it unless the user's latest message clearly breaks away from it, e.g., asking a simple question during a task should be "chat".)
+
+Output ONLY a valid JSON object with the following schema:
+{{
+    "intent": "<one of the categories>",
+    "confidence": <float between 0.0 and 1.0>,
+    "reasoning": "<brief explanation of why>"
+}}
+"""
+
+            prompt = f"{history_context}\n\nUser's Latest Message: {user_input}\n\nOutput JSON:"
+
+            agent = Agent(
+                model=model_instance,
+                instructions=instructions,
+                markdown=False,
             )
-        except Exception as e:
-            logger.warning(f"NLU analysis failed: {e}. Falling back to 'chat'.")
+            
+            response = await agent.arun(prompt)
+            content = getattr(response, "content", "").strip()
+            
+            # Parse JSON
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+            
+            import json
+            data = json.loads(content)
+            
+            intent = data.get("intent", mode_hint or "chat")
+            valid_intents = ["chat", "task", "team", "workflow", "data_query", "kg_qa"]
+            if intent not in valid_intents:
+                intent = mode_hint or "chat"
+                
             return IntentResult(
-                intent="chat",
-                confidence=0.0,
-                reasoning=str(e),
+                intent=intent,
+                confidence=float(data.get("confidence", 0.8)),
+                reasoning=data.get("reasoning", "LLM classified"),
                 parameters={}
             )
+
+        except Exception as e:
+            logger.warning(f"NLU LLM analysis failed: {e}. Falling back to heuristic.")
+            return self._fallback_heuristic(user_input, mode_hint)
+
+    def _fallback_heuristic(self, user_input: str, mode_hint: Optional[str]) -> IntentResult:
+        lower_input = user_input.lower()
+        agent_intent = mode_hint or "chat"
+        
+        if any(w in lower_input for w in ["任务", "执行", "计划", "task", "plan", "execute", "写一个", "帮我", "代码"]):
+            agent_intent = "task"
+        elif any(w in lower_input for w in ["团队", "协作", "team", "collaborate"]):
+            agent_intent = "team"
+        elif any(w in lower_input for w in ["工作流", "流程", "workflow", "flow"]):
+            agent_intent = "workflow"
+            
+        return IntentResult(
+            intent=agent_intent,
+            confidence=0.5,
+            reasoning="Fallback heuristic mapping",
+            parameters={}
+        )

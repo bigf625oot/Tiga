@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.llm_model import LLMModel
-from app.models.workflow import Workflow
+from app.models.agent_workflow import AgentWorkflow
 from app.services.agent.schemas.intent import IntentResult
 from app.services.agent.executors.base.base_executor import BaseExecutor
 from app.services.agent.components.memory_manager import DefaultMemoryManager
@@ -54,7 +54,7 @@ class WorkflowExecutor(BaseExecutor):
                     yield {"type": "error", "content": _("Workflow definition is empty or unsupported.")}
                     return
 
-                yield {"type": "status", "content": _("Executing workflow: {} (v{})").format(wf.name, wf.version)}
+                yield {"type": "status", "content": _("Executing workflow: {}").format(wf.name)}
 
                 if self.memory_manager:
                     await self.memory_manager.get_compressed_context(session_id, current_query=input_text)
@@ -197,33 +197,21 @@ class WorkflowExecutor(BaseExecutor):
         async for chunk in engine.execute_task(task_step, context):
             yield chunk
 
-    async def _load_workflow(self, db: AsyncSession, intent: IntentResult, kwargs: Dict[str, Any]) -> Optional[Workflow]:
+    async def _load_workflow(self, db: AsyncSession, intent: IntentResult, kwargs: Dict[str, Any]) -> Optional[AgentWorkflow]:
         task_params = getattr(intent, "parameters", None) or {}
         params = kwargs.get("params") or {}
 
         workflow_id = task_params.get("workflow_id") or params.get("workflow_id") or kwargs.get("workflow_id")
-        original_id = task_params.get("original_id") or params.get("original_id") or kwargs.get("original_id")
         workflow_name = task_params.get("workflow_name") or params.get("workflow_name") or kwargs.get("workflow_name")
-        version = task_params.get("version") or params.get("version") or kwargs.get("version")
-        allow_draft = bool(task_params.get("allow_draft") or params.get("allow_draft") or kwargs.get("allow_draft"))
 
         stmt = None
         if workflow_id:
-            stmt = select(Workflow).where(Workflow.id == str(workflow_id))
-        elif original_id:
-            stmt = select(Workflow).where(Workflow.original_id == str(original_id))
-            if version is not None:
-                stmt = stmt.where(Workflow.version == int(version))
-            else:
-                stmt = stmt.where(Workflow.is_latest.is_(True))
+            stmt = select(AgentWorkflow).where(AgentWorkflow.id == str(workflow_id))
         elif workflow_name:
-            stmt = select(Workflow).where(Workflow.name == str(workflow_name), Workflow.is_latest.is_(True))
+            stmt = select(AgentWorkflow).where(AgentWorkflow.name == str(workflow_name), AgentWorkflow.is_active.is_(True))
 
         if stmt is None:
             return None
-
-        if not allow_draft:
-            stmt = stmt.where(Workflow.is_draft.is_(False))
 
         result = await db.execute(stmt)
         return result.scalars().first()

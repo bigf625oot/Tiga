@@ -122,23 +122,30 @@
       @toggle-knowledge-selection="onToggleKnowledgeSelection"
       @confirm="handleAttachmentOk"
     />
+
+    <DocumentPreviewDrawer
+      v-model:visible="docPreviewVisible"
+      :doc-id="previewDocId"
+    />
   </DynamicGridBackground>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onErrorCaptured } from 'vue';
+import { ref, computed, onMounted, watch, onErrorCaptured, provide } from 'vue';
 import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
 import { useTheme } from '@/composables/useTheme';
 import { useToast } from '@/components/ui/toast/use-toast';
 import DynamicGridBackground from '@/shared/components/molecules/DynamicGridBackground.vue';
+import { ChatContextKey } from '../../chat/context/ChatContext';
 
 // Subcomponents
 import SmartQAHeader from './SmartQA/layout/SmartQAHeader.vue';
 import SmartQAChatArea from './SmartQA/layout/SmartQAChatArea.vue';
-import SmartQATaskPanel from './SmartQA/workflow/SmartQATaskPanel.vue';
+import SmartQATaskPanel from '../../workflow/components/SmartQA/SmartQATaskPanel.vue';
 import AttachmentDialog from './SmartQA/common/AttachmentDialog.vue';
 import FileSidebar from './SmartQA/common/FileSidebar.vue';
 import MemoDrawer, { type Memo } from './SmartQA/common/MemoDrawer.vue';
+import DocumentPreviewDrawer from './SmartQA/common/DocumentPreviewDrawer.vue';
 
 // Composables
 import { useChatSession } from '../composables/useChatSession';
@@ -177,6 +184,9 @@ const isFileSidebarOpen = ref(false);
 const isNetworkSearchEnabled = ref(true);
 const isMemoDrawerOpen = ref(false);
 const memos = ref<Memo[]>([]);
+
+const docPreviewVisible = ref(false);
+const previewDocId = ref<string | number | null>(null);
 
 const isWorkflowMode = computed(() => mode.value === 'workflow');
 const isAutoTaskMode = computed(() => mode.value === 'auto_task');
@@ -249,6 +259,16 @@ const {
 } = useChatSession();
 
 const isTaskRunning = computed(() => isLoading.value || workflowStore.isRunning || isStreaming.value);
+
+// --- P10: Provide Global Chat Context for deeply nested block renderers ---
+provide(ChatContextKey, {
+  modeId: currentModeId,
+  currentAgent: computed(() => currentAgent.value as Agent | null),
+  sessionId: currentSessionId,
+  isWorkflowRunning: computed(() => workflowStore.isRunning)
+});
+// -------------------------------------------------------------------------
+
 const taskPanelRef = ref<any>(null);
 
 // Error boundary: ensure loading states always reset on unhandled Vue errors
@@ -566,8 +586,8 @@ const handleLocateNode = (item: any) => {
     // taskPanelRef.value?.locateNode?.(item.nodeId || item.title, item.docId);
 };
 const handleOpenDocSpace = (docId: string) => {
-    isRightCollapsed.value = false;
-    // taskPanelRef.value?.openDocSpace?.(docId);
+    previewDocId.value = docId;
+    docPreviewVisible.value = true;
 };
 
 const onFileChange = (files: File[]) => {

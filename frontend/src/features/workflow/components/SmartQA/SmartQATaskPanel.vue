@@ -15,16 +15,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import AutoTaskPanel from '../../AutoTaskPanel.vue';
+import AutoTaskPanel from '@/features/workflow/components/AutoTaskPanel.vue';
 import WorkspaceTabs from '@/features/workflow/components/WorkspaceTabs.vue';
 
-defineProps<{
-  isAutoTaskMode: boolean;
-  isWorkflowMode: boolean;
-  sessionId: string | null;
-  agentName: string;
-  attachmentsCount: number;
-  hasKnowledgeBase: boolean;
+// Props definition without generic <{ ... }> since defineProps isn't strictly necessary when no specific usage in script, but if we do:
+const props = defineProps<{
+    isWorkflowMode?: boolean;
+    isAutoTaskMode?: boolean;
+    sessionId?: string | null;
+    agentName?: string;
+    attachmentsCount?: number;
+    hasKnowledgeBase?: boolean;
 }>();
 
 defineEmits(['run-task', 'close', 'open-session']);
