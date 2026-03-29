@@ -69,7 +69,7 @@ class StreamAggregator:
 
         if ctype == "content" and isinstance(content, str):
             self.content.append(content)
-        elif ctype == "think" and isinstance(content, str):
+        elif ctype in ("think", "reasoning", "reasoning_content") and isinstance(content, str):
             self.reasoning.append(content)
         elif ctype == "run_output":
             # 聚合 Tool Call 详情

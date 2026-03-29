@@ -20,6 +20,7 @@ import MermaidRenderer from './MermaidRenderer.vue';
 import PlantUMLRenderer from './PlantUMLRenderer.vue';
 import AsciiArtRenderer from './AsciiArtRenderer.vue';
 import SourceCard from './SourceCard.vue';
+import ArtifactCard from './ArtifactCard.vue';
 
 const props = defineProps<{
   content: string;
@@ -115,6 +116,16 @@ const renderNode = (node: any, key: string | number = 0): any => {
         title: node.properties.title,
         key,
         onClick: (id: string) => emit('open-doc-space', id)
+      });
+    }
+
+    // 拦截 Tiga Artifact 节点 (沙箱生成文件)
+    if (node.tagName === 'tiga-artifact') {
+      return h(ArtifactCard, {
+        type: node.properties.type,
+        url: node.properties.url,
+        name: node.properties.name,
+        key
       });
     }
 

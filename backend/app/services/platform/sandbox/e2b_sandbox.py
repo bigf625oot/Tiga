@@ -77,7 +77,7 @@ class E2BSandboxService:
 
         # 3. 如果有 session_id，持久化映射关系
         if session_id:
-            await self.storage.set(session_id, sandbox.id)
+            await self.storage.set(session_id, sandbox.sandbox_id)
             
         return sandbox
 
@@ -159,7 +159,7 @@ class E2BSandboxService:
         finally:
             # 只有 ephemeral (无 session_id) 的沙箱才立即关闭
             if not session_id:
-                await sandbox.close()
+                await sandbox.kill()
 
     async def upload_file(self, session_id: Optional[str], remote_path: str, content: Union[str, bytes]):
         """异步上传文件"""
@@ -169,7 +169,7 @@ class E2BSandboxService:
             await sandbox.files.write(remote_path, content)
         finally:
             if not session_id:
-                await sandbox.close()
+                await sandbox.kill()
 
     async def download_file(self, session_id: Optional[str], remote_path: str) -> bytes:
         """异步下载文件"""
@@ -178,7 +178,7 @@ class E2BSandboxService:
             return await sandbox.files.read(remote_path, format="bytes")
         finally:
             if not session_id:
-                await sandbox.close()
+                await sandbox.kill()
 
     async def close_session(self, session_id: str):
         """主动销毁 Session，释放云端资源"""
@@ -186,7 +186,7 @@ class E2BSandboxService:
         if e2b_id:
             try:
                 sandbox = await AsyncSandbox.connect(e2b_id, api_key=self.api_key)
-                await sandbox.close()
+                await sandbox.kill()
                 logger.info(f"Sandbox {e2b_id} closed successfully.")
             except Exception:
                 pass
@@ -220,7 +220,7 @@ class E2BSandboxService:
             }
         finally:
             if not session_id:
-                await sandbox.close()
+                await sandbox.kill()
 
 # 全局沙箱服务实例
 sandbox_service = E2BSandboxService()

@@ -222,6 +222,7 @@ class PlanningEngine:
                 "【强制要求】：必须输出符合 JSON Schema 的纯 JSON 结构，拒绝任何 Markdown 代码块标签。",
                 "【工具原则】：从 Catalog 中精确挑选工具 (tool_name)。",
                 "【依赖原则】：任务依赖必须严格构成有向无环图 (DAG)，依赖的前置任务必须真实存在且不能成环。",
+                "Important Rules for `executor_role`:\n- Based on the tools required for a task, you MUST assign a reasonable and descriptive `executor_role` (e.g. 'websearch', 'data_analyst', 'coder', 'researcher').\n- This role helps the downstream system understand the context of the task.",
                 f"### 可用工具库 (Catalog)：\n{await self._filter_capabilities(user_goal)}"
             ],
             # 采用 Agent 的强结构化输出能力

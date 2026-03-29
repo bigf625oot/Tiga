@@ -99,14 +99,17 @@ class DefaultToolRegistry:
         return [t.func for t in self._tools.values()]
 
     def build_from_hint(self, role: str) -> List[Any]:
-        """Why: 按角色动态裁剪工具集，避免大模型 Context Window Pollution。"""
+        """
+        工具分发策略。
+        在单一智能体或全局工作流场景中，工具已经是基于 AgentModel 绑定或 NLU 意图精确加载的，
+        """
         if not role:
             return self.get_all_tools()
 
         role = role.lower()
         matched = []
         for t in self._tools.values():
-            if not t.roles or role in [r.lower() for r in t.roles]:
+            if not t.roles or "*" in t.roles or role in [r.lower() for r in t.roles]:
                 matched.append(t.func)
 
         return matched if matched else self.get_all_tools()

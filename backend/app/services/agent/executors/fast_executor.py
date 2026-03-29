@@ -17,8 +17,8 @@ logger = logging.getLogger("eah.executors.fast")
 
 class FastExecutor(LightBaseExecutor):
     """
-    [Strategy] 极速 QA 执行器
-    Trade-offs: 旁路重型规划与反思，采用并发上下文组装，以 O(1) 拓扑实现极低延迟。
+    极速 QA 执行器
+    旁路重型规划与反思，采用并发上下文组装，以 O(1) 拓扑实现极低延迟。
     """
 
     SYSTEM_INSTRUCTIONS: List[str] = [
@@ -46,9 +46,6 @@ class FastExecutor(LightBaseExecutor):
         session_id: str = kwargs.get("session_id")
         files: List[Any] = kwargs.get("files", [])
         
-        # 1. Concurrent Context Assembly (Agent, History, Files)
-        # [P10 Concurrent Assembly] O(1) 并发组装，通过 asyncio.gather 并行执行所有前置 I/O 任务，将 TTFT 压缩至极限。
-        # 强制使用 return_exceptions=True 保证单一组件（如历史库异常）不导致全链路崩溃，实现状态机无缝降级。
         setup_tasks = [
             self._prepare_agent(db, session_id, kwargs, intent),
             self._prepare_history(session_id, current_query=input_text),

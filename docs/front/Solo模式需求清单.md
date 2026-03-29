@@ -117,3 +117,9 @@ agent = Agent(
     reflection=True,
     multimodal=True  # 支持视觉和音频
 )
+
+
+样式/ui使用Tailwind CSS + Shadcn Vue
+Ai对话逻辑使用	Vercel AI SDK	支持 useChat hook，管理对话状态极度简单
+markdown 输出markdown-it	插件丰富，支持公式、表格
+动画效果VueUse (useTransition)	实现消息平滑滚动和淡入

@@ -70,9 +70,16 @@ class ExecutionEngine:
             f"Role: {task.executor_role}\n"
             f"Task Description: {task.description}\n"
             f"Expected Output: {task.expected_output}\n"
-            "Complete this specific task using the tools provided if necessary."
+            "CRITICAL INSTRUCTION: You are an execution agent. You MUST complete this specific task. "
         )
         
+        if tools:
+            system_prompt += (
+                "You are equipped with tools. You MUST use the tools provided if the task requires data fetching or external actions. "
+                "Under NO circumstances should you output natural language apologizing that you cannot use tools or cannot fetch data. "
+                "If you need data, call the appropriate tool. If you lack a specific tool, use your best judgment with available tools."
+            )
+
         if tool_instructions:
             system_prompt += f"\n\n## Available Tool Instructions\n{tool_instructions}"
 
@@ -105,10 +112,23 @@ class ExecutionEngine:
             add_memories_to_context=True if agno_storage else False,
         )
 
-        # 转换上下文为字符串或者传递给 agent
-        # (实际实现中可能需要将 context 转换给 agent.run)
+        # 转换为字符串或传递给 agent
         context_str = "\n".join([str(c) for c in context]) if context else ""
-        prompt = f"Context:\n{context_str}\n\nTask Goal:\n{task.description}\n\nExecute the task directly. You MUST use appropriate tools if the task requires fetching information or performing actions. Do NOT repeat the plan. Do NOT output meta-commentary."
+        
+        tool_directive = ""
+        if tools:
+            tool_directive = (
+                "You MUST use the provided tools to fetch information or perform actions. "
+                "NEVER say you are unable to use tools. "
+            )
+            
+        prompt = (
+            f"Context:\n{context_str}\n\n"
+            f"Task Goal:\n{task.description}\n\n"
+            "Execute the task directly. "
+            f"{tool_directive}"
+            "Do NOT repeat the plan. Do NOT output meta-commentary."
+        )
 
         adapter = AgnoStreamAdapter()
         raw_stream = agent.arun(prompt, stream=True, stream_events=True)
@@ -145,6 +165,7 @@ class ExecutionEngine:
     def _resolve_tools_for_role(self, role: str) -> List[Any]:
         """
         根据角色从 ToolRegistry 分配专属工具。
-        Why: 防止大模型被过多无关工具干扰（Context Window Pollution）。
+        由于工具在 AgentAssembler 阶段已经经过了一轮严格的业务过滤（绑定了哪些工具，加载了哪些工具），
+        这里的裁剪仅作为防抖处理，默认容错性很高。
         """
         return self.tool_registry.build_from_hint(role)

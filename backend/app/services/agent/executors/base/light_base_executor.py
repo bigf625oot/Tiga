@@ -8,8 +8,8 @@ from app.services.agent.components.memory_manager import DefaultMemoryManager
 
 class LightBaseExecutor(ABC):
     """
-    [Architecture] 轻量级执行器基类
-    Trade-offs: 彻底剥离规划(Planning)与反思(Reflection)等重型认知链路，牺牲复杂任务处理能力，换取极低延迟与 O(1) 的执行复杂度。仅保留核心的模型依赖与上下文加载能力。
+    轻量级执行器基类
+    彻底剥离规划(Planning)与反思(Reflection)等重型认知链路，牺牲复杂任务处理能力，换取极低延迟与 O(1) 的执行复杂度。仅保留核心的模型依赖与上下文加载能力。
     """
     
     def __init__(

@@ -114,8 +114,9 @@ class AgnoStreamAdapter:
                     async for out in self._flush_buffer():
                         yield out
 
-                if t in ("reasoning", "thought", "thinking", "think"):
-                    yield StreamEvent(type="think", content=chunk.get("content", ""), status="running")
+                if t in ("reasoning", "thought", "thinking", "think", "reasoning_content"):
+                    val = chunk.get("content", "") or chunk.get("reasoning_content", "") or chunk.get(t, "")
+                    yield StreamEvent(type="think", content=val, status="running")
                     return
 
                 if t in ("tool_start", "tool_call", "tool_use", "call"):
@@ -230,7 +231,7 @@ class AgnoStreamAdapter:
                     # Safe to ignore these purely internal lifecycle events to prevent noise and duplicates
                     return
 
-            reasoning = getattr(chunk, "thinking", None) or getattr(chunk, "reasoning", None)
+            reasoning = getattr(chunk, "thinking", None) or getattr(chunk, "reasoning", None) or getattr(chunk, "reasoning_content", None)
             if isinstance(reasoning, str) and reasoning:
                 yield StreamEvent(type="think", content=reasoning, status="running")
 

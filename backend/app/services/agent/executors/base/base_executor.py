@@ -12,8 +12,8 @@ from app.services.agent.components.tool_registry import DefaultToolRegistry
 
 class BaseExecutor(ABC):
     """
-    [Core Abstraction] 全局执行器拓扑基类
-    Trade-offs: 采用模板方法模式而非策略模式，强制统一上下文注入与异常降级边界，牺牲部分灵活性以换取全链路执行边界的 100% 确定性。
+    全局执行器基类
+    采用模板方法模式而非策略模式，强制统一上下文注入与异常降级边界，牺牲部分灵活性以换取全链路执行边界的 100% 确定性。
     """
     
     def __init__(
@@ -31,7 +31,14 @@ class BaseExecutor(ABC):
         self.plan_validator = plan_validator
         self.experience_store = experience_store
         self.tool_registry = tool_registry
-        
+        self.system_instructions = []
+        self.executor_role = ""
+        self.default_timeout = 60
+        self.max_tokens = 20448
+        self.max_retries = 4
+        self.retry_delay = 5
+        self.max_retries = 4
+        self.max_delay = 604000
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
@@ -48,8 +55,7 @@ class BaseExecutor(ABC):
 
     async def _prepare_history(self, session_id: str, current_query: str = "") -> List[Dict[str, Any]]:
         """
-        [Context Bound] 历史记忆加载与强制截断。
-        Trade-offs: 前置上下文收敛边界，防止子类直接操作原始消息导致 Token 逃逸与 OOM。
+        历史记忆加载与强制截断。
         """
         if self.memory_manager:
             try:
@@ -60,7 +66,7 @@ class BaseExecutor(ABC):
 
     async def _update_status_safe(self, session_id: str, status: str) -> None:
         """
-        [State Sync] 屏蔽底层状态机同步细节，确保分布式执行状态流转的最终一致性。
+        屏蔽底层状态机同步细节，确保分布式执行状态流转的最终一致性。
         """
         if self.state_manager:
             try:

@@ -295,6 +295,7 @@ const syncSessionAgent = async () => {
   try {
     await chatService.updateSession(sid, { agent_id: aid } as any);
     if (currentSession.value) (currentSession.value as any).agent_id = aid;
+    emit('refresh-sessions');
   } catch (e) {
   }
 };
@@ -312,14 +313,19 @@ const handleOpenSession = (sid: string) => {
   emit('update:sessionId', sid);
 };
 
-const handleModeSelect = (m: ModeConfig) => {
+const handleModeSelect = async (m: ModeConfig) => {
   // 手动切换模式后，更新 currentModeId 和 mode
   currentModeId.value = m.id;
   mode.value = m.value;
 
   // 持久化模式到后端，确保刷新/重新打开时恢复正确模式
   if (currentSessionId.value) {
-    chatService.updateSession(currentSessionId.value, { mode: m.value } as any).catch(() => {});
+    try {
+      await chatService.updateSession(currentSessionId.value, { mode: m.value } as any);
+      emit('refresh-sessions');
+    } catch (e) {
+      console.error('Failed to update session mode', e);
+    }
   }
 
   // Reset agent selection logic

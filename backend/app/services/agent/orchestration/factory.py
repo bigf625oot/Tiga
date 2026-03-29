@@ -14,7 +14,6 @@ from app.services.agent.utils.agno_compat import filter_init_kwargs
 logger = logging.getLogger(__name__)
 
 class ModelProviderAdapter:
-    """解耦厂商特定的逻辑 (DeepSeek, OpenAI o1, etc.)"""
     @staticmethod
     def apply_custom_logic(model: Any, llm_record: LLMModel, config: AgentConfig):
         provider = (llm_record.provider or "").lower()
@@ -37,7 +36,7 @@ class ModelProviderAdapter:
 
 class AgentFactory:
     """
-    P10 级 Agent 工厂：支持高并发构建、多态模型适配。
+    Agent 工厂：支持高并发构建、多态模型适配。
     注意：此层已纯化，不处理指令编排与 DB 解析，所有依赖需由外部(Assembler)注入。
     """
     
@@ -80,8 +79,6 @@ class AgentFactory:
                 "debug_mode": settings.DEBUG,
                 **kwargs,
             }
-
-            # --- Anti-Corruption Layer (防腐层) ---
             app_db = agent_payload.pop("db", None)
             
             # 如果上层传递了专用于 Agno 的 storage，需要映射为 Agno 新版的 db 参数
