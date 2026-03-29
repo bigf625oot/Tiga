@@ -17,15 +17,29 @@ logger = logging.getLogger("agno.control_plane")
 
 @dataclass
 class OrchestrationContext:
-    """编排上下文：贯穿请求全生命周期的状态机"""
+    """
+    编排上下文：贯穿请求全生命周期的状态机
+    这里采用了“宽表”模式（Context Object Pattern）来承载三大范式（Lite, Agentic, Specialized）的异构上下文。
+    - Lite (对话流): 依赖 knowledge_fragment, history_manager
+    - Agentic (工作流/智能体): 依赖 collected_tools, 计划与执行状态 (通过 kwargs 穿透)
+    - Specialized (领域编译器): 依赖领域 Schema (如 DB Schema, KG Schema)
+    """
     user_input: str
     db: AsyncSession
     session_id: str
     kwargs: Dict[str, Any]
     start_time: float = field(default_factory=time.time)
     intent: Optional[IntentResult] = None
+    
+    # --- 多范式上下文载体 ---
+    # 1. Lite / RAG Context
     knowledge_fragment: str = ""
     history_manager: Optional[SessionHistory] = None
+    
+    # 2. Specialized Context (Data Query / KG QA)
+    domain_schema: str = ""
+    
+    # 3. Execution State
     full_response: str = ""
     full_reasoning: str = ""
     collected_tools: List[Dict[str, Any]] = field(default_factory=list)
@@ -169,21 +183,27 @@ class AgnoControlPlane:
                 asyncio.get_event_loop().call_soon(lambda: None)  # yield point ensures task is scheduled
 
     async def _resolve_intent(self, ctx: OrchestrationContext) -> IntentResult:
-        """带强制逻辑与超时回退的意图识别"""
+        """带强制逻辑、启发式预判与超时回退的意图识别 (O(1) -> O(N) 降级策略)"""
         mode_hint = self._get_forced_intent(ctx.kwargs)
         
-        # 如果前端明确指定了 quick 或 chat 模式，直接短路 NLU 分类，实现 O(1) 路由
+        # 1. 显式意图短路 (O(1))：如果前端明确指定了 quick 或 chat 模式，直接短路 NLU
         if mode_hint in ("quick", "chat"):
             return IntentResult(
                 intent=mode_hint,
+                paradigm=IntentResult.resolve_paradigm(mode_hint),
                 confidence=1.0,
                 reasoning="Bypassed NLU due to explicit mode selection",
                 parameters={},
             )
 
-        # 即使有强制模式（如 task），如果用户只是想闲聊或问问题，也应该灵活降级，避免重度执行。
-        # 非 quick/chat 模式，我们将 forced 作为 mode_hint 传递给 NLU 服务。
+        # 2. 启发式预判拦截 (O(1))：通过正则与长度快速识别典型的 task/chat，避免滥用 LLM
+        from app.services.agent.orchestration.router import _heuristic_classify
+        heuristic_intent = _heuristic_classify(ctx.user_input)
+        if heuristic_intent and heuristic_intent.confidence > 0.8:
+            logger.info(f"NLU Short-circuit via heuristic: {heuristic_intent.intent}")
+            return heuristic_intent
 
+        # 3. 深度语义识别 (O(N))：使用 NLU Service 进行大模型意图分类
         try:
             nlu_service = NluService(self.llm_model)
             # 严格限时 NLU，不能让分析影响响应速度
@@ -199,12 +219,13 @@ class AgnoControlPlane:
         except Exception as e:
             logger.warning(f"NLU failed or timed out: {e}. Falling back safely.")
             
-            fallback_intent = mode_hint or "chat"
+            fallback_intent = mode_hint or (heuristic_intent.intent if heuristic_intent else "chat")
             if not mode_hint and ctx.kwargs.get("agent_id"):
                 fallback_intent = "task"
                 
             return IntentResult(
                 intent=fallback_intent,
+                paradigm=IntentResult.resolve_paradigm(fallback_intent),
                 confidence=0.0,
                 reasoning=f"Control plane fallback: {e}",
                 parameters={},
@@ -244,15 +265,33 @@ class AgnoControlPlane:
         return combined[:12000] # Token 窗口安全截断
 
     def _build_prompt(self, ctx: OrchestrationContext) -> str:
-        """构建增强提示词 (Prompt Injection)"""
+        """
+        构建增强提示词 (Prompt Injection)
+        根据底层架构范式 (Paradigm) 进行策略性上下文注入，避免 RAG 污染 Agent 的核心指令 (P10 Determinism)。
+        """
         if not ctx.knowledge_fragment:
             return ctx.user_input
         
-        return (
-            f"Relevant Context:\n{ctx.knowledge_fragment}\n\n"
-            f"User Question: {ctx.user_input}\n\n"
-            f"Please answer based on the context above."
-        )
+        paradigm = ctx.intent.paradigm if ctx.intent else "lite"
+        
+        if paradigm == "agentic":
+            return (
+                f"Background Knowledge:\n{ctx.knowledge_fragment}\n\n"
+                f"Task Directive: {ctx.user_input}\n\n"
+                f"Execute the task logically. The background knowledge is for your reference."
+            )
+        elif paradigm == "specialized":
+            return (
+                f"Domain Context:\n{ctx.knowledge_fragment}\n\n"
+                f"Query/Execution: {ctx.user_input}"
+            )
+        else:
+            # Lite paradigm (Chat/RAG)
+            return (
+                f"Relevant Context:\n{ctx.knowledge_fragment}\n\n"
+                f"User Question: {ctx.user_input}\n\n"
+                f"Please answer based on the context above."
+            )
 
     async def _init_history(self, ctx: OrchestrationContext):
         """初始化会话并保存用户消息"""

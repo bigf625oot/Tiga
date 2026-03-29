@@ -34,11 +34,11 @@ const handleEvent = (eventName: string, payload?: any) => {
 </script>
 
 <template>
-  <div class="flex flex-col space-y-3 w-full">
+  <div class="flex flex-col space-y-3 w-full max-w-full overflow-hidden">
     <div 
       v-for="(block, index) in renderableBlocks" 
       :key="index"
-      class="w-full"
+      class="w-full max-w-full overflow-hidden"
     >
       <component 
         v-if="BlockRendererRegistry[block.type]"

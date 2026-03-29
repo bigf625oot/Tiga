@@ -50,6 +50,6 @@ class LocalStorage(StorageProvider):
             logger.error(f"Local delete failed: {e}")
             return False
 
-    def generate_presigned_url(self, key: str, expiration: int = 3600) -> Optional[str]:
+    def generate_presigned_url(self, key: str, expiration: int = 3600, params: Optional[dict] = None) -> Optional[str]:
         # Simple static URL mapping
         return f"{self.base_url}/{key}"

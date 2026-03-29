@@ -76,8 +76,8 @@ class StorageService:
     def delete_file(self, key: str) -> bool:
         return self.provider.delete_file(key)
 
-    def generate_presigned_url(self, key: str, expiration: int = 3600) -> Optional[str]:
-        return self.provider.generate_presigned_url(key, expiration)
+    def generate_presigned_url(self, key: str, expiration: int = 3600, params: Optional[dict] = None) -> Optional[str]:
+        return self.provider.generate_presigned_url(key, expiration, params=params)
 
     # Legacy support
     @property

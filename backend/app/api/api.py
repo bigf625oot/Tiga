@@ -18,7 +18,6 @@ from app.api.endpoints import (
     recordings,
     render_data,
     user_script,
-
     agent_workflow,
     skills,
     service_categories,

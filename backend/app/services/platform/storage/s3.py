@@ -53,10 +53,17 @@ class S3Storage(StorageProvider):
             logger.error(f"S3 delete failed: {e}")
             return False
 
-    def generate_presigned_url(self, key: str, expiration: int = 3600) -> Optional[str]:
+    def generate_presigned_url(self, key: str, expiration: int = 3600, params: Optional[dict] = None) -> Optional[str]:
         try:
+            s3_params = {"Bucket": self.bucket_name, "Key": key}
+            if params:
+                if "response-content-disposition" in params:
+                    s3_params["ResponseContentDisposition"] = params["response-content-disposition"]
+                if "response-content-type" in params:
+                    s3_params["ResponseContentType"] = params["response-content-type"]
+            
             response = self.s3_client.generate_presigned_url(
-                "get_object", Params={"Bucket": self.bucket_name, "Key": key}, ExpiresIn=expiration
+                "get_object", Params=s3_params, ExpiresIn=expiration
             )
             return response
         except Exception as e:

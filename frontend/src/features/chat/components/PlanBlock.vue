@@ -14,12 +14,16 @@ const completedStepCount = computed(() => props.block.steps.filter(s => s.status
 const statusLabel = computed(() => {
   if (isRunning.value) return '执行中';
   if (hasError.value) return '部分失败';
+  if (completedStepCount.value === 0 && props.block.steps.length > 0) return '待执行';
+  if (completedStepCount.value < props.block.steps.length) return '执行中';
   return '已完成';
 });
 
 const statusPillClass = computed(() => {
   if (isRunning.value) return 'text-primary border-primary/30 bg-primary/8';
   if (hasError.value) return 'text-destructive border-destructive/30 bg-destructive/8';
+  if (completedStepCount.value === 0 && props.block.steps.length > 0) return 'text-muted-foreground border-border/50 bg-muted/20';
+  if (completedStepCount.value < props.block.steps.length) return 'text-primary border-primary/30 bg-primary/8';
   return 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/8';
 });
 

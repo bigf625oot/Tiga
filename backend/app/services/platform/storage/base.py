@@ -23,6 +23,6 @@ class StorageProvider(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def generate_presigned_url(self, key: str, expiration: int = 3600) -> Optional[str]:
+    def generate_presigned_url(self, key: str, expiration: int = 3600, params: Optional[dict] = None) -> Optional[str]:
         """Generate a public/presigned URL."""
         pass

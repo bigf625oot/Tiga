@@ -170,11 +170,9 @@
             </div>
           </Transition>
 
-          <!-- PDF viewer: <object type="application/pdf"> is preferred over <iframe>
-               because it invokes the browser's native PDF plugin based on the type
-               attribute alone, ignoring Content-Disposition from the server response.
-               An <iframe> respects Content-Disposition: attachment and triggers a
-               download instead of inline rendering; <object> does not exhibit this.
+          <!-- PDF viewer: <object type="application/pdf"> is used for native PDF rendering.
+               The backend endpoint will redirect to an OSS presigned URL which natively
+               supports HTTP Range and Content-Length, required by modern browser PDF viewers.
                Fallback slot provides a download link for environments without a PDF plugin. -->
           <object
             v-if="pdfSrc && uiState !== 'error'"
@@ -298,7 +296,7 @@ const startLoadingTimer = () => {
 const preflight = async (url: string): Promise<boolean> => {
   const ac = new AbortController();
   try {
-    const res = await fetch(url, { signal: ac.signal });
+    const res = await fetch(url, { signal: ac.signal, cache: 'no-store' });
     ac.abort(); // headers received; discard body to avoid downloading the PDF
     return res.ok || res.redirected;
   } catch (e: unknown) {
@@ -314,7 +312,8 @@ const reload = () => {
   // Brief tick to unmount the object before remounting with the same src
   setTimeout(async () => {
     const url = `/api/v1/knowledge/${props.docId}/file?t=${Date.now()}`;
-    const ok = await preflight(url);
+    const preflightUrl = `${url}&_preflight=1`;
+    const ok = await preflight(preflightUrl);
     if (!ok) { uiState.value = 'error'; return; }
     pdfSrc.value = url;
     startLoadingTimer();
@@ -336,8 +335,11 @@ watch(
     const url = `/api/v1/knowledge/${docId}/file`;
 
     // Run preflight and meta fetch in parallel to minimise perceived latency
+    // Append a query parameter to the preflight URL to prevent the browser from caching
+    // the aborted response and serving it to the <object> tag.
+    const preflightUrl = url.includes('?') ? `${url}&_preflight=1` : `${url}?_preflight=1`;
     const [ok] = await Promise.all([
-      preflight(url),
+      preflight(preflightUrl),
       knowledgeService.getDocMeta(docId)
         .then(meta => { filename.value = meta.filename ?? `doc#${docId}`; })
         .catch(() => { filename.value = `doc#${docId}`; }),

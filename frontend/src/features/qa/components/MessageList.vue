@@ -1,44 +1,49 @@
 <template>
   <div class="h-full relative min-h-0 min-w-0 flex flex-col group/scrollbar">
-    <!-- Virtual Scroll Container -->
+    <!-- Virtual Scroll Container  -->
     <DynamicScroller
       ref="scrollerRef"
-      class="flex-1 min-h-0 overflow-y-auto overscroll-none px-10 pt-8 pb-16 no-scrollbar scroller-container"
+      class="flex-1 w-full min-h-0 overflow-y-auto overscroll-none px-4 md:px-8 xl:px-10 pt-8 pb-16 no-scrollbar scroller-container"
       :items="messageGroupsWithId"
       :min-item-size="100"
       key-field="id"
       @scroll="handleScroll"
     >
-      <template v-slot="{ item: group, index: idx, active }">
+      <template #default="{ item: group, index: idx, active }">
         <DynamicScrollerItem
           :item="group"
           :active="active"
           :size-dependencies="[
             group.messages.length,
-            group.messages[group.messages.length - 1]?.content?.length,
-            group.messages[group.messages.length - 1]?.reasoning?.length,
-            props.isStreaming && idx === messageGroupsWithId.length - 1
+            group.messages.map((m: any) => m.content),
+            group.messages.map((m: any) => m.steps?.length),
+            group.messages.map((m: any) => m.tools?.length)
           ]"
           :data-index="idx"
-          class="max-w-4xl mx-auto w-full pb-8 scroll-mt-8"
+          class="w-full max-w-[1000px] mx-auto pb-8 scroll-mt-8 lg:pr-8"
         >
           <!-- 1. Normal Message Group -->
           <template v-if="!group.isLoader">
-              <!-- Time Separator -->
-              <div v-if="group.showTime" class="flex justify-center my-4">
-                  <span class="text-[10px] text-muted-foreground/40 px-2 py-0.5 rounded-full select-none">
-                  {{ formatGroupTime(group.timestamp) }}
-                  </span>
+              <!-- Time Separator (Semantic & Optimized) -->
+              <div v-if="group.showTime" class="flex justify-center my-6 relative z-10 pointer-events-none">
+                  <time 
+                      :datetime="group.timestamp.toISOString()" 
+                      class="text-[11px] font-medium text-muted-foreground/70 px-3 py-1 rounded-full bg-background/60 backdrop-blur-md border border-border/40 shadow-sm select-none"
+                  >
+                      {{ group.formattedTime }}
+                  </time>
               </div>
+            </template>
       
-              <!-- Messages in Group -->
-              <ChatCard 
-                  v-for="(msg, mIdx) in group.messages" 
-                  :key="msg.id || mIdx"
-                  class="mb-6 last:mb-0"
-                  :message="msg"
-                  :type="msg.type || 'knowledge_qa'"
-                  :is-user="group.role === 'user'"
+              <!-- Grouped Messages -->
+           <template v-if="!group.isLoading">
+               <ChatCard
+                   v-for="(msg, mIdx) in group.messages"
+                   :key="msg.id || mIdx"
+                   class="mb-6 last:mb-0 w-full"
+                   :message="msg"
+                   :type="msg.type || 'knowledge_qa'"
+                   :is-user="group.role === 'user'"
                   :show-avatar="group.role === 'user' ? true : (mIdx === 0)"
                   :show-meta="mIdx === 0 && group.role !== 'user'"
                   :agent="currentAgent"
@@ -166,6 +171,7 @@ const messageGroups = computed(() => {
           messages: [msg],
           timestamp: msgTime,
           lastTimestamp: msgTime,
+          formattedTime: formatGroupTime(msgTime), // ✨ 预计算，内存换 CPU，符合零计算渲染原则
           showTime,
           height: undefined,
           isLoader: false

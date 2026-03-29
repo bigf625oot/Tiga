@@ -12,7 +12,6 @@ import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
 import { visit } from 'unist-util-visit';
-
 import CodeBlock from './CodeBlock.vue';
 import Citation from './Citation.vue';
 import DocumentCard from './DocumentCard.vue';
@@ -75,51 +74,6 @@ const remarkCitationPlugin = () => {
         });
         
         lastIndex = citationRegex.lastIndex;
-      }
-      
-      if (lastIndex < node.value.length) {
-        children.push({ type: 'text', value: node.value.slice(lastIndex) });
-      }
-      
-      parent.children.splice(index, 1, ...children);
-      return index! + children.length; // skip the newly inserted nodes
-    });
-  };
-};
-
-// 1.5. Remark 插件：提取文档引用 doc#1: 《title》
-const remarkDocumentCardPlugin = () => {
-  return (tree: any) => {
-    visit(tree, 'text', (node: any, index: number | undefined, parent: any) => {
-      if (!parent) return;
-      
-      // Some formatting like **doc#6**: 《...》 might be split into multiple nodes by remark.
-      // But if it's plain text like "doc#6: 《...》", this will match.
-      const docRegex = /doc#\s*(\d+)[*\s]*[:：]?\s*《([^》]+)》/gi;
-      if (!docRegex.test(node.value)) return;
-      
-      const children: any[] = [];
-      let lastIndex = 0;
-      let match;
-      
-      docRegex.lastIndex = 0; // reset regex
-      while ((match = docRegex.exec(node.value)) !== null) {
-        if (match.index > lastIndex) {
-          children.push({ type: 'text', value: node.value.slice(lastIndex, match.index) });
-        }
-        
-        children.push({
-          type: 'documentCard',
-          data: {
-            hName: 'document-card',
-            hProperties: {
-              docId: match[1],
-              title: match[2]
-            }
-          }
-        });
-        
-        lastIndex = docRegex.lastIndex;
       }
       
       if (lastIndex < node.value.length) {
@@ -267,15 +221,24 @@ const renderNode = (node: any, key: string | number = 0): any => {
 // 4. 执行 Unified 编译管线
 const processMarkdown = async (text: string) => {
   try {
-    // Pre-normalize bold-wrapped doc references: **doc#6**: 《...》 → doc#6: 《...》
-    // remark splits **doc#6** into a strong node, breaking the text-node regex in remarkDocumentCardPlugin
-    text = text.replace(/\*\*(doc#\s*\d+)\*\*(?=\s*[*\s]*[:：]?\s*《)/g, '$1');
+    // Pre-process doc references into custom HTML tags before parsing to avoid AST fragmentation
+    // Matches:
+    // - doc#6: 《Title》
+    // - **doc#6**: *Title*
+    // - doc#6: Title
+    text = text.replace(/(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?(?:[:：]\s*|\s+)(?:《([^》\n]+)》|\*([^\*\n]+)\*|([^\n，。；！？,.;!?(（\[\]]+))/gi, (match, docId, t1, t2, t3) => {
+        const title = (t1 || t2 || t3 || '').trim();
+        if (title) {
+            const safeTitle = title.replace(/"/g, '&quot;');
+            return `<document-card doc-id="${docId}" title="${safeTitle}"></document-card>`;
+        }
+        return match;
+    });
 
     const processor = unified()
       .use(remarkParse)
       .use(remarkGfm)
       .use(remarkCitationPlugin)
-      .use(remarkDocumentCardPlugin)
       .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeRaw); // 允许内嵌 HTML，但通过 VNode 渲染保证安全（防 XSS）
       // 彻底移除 rehypeShiki，回归第一性原理：使用最简单的结构直接展示文本

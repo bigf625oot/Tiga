@@ -182,10 +182,13 @@ export function useMarkdown() {
         });
 
         // Pre-process for document cards before markdown parsing to handle markdown bolding etc
-        // Convert `**doc#6**: 《...》` or `doc#6: 《...》` or `• doc#6: 《...》` into a custom tag that we can parse later
-        // It's possible the text includes newlines or dashes, so let's be more flexible.
-        inputText = inputText.replace(/(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?[:：]?\s*《([^》]+)》/gi, (match, docId, title) => {
-            return `\n\n<document-card doc-id="${docId}" title="${escapeHtml(title)}"></document-card>\n\n`;
+        // Convert `**doc#6**: *...*` or `doc#6: ...` or `• doc#6: ...` into a custom tag that we can parse later
+        inputText = inputText.replace(/(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?(?:[:：]\s*|\s+)(?:《([^》\n]+)》|\*([^\*\n]+)\*|([^\n，。；！？,.;!?(（\[\]]+))/gi, (match, docId, t1, t2, t3) => {
+            const title = (t1 || t2 || t3 || '').trim();
+            if (title) {
+                return `\n\n<document-card doc-id="${docId}" title="${escapeHtml(title)}"></document-card>\n\n`;
+            }
+            return match;
         });
 
         // Parse markdown

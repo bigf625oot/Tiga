@@ -46,6 +46,7 @@ def _heuristic_classify(message: str) -> Optional[IntentResult]:
         if pat.search(message):
             return IntentResult(
                 intent="task",
+                paradigm="agentic",
                 confidence=0.85,
                 reasoning=f"Heuristic matched task pattern: {pat.pattern[:40]}",
                 parameters={},
@@ -54,6 +55,7 @@ def _heuristic_classify(message: str) -> Optional[IntentResult]:
         if pat.search(message):
             return IntentResult(
                 intent="chat",
+                paradigm="lite",
                 confidence=0.85,
                 reasoning=f"Heuristic matched chat pattern: {pat.pattern[:40]}",
                 parameters={},
@@ -63,6 +65,7 @@ def _heuristic_classify(message: str) -> Optional[IntentResult]:
     if len(message.strip()) < 4:
         return IntentResult(
             intent="chat",
+            paradigm="lite",
             confidence=0.7,
             reasoning="Short message heuristic (<4 chars)",
             parameters={},
@@ -137,14 +140,18 @@ class ModeRouter:
         except Exception as e:
             logger.warning(f"Failed to pre-assemble tools for registry: {e}")
 
-        # 根据意图进行分发
-        if intent_key in ("chat", "quick", "data_query", "kg_qa"):
+        # 根据宏观范式进行分发 (降维打击，消除 if-else 业务耦合)
+        paradigm = getattr(intent, "paradigm", IntentResult.resolve_paradigm(intent_key))
+        
+        logger.info(f"Resolved paradigm: {paradigm} for intent: {intent_key}")
+
+        if paradigm == "lite":
             from app.services.agent.executors.fast_executor import FastExecutor
             executor = FastExecutor(llm_model=self.llm_model, memory_manager=memory_manager)
 
-        elif intent_key == "task":
-            from app.services.agent.executors.single_executor import SingleExecutor
-            executor = SingleExecutor(
+        elif paradigm == "agentic":
+            from app.services.agent.executors.agentic_executor import AgenticExecutor
+            executor = AgenticExecutor(
                 llm_model=self.llm_model,
                 memory_manager=memory_manager,
                 state_manager=state_manager,
@@ -153,30 +160,14 @@ class ModeRouter:
                 tool_registry=tool_registry
             )
 
-        elif intent_key == "team":
-            from app.services.agent.executors.team_executor import TeamExecutor
-            executor = TeamExecutor(
-                llm_model=self.llm_model,
-                memory_manager=memory_manager,
-                state_manager=state_manager,
-                plan_validator=plan_validator,
-                experience_store=experience_store,
-                tool_registry=tool_registry
-            )
-
-        elif intent_key == "workflow":
-            from app.services.agent.executors.workflow_executor import WorkflowExecutor
-            executor = WorkflowExecutor(
-                llm_model=self.llm_model,
-                memory_manager=memory_manager,
-                state_manager=state_manager,
-                plan_validator=plan_validator,
-                experience_store=experience_store,
-                tool_registry=tool_registry
-            )
+        elif paradigm == "specialized":
+            # 预留给未来独立演进的 SpecializedExecutor (涉及沙盒编译、代码解释器、Graph 专有检索等)
+            # 当前复用 FastExecutor 的基础逻辑
+            from app.services.agent.executors.fast_executor import FastExecutor
+            executor = FastExecutor(llm_model=self.llm_model, memory_manager=memory_manager)
 
         else:
-            logger.warning(f"Unknown intent {intent_key}, falling back to FastExecutor")
+            logger.warning(f"Unknown paradigm {paradigm} for intent {intent_key}, falling back to Lite")
             from app.services.agent.executors.fast_executor import FastExecutor
             executor = FastExecutor(llm_model=self.llm_model, memory_manager=memory_manager)
 
@@ -197,7 +188,13 @@ class ModeRouter:
             return heuristic_intent
 
         if mode_hint:
-            return IntentResult(intent=mode_hint, confidence=1.0, reasoning="Forced intent override.", parameters={})
+            return IntentResult(
+                intent=mode_hint, 
+                paradigm=IntentResult.resolve_paradigm(mode_hint),
+                confidence=1.0, 
+                reasoning="Forced intent override.", 
+                parameters={}
+            )
 
         if heuristic_intent:
             return heuristic_intent
@@ -224,6 +221,7 @@ class ModeRouter:
                 
             return IntentResult(
                 intent=fallback_intent,
+                paradigm=IntentResult.resolve_paradigm(fallback_intent),
                 confidence=0.0,
                 reasoning=f"Router fallback: {e}",
                 parameters={},

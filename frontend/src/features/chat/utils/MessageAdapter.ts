@@ -11,7 +11,9 @@ import type {
     ResourceBlock,
     ErrorBlock,
     ReferencesBlock,
-    SoloLayoutBlock
+    SoloLayoutBlock,
+    TerminalBlock,
+    ActionBlock
 } from '../types';
 
 /**
@@ -88,6 +90,8 @@ export function adaptMessageToBlocks(
     const blocks: ContentBlock[] = [];
 
     // Strategy Pattern: if Solo mode, use a specific unified layout block
+    // We now use sequential blocks for solo mode too
+    /*
     if (modeId === 'solo') {
         blocks.push({
             type: 'solo_layout',
@@ -103,6 +107,7 @@ export function adaptMessageToBlocks(
             blocks
         };
     }
+    */
 
     // Default Pattern: Sequential Blocks
     // Only show execution plan for complex modes, hide for 'quick' and 'chat'
@@ -110,13 +115,61 @@ export function adaptMessageToBlocks(
     const shouldShowPlan = modeId && SHOW_PLAN_MODES.includes(modeId);
 
     if (message.steps && message.steps.length > 0 && shouldShowPlan) {
+        const isMsgRunning = isStreaming && isLast;
+        const rawTools = message.tools || [];
+        const hasMsgError = !!message.error;
+
         blocks.push({
             type: 'plan',
-            steps: message.steps.map((s, i) => ({
-                id: String(i),
-                text: s.content,
-                status: (s as any).status === 'completed' ? 'completed' : ((s as any).status === 'running' ? 'running' : 'pending')
-            }))
+            steps: message.steps.map((s, idx, arr) => {
+                let status = (s as any).status;
+                let text = s.content || (s as any).title || (s as any).description || `步骤 ${idx + 1}`;
+                if (typeof text !== 'string') text = JSON.stringify(text);
+
+                if (!status) {
+                    const chunkSize = Math.ceil(rawTools.length / arr.length) || 1;
+                    const stepTools = rawTools.filter((_: any, ti: number) =>
+                        ti >= idx * chunkSize && ti < (idx + 1) * chunkSize
+                    );
+                    const hasErrorTool = stepTools.some((t: any) => t.status === 'error');
+                    const hasRunningTool = stepTools.some((t: any) => t.status === 'running');
+                    const stepToolsLen = stepTools.length;
+
+                    if (hasErrorTool) {
+                        status = 'error';
+                    } else if (hasRunningTool) {
+                        status = 'running';
+                    } else if (stepToolsLen > 0) {
+                        status = 'completed';
+                    } else {
+                        if (!isMsgRunning) {
+                            const anyError = hasMsgError || arr.some((_, aIdx) => {
+                                const cSize = Math.ceil(rawTools.length / arr.length) || 1;
+                                const sTools = rawTools.filter((_: any, ti: number) => ti >= aIdx * cSize && ti < (aIdx + 1) * cSize);
+                                return sTools.some((t: any) => t.status === 'error');
+                            });
+                            status = anyError ? 'pending' : 'completed';
+                        } else {
+                            const allPrevDone = arr.slice(0, idx).every((_, pIdx) => {
+                                const cSize = Math.ceil(rawTools.length / arr.length) || 1;
+                                const sTools = rawTools.filter((_: any, ti: number) => ti >= pIdx * cSize && ti < (pIdx + 1) * cSize);
+                                return sTools.length > 0 && !sTools.some((t: any) => t.status === 'error') && !sTools.some((t: any) => t.status === 'running');
+                            });
+                            if (allPrevDone) {
+                                status = 'running';
+                            } else {
+                                status = 'pending';
+                            }
+                        }
+                    }
+                }
+
+                return {
+                    id: String((s as any).step ?? (s as any).id ?? idx),
+                    text,
+                    status: (status === 'completed' || status === 'done') ? 'completed' : (status === 'running' ? 'running' : (status === 'error' ? 'error' : 'pending'))
+                };
+            })
         } as PlanBlock);
     }
 
@@ -124,11 +177,69 @@ export function adaptMessageToBlocks(
     if (message.tools && message.tools.length > 0) {
         message.tools.forEach((t: any, idx: number) => {
             const callId = t.id || String(idx);
+            const args = t.args || t.arguments || {};
+            const toolName = t.name || '';
+            
+            // Map command execution tools to TerminalBlock
+            const terminalTools = ['execute_command', 'run_command', 'bash', 'shell', 'cmd', 'powershell'];
+            if (terminalTools.includes(toolName)) {
+                let command = '';
+                if (typeof args === 'string') {
+                    command = args;
+                } else if (typeof args === 'object' && args !== null) {
+                    command = args.command || args.cmd || args.script || JSON.stringify(args);
+                }
+                
+                blocks.push({
+                    type: 'terminal',
+                    command: command,
+                    output: typeof t.result === 'string' ? t.result : (t.result ? JSON.stringify(t.result) : ''),
+                    status: t.status === 'error' ? 'error' : (t.status === 'running' ? 'running' : 'success')
+                } as TerminalBlock);
+                return;
+            }
+
+            // Map file editing tools to ActionBlock
+            const actionTools = ['create_file', 'edit_file', 'delete_file', 'write_file', 'fs_write_file'];
+            if (actionTools.includes(toolName)) {
+                let path = '';
+                let content = '';
+                if (typeof args === 'object' && args !== null) {
+                    path = String(args.path || args.file || args.file_path || '');
+                    content = String(args.content || args.code || '');
+                }
+                
+                let actionType: 'create_file' | 'edit_file' | 'delete_file' = 'edit_file';
+                if (toolName.includes('create') || toolName === 'write_file' || toolName === 'fs_write_file') actionType = 'create_file';
+                if (toolName.includes('delete')) actionType = 'delete_file';
+
+                // We try to use the diff from result if available, otherwise just show content
+                let diff = '';
+                if (t.result && typeof t.result === 'string' && t.result.includes('diff')) {
+                    diff = t.result;
+                } else if (actionType === 'create_file') {
+                    diff = `--- /dev/null\n+++ b/${path}\n@@ -0,0 +1,${content.split('\\n').length} @@\n${content.split('\\n').map((l: string) => '+' + l).join('\\n')}`;
+                } else {
+                    diff = `File: ${path}\nContent:\n${content}`;
+                }
+
+                blocks.push({
+                    type: 'action',
+                    action_type: actionType,
+                    path: path,
+                    description: `Action: ${toolName} on ${path}`,
+                    diff: diff,
+                    status: t.status === 'running' ? 'pending' : (t.status === 'error' ? 'rejected' : 'applied')
+                } as ActionBlock);
+                return;
+            }
+
+            // Fallback to generic ToolCallBlock
             blocks.push({
                 type: 'tool_call',
                 call_id: callId,
-                tool_name: t.name,
-                arguments: t.args || t.arguments || {},
+                tool_name: toolName,
+                arguments: args,
                 state: t.status === 'error' ? 'error' : (t.status === 'running' ? 'running' : 'success')
             } as ToolCallBlock);
 
@@ -173,6 +284,7 @@ export function adaptMessageToBlocks(
         const nextDoc = raw.indexOf('[DocCard:', currentPos);
         const nextFile = raw.indexOf('::: file', currentPos);
         const nextFileSpace = raw.indexOf(':::  file', currentPos);
+        const nextToolCode = raw.indexOf('```tool_code', currentPos);
 
         const candidates = [
             { type: 'think', pos: nextThink },
@@ -181,7 +293,8 @@ export function adaptMessageToBlocks(
             { type: 'markmap', pos: nextMarkmap },
             { type: 'sql', pos: nextSql },
             { type: 'doc', pos: nextDoc },
-            { type: 'file', pos: nextFile !== -1 ? nextFile : nextFileSpace }
+            { type: 'file', pos: nextFile !== -1 ? nextFile : nextFileSpace },
+            { type: 'tool_code', pos: nextToolCode }
         ].filter(c => c.pos !== -1).sort((a, b) => a.pos - b.pos);
 
         if (candidates.length === 0) {
@@ -332,6 +445,36 @@ export function adaptMessageToBlocks(
                 textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 8));
                 currentPos = nextBlock.pos + 8;
             }
+        } else if (nextBlock.type === 'tool_code') {
+            const match = raw.slice(nextBlock.pos).match(/^```tool_code\s*([\s\S]*?)(?:```|$)/);
+            if (match) {
+                const toolText = match[1].trim();
+                let toolName = 'tool';
+                let args = toolText;
+                
+                const nameMatch = toolText.match(/^([a-zA-Z0-9_]+)\s*\(([\s\S]*?)\)?$/);
+                if (nameMatch) {
+                    toolName = nameMatch[1];
+                    args = nameMatch[2];
+                }
+                
+                const hasTool = message.tools?.some((t: any) => t.name === toolName);
+                if (!hasTool) {
+                    blocks.push({
+                        type: 'tool_call',
+                        call_id: `streaming-tool-${Date.now()}`,
+                        tool_name: toolName,
+                        arguments: args,
+                        state: match[0].endsWith('```') ? 'success' : 'running'
+                    } as ToolCallBlock);
+                }
+                
+                currentPos = nextBlock.pos + match[0].length;
+            } else {
+                // Should not happen with the regex, but just in case
+                textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 12));
+                currentPos = nextBlock.pos + 12;
+            }
         }
     }
 
@@ -366,6 +509,53 @@ export function adaptMessageToBlocks(
             message: message.error,
             can_retry: true
         } as ErrorBlock);
+    }
+
+    // 6. Process Artifacts
+    const artifactLinks: any[] = [];
+    if (message.artifacts && Array.isArray(message.artifacts)) {
+        for (const a of message.artifacts as any[]) {
+            if (a?.url) {
+                artifactLinks.push({
+                    name: a.file_name || a.name || '交付文件',
+                    url: a.url,
+                    type: a.type || 'file',
+                    size: a.file_size ?? a.size,
+                });
+            }
+        }
+    }
+    const events = message.stream_events ?? [];
+    for (const ev of events) {
+        if (ev.event === 'artifact') {
+            try {
+                const card: any = ev.raw ?? (typeof ev.content === 'string' ? JSON.parse(ev.content) : ev.content);
+                if (card?.url) {
+                    artifactLinks.push({
+                        name: card.file_name || card.name || '交付文件',
+                        url: card.url,
+                        type: card.type || 'file',
+                        size: card.file_size ?? card.size,
+                    });
+                }
+            } catch {
+                // skip
+            }
+        }
+    }
+
+    if (artifactLinks.length > 0) {
+        artifactLinks.forEach(art => {
+            blocks.push({
+                type: 'resource',
+                resource_type: 'file',
+                data: {
+                    id: art.url, // using url as id
+                    title: art.name,
+                    size: art.size ? `${(art.size / 1024).toFixed(1)} KB` : undefined
+                }
+            } as ResourceBlock);
+        });
     }
 
     return {

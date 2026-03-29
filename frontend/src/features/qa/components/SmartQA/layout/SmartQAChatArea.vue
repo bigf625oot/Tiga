@@ -2,7 +2,7 @@
   <div class="h-full flex-1 flex flex-col min-h-0 relative min-w-0">
     <!-- Empty State -->
     <div v-if="messages.length === 0" key="empty-state" class="flex-1 flex flex-col items-center justify-start pt-[15vh] px-4 overflow-y-auto relative custom-scrollbar">
-      <div class="w-full max-w-2xl flex flex-col items-center gap-6">
+      <div class="w-full max-w-[1000px] w-full flex flex-col items-center gap-6">
         <div class="flex flex-col items-center gap-4 transition-all duration-500 ease-in-out" 
              :class="inputValue ? 'opacity-40 scale-90 translate-y-4' : 'opacity-100'">
           <TechAnimation :width="200" :height="200" class="mb-4" />
@@ -120,6 +120,7 @@
             :is-streaming="isStreaming"
             :loading-status="loadingStatus"
             :current-mode-id="currentModeId"
+            class="w-full max-w-full" 
             @locate-node="$emit('locate-node', $event)"
             @open-doc-space="$emit('open-doc-space', $event)"
             @quote-message="handleQuoteMessage"
@@ -133,7 +134,7 @@
         <!-- Sticky Input Area positioned at bottom overlaying the list -->
         <!-- Use z-30 to ensure input area is above message list -->
         <div class="flex-none w-full px-4 pt-4 pb-6 z-30 bg-background shrink-0 relative  dark:shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.2)]">
-          <div class="max-w-4xl mx-auto relative group/footer">
+          <div class="max-w-[1000px] w-full mx-auto relative group/footer">
            <!-- Mode Toggle Trigger (Visible on hover or if no modes shown) -->
            <div v-if="!isModeBarVisible" class="absolute -top-8 left-0 w-full flex justify-center opacity-0 group-hover/footer:opacity-100 transition-opacity duration-300 pointer-events-none group-hover/footer:pointer-events-auto">
                <Button variant="secondary" size="sm" class="h-6 text-[10px] px-2 shadow-sm bg-background/80 backdrop-blur border border-border/50" @click="isModeBarVisible = true">

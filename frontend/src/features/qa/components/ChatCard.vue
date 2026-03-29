@@ -34,8 +34,8 @@
 
       <!-- Bubble -->
       <div 
-        class="relative text-sm leading-normal transition-all duration-200 max-w-full min-w-0"
-        :class="[bubbleClasses, isUser ? 'shadow-sm' : '']"
+        class="relative text-sm leading-normal transition-all duration-200 min-w-0"
+        :class="[bubbleClasses, isUser ? 'shadow-sm max-w-[85%] w-fit' : 'mt-1 w-full']"
       >
         <template v-if="isUser">
             <div v-if="isEditing" class="flex flex-col gap-2 min-w-[200px]">
@@ -55,7 +55,7 @@
         </template>
 
         <!-- Agent Mode: Rich Content -->
-        <div v-else class="agent-content flex flex-col gap-2 min-w-0 max-w-full">
+        <div v-else class="agent-content flex flex-col gap-2 min-w-0 w-full max-w-full">
             <div v-if="isStreaming && isLast && !message.content && !message.reasoning && (!message.steps || message.steps.length === 0) && (!message.tools || message.tools.length === 0)" class="flex items-center gap-2 py-1">
                 <span class="relative flex h-2.5 w-2.5">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -70,6 +70,7 @@
                 @locate-node="$emit('locate-node', $event)"
                 @open-doc-space="$emit('open-doc-space', $event)"
                 @resend-message="$emit('resend-message', message)"
+                class="w-full flex-1"
             />
         </div>
       </div>
@@ -207,8 +208,8 @@ const bubbleClasses = computed(() => {
   if (props.isUser) {
     return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-3';
   } else {
-    // TRAE style: transparent background, no border, plain text for AI
-    return 'bg-transparent text-foreground px-1 py-1';
+    // 采用与 ChatView demo 完全一致的全宽块级布局
+    return 'bg-transparent text-foreground px-0 py-0 w-full';
   }
 });
 

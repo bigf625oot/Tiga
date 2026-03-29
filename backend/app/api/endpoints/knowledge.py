@@ -668,36 +668,28 @@ async def stream_document_file(doc_id: int, db: AsyncSession = Depends(get_db)):
             raise HTTPException(status_code=404, detail="File not found on disk")
         return FileResponse(file_path, media_type=content_type, headers={"Content-Disposition": disposition})
 
-    # OSS/S3: stream directly from storage provider through the backend.
-    # Redirecting to a presigned URL causes the browser's <object>/<iframe> to
-    # render cross-origin content, which can fail silently due to missing OSS CORS
-    # headers. Proxying through the backend keeps the response same-origin, giving
-    # the browser full Content-Type and Content-Disposition control.
-    import asyncio
-
-    def _iter_oss():
-        """Synchronous generator: pull from oss2 GetObjectResult in 64 KB chunks."""
-        try:
-            result = storage_service.provider.bucket.get_object(doc.oss_key)
-            for chunk in result:
-                yield chunk
-        except Exception as e:
-            logger.error(f"OSS stream error doc={doc_id}: {e}")
-
-    async def _aiter_oss():
-        loop = asyncio.get_event_loop()
-        gen = _iter_oss()
-        while True:
-            chunk = await loop.run_in_executor(None, next, gen, None)
-            if chunk is None:
-                break
-            yield chunk
-
-    return StreamingResponse(
-        _aiter_oss(),
-        media_type=content_type,
-        headers={"Content-Disposition": disposition},
+    # OSS/S3: redirect to presigned URL.
+    # The browser's PDF viewer requires HTTP Range and Content-Length to seek to the xref table
+    # at the end of the file. StreamingResponse uses chunked transfer encoding which lacks both,
+    # causing the PDF viewer to fail with "Failed to load PDF document" on larger files.
+    # Redirecting to the native OSS/S3 URL offloads the Range processing to the object storage.
+    from fastapi.responses import RedirectResponse
+    
+    params = {
+        "response-content-type": content_type,
+        "response-content-disposition": disposition
+    }
+    
+    presigned_url = storage_service.provider.generate_presigned_url(
+        doc.oss_key, 
+        expiration=3600, 
+        params=params
     )
+    
+    if presigned_url:
+        return RedirectResponse(url=presigned_url)
+    else:
+        raise HTTPException(status_code=500, detail="Failed to generate storage URL")
 
 
 @router.get("/{doc_id}/meta")

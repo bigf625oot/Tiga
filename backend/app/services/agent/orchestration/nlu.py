@@ -105,6 +105,7 @@ Output ONLY a valid JSON object with the following schema:
                 
             return IntentResult(
                 intent=intent,
+                paradigm=IntentResult.resolve_paradigm(intent),
                 confidence=float(data.get("confidence", 0.8)),
                 reasoning=data.get("reasoning", "LLM classified"),
                 parameters={}
@@ -127,6 +128,7 @@ Output ONLY a valid JSON object with the following schema:
             
         return IntentResult(
             intent=agent_intent,
+            paradigm=IntentResult.resolve_paradigm(agent_intent),
             confidence=0.5,
             reasoning="Fallback heuristic mapping",
             parameters={}
