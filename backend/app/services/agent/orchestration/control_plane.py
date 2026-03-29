@@ -124,7 +124,7 @@ class AgnoControlPlane:
             rag_task = asyncio.create_task(self._fetch_knowledge(ctx))
             history_init_task = asyncio.create_task(self._init_history(ctx))
 
-            yield {"type": "status", "content": _("Orchestrating context...")}
+            yield {"type": "status", "content": "正在编排上下文..."}
 
             # Step 3: 等待核心决策数据 (NLU)
             ctx.intent = await nlu_task
@@ -171,8 +171,18 @@ class AgnoControlPlane:
     async def _resolve_intent(self, ctx: OrchestrationContext) -> IntentResult:
         """带强制逻辑与超时回退的意图识别"""
         mode_hint = self._get_forced_intent(ctx.kwargs)
-        # P10 护城河：即使有强制模式（如 task），如果用户只是想闲聊或问问题，也应该灵活降级，避免重度执行。
-        # 因此，我们将 forced 作为 mode_hint 传递给 NLU 服务，而不是直接 bypass。
+        
+        # 如果前端明确指定了 quick 或 chat 模式，直接短路 NLU 分类，实现 O(1) 路由
+        if mode_hint in ("quick", "chat"):
+            return IntentResult(
+                intent=mode_hint,
+                confidence=1.0,
+                reasoning="Bypassed NLU due to explicit mode selection",
+                parameters={},
+            )
+
+        # 即使有强制模式（如 task），如果用户只是想闲聊或问问题，也应该灵活降级，避免重度执行。
+        # 非 quick/chat 模式，我们将 forced 作为 mode_hint 传递给 NLU 服务。
 
         try:
             nlu_service = NluService(self.llm_model)

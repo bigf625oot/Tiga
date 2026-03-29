@@ -268,7 +268,7 @@ async def chat_session(
                 chunk_data = chunk
             elif event_type == "status":
                 sse_event = "status"
-                chunk_data = chunk
+                chunk_data = chunk.get("content", chunk)
             elif event_type == "error":
                 sse_event = "error"
                 chunk_data = chunk
@@ -439,6 +439,7 @@ async def chat_session_multipart(
                 sse_event = "chart"
             elif event_type == "status":
                 sse_event = "status"
+                chunk = chunk.get("content", chunk)
             elif event_type == "error":
                 sse_event = "error"
             else:

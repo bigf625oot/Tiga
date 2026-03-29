@@ -51,7 +51,7 @@
         class="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 cursor-default group min-w-0"
       >
         <span class="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0 group-last:bg-primary/50 group-last:animate-pulse"></span>
-        <span class="truncate leading-relaxed font-mono min-w-0 flex-1">{{ typeof log.text === 'string' ? log.text : JSON.stringify(log.text) }}</span>
+        <span class="truncate leading-relaxed font-mono min-w-0 flex-1">{{ log.text }}</span>
       </div>
     </div>
 
@@ -62,12 +62,12 @@
         <!-- Vertical connector -->
         <div
           v-if="idx < execSteps.length - 1"
-          class="absolute left-[8px] top-[22px] bottom-0 w-px z-0"
+          class="absolute left-[8px] top-[18px] bottom-0 w-px z-0"
           :class="step.status === 'error' ? 'bg-destructive/25' : 'bg-border/40'"
         ></div>
 
         <!-- Status indicator -->
-        <div class="flex-shrink-0 w-[18px] h-[18px] mt-1 z-10 flex items-center justify-center">
+        <div class="flex-shrink-0 w-[18px] h-[18px] z-10 flex items-center justify-center">
           <template v-if="step.status === 'running'">
             <span class="w-[16px] h-[16px] rounded-full border-2 border-primary border-t-transparent animate-spin inline-block"></span>
           </template>
@@ -79,7 +79,7 @@
         <!-- Step body -->
         <div class="flex-1 min-w-0 pb-3.5">
           <!-- Step title + elapsed -->
-          <div class="flex items-baseline justify-between gap-2 mb-1.5 min-w-0">
+          <div class="flex items-start justify-between gap-2 mb-1.5 min-w-0">
             <div class="text-[13px] font-medium leading-snug truncate flex-1"
                  :class="{
                    'text-foreground/90': step.status === 'running',
@@ -371,7 +371,20 @@ const miniLogs = computed(() => {
   const result: { id: string; text: string }[] = [];
   for (const ev of events) {
     if (ev.event === 'status' && ev.content) {
-      const text = typeof ev.content === 'string' ? ev.content : JSON.stringify(ev.content);
+      // 兼容旧数据：如果是对象且有 content 字段，则提取 content
+      let text = '';
+      if (typeof ev.content === 'string') {
+        try {
+          const parsed = JSON.parse(ev.content);
+          text = parsed.content || ev.content;
+        } catch {
+          text = ev.content;
+        }
+      } else if (typeof ev.content === 'object' && ev.content !== null) {
+        text = (ev.content as any).content || JSON.stringify(ev.content);
+      } else {
+        text = String(ev.content);
+      }
       result.push({ id: ev.id, text });
     }
   }
@@ -414,15 +427,6 @@ function computeExecution() {
         ti >= idx * chunkSize && ti < (idx + 1) * chunkSize,
       );
 
-      const hasRunningTool = stepTools.some(t => t.status === 'running');
-      const hasErrorTool = stepTools.some(t => t.status === 'error');
-      const isLastStep = idx === steps.length - 1;
-
-      let status: ExecStep['status'] = 'done';
-      if (hasErrorTool) status = 'error';
-      else if (hasRunningTool || (isRunning.value && isLastStep && stepTools.length === 0)) status = 'running';
-      else if (!isRunning.value || !isLastStep) status = 'done';
-
       let title = s.content || s.description || s.title || `步骤 ${idx + 1}`;
       if (typeof title !== 'string') {
           title = JSON.stringify(title);
@@ -431,9 +435,43 @@ function computeExecution() {
       return {
         id: String(s.step ?? s.id ?? idx),
         title,
-        status,
         toolCalls: stepTools,
         elapsed: undefined, // 后端未下发耗时时留空
+        _stepToolsLen: stepTools.length,
+        _hasRunningTool: stepTools.some((t: any) => t.status === 'running'),
+        _hasErrorTool: stepTools.some((t: any) => t.status === 'error')
+      };
+    }).map((step: any, idx: number, arr: any[]) => {
+      let status: ExecStep['status'] = 'pending';
+
+      if (step._hasErrorTool) {
+        status = 'error';
+      } else if (step._hasRunningTool) {
+        status = 'running';
+      } else if (step._stepToolsLen > 0) {
+        status = 'done';
+      } else {
+        if (!isRunning.value) {
+           const anyError = arr.some(a => a._hasErrorTool);
+           status = anyError ? 'pending' : 'done';
+        } else {
+           const allPrevDone = arr.slice(0, idx).every(prev => 
+             prev._stepToolsLen > 0 && !prev._hasErrorTool && !prev._hasRunningTool
+           );
+           if (allPrevDone) {
+             status = 'running';
+           } else {
+             status = 'pending';
+           }
+        }
+      }
+
+      return {
+        id: step.id,
+        title: step.title,
+        status,
+        toolCalls: step.toolCalls,
+        elapsed: step.elapsed
       };
     });
   });

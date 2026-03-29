@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ref, h, defineComponent, PropType } from 'vue';
+import { ref, h, defineComponent } from 'vue';
 import { Check, Copy } from 'lucide-vue-next';
 import { useToast } from '@/components/ui/toast/use-toast';
 
@@ -8,8 +8,6 @@ export default defineComponent({
   props: {
     language: String,
     rawCode: { type: String, required: true },
-    codeAstNodes: Array as PropType<any[]>,
-    shikiStyle: [String, Object] as PropType<string | Record<string, any>>
   },
   setup(props) {
     const copied = ref(false);
@@ -31,7 +29,7 @@ export default defineComponent({
       }
     };
 
-    // 使用纯渲染函数返回整个组件树，避免任何 <component :is> 带来的跨上下文 VNode 丢失问题
+    // 回归第一性原理：最简单可靠的 pre > code 渲染
     return () => h(
       'div',
       { class: 'code-block-wrapper not-prose relative group my-4 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#0d1117]' },
@@ -47,13 +45,11 @@ export default defineComponent({
             copied.value ? h(Check, { class: 'text-emerald-500 w-3.5 h-3.5' }) : h(Copy, { class: 'w-3.5 h-3.5' })
           ])
         ]),
-        // Body with injected AST nodes
+        // Body: 纯文本直接渲染，抛弃一切复杂的 AST 节点遍历和注入
         h('div', { class: 'p-4 m-0 overflow-x-auto text-sm leading-relaxed custom-scrollbar' }, [
-          h(
-            'pre',
-            { class: 'shiki m-0 p-0 bg-transparent', style: props.shikiStyle || '' },
-            props.codeAstNodes?.length ? props.codeAstNodes : [h('code', {}, props.rawCode)]
-          )
+          h('pre', { class: 'm-0 p-0 bg-transparent text-zinc-800 dark:text-zinc-200 font-mono' }, [
+            h('code', {}, props.rawCode)
+          ])
         ])
       ]
     );

@@ -100,7 +100,7 @@ class AgnoStreamAdapter:
             if hasattr(chunk, "tool_calls") and chunk.tool_calls:
                 names = [tc.function.name for tc in chunk.tool_calls if getattr(tc, "function", None)]
                 if names:
-                    yield StreamEvent(type="status", content=f"Running tools: {', '.join(names)}...")
+                    yield StreamEvent(type="status", content=f"正在运行工具: {', '.join(names)}...")
 
             # 2. 字典型事件映射 (字典流)
             if isinstance(chunk, dict) and "type" in chunk:

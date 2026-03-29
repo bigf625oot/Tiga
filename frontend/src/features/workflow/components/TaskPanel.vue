@@ -394,7 +394,24 @@ const goBack = () => {
 const parsedLogs = computed(() => {
   if (!selectedTask.value?.logs) return [];
   return selectedTask.value.logs.map((line, index) => {
-    const strLine = String(line);
+    let rawObj = line;
+    let strLine = String(line);
+    
+    // 尝试解析可能的 JSON 字符串
+    if (typeof line === 'string' && line.trim().startsWith('{')) {
+      try {
+        rawObj = JSON.parse(line);
+        // 如果有 content 字段，提取出来作为日志文本
+        if (rawObj && typeof rawObj === 'object' && 'content' in rawObj) {
+          strLine = typeof rawObj.content === 'string' ? rawObj.content : JSON.stringify(rawObj.content);
+        }
+      } catch (e) {
+        // ignore
+      }
+    } else if (typeof line === 'object' && line !== null && 'content' in line) {
+      strLine = typeof line.content === 'string' ? line.content : JSON.stringify(line.content);
+    }
+
     let type = 'default';
     if (/error|exception|traceback|failed/i.test(strLine)) type = 'error';
     else if (/success|done|completed|✓|✅/i.test(strLine)) type = 'success';
@@ -402,7 +419,7 @@ const parsedLogs = computed(() => {
     
     return {
       id: index,
-      text: typeof line === 'object' ? JSON.stringify(line, null, 2) : strLine,
+      text: typeof rawObj === 'object' && !('content' in rawObj) ? JSON.stringify(rawObj, null, 2) : strLine,
       type
     };
   });

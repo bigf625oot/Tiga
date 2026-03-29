@@ -73,7 +73,7 @@ class FastExecutor(LightBaseExecutor):
             
         if file_ctx:
             instructions.append(f"Uploaded Files Context:\n{file_ctx}")
-            yield {"type": "status", "content": f"Processed {len(files)} files."}
+            yield {"type": "status", "content": f"已处理 {len(files)} 个文件。"}
 
         # 3. Contextual Augmentation
         augmented_input = self._augment_input(input_text, intent)

@@ -11,7 +11,6 @@ import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
-import rehypeShiki from '@shikijs/rehype';
 import { visit } from 'unist-util-visit';
 
 import CodeBlock from './CodeBlock.vue';
@@ -195,10 +194,25 @@ const renderNode = (node: any, key: string | number = 0): any => {
       }
     }
 
-    // 拦截 Pre 节点 (由 shiki 增强过，但我们保留了 rawCode 和 language)
+    // 拦截 Pre 节点，回退到最简单可靠的 pre > code 纯文本渲染模式
     if (node.tagName === 'pre') {
-      const rawCode = node.properties?.rawCode || '';
-      const language = node.properties?.language || '';
+      const codeNode = node.children?.find((c: any) => c.tagName === 'code');
+      let rawCode = '';
+      let language = '';
+      
+      if (codeNode) {
+        // 从 code 节点中提取纯文本代码
+        rawCode = codeNode.children?.filter((c: any) => c.type === 'text').map((c: any) => c.value).join('') || '';
+        
+        // 从 className 中提取语言 (例如 'language-javascript')
+        const className = codeNode.properties?.className;
+        if (Array.isArray(className)) {
+          const langClass = className.find(c => typeof c === 'string' && c.startsWith('language-'));
+          if (langClass) language = langClass.replace('language-', '');
+        } else if (typeof className === 'string' && className.startsWith('language-')) {
+          language = className.replace('language-', '');
+        }
+      }
       
       // Mermaid 拦截
       if (language === 'mermaid') {
@@ -215,22 +229,10 @@ const renderNode = (node: any, key: string | number = 0): any => {
         return h(AsciiArtRenderer, { code: rawCode, key });
       }
       
-      // 提取被 shiki 处理后的 code 节点，同时保留 shiki 注入的 CSS 变量 style（含 --shiki-light/dark-bg 等）
-      const styleProp = node.properties?.style;
-      const shikiStyle = typeof styleProp === 'string' ? parseStyle(styleProp) : (styleProp || {});
-      // const codeAstNodes = (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
-      
-      const codeNode = node.children?.find((c: any) => c.tagName === 'code');
-      const codeAstNodes = codeNode 
-      ? (codeNode.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`))
-      : (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
-
-
+      // 极简方案：抛弃复杂的 AST 传递，直接传递 rawCode 和 language 给 CodeBlock
       return h(CodeBlock, {
         rawCode,
         language,
-        codeAstNodes,
-        shikiStyle,
         key
       });
     }
@@ -275,23 +277,8 @@ const processMarkdown = async (text: string) => {
       .use(remarkCitationPlugin)
       .use(remarkDocumentCardPlugin)
       .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeRaw) // 允许内嵌 HTML，但通过 VNode 渲染保证安全（防 XSS）
-      .use(rehypeShiki, {
-        themes: {
-          light: 'vitesse-light',
-          dark: 'vitesse-dark',
-        },
-        defaultColor: false,
-        fallbackLanguage: 'text',
-        transformers: [{
-          name: 'preserve-raw-code',
-          pre(node: any) {
-            node.properties.rawCode = this.source;
-            const lang = (this.options as any).lang;
-            node.properties.language = lang === 'text' ? '' : (lang || '');
-          }
-        }]
-      });
+      .use(rehypeRaw); // 允许内嵌 HTML，但通过 VNode 渲染保证安全（防 XSS）
+      // 彻底移除 rehypeShiki，回归第一性原理：使用最简单的结构直接展示文本
 
     const mdAst = processor.parse(text);
     const hastAst = await processor.run(mdAst);

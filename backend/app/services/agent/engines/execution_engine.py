@@ -38,10 +38,32 @@ class ExecutionEngine:
             self.llm_model = await resolve_chat_llm_model(self.db)
             
         model_instance = ModelFactory.create_model(self.llm_model)
+        
+        from app.services.agent.orchestration.factory import ModelProviderAdapter
+        from app.services.agent.domain.config import AgentConfig
+        ModelProviderAdapter.apply_custom_logic(
+            model_instance, 
+            self.llm_model, 
+            AgentConfig(name="ExecutionAgent", role=task.executor_role or "executor")
+        )
 
         # 这里应当根据 task.executor_role 从 ToolRegistry 提取需要的工具
         # 为简化，当前提取 registry 中的所有工具或特定 role 的工具
         tools = self._resolve_tools_for_role(task.executor_role)
+        
+        # 收集具有契约的工具指令 (比如 SkillToolkit)
+        tool_snippets = []
+        for t in tools:
+            # Check if tool has get_system_prompt_snippet method (duck typing)
+            if hasattr(t, "get_system_prompt_snippet") and callable(t.get_system_prompt_snippet):
+                try:
+                    snippet = t.get_system_prompt_snippet()
+                    if snippet:
+                        tool_snippets.append(snippet)
+                except Exception as e:
+                    logger.warning(f"Failed to extract prompt snippet from tool {t}: {e}")
+        
+        tool_instructions = "\n\n".join(tool_snippets) if tool_snippets else ""
         
         system_prompt = (
             f"You are executing a sub-task: '{task.title}'.\n"
@@ -50,6 +72,9 @@ class ExecutionEngine:
             f"Expected Output: {task.expected_output}\n"
             "Complete this specific task using the tools provided if necessary."
         )
+        
+        if tool_instructions:
+            system_prompt += f"\n\n## Available Tool Instructions\n{tool_instructions}"
 
         agent = Agent(
             name=f"Executor-{task.task_id}",
@@ -62,7 +87,7 @@ class ExecutionEngine:
         # 转换上下文为字符串或者传递给 agent
         # (实际实现中可能需要将 context 转换给 agent.run)
         context_str = "\n".join([str(c) for c in context]) if context else ""
-        prompt = f"Context:\n{context_str}\n\nTask Goal:\n{task.description}\n\nExecute the task directly. Do NOT repeat the plan. Do NOT output meta-commentary."
+        prompt = f"Context:\n{context_str}\n\nTask Goal:\n{task.description}\n\nExecute the task directly. You MUST use appropriate tools if the task requires fetching information or performing actions. Do NOT repeat the plan. Do NOT output meta-commentary."
 
         adapter = AgnoStreamAdapter()
         raw_stream = agent.arun(prompt, stream=True, stream_events=True)

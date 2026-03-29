@@ -105,7 +105,11 @@ export function adaptMessageToBlocks(
     }
 
     // Default Pattern: Sequential Blocks
-    if (message.steps && message.steps.length > 0) {
+    // Only show execution plan for complex modes, hide for 'quick' and 'chat'
+    const SHOW_PLAN_MODES = ['solo', 'team', 'workflow', 'auto_task', 'data_query', 'kg_qa'];
+    const shouldShowPlan = modeId && SHOW_PLAN_MODES.includes(modeId);
+
+    if (message.steps && message.steps.length > 0 && shouldShowPlan) {
         blocks.push({
             type: 'plan',
             steps: message.steps.map((s, i) => ({

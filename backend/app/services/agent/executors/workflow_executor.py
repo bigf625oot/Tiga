@@ -54,7 +54,7 @@ class WorkflowExecutor(BaseExecutor):
                     yield {"type": "error", "content": _("Workflow definition is empty or unsupported.")}
                     return
 
-                yield {"type": "status", "content": _("Executing workflow: {}").format(wf.name)}
+                yield {"type": "status", "content": _("正在执行工作流: {}").format(wf.name)}
 
                 if self.memory_manager:
                     await self.memory_manager.get_compressed_context(session_id, current_query=input_text)
@@ -65,7 +65,7 @@ class WorkflowExecutor(BaseExecutor):
 
             # [Fallback] 拓扑降级：静态配置缺失时回退至动态规划(SingleExecutor)
             logger.info("No static workflow config found, falling back to SingleExecutor.")
-            yield {"type": "status", "content": _("No workflow found, delegating to task executor.")}
+            yield {"type": "status", "content": _("未找到匹配的工作流，降级至任务执行器。")}
             from app.services.agent.executors.single_executor import SingleExecutor
 
             fallback_executor = SingleExecutor(
@@ -123,7 +123,7 @@ class WorkflowExecutor(BaseExecutor):
             yield {"type": "error", "content": f"Workflow DAG has circular dependencies involving nodes: {cycle_nodes}"}
             return
 
-        yield {"type": "status", "content": _("DAG parsed: {} nodes in topological order.").format(len(execution_order))}
+        yield {"type": "status", "content": _("DAG解析完成: 拓扑排序共 {} 个节点。").format(len(execution_order))}
 
         for nid in execution_order:
             node = node_map[nid]
@@ -137,7 +137,7 @@ class WorkflowExecutor(BaseExecutor):
                 for d in deps if str(d) in node_outputs
             )
 
-            yield {"type": "status", "content": _("Executing node: {} ({})").format(node_name, node_type)}
+            yield {"type": "status", "content": _("正在执行节点: {} ({})").format(node_name, node_type)}
             yield {"type": "task_start", "task_id": nid, "title": node_name, "status": "running"}
 
             try:

@@ -64,7 +64,7 @@ class SingleExecutor(BaseExecutor):
         session_id: str = kwargs.get("session_id")
         files: List[Any] = kwargs.get("files", [])
         
-        yield {"type": "status", "content": _("Orchestrating autonomous planning environment...")}
+        yield {"type": "status", "content": "正在初始化自主规划环境..."}
 
         try:
             # 1. [Context Topology] 并发加载上下文拓扑
@@ -81,13 +81,13 @@ class SingleExecutor(BaseExecutor):
             
             file_context = file_results.get("context", "") if file_results else ""
             if file_context:
-                yield {"type": "status", "content": _("Contextualized with {} files.").format(len(files))}
+                yield {"type": "status", "content": f"包含 {len(files)} 个文件的上下文已就绪。"}
                 
             # --- [Pre-Planning Gatekeeper: Clarification Check] ---
             # P10 \u7ea7\u9632\u5fa1\uff1a\u5728\u8fdb\u5165\u9ad8\u6602\u7684 Planning Phase \u4e4b\u524d\uff0c\u901a\u8fc7\u8f7b\u91cf\u7ea7\u6a21\u578b\u8fdb\u884c\u610f\u56fe\u6258\u5e95\u6f84\u6e05
             # \u5982\u679c intent \u8bc6\u522b\u7f6e\u4fe1\u5ea6\u504f\u4f4e\uff0c\u6216\u7528\u6237\u8f93\u5165\u672c\u8eab\u5b58\u5728\u9ad8\u5ea6\u6b67\u4e49\uff0c\u5219\u89e6\u53d1\u53cd\u95ee\u77ed\u8def
             if intent.confidence < 0.85:
-                yield {"type": "status", "content": _("Checking task ambiguity...")}
+                yield {"type": "status", "content": "正在检查任务意图是否清晰..."}
                 clarifier = IntentClarifier(llm_model=self.llm_model)
                 clarification_result = await clarifier.check_ambiguity(input_text, context=file_context)
                 
@@ -108,9 +108,14 @@ class SingleExecutor(BaseExecutor):
                 await self.state_manager.update_status(session_id, "planning")
 
             # 2. [Planning Phase] \u52a8\u6001\u4efb\u52a1\u62c6\u89e3
-            yield {"type": "status", "content": _("Generating execution plan...")}
+            yield {"type": "status", "content": "正在生成执行计划..."}
             
-            planning_engine = PlanningEngine(db=db, llm_model=self.llm_model)
+            tools = self.tool_registry.get_all_tools()
+            planning_engine = PlanningEngine(
+                db=db, 
+                llm_model=self.llm_model, 
+                tools=tools
+            )
             plan_manifest = await planning_engine.generate_plan(
                 session_id=session_id,
                 user_goal=input_text,
@@ -142,7 +147,7 @@ class SingleExecutor(BaseExecutor):
             
             # [Linear Execution] 采用线性执行，将后置评估降维至旁路
             for task in plan_manifest.tasks:
-                yield {"type": "status", "content": _(f"Executing task: {task.title}")}
+                yield {"type": "status", "content": f"正在执行任务: {task.title}"}
                 yield {"type": "execute_start", "content": task.description}
                 
                 task_output = ""
@@ -168,10 +173,10 @@ class SingleExecutor(BaseExecutor):
                 await self.state_manager.update_status(session_id, "reflecting")
                 
             if self.experience_store:
-                yield {"type": "status", "content": _("Consolidating experience asynchronously...")}
+                yield {"type": "status", "content": "正在异步沉淀经验..."}
                 reflection_engine = ReflectionEngine(db=db, experience_store=self.experience_store, llm_model=self.llm_model)
                 
-                # P10 性能优化：将反思作为非阻塞任务投递到事件循环，而不是阻塞等待
+                # 性能优化：将反思作为非阻塞任务投递到事件循环，而不是阻塞等待
                 async def _background_reflect():
                     try:
                         await reflection_engine.reflect_and_store(
@@ -190,5 +195,5 @@ class SingleExecutor(BaseExecutor):
 
         except Exception as e:
             logger.error(f"SingleExecutor failed: {e}", exc_info=True)
-            yield self._yield_error(_("Execution engine encountered a critical failure"), e)
+            yield self._yield_error("执行引擎遇到严重故障", e)
 

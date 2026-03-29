@@ -61,7 +61,7 @@ class TeamExecutor(BaseExecutor):
         
         images = []
         if files:
-            yield {"type": "status", "content": _("Processing uploaded files for team context...")}
+            yield {"type": "status", "content": _("正在处理团队上下文的上传文件...")}
             file_results = await FileOrchestrator.process_batch(files, session_id=session_id)
             if file_results.get("context"):
                 input_text += f"\n\n[Uploaded Files Context]\n{file_results['context']}"
@@ -73,7 +73,7 @@ class TeamExecutor(BaseExecutor):
             history_msgs = await self.memory_manager.get_compressed_context(session_id, current_query=input_text)
 
         # 4. [Execution Stream] 协作执行与流式事件适配
-        yield {"type": "status", "content": _("Team collaborating...")}
+        yield {"type": "status", "content": _("团队协作中...")}
         try:
             run_kwargs = {"messages": history_msgs, "stream": True, "yield_run_output": True}
             if images:
