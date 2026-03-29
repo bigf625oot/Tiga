@@ -28,9 +28,9 @@ class ToolsManager:
         """
         self._custom_tools.append(tool)
         
-    async def load_tools(self, agent_model: Any, db: AsyncSession = None, session_id: str = None, enable_search: bool = False) -> List[Any]:
+    async def load_tools(self, agent_model: Any, db: AsyncSession = None, session_id: str = None, enable_search: bool = False, suggested_tools: List[str] = None) -> List[Any]:
         """
-        Load all tools based on agent configuration and defaults using the unified CapabilityRegistry.
+        Load tools progressively based on NLU suggestions instead of eager loading all.
         """
         registry = CapabilityRegistry()
         
@@ -39,6 +39,12 @@ class ToolsManager:
         mcp_config = getattr(agent_model, "mcp_config", []) or []
         knowledge_config = getattr(agent_model, "knowledge_config", None)
         
+        # 如果 NLU 有推荐工具，覆盖 agent_model 的 tools_config 以实现按需挂载
+        # 否则回退到 agent_model 预设的配置（防御性降级）
+        if suggested_tools is not None and len(suggested_tools) > 0:
+            tools_config = [{"name": t} for t in suggested_tools]
+            logger.info(f"Progressive loading active: replacing tools_config with {suggested_tools}")
+
         # 1. Local Tools Provider
         registry.register_provider(LocalCapabilityProvider(
             tools_config=tools_config,

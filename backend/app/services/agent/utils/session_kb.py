@@ -135,6 +135,22 @@ class SessionKnowledgeManager:
             logger.error(f"Error adding file {file_path} to KB: {e}")
             return False
 
+    def add_text(self, text: str, source_name: str) -> bool:
+        """
+        Adds raw text to the knowledge base.
+        """
+        if not self.kb:
+            logger.warning("KB not initialized. Call get_knowledge_base first.")
+            return False
+            
+        try:
+            doc = Document(content=text, meta_data={"file_name": source_name})
+            self.kb.load_documents([doc], upsert=True)
+            return True
+        except Exception as e:
+            logger.error(f"Error adding text from {source_name} to KB: {e}")
+            return False
+
     def cleanup(self) -> bool:
         """
         Removes the session knowledge base and temporary files.

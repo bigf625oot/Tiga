@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Literal
+from typing import Any, Dict, Optional, Literal, List
 from pydantic import BaseModel, Field, ConfigDict
 
 # 定义三大底层架构范式
@@ -13,6 +13,7 @@ class IntentResult(BaseModel):
     confidence: float = Field(default=1.0, description="置信度")
     reasoning: Optional[str] = Field(default="", description="推理过程")
     parameters: Dict[str, Any] = Field(default_factory=dict, description="提取的参数")
+    suggested_tools: List[str] = Field(default_factory=list, description="通过 NLU 或 Tools RAG 动态推荐的工具标识符列表")
     
     @classmethod
     def resolve_paradigm(cls, intent: str) -> ParadigmType:

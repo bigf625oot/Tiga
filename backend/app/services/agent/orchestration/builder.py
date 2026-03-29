@@ -109,13 +109,16 @@ class AgentAssembler:
             if not self.ctx.agent_model:
                 await self._load_essential_data()
             
+            intent = overrides.get("intent")
+            suggested_tools = intent.suggested_tools if intent else []
+
             await self._assemble_toolset(
                 session_id=overrides.get("session_id"),
-                enable_search=overrides.get("enable_search")
+                enable_search=overrides.get("enable_search"),
+                suggested_tools=suggested_tools
             )
             
             # Inject intent-based tools directly into ctx.tools to avoid modifying DB model
-            intent = overrides.get("intent")
             if intent:
                 intent_key = intent.intent.value if hasattr(intent.intent, "value") else str(intent.intent)
                 if intent_key in ("data_query", "kg_qa"):
@@ -166,14 +169,18 @@ class AgentAssembler:
         
         self.ctx.instruction_builder = InstructionComposer(self.ctx.agent_model.system_prompt)
 
-    async def _assemble_toolset(self, session_id: Optional[str], enable_search: Optional[bool]):
-        """装配工具并提取其专属指令"""
+    async def _assemble_toolset(self, session_id: Optional[str], enable_search: Optional[bool], suggested_tools: List[str] = None):
+        """装配工具并提取其专属指令 (支持基于 NLU 的渐进式加载)"""
         model_cfg = self.ctx.agent_model.model_config or {}
         search_flag = enable_search if enable_search is not None else model_cfg.get("enable_search", True)
         
-        # 1. 加载所有工具 (基于 CapabilityRegistry)
+        # 1. 加载所有工具 (基于 CapabilityRegistry + Tools RAG 推荐)
         self.ctx.tools = await default_tools.load_tools(
-            self.ctx.agent_model, self.db, session_id, enable_search=search_flag
+            self.ctx.agent_model, 
+            self.db, 
+            session_id, 
+            enable_search=search_flag,
+            suggested_tools=suggested_tools
         )
         
         # 2. 提取带有契约的工具指令 (统一接口处理)

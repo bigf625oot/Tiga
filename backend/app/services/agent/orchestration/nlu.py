@@ -1,10 +1,11 @@
 import logging
 import asyncio
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.llm_model import LLMModel
 from app.services.agent.schemas.intent import IntentResult
 from app.services.platform.llm.factory import ModelFactory
+from app.services.agent.tools.retriever import tool_retriever
 from agno.agent import Agent
 
 logger = logging.getLogger("eah.core.nlu")
@@ -13,11 +14,40 @@ class NluService:
     """
     Agent NLU Service: Translates natural language into agent intents,
     taking into account user input, current mode hint, and conversation history.
+    Now implements Dual-Track Retrieval (Intent + Tools RAG).
     """
     def __init__(self, llm_model: Optional[LLMModel] = None):
         self.llm_model = llm_model
 
     async def analyze(
+        self, 
+        user_input: str, 
+        mode_hint: Optional[str] = None, 
+        session_id: Optional[str] = None, 
+        db: Optional[AsyncSession] = None
+    ) -> IntentResult:
+        """
+        Analyzes user input and returns an IntentResult with suggested tools.
+        Supported intents for Agent: "chat", "task", "team", "workflow", "data_query", "kg_qa"
+        """
+        # 1. 宏观意图推断 (Macro Intent)
+        base_intent = await self._analyze_intent(user_input, mode_hint, session_id, db)
+        
+        # 2. 微观工具召回 (Micro Tools RAG)
+        # 只有非纯聊天的场景才需要去召回工具，或者当识别为 lite 但有特定关键词时
+        suggested_tools = []
+        if base_intent.intent != "chat" or mode_hint == "quick":
+            # 根据用户的具体 Query 和宏观范式，动态召回最相关的 Top-K 工具
+            suggested_tools = await tool_retriever.retrieve(
+                query=user_input, 
+                top_k=3, 
+                paradigm=base_intent.paradigm
+            )
+            base_intent.suggested_tools = suggested_tools
+            
+        return base_intent
+
+    async def _analyze_intent(
         self, 
         user_input: str, 
         mode_hint: Optional[str] = None, 

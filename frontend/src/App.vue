@@ -455,37 +455,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, defineAsyncComponent, reactive, watch } from 'vue';
+import { ref, onMounted, computed, defineAsyncComponent, watch, reactive } from 'vue';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import { useWorkflowStore } from '@/features/workflow/store/workflow.store';
-import { MODE_LABELS } from '@/features/qa/constants';
+import { useWorkflowStore } from '@/features/llm-chat/store/workflow/workflow.store';
+import { MODE_LABELS } from '@/features/llm-chat/shared/constants';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/locales';
 import { useTheme } from '@/composables/useTheme';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Toaster } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import SmartQA from '@/features/qa/components/SmartQA.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
-import LanguageToggle from '@/components/LanguageToggle.vue';
-import AgentIcon from '@/shared/components/atoms/AgentIcon/AgentIcon.vue';
+import SmartQA from '@/features/llm-chat/shared/components/SmartQA.vue';
 import TaskCenter from '@/components/TaskCenter.vue';
-import { useArtifactProvider, ArtifactContextKey } from '@/features/chat/context/ArtifactContext';
+import { useArtifactProvider } from '@/features/llm-chat/shared/context/ArtifactContext';
 
 // Icons
 import {
-  Menu, X, Plus, MessageSquare, Clock, Search, Mic, BarChart, Calculator,
-  LayoutGrid, Database, Film, Box, Workflow, Network, Share2,
-  Trash2, Settings, Cpu, MoreHorizontal, ChevronRight, ChevronDown, Users,
+  Menu, X, Plus, MessageSquare, Search, Mic, BarChart, Calculator,
+  LayoutGrid, Database, Film, Box, Network, Share2, Workflow,
+  Trash2, Settings, Cpu, ChevronRight, ChevronDown, Users,
   GitBranch, Upload
 } from 'lucide-vue-next';
 import {
@@ -523,15 +516,13 @@ const DatabaseManagement = defineAsyncComponent(() => import('@/features/system/
 const AgentManagement = defineAsyncComponent(() => import('@/features/agent/components/AgentManagement.vue'));
 const ServiceMarket = defineAsyncComponent(() => import('@/features/agent/components/ServiceMarket.vue'));
 const AgentFlow = defineAsyncComponent(() => import('@/features/agent/components/AgentFlow.vue'));
-
 const DataDashboard = defineAsyncComponent(() => import('@/features/data_etl/DataDashboard.vue'));
 const DataSourceManagement = defineAsyncComponent(() => import('@/features/data_etl/DataSourceManagement.vue'));
 const EtlPipelineList = defineAsyncComponent(() => import('@/features/data_etl/EtlPipelineList.vue'));
 const EditorLayout = defineAsyncComponent(() => import('@/features/etl_editor/EditorLayout.vue'));
 const SystemSettings = defineAsyncComponent(() => import('@/features/data_etl/SystemSettings.vue'));
 const SmartTeam = defineAsyncComponent(() => import('@/features/team/components/SmartTeam.vue'));
-const ChatDemo = defineAsyncComponent(() => import('@/features/chat/components/ChatView.vue'));
-const GlobalArtifactEditor = defineAsyncComponent(() => import('@/features/workflow/components/editor/GlobalArtifactEditor.vue'));
+const GlobalArtifactEditor = defineAsyncComponent(() => import('@/features/llm-chat/workflow/components/editor/GlobalArtifactEditor.vue'));
 
 // Setup Axios
 const api = axios.create({
@@ -594,8 +585,7 @@ const componentMap: Record<string, any> = {
     'etl_pipeline': EditorLayout,
     'etl_settings': SystemSettings,
     'list': RecordingList,
-    'detail': RecordingDetail,
-    'chat_demo': ChatDemo
+    'detail': RecordingDetail
 };
 
 const currentViewComponent = computed(() => {
@@ -783,7 +773,6 @@ interface SidebarItem {
 }
 
 const agentSidebarItems: SidebarItem[] = [
-    { id: 'chat_demo', label: '消息卡片 Demo', icon: Box },
     { id: 'model', label: '模型管理', icon: Cpu },
     { id: 'service_market', label: '工具市场', icon: LayoutGrid },
     { id: 'agent', label: '智能体中心', icon: Box },

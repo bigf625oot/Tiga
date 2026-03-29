@@ -53,15 +53,43 @@ class ImageProcessor(BaseProcessor):
     async def process(self, file_bytes: bytes, filename: str, kb_manager: Any = None, **kwargs) -> ProcessedResult:
         # P10 级设计：支持内存二进制流直接构建，无需写磁盘
         try:
+            # Check if we should fallback to OCR (e.g. model doesn't support vision)
+            # Default behavior: we still provide the image object, but we ALSO extract text if possible
+            # to ensure text-only models can still understand the image content.
+            
+            ocr_text = None
+            try:
+                import pytesseract
+                from PIL import Image as PILImage
+                
+                # Perform Edge OCR
+                img = PILImage.open(io.BytesIO(file_bytes))
+                ocr_text = pytesseract.image_to_string(img)
+                if ocr_text and len(ocr_text.strip()) > 5:
+                    ocr_text = f"[OCR 提取内容]\n{ocr_text.strip()}"
+                else:
+                    ocr_text = None
+            except ImportError:
+                logger.debug("pytesseract not installed, skipping Edge OCR fallback.")
+            except Exception as e:
+                logger.warning(f"Edge OCR extraction failed for {filename}: {e}")
+
             # 某些模型支持 base64，Agno Image 可以通过 content 传入
             image_obj = Image(content=file_bytes, filepath=filename)
+            
+            # If OCR succeeded and we have a KB, add the OCR text to the KB for RAG
+            if ocr_text and kb_manager:
+                await asyncio.to_thread(kb_manager.add_text, ocr_text, filename)
+                
+            content_text = ocr_text if ocr_text else f"[图片文件: {filename}]"
+            
             return {
                 "status": "success",
                 "file_type": "image",
                 "filename": filename,
-                "content_text": f"[图片文件: {filename}]",
+                "content_text": self._truncate_text(content_text),
                 "media_objects": [image_obj],
-                "metadata": {},
+                "metadata": {"has_ocr": bool(ocr_text)},
                 "error_msg": None
             }
         except Exception as e:

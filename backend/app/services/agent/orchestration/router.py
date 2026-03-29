@@ -119,7 +119,11 @@ class ModeRouter:
         try:
             assembler = AgentAssembler(db, agent_id)
             await assembler._load_essential_data()
-            await assembler._assemble_toolset(session_id=session_id, enable_search=enable_search)
+            await assembler._assemble_toolset(
+                session_id=session_id, 
+                enable_search=enable_search,
+                suggested_tools=intent.suggested_tools
+            )
             
             for tool in assembler.ctx.tools:
                 if callable(tool):
