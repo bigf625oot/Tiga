@@ -86,6 +86,12 @@
               <button class="p-1 text-muted-foreground/40 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-all" title="复制" @click="copyText(message.content)">
                   <Copy class="w-3.5 h-3.5" />
               </button>
+              <button class="p-1 text-muted-foreground/40 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-all" title="重新发送" @click="$emit('resend-message', message)">
+                  <RotateCcw class="w-3.5 h-3.5" />
+              </button>
+              <button class="p-1 text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all" title="删除" @click="$emit('delete-message', message)">
+                  <Trash2 class="w-3.5 h-3.5" />
+              </button>
           </template>
           <template v-else>
               <button class="p-1 text-muted-foreground/40 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-all" title="复制" @click="copyText(message.content)">

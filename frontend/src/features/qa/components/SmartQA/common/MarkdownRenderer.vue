@@ -32,6 +32,20 @@ const emit = defineEmits<{
 
 const renderedVNode = shallowRef<any>(null);
 
+// 解析 style 字符串为对象，避免 Vue cssText 赋值时丢失纯 CSS 变量
+const parseStyle = (styleStr: string): Record<string, string> => {
+  const styleObj: Record<string, string> = {};
+  if (!styleStr) return styleObj;
+  
+  styleStr.split(';').forEach(rule => {
+    const [key, ...values] = rule.split(':');
+    if (key && values.length) {
+      styleObj[key.trim()] = values.join(':').trim();
+    }
+  });
+  return styleObj;
+};
+
 // 1. Remark 插件：提取引用的 [1], [2] 并转化为特殊的 HAST 节点
 const remarkCitationPlugin = () => {
   return (tree: any) => {
@@ -119,35 +133,7 @@ const remarkDocumentCardPlugin = () => {
   };
 };
 
-// 2. Rehype 插件：在 shiki 处理之前，提取 rawCode
-const rehypeExtractRawCode = () => {
-  return (tree: any) => {
-    visit(tree, 'element', (node: any) => {
-      if (node.tagName === 'pre') {
-        const codeNode = node.children.find((c: any) => c.tagName === 'code');
-        if (codeNode) {
-          let rawValue = '';
-          visit(codeNode, 'text', (textNode: any) => {
-            rawValue += textNode.value;
-          });
-          node.properties = node.properties || {};
-          node.properties.rawCode = rawValue;
-          
-          const className = codeNode.properties?.className || [];
-          const langClass = Array.isArray(className) 
-            ? className.find((c: any) => String(c).startsWith('language-'))
-            : (String(className).startsWith('language-') ? className : undefined);
-            
-          if (langClass) {
-            node.properties.language = String(langClass).replace('language-', '');
-          }
-        }
-      }
-    });
-  };
-};
-
-// 3. 将 HAST 转换为 Vue VNode 的核心引擎
+// 2. 将 HAST 转换为 Vue VNode 的核心引擎
 const renderNode = (node: any, key: string | number = 0): any => {
   if (node.type === 'text') {
     return node.value;
@@ -229,13 +215,22 @@ const renderNode = (node: any, key: string | number = 0): any => {
         return h(AsciiArtRenderer, { code: rawCode, key });
       }
       
-      // 提取被 shiki 处理后的 code 节点
-      const codeAstNodes = (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
+      // 提取被 shiki 处理后的 code 节点，同时保留 shiki 注入的 CSS 变量 style（含 --shiki-light/dark-bg 等）
+      const styleProp = node.properties?.style;
+      const shikiStyle = typeof styleProp === 'string' ? parseStyle(styleProp) : (styleProp || {});
+      // const codeAstNodes = (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
       
+      const codeNode = node.children?.find((c: any) => c.tagName === 'code');
+      const codeAstNodes = codeNode 
+      ? (codeNode.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`))
+      : (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
+
+
       return h(CodeBlock, {
         rawCode,
         language,
         codeAstNodes,
+        shikiStyle,
         key
       });
     }
@@ -249,6 +244,10 @@ const renderNode = (node: any, key: string | number = 0): any => {
         if (propKey === 'className') {
           props.class = Array.isArray(propValue) ? propValue.join(' ') : propValue;
         } 
+        // style 字符串转换为对象
+        else if (propKey === 'style' && typeof propValue === 'string') {
+          props.style = parseStyle(propValue);
+        }
         // 过滤内部属性
         else if (propKey !== 'rawCode' && propKey !== 'language') {
           props[propKey] = propValue;
@@ -266,6 +265,10 @@ const renderNode = (node: any, key: string | number = 0): any => {
 // 4. 执行 Unified 编译管线
 const processMarkdown = async (text: string) => {
   try {
+    // Pre-normalize bold-wrapped doc references: **doc#6**: 《...》 → doc#6: 《...》
+    // remark splits **doc#6** into a strong node, breaking the text-node regex in remarkDocumentCardPlugin
+    text = text.replace(/\*\*(doc#\s*\d+)\*\*(?=\s*[*\s]*[:：]?\s*《)/g, '$1');
+
     const processor = unified()
       .use(remarkParse)
       .use(remarkGfm)
@@ -273,15 +276,21 @@ const processMarkdown = async (text: string) => {
       .use(remarkDocumentCardPlugin)
       .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeRaw) // 允许内嵌 HTML，但通过 VNode 渲染保证安全（防 XSS）
-      .use(rehypeExtractRawCode)
       .use(rehypeShiki, {
         themes: {
           light: 'vitesse-light',
           dark: 'vitesse-dark',
         },
-        defaultColor: false, // 让 shiki 生成 css 变量
-        // 忽略不支持的语言，避免报错
+        defaultColor: false,
         fallbackLanguage: 'text',
+        transformers: [{
+          name: 'preserve-raw-code',
+          pre(node: any) {
+            node.properties.rawCode = this.source;
+            const lang = (this.options as any).lang;
+            node.properties.language = lang === 'text' ? '' : (lang || '');
+          }
+        }]
       });
 
     const mdAst = processor.parse(text);
@@ -301,18 +310,3 @@ watch(() => props.content, (newContent) => {
 }, { immediate: true });
 
 </script>
-
-<style>
-/* 添加 shiki 多主题支持变量映射 */
-html.dark .shiki,
-html.dark .shiki span {
-  color: var(--shiki-dark) !important;
-  background-color: var(--shiki-dark-bg) !important;
-}
-
-html:not(.dark) .shiki,
-html:not(.dark) .shiki span {
-  color: var(--shiki-light) !important;
-  background-color: var(--shiki-light-bg) !important;
-}
-</style>

@@ -50,6 +50,8 @@
                   @quote-message="$emit('quote-message', $event)"
                   @excerpt-message="$emit('excerpt-message', $event)"
                   @delete-message="$emit('delete-message', $event)"
+                  @resend-message="$emit('resend-message', $event)"
+                  @edit-message="$emit('edit-message', $event)"
               />
           </template>
 
@@ -130,7 +132,7 @@ const props = defineProps<{
   currentModeId?: string | null;
 }>();
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
 
 // Grouping Logic
 const messageGroups = computed(() => {

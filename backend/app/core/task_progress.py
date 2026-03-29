@@ -33,19 +33,19 @@ class TaskProgress:
         step: str = "",
         extend: Optional[Dict[str, Any]] = None
     ) -> None:
-        redis = await self._get_redis()
-        key = self._key(task_id)
-
-        data = {
-            "percent": str(percent),
-            "status": status,
-            "msg": msg,
-            "step": step,
-            "ts": datetime.now().isoformat(),
-            "extend": json.dumps(extend or {})
-        }
-
         try:
+            redis = await self._get_redis()
+            key = self._key(task_id)
+
+            data = {
+                "percent": str(percent),
+                "status": status,
+                "msg": msg,
+                "step": step,
+                "ts": datetime.now().isoformat(),
+                "extend": json.dumps(extend or {})
+            }
+
             await redis.hset(key, mapping=data)
             if status in ("SUCCESS", "FAILED", "CANCELLED"):
                 await redis.expire(key, PROGRESS_FINAL_TTL)
@@ -55,10 +55,9 @@ class TaskProgress:
             logger.error(f"Failed to set progress for {task_id}: {e}")
 
     async def get_progress(self, task_id: str) -> Optional[Dict[str, Any]]:
-        redis = await self._get_redis()
-        key = self._key(task_id)
-
         try:
+            redis = await self._get_redis()
+            key = self._key(task_id)
             data = await redis.hgetall(key)
             if not data:
                 return None
@@ -77,10 +76,9 @@ class TaskProgress:
             return None
 
     async def delete_progress(self, task_id: str) -> None:
-        redis = await self._get_redis()
-        key = self._key(task_id)
-
         try:
+            redis = await self._get_redis()
+            key = self._key(task_id)
             await redis.unlink(key)
         except Exception as e:
             logger.error(f"Failed to delete progress for {task_id}: {e}")

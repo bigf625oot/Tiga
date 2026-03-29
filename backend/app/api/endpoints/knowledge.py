@@ -638,6 +638,83 @@ async def delete_document(doc_id: int, db: AsyncSession = Depends(get_db)):
     return {"status": "deleted"}
 
 
+@router.get("/{doc_id}/file")
+async def stream_document_file(doc_id: int, db: AsyncSession = Depends(get_db)):
+    doc = await db.get(KnowledgeDocument, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not doc.oss_key:
+        raise HTTPException(status_code=400, detail="Document has no file")
+
+    from app.services.platform.storage.local import LocalStorage
+    import urllib.parse
+
+    file_ext = os.path.splitext(doc.filename)[1].lower()
+    content_type = "application/pdf" if file_ext == ".pdf" else "application/octet-stream"
+
+    # RFC 5987 encoding for non-ASCII filenames to avoid latin-1 encoding errors in HTTP headers
+    try:
+        safe_name_ascii = doc.filename.encode("ascii").decode("ascii")
+        disposition = f'inline; filename="{safe_name_ascii}"'
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        encoded_name = urllib.parse.quote(doc.filename, safe="")
+        disposition = f"inline; filename*=UTF-8''{encoded_name}"
+
+    # Local storage: serve directly via FileResponse (supports Range, no temp copy)
+    if isinstance(storage_service.provider, LocalStorage):
+        from fastapi.responses import FileResponse
+        file_path = os.path.join(storage_service.provider.upload_dir, doc.oss_key)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found on disk")
+        return FileResponse(file_path, media_type=content_type, headers={"Content-Disposition": disposition})
+
+    # OSS/S3: stream directly from storage provider through the backend.
+    # Redirecting to a presigned URL causes the browser's <object>/<iframe> to
+    # render cross-origin content, which can fail silently due to missing OSS CORS
+    # headers. Proxying through the backend keeps the response same-origin, giving
+    # the browser full Content-Type and Content-Disposition control.
+    import asyncio
+
+    def _iter_oss():
+        """Synchronous generator: pull from oss2 GetObjectResult in 64 KB chunks."""
+        try:
+            result = storage_service.provider.bucket.get_object(doc.oss_key)
+            for chunk in result:
+                yield chunk
+        except Exception as e:
+            logger.error(f"OSS stream error doc={doc_id}: {e}")
+
+    async def _aiter_oss():
+        loop = asyncio.get_event_loop()
+        gen = _iter_oss()
+        while True:
+            chunk = await loop.run_in_executor(None, next, gen, None)
+            if chunk is None:
+                break
+            yield chunk
+
+    return StreamingResponse(
+        _aiter_oss(),
+        media_type=content_type,
+        headers={"Content-Disposition": disposition},
+    )
+
+
+@router.get("/{doc_id}/meta")
+async def get_document_meta(doc_id: int, db: AsyncSession = Depends(get_db)):
+    doc = await db.get(KnowledgeDocument, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {
+        "id": doc.id,
+        "filename": doc.filename,
+        "file_size": doc.file_size,
+        "status": doc.status,
+        "created_at": doc.created_at,
+        "updated_at": doc.updated_at,
+    }
+
+
 @router.get("/{doc_id}/content")
 async def get_document_content(doc_id: int, db: AsyncSession = Depends(get_db)):
     doc = await db.get(KnowledgeDocument, doc_id)

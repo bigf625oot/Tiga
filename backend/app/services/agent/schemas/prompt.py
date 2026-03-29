@@ -70,6 +70,31 @@ Always verify the environment with `list_files` if needed.
 CRITICAL: If the user asks you to generate a specific file format (like .docx, .xlsx, .pdf) that requires external libraries, you MUST use `run_shell` to install the required libraries (like python-docx, openpyxl, etc.) FIRST, and then write the Python script to generate the file. Do NOT tell the user that you cannot generate the file due to environment restrictions. You HAVE the capability to install any python package you need.""")
 
     @staticmethod
+    def get_visualization_output_prompt() -> str:
+        return _("""## Visualization Output Rules
+
+**Mind Map** — use `markmap` fenced block with a Markdown outline:
+\```markmap
+# Topic
+## Branch A
+### Sub-item A1
+### Sub-item A2
+## Branch B
+### Sub-item B1
+\```
+
+**Flowchart / Sequence / Other diagrams** — use `mermaid` fenced block:
+\```mermaid
+flowchart TD
+  A[Start] --> B[Step]
+\```
+
+Rules:
+- Mind maps MUST use `markmap` (not `mermaid mindmap`).
+- Flowcharts, sequence diagrams, gantt, class diagrams MUST use `mermaid`.
+- NEVER say "I cannot render graphics". The frontend renders both automatically.""")
+
+    @staticmethod
     def get_knowledge_prompt() -> str:
         return _("""## Knowledge Base
 Access advanced Knowledge Graph retrieval via:
@@ -168,6 +193,14 @@ class InstructionComposer:
                 category=InstructionCategory.SKILL
             ))
         return self
+
+    def with_visualization(self) -> "InstructionComposer":
+        return self.add_segment(InstructionSegment(
+            key="constraint_visualization_output",
+            content=InstructionLibrary.get_visualization_output_prompt(),
+            category=InstructionCategory.CONSTRAINT,
+            priority=10
+        ))
 
     def with_strategies(self, cot: bool = False, react: bool = False) -> "InstructionComposer":
         """注入推理与执行策略"""

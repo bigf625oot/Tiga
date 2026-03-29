@@ -95,6 +95,13 @@
             v-model:is-network-search-enabled="isNetworkSearchEnabled"
           />
         </div>
+
+        <!-- Doc Preview Panel: inline right panel, lazy-loads PDF -->
+        <DocPreviewPanel
+          :visible="docPreviewVisible"
+          :doc-id="previewDocId"
+          @close="docPreviewVisible = false"
+        />
       </div>
     </div>
 
@@ -123,10 +130,6 @@
       @confirm="handleAttachmentOk"
     />
 
-    <DocumentPreviewDrawer
-      v-model:visible="docPreviewVisible"
-      :doc-id="previewDocId"
-    />
   </DynamicGridBackground>
 </template>
 
@@ -145,7 +148,7 @@ import SmartQATaskPanel from '../../workflow/components/SmartQA/SmartQATaskPanel
 import AttachmentDialog from './SmartQA/common/AttachmentDialog.vue';
 import FileSidebar from './SmartQA/common/FileSidebar.vue';
 import MemoDrawer, { type Memo } from './SmartQA/common/MemoDrawer.vue';
-import DocumentPreviewDrawer from './SmartQA/common/DocumentPreviewDrawer.vue';
+import DocPreviewPanel from './SmartQA/common/DocPreviewPanel.vue';
 
 // Composables
 import { useChatSession } from '../composables/useChatSession';
@@ -831,6 +834,8 @@ watch(() => props.sessionId, (newId, oldId) => {
     sessionAttachments.value = [];
     isFileSidebarOpen.value = false;
     isRightCollapsed.value = true;
+    docPreviewVisible.value = false;
+    previewDocId.value = null;
     workflowStore.resetWorkflow();
     if (newId) {
         // 先设为 quick（假设空），等 fetch 完再根据内容决定

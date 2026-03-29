@@ -1,17 +1,17 @@
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 
-# 针对 SQLite 的并发写冲突，必须在 connect_args 层面配置 timeout，
-# 而非 PRAGMA busy_timeout —— aiosqlite 在 PRAGMA 执行前已创建连接，
-# connect_args 的 timeout 参数直接作用于底层 sqlite3 模块的写锁等待。
+# SQLite 单写者约束：QueuePool 多连接并发写必然触发 "database is locked"。
+# StaticPool 强制全进程共享单一底层连接，将所有写操作串行化，从根源消除锁竞争。
+# 代价：牺牲读并发（可接受，SQLite 非生产级数据库）。
 _engine_kwargs = {"echo": False}
 if "sqlite" in settings.database_url:
-    # timeout=30: 写锁被占用时最多等待 30 秒再报 OperationalError，
-    # 彻底消除流式响应期间并发写导致的 "database is locked" 错误。
-    _engine_kwargs["connect_args"] = {"timeout": 30, "check_same_thread": False}
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+    _engine_kwargs["poolclass"] = StaticPool
 
 engine = create_async_engine(settings.database_url, **_engine_kwargs)
 
@@ -23,8 +23,8 @@ if "sqlite" in settings.database_url:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
-        # busy_timeout 双保险：PRAGMA 层也设置，与 connect_args timeout 共同生效
-        cursor.execute("PRAGMA busy_timeout=30000")
+        # 防御外部工具（如 DB Browser）并发读写时的锁等待
+        cursor.execute("PRAGMA busy_timeout=5000")
         cursor.close()
 
 

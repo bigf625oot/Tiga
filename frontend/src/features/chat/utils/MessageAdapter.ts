@@ -14,6 +14,71 @@ import type {
     SoloLayoutBlock
 } from '../types';
 
+/**
+ * Converts Mermaid mindmap syntax to Markdown outline for Markmap rendering.
+ * Mermaid mindmap uses indentation-based hierarchy; we map each level to a
+ * heading depth so Markmap can build the interactive tree.
+ *
+ * Input:
+ *   mindmap
+ *     root((Agent综述))
+ *       Branch A
+ *         Leaf
+ *
+ * Output:
+ *   # Agent综述
+ *   ## Branch A
+ *   ### Leaf
+ */
+function convertMermaidMindmapToMarkdown(code: string): string {
+    const lines = code.split('\n');
+    const result: string[] = [];
+    let baseIndent = -1;
+    let indentStep = 2; // detected from first two levels
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        // Skip directive line and blanks
+        if (!trimmed || trimmed === 'mindmap') continue;
+
+        const currentIndent = line.length - line.trimStart().length;
+
+        if (baseIndent === -1) {
+            baseIndent = currentIndent;
+        } else if (indentStep === 2 && currentIndent > baseIndent) {
+            // Detect actual indent step from the first child
+            indentStep = Math.max(1, currentIndent - baseIndent);
+        }
+
+        // Relative indent → heading level (root = h1)
+        const level = Math.max(1, Math.round((currentIndent - baseIndent) / indentStep) + 1);
+
+        // Strip Mermaid node shape decorators.
+        // Mermaid allows an optional ASCII identifier before the shape, e.g. root((label)).
+        // Match with-prefix forms first, then bare forms.
+        const ID = '[a-zA-Z0-9_-]*'; // optional node identifier
+        const text = trimmed
+            .replace(new RegExp(`^${ID}\\(\\((.+?)\\)\\)$`), '$1')  // id((label)) circle
+            .replace(new RegExp(`^${ID}\\[\\[(.+?)\\]\\]$`), '$1')  // id[[label]] cylinder
+            .replace(new RegExp(`^${ID}\\[/(.+?)/\\]$`),    '$1')   // id[/label/] trapezoid
+            .replace(new RegExp(`^${ID}\\[\\\\(.+?)\\\\\\]$`), '$1') // id[\label\] inv-trap
+            .replace(new RegExp(`^${ID}\\((.+?)\\)$`),      '$1')   // id(label) rounded
+            .replace(new RegExp(`^${ID}\\[(.+?)\\]$`),      '$1')   // id[label] square
+            .replace(/^\{\{(.+?)\}\}$/, '$1')                         // {{hexagon}}
+            .replace(/^>(.+?)$/, '$1')                                // >cloud/bang
+            .replace(/^"(.+?)"$/, '$1')                               // "text"
+            .replace(/^`(.+?)`$/, '$1')                               // `icon`
+            .replace(/:::[\w\s]+:::?/g, '')                           // :::class:::
+            .trim();
+
+        if (!text) continue;
+
+        result.push(`${'#'.repeat(Math.min(level, 6))} ${text}`);
+    }
+
+    return result.join('\n');
+}
+
 export function adaptMessageToBlocks(
     message: Message, 
     isStreaming: boolean = false, 
@@ -98,6 +163,8 @@ export function adaptMessageToBlocks(
     while (currentPos < len) {
         const nextThink = raw.indexOf('<think>', currentPos);
         const nextChart = raw.indexOf('::: echarts', currentPos);
+        const nextMermaid = raw.indexOf('```mermaid', currentPos);
+        const nextMarkmap = raw.indexOf('```markmap', currentPos);
         const nextSql = raw.indexOf('```sql', currentPos);
         const nextDoc = raw.indexOf('[DocCard:', currentPos);
         const nextFile = raw.indexOf('::: file', currentPos);
@@ -106,6 +173,8 @@ export function adaptMessageToBlocks(
         const candidates = [
             { type: 'think', pos: nextThink },
             { type: 'chart', pos: nextChart },
+            { type: 'mermaid', pos: nextMermaid },
+            { type: 'markmap', pos: nextMarkmap },
             { type: 'sql', pos: nextSql },
             { type: 'doc', pos: nextDoc },
             { type: 'file', pos: nextFile !== -1 ? nextFile : nextFileSpace }
@@ -161,6 +230,62 @@ export function adaptMessageToBlocks(
             } else {
                 textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 11));
                 currentPos = nextBlock.pos + 11;
+            }
+        } else if (nextBlock.type === 'mermaid') {
+            const match = raw.slice(nextBlock.pos).match(/^```mermaid\s*([\s\S]*?)```/);
+            if (match) {
+                const code = match[1].trim();
+                // Auto-convert Mermaid mindmap → Markmap for better visuals
+                if (/^mindmap\b/.test(code)) {
+                    blocks.push({
+                        type: 'visualization',
+                        vis_type: 'markmap',
+                        data: convertMermaidMindmapToMarkdown(code)
+                    } as VisualizationBlock);
+                } else {
+                    blocks.push({
+                        type: 'visualization',
+                        vis_type: 'mermaid',
+                        data: code
+                    } as VisualizationBlock);
+                }
+                currentPos = nextBlock.pos + match[0].length;
+            } else {
+                // Incomplete fenced block (still streaming)
+                const partialCode = raw.slice(nextBlock.pos + 10).trim();
+                if (/^mindmap\b/.test(partialCode)) {
+                    blocks.push({
+                        type: 'visualization',
+                        vis_type: 'markmap',
+                        data: convertMermaidMindmapToMarkdown(partialCode)
+                    } as VisualizationBlock);
+                } else {
+                    blocks.push({
+                        type: 'visualization',
+                        vis_type: 'mermaid',
+                        data: partialCode
+                    } as VisualizationBlock);
+                }
+                currentPos = len;
+            }
+        } else if (nextBlock.type === 'markmap') {
+            const match = raw.slice(nextBlock.pos).match(/^```markmap\s*([\s\S]*?)```/);
+            if (match) {
+                blocks.push({
+                    type: 'visualization',
+                    vis_type: 'markmap',
+                    data: match[1].trim()
+                } as VisualizationBlock);
+                currentPos = nextBlock.pos + match[0].length;
+            } else {
+                // Incomplete fenced block (still streaming) — render partial markdown
+                const partialContent = raw.slice(nextBlock.pos + 10).trim();
+                blocks.push({
+                    type: 'visualization',
+                    vis_type: 'markmap',
+                    data: partialContent
+                } as VisualizationBlock);
+                currentPos = len;
             }
         } else if (nextBlock.type === 'sql') {
             const match = raw.slice(nextBlock.pos).match(/^```sql\s*([\s\S]*?)```/);

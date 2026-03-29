@@ -213,6 +213,7 @@ class AgentAssembler:
             cot=bool(model.enable_cot),
             react=bool(model.enable_react)
         )
+        builder.with_visualization()
             
         return builder.build()
 

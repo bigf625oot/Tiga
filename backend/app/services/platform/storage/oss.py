@@ -75,7 +75,11 @@ class AliyunOSSStorage(StorageProvider):
 
     def generate_presigned_url(self, key: str, expiration: int = 3600) -> Optional[str]:
         try:
-            return self.bucket.sign_url("GET", key, expiration)
+            # slash_safe=True prevents oss2 from percent-encoding '/' in the key path.
+            # Without it, 'knowledge/file.pdf' becomes 'knowledge%2Ffile.pdf' in the
+            # signed URL, which OSS rejects with 403 because the signature covers the
+            # decoded key but the request path doesn't match.
+            return self.bucket.sign_url("GET", key, expiration, slash_safe=True)
         except Exception as e:
             logger.error(f"OSS Sign URL Failed: {e}")
             return None

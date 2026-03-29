@@ -210,7 +210,7 @@ class Settings(BaseSettings):
     OCR_ENABLED: bool = False
     DOC_PARSE_PDF_BACKENDS: str = "docling,pymupdf,pdfplumber,pypdf,ocr"
     QA_SYSTEM_PROMPT: str = ""
-    QA_SYSTEM_PROMPT_FILE: str = "backend/app/services/rag/prompts/qa_system.md"
+    QA_SYSTEM_PROMPT_FILE: str = "backend/app/services/intelligence/knowledge/rag/prompts/qa_system.md"
     # Qdrant / 向量数据库
     QDRANT_URL: Optional[str] = None
     QDRANT_API_KEY: Optional[str] = None

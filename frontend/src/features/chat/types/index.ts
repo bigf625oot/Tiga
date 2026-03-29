@@ -94,7 +94,7 @@ export interface ConfirmationBlock {
 
 export interface VisualizationBlock {
   type: 'visualization';
-  vis_type: 'mermaid' | 'recharts' | 'echarts';
+  vis_type: 'mermaid' | 'markmap' | 'recharts' | 'echarts';
   data: string;
 }
 

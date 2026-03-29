@@ -197,7 +197,12 @@ async def delete_async_task(
     task_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    success = await async_task.soft_delete(db, task_id)
+    try:
+        success = await async_task.soft_delete(db, task_id)
+    except Exception as e:
+        logger.error(f"Failed to soft delete task {task_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Database error while deleting task: {str(e)}")
+
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
 

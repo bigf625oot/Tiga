@@ -33,5 +33,11 @@ export const knowledgeService = {
     const res = await fetch(`/api/v1/knowledge/${docId}/content`);
     if (!res.ok) throw new Error('Failed to fetch document content');
     return res.json();
+  },
+
+  async getDocMeta(docId: string | number): Promise<{ id: number; filename: string; file_size: number; created_at: string | null; updated_at: string | null }> {
+    const res = await fetch(`/api/v1/knowledge/${docId}/meta`);
+    if (!res.ok) throw new Error('Failed to fetch document meta');
+    return res.json();
   }
 };

@@ -1,6 +1,14 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue';
 import ChartFrame from '../../../analytics/components/ChartFrame.vue';
 import type { VisualizationBlock } from '../../types';
+
+const MermaidRenderer = defineAsyncComponent(
+    () => import('../../../qa/components/SmartQA/common/MermaidRenderer.vue')
+);
+const MarkmapRenderer = defineAsyncComponent(
+    () => import('../../../qa/components/SmartQA/common/MarkmapRenderer.vue')
+);
 
 defineProps<{
   block: VisualizationBlock;
@@ -29,4 +37,7 @@ const parseChartOption = (data: string) => {
           <ChartFrame :option="parseChartOption(block.data)" />
       </div>
   </div>
+
+  <MermaidRenderer v-else-if="block.vis_type === 'mermaid'" :code="block.data" />
+  <MarkmapRenderer v-else-if="block.vis_type === 'markmap'" :content="block.data" />
 </template>

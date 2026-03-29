@@ -116,6 +116,7 @@ export interface KnowledgeDoc {
   id: string;
   filename: string;
   file_size: number;
+  created_at?: string;
   updated_at: string;
 }
 
