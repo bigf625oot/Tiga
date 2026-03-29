@@ -310,15 +310,31 @@ class AgnoControlPlane:
             self.llm_model = await resolve_chat_llm_model(db)
 
     def _get_forced_intent(self, kwargs: Dict) -> Optional[str]:
-        """从请求参数中提取强制意图或模式"""
-        mode_map = {
-            "quick": "quick", "chat": "chat",
-            "plan": "task", "task": "task", "solo": "task",
-            "team": "team",
-            "flow": "workflow", "workflow": "workflow",
-            "data": "data_query", "kg": "kg_qa"
-        }
+        """
+        从请求参数中提取并归一化强制意图。
+        消除冗余的 Identity Map (如 "chat": "chat")，分离别名解析与合法性校验，保证架构的确定性。
+        """
         requested = kwargs.get("mode") or kwargs.get("intent_override")
-        if isinstance(requested, str):
-            return mode_map.get(requested.lower())
+        if not isinstance(requested, str) or not requested.strip():
+            return None
+
+        requested = requested.lower().strip()
+
+        # 1. 别名降维解析 (Alias Resolution)
+        aliases = {
+            "plan": "task",
+            "solo": "task",
+            "flow": "workflow",
+            "data": "data_query",
+            "kg": "kg_qa"
+        }
+        normalized_mode = aliases.get(requested, requested)
+
+        # 2. 领域词汇白名单校验 (Domain Vocabulary Validation)
+        valid_modes = {"quick", "chat", "task", "team", "workflow", "data_query", "kg_qa"}
+        
+        if normalized_mode in valid_modes:
+            return normalized_mode
+            
+        logger.warning(f"Unrecognized mode requested: {requested}. Ignoring forced intent.")
         return None
