@@ -101,7 +101,7 @@
       rows="1"
       :placeholder="currentPlaceholder"
       :class="[
-        'w-full p-4 resize-none outline-none text-sm bg-transparent max-h-[60vh] overflow-y-auto custom-scrollbar placeholder:text-muted-foreground/70 transition-all',
+        'w-full p-4 resize-none outline-none text-sm bg-transparent max-h-[40vh] overflow-y-auto custom-scrollbar placeholder:text-muted-foreground/70 transition-all',
         large ? 'min-h-[128px]' : 'min-h-[56px]'
       ]"
       :disabled="isLoading"

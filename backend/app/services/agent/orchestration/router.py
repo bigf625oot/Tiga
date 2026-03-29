@@ -149,33 +149,39 @@ class ModeRouter:
         
         logger.info(f"Resolved paradigm: {paradigm} for intent: {intent_key}")
 
-        if paradigm == "lite":
-            from app.services.agent.executors.fast_executor import FastExecutor
-            executor = FastExecutor(llm_model=self.llm_model, memory_manager=memory_manager)
-
-        elif paradigm == "agentic":
-            from app.services.agent.executors.agentic_executor import AgenticExecutor
-            executor = AgenticExecutor(
-                llm_model=self.llm_model,
-                memory_manager=memory_manager,
-                state_manager=state_manager,
-                plan_validator=plan_validator,
-                experience_store=experience_store,
-                tool_registry=tool_registry
-            )
-
-        elif paradigm == "specialized":
-            # 预留给未来独立演进的 SpecializedExecutor (涉及沙盒编译、代码解释器、Graph 专有检索等)
-            # 当前复用 FastExecutor 的基础逻辑
-            from app.services.agent.executors.fast_executor import FastExecutor
-            executor = FastExecutor(llm_model=self.llm_model, memory_manager=memory_manager)
-
-        else:
-            logger.warning(f"Unknown paradigm {paradigm} for intent {intent_key}, falling back to Lite")
+        # [P10 Paradigm Shift] 使用策略模式/注册表替换冗长的 if-else，实现 O(1) 路由分发
+        executor_strategy = self._get_executor_strategy(paradigm)
+        
+        # 构建执行器上下文参数
+        context_kwargs = {
+            "llm_model": self.llm_model,
+            "memory_manager": memory_manager,
+            "state_manager": state_manager,
+            "plan_validator": plan_validator,
+            "experience_store": experience_store,
+            "tool_registry": tool_registry
+        }
+        
+        try:
+            import inspect
+            sig = inspect.signature(executor_strategy.__init__)
+            supported_kwargs = {k: v for k, v in context_kwargs.items() if k in sig.parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())}
+            executor = executor_strategy(**supported_kwargs)
+        except Exception as e:
+            logger.error(f"Failed to instantiate executor for paradigm {paradigm}: {e}. Falling back to Lite.")
             from app.services.agent.executors.fast_executor import FastExecutor
             executor = FastExecutor(llm_model=self.llm_model, memory_manager=memory_manager)
 
         return executor, intent
+
+    def _get_executor_strategy(self, paradigm: str):
+        """[Strategy Pattern] 延迟加载执行器，避免循环依赖，同时消除 if-else 耦合"""
+        if paradigm == "agentic":
+            from app.services.agent.executors.agentic_executor import AgenticExecutor
+            return AgenticExecutor
+        # Lite 及 Specialized 均映射至 FastExecutor (降维打击)
+        from app.services.agent.executors.fast_executor import FastExecutor
+        return FastExecutor
 
     async def _resolve_intent(self, user_input: str, kwargs: Dict[str, Any], session_id: str = None, db: AsyncSession = None) -> IntentResult:
         """解析用户意图"""

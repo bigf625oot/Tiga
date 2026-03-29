@@ -1,6 +1,7 @@
 <template>
   <div class="prose dark:prose-invert max-w-none text-sm leading-normal markdown-body">
     <component :is="renderedVNode" v-if="renderedVNode" />
+    <div v-else class="contents text-zinc-400 italic text-xs">(正在加载...)</div>
   </div>
 </template>
 
@@ -18,6 +19,7 @@ import DocumentCard from './DocumentCard.vue';
 import MermaidRenderer from './MermaidRenderer.vue';
 import PlantUMLRenderer from './PlantUMLRenderer.vue';
 import AsciiArtRenderer from './AsciiArtRenderer.vue';
+import SourceCard from './SourceCard.vue';
 
 const props = defineProps<{
   content: string;
@@ -129,7 +131,7 @@ const renderNode = (node: any, key: string | number = 0): any => {
       });
     }
 
-    // 拦截 Link 节点，处理 PDF
+    // 拦截 Link 节点，处理 PDF 和普通链接
     if (node.tagName === 'a') {
       const href = node.properties?.href || '';
       if (typeof href === 'string' && href.toLowerCase().endsWith('.pdf')) {
@@ -146,6 +148,25 @@ const renderNode = (node: any, key: string | number = 0): any => {
           h('iframe', { src: href, class: 'w-full h-[500px] border-none' })
         ]);
       }
+
+      // 获取 a 标签内的文本内容作为 title
+      let title = '';
+      const extractText = (n: any) => {
+        if (n.type === 'text') title += n.value;
+        if (n.children) n.children.forEach(extractText);
+      };
+      node.children?.forEach(extractText);
+
+      return h(SourceCard, {
+        source: {
+          url: href,
+          title: title || href
+        },
+        type: 'web',
+        size: 'sm',
+        class: 'my-2 inline-flex w-full max-w-sm align-middle', // inline-flex for better alignment
+        key
+      });
     }
 
     // 拦截 Pre 节点，回退到最简单可靠的 pre > code 纯文本渲染模式
@@ -218,14 +239,10 @@ const renderNode = (node: any, key: string | number = 0): any => {
   return null;
 };
 
-// 4. 执行 Unified 编译管线
-const processMarkdown = async (text: string) => {
+// 4. 执行 Unified 编译管线（同步版本，消除时序竞争）
+const processMarkdown = (text: string) => {
   try {
     // Pre-process doc references into custom HTML tags before parsing to avoid AST fragmentation
-    // Matches:
-    // - doc#6: 《Title》
-    // - **doc#6**: *Title*
-    // - doc#6: Title
     text = text.replace(/(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?(?:[:：]\s*|\s+)(?:《([^》\n]+)》|\*([^\*\n]+)\*|([^\n，。；！？,.;!?(（\[\]]+))/gi, (match, docId, t1, t2, t3) => {
         const title = (t1 || t2 || t3 || '').trim();
         if (title) {
@@ -240,55 +257,26 @@ const processMarkdown = async (text: string) => {
       .use(remarkGfm)
       .use(remarkCitationPlugin)
       .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeRaw); // 允许内嵌 HTML，但通过 VNode 渲染保证安全（防 XSS）
-      // 彻底移除 rehypeShiki，回归第一性原理：使用最简单的结构直接展示文本
+      .use(rehypeRaw);
 
     const mdAst = processor.parse(text);
-    const hastAst = await processor.run(mdAst);
+    const hastAst = processor.runSync(mdAst);
 
     const children = renderNode(hastAst);
     renderedVNode.value = h('div', { class: 'contents' }, children);
   } catch (err) {
     console.error('Markdown parsing error:', err);
-    // 降级处理
     renderedVNode.value = h('div', { class: 'text-red-500' }, 'Markdown rendering failed');
   }
 };
 
-// 解决重绘风暴：引入 requestAnimationFrame 和处理状态标志位防抖
-let isProcessing = false;
-let pendingContent: string | null = null;
-let rafId: number | null = null;
-
-const scheduleProcess = async (content: string) => {
-  if (isProcessing) {
-    // 正在处理中，只缓存最新内容
-    pendingContent = content;
-    return;
-  }
-  
-  isProcessing = true;
-  await processMarkdown(content);
-  isProcessing = false;
-  
-  if (pendingContent !== null) {
-    const nextContent = pendingContent;
-    pendingContent = null;
-    // 使用 rAF 将下一次渲染推迟到下一帧，释放主线程给浏览器渲染
-    rafId = requestAnimationFrame(() => {
-      scheduleProcess(nextContent);
-    });
-  }
-};
-
+// 简单直接：无调度、无锁、无 rAF，每次内容变化直接同步渲染
 watch(() => props.content, (newContent) => {
-  scheduleProcess(newContent || '');
+  processMarkdown(newContent || '');
 }, { immediate: true });
 
 onUnmounted(() => {
-  if (rafId !== null) {
-    cancelAnimationFrame(rafId);
-  }
+  // 清理
 });
 
 </script>

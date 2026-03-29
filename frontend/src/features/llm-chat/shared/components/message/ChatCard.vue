@@ -65,13 +65,18 @@
             </div>
             
             <MessageRenderer 
-                v-else
+                v-else-if="adaptedMessage && adaptedMessage.blocks && adaptedMessage.blocks.length > 0"
                 :message="adaptedMessage" 
                 @locate-node="$emit('locate-node', $event)"
                 @open-doc-space="$emit('open-doc-space', $event)"
                 @resend-message="$emit('resend-message', message)"
                 class="w-full flex-1"
             />
+            
+            <!-- Fallback: 只在没有blocks也没有content时才显示 -->
+            <div v-else-if="!message.content && !message.reasoning" class="text-muted-foreground italic text-sm py-2">
+              (无返回内容)
+            </div>
         </div>
       </div>
 
@@ -124,13 +129,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import dayjs from 'dayjs';
-import { Activity, Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2, Pencil, RotateCcw } from 'lucide-vue-next';
-import { useMarkdown, isHighlighterReady } from '@/features/llm-chat/shared/composables/useMarkdown';
+import { Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2, Pencil, RotateCcw } from 'lucide-vue-next';
+import { useMarkdown } from '@/features/llm-chat/shared/composables/useMarkdown';
 import { formatTime, formatDuration } from '@/features/llm-chat/shared/utils/qa/dateUtils';
 import type { Message } from '@/features/llm-chat/shared/types';
 
 // 新引入的 UI 组件
-import SoloTaskCard from '../../workflow/components/SmartQA/SoloTaskCard.vue';
 import MessageRenderer from './MessageRenderer.vue';
 import { adaptMessageToBlocks } from '@/features/llm-chat/shared/utils/MessageAdapter';
 
@@ -191,12 +195,14 @@ const handleExcerpt = () => {
 const contentRef = computed(() => props.message?.content || '');
 const { render } = useMarkdown();
 const userHtml = computed(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    isHighlighterReady.value;
     return render(contentRef.value, { allowHtml: false });
 });
 
-const adaptedMessage = computed(() => adaptMessageToBlocks(props.message, props.isStreaming, props.isLast, props.currentModeId ?? undefined));
+const adaptedMessage = computed(() => {
+    const adapted = adaptMessageToBlocks(props.message, props.isStreaming, props.isLast, props.currentModeId ?? undefined);
+    // 确保永远返回一个有效的 ChatMessage 对象，防止 undefined 导致组件卸载
+    return adapted || { id: String(Date.now()), role: 'assistant', status: 'completed', blocks: [] };
+});
 
 watch(() => props.message.steps, (newVal, oldVal) => {
     if (newVal && newVal.length > 0 && (!oldVal || oldVal.length === 0)) {

@@ -76,12 +76,33 @@ class ExecutionEngine:
         if tool_instructions:
             system_prompt += f"\n\n## Available Tool Instructions\n{tool_instructions}"
 
+        # Leverage Agno's native cross-session user memory for ExecutionEngine
+        from app.core.config import settings
+        agno_storage = None
+        try:
+            from agno.db.postgres import AsyncPostgresDb
+            db_url = str(settings.DATABASE_URL)
+            if db_url:
+                agno_storage = AsyncPostgresDb(
+                    db_url=db_url,
+                    session_table="agno_sessions",
+                    memory_table="agno_user_memories"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to initialize Agno native storage: {e}")
+
+        user_id = kwargs.get("user_id", "default_user")
+
         agent = Agent(
             name=f"Executor-{task.task_id}",
             model=model_instance,
             tools=tools,
             instructions=[system_prompt],
-            markdown=True
+            markdown=True,
+            db=agno_storage,
+            user_id=user_id,
+            enable_user_memories=True if agno_storage else False,
+            add_memories_to_context=True if agno_storage else False,
         )
 
         # 转换上下文为字符串或者传递给 agent

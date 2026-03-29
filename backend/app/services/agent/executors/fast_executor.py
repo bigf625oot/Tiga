@@ -47,19 +47,34 @@ class FastExecutor(LightBaseExecutor):
         files: List[Any] = kwargs.get("files", [])
         
         # 1. Concurrent Context Assembly (Agent, History, Files)
+        # [P10 Concurrent Assembly] O(1) 并发组装，通过 asyncio.gather 并行执行所有前置 I/O 任务，将 TTFT 压缩至极限。
+        # 强制使用 return_exceptions=True 保证单一组件（如历史库异常）不导致全链路崩溃，实现状态机无缝降级。
         setup_tasks = [
-            asyncio.create_task(self._prepare_agent(db, session_id, kwargs, intent)),
-            asyncio.create_task(self._prepare_history(session_id, current_query=input_text)),
-            asyncio.create_task(self._handle_incoming_files(session_id, files))
+            self._prepare_agent(db, session_id, kwargs, intent),
+            self._prepare_history(session_id, current_query=input_text),
+            self._handle_incoming_files(session_id, files)
         ]
         
-        agent = await setup_tasks[0]
+        results = await asyncio.gather(*setup_tasks, return_exceptions=True)
+        
+        # 结果解析与降级处理
+        agent = results[0] if not isinstance(results[0], Exception) else None
         if not agent:
+            error_msg = str(results[0]) if isinstance(results[0], Exception) else "Unknown"
+            logger.error(f"Agent assembly failed: {error_msg}")
             yield {"type": "error", "content": "Agent assembly failed"}
             return
 
-        history_msgs = await setup_tasks[1]
-        file_ctx, media_objs, kb = await setup_tasks[2]
+        history_msgs = results[1] if not isinstance(results[1], Exception) else []
+        if isinstance(results[1], Exception):
+            logger.warning(f"History retrieval degraded gracefully: {results[1]}")
+
+        file_result = results[2]
+        if isinstance(file_result, Exception):
+            logger.warning(f"File handling degraded gracefully: {file_result}")
+            file_ctx, media_objs, kb = "", [], None
+        else:
+            file_ctx, media_objs, kb = file_result
 
         # 2. Instruction Orchestration
         base_instructions = getattr(agent, "instructions", None)
@@ -123,13 +138,34 @@ class FastExecutor(LightBaseExecutor):
         agent_id = kwargs.get("agent_id")
         reasoning = kwargs.get("enable_reasoning", False)
         search = kwargs.get("enable_search", True)
+        user_id = kwargs.get("user_id", "default_user")
+
+        #利用 Agno 原生能力处理跨会话用户偏好记忆
+        from app.core.config import settings
+        agno_storage = None
+        try:
+            # 引入 Agno 原生的 PostgresDb (用于长期状态和记忆)
+            from agno.db.postgres import AsyncPostgresDb
+            db_url = str(settings.DATABASE_URL)
+            if db_url:
+                agno_storage = AsyncPostgresDb(
+                    db_url=db_url,
+                    session_table="agno_sessions",
+                    memory_table="agno_user_memories"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to initialize Agno native storage: {e}")
 
         assembler = AgentAssembler(db, agent_id)
         return await assembler.build(
             session_id=session_id,
             reasoning_override=reasoning,
             enable_search=search,
-            intent=intent
+            intent=intent,
+            storage=agno_storage,
+            user_id=user_id,
+            enable_user_memories=True if agno_storage else False,
+            add_memories_to_context=True if agno_storage else False,
         )
 
     async def _handle_incoming_files(self, session_id: str, files: List[Any]) -> Tuple[str, List[Any], Optional[Any]]:

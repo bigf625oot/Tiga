@@ -119,7 +119,8 @@ class SingleExecutor(BaseExecutor):
             plan_manifest = await planning_engine.generate_plan(
                 session_id=session_id,
                 user_goal=input_text,
-                context=file_context
+                context=file_context,
+                history_msgs=history_msgs
             )
             
             # [Validation] 强制计划确定性校验，阻断不合规规划
@@ -129,7 +130,6 @@ class SingleExecutor(BaseExecutor):
                 if not is_valid:
                     raise ValueError(f"Plan validation failed: {error_msg}")
             
-            # 閫氱煡鍓嶇璁″垝鐢熸垚瀹屾瘯
             yield {
                 "type": "plan", 
                 "content": json.dumps({"reasoning": plan_manifest.reasoning, "tasks": [t.dict() for t in plan_manifest.tasks]})
@@ -152,7 +152,7 @@ class SingleExecutor(BaseExecutor):
                 
                 task_output = ""
                 try:
-                    async for event in execution_engine.execute_task(task, history_msgs):
+                    async for event in execution_engine.execute_task(task, history_msgs, **kwargs):
                         # [Stream Adapter] 过滤内部状态，防止前端渲染抖动
                         yield event
                         event_dict = event.to_dict() if hasattr(event, "to_dict") else event

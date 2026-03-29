@@ -6,6 +6,17 @@ import { MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES } from '@/features/llm-chat/share
 import type { Attachment, KnowledgeDoc } from '@/features/llm-chat/shared/types';
 
 /**
+ * [P10 Zero-Copy & Determinism] 并发计算文件 Hash，实现秒传。
+ * 避免大文件阻塞主线程。
+ */
+async function calculateFileHash(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Manages file uploads (local and knowledge base) and attachment selection.
  * 
  * @returns Attachment state and management functions
@@ -80,6 +91,11 @@ export function useAttachments() {
     // Optimization: Create an object URL immediately to avoid loading file content into memory
     // Useful for image previews without blocking the main thread with FileReader
     (file as any).previewUrl = URL.createObjectURL(file);
+    
+    // [P10 Concurrent Preprocessing] 异步触发 Hash 计算，预热缓存
+    calculateFileHash(file).then(hash => {
+        (file as any).hash = hash;
+    }).catch(e => console.warn('Hash calc failed', e));
 
     localFileList.value = [...localFileList.value, file];
     return false;
@@ -143,6 +159,12 @@ export function useAttachments() {
            toast({ description: `不支持的文件类型: ${file.name}`, variant: 'destructive' });
            return;
         }
+        
+        // [P10 Concurrent Preprocessing] 异步触发 Hash 计算
+        calculateFileHash(file).then(hash => {
+            (file as any).hash = hash;
+        }).catch(e => console.warn('Hash calc failed', e));
+
         validFiles.push(file);
     });
 

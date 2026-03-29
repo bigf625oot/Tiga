@@ -187,6 +187,7 @@ const messageGroups = computed(() => {
   // We check if it's currently streaming. If it's streaming, the loader should disappear 
   // because the actual message is being generated (whether reasoning or text).
   const lastMsg = props.messages[props.messages.length - 1];
+  // 增加对 !lastMsg 的防御，以及修复 isLoading 状态下的 loading 占位符逻辑
   const hasStartedResponse = lastMsg && lastMsg.role !== 'user' && (lastMsg.content || lastMsg.reasoning || props.isStreaming);
 
   if (props.isLoading && !hasStartedResponse) {

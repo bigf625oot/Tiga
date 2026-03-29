@@ -207,7 +207,7 @@ class PlanningEngine:
         lines.append("\nPlease fix the above logic/structure errors, and output a strict JSON matching the schema.")
         return "\n".join(lines)
 
-    async def generate_plan(self, session_id: str, user_goal: str, context: str = "") -> Optional[ExecutionPlan]:
+    async def generate_plan(self, session_id: str, user_goal: str, context: str = "", history_msgs: List[Dict[str, Any]] = None) -> Optional[ExecutionPlan]:
         # 1. 无状态初始化：每个 Request 独享独立的 Agent 实例
         if not self.llm_model:
             self.llm_model = await resolve_chat_llm_model(self.db)
@@ -229,10 +229,15 @@ class PlanningEngine:
             retries=1 # 将重试逻辑提升至外层进行带上下文的深度重试
         )
 
+        history_str = ""
+        if history_msgs:
+            history_str = "Conversation History:\n" + "\n".join([f"{m.get('role')}: {m.get('content')}" for m in history_msgs])
+
         base_prompt = (
             f"User Goal: {user_goal}\n"
-            f"Context: {context}\n"
-            "Analyze the User Goal deeply. If it is a complex task (like writing a comprehensive report, comparing products, or requiring data gathering), you MUST break it down into multiple logical steps (e.g., Step 1: Research, Step 2: Analyze, Step 3: Generate Document). ONLY use EXACTLY ONE step if the goal is truly trivial (like a simple greeting or a direct 1-step calculation). Use the same language as the User Goal."
+            f"Context (Files/Docs): {context}\n"
+            f"{history_str}\n"
+            "Analyze the User Goal deeply considering the Conversation History and Context. If it is a complex task (like writing a comprehensive report, comparing products, or requiring data gathering), you MUST break it down into multiple logical steps (e.g., Step 1: Research, Step 2: Analyze, Step 3: Generate Document). ONLY use EXACTLY ONE step if the goal is truly trivial (like a simple greeting or a direct 1-step calculation). Use the same language as the User Goal."
         )
 
         MAX_ATTEMPTS = 3

@@ -155,18 +155,33 @@ class DefaultMemoryManager:
         return [MemoryContextItem(role=m.role, content=m.content).to_dict() for m in msgs]
 
     async def get_compressed_context(self, session_id: str, current_query: str) -> List[Dict[str, Any]]:
-        """Why: 编排装配管线 (DB短时 -> Graph长时 -> LLM压缩)。"""
+        """Why: 编排装配管线 (DB短时 -> Graph长时 -> LLM压缩)。使用 asyncio.gather 实现 O(1) 并发召回。"""
         try:
             cfg = await self._get_system_context_memory()
             limit = cfg.context.history_limit
             threshold = cfg.context.compression_threshold
             enable_graph_memory = getattr(cfg.context, "enable_graph_memory", False)
 
-            raw_history = await self.get_messages(session_id, limit=limit)
+            # [P10 Concurrent Assembly] 并发召回短时与长时记忆，消除串行 IO
+            async def _safe_recall() -> str:
+                if enable_graph_memory and current_query:
+                    return await self._graph_retriever.recall(current_query)
+                return ""
 
-            graph_memory_text = ""
-            if enable_graph_memory and current_query:
-                graph_memory_text = await self._graph_retriever.recall(current_query)
+            recall_tasks = [
+                self.get_messages(session_id, limit=limit),
+                _safe_recall()
+            ]
+            
+            results = await asyncio.gather(*recall_tasks, return_exceptions=True)
+            
+            raw_history = results[0] if not isinstance(results[0], Exception) else []
+            if isinstance(results[0], Exception):
+                logger.warning(f"Short-term memory recall failed: {results[0]}")
+
+            graph_memory_text = results[1] if not isinstance(results[1], Exception) else ""
+            if isinstance(results[1], Exception):
+                logger.warning(f"Graph memory recall failed: {results[1]}")
 
             compressor = ContextCompressor(model=self.llm_model)
             compressed = await compressor.compress_context(raw_history, max_tokens=threshold)

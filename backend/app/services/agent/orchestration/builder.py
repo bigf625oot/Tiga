@@ -246,6 +246,9 @@ class AgentAssembler:
             "memory": overrides.get("memory"),
             "storage": overrides.get("storage"),
             "knowledge": overrides.get("knowledge"),
+            "user_id": overrides.get("user_id"),
+            "enable_user_memories": overrides.get("enable_user_memories"),
+            "add_memories_to_context": overrides.get("add_memories_to_context"),
             "show_tool_calls": False,  # Force disable raw text tool calls in stream
         }
 
