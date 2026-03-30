@@ -8,6 +8,7 @@ import type {
     ThoughtBlock,
     TextBlock,
     VisualizationBlock,
+    MediaBlock,
     ResourceBlock,
     ErrorBlock,
     ReferencesBlock,
@@ -234,13 +235,80 @@ export function adaptMessageToBlocks(
                 return;
             }
 
+            // Map chart generation tools to VisualizationBlock
+            const chartTools = ['generate_chart', 'echarts', 'draw_chart', 'plot', 'd3_chart', 'antv_chart'];
+            if (chartTools.includes(toolName) && t.result) {
+                blocks.push({
+                    type: 'tool_call',
+                    call_id: callId,
+                    tool_name: toolName,
+                    arguments: args,
+                    state: t.status === 'error' ? 'error' : (t.status === 'running' ? 'running' : 'success')
+                } as ToolCallBlock);
+
+                let chartData = t.result;
+                let visType = 'echarts';
+                if (toolName.includes('d3')) visType = 'd3';
+                if (toolName.includes('antv')) visType = 'antv';
+
+                if (typeof chartData === 'string') {
+                    // Check if it's already a stringified JSON
+                    try {
+                        JSON.parse(chartData);
+                    } catch {
+                        // Not valid JSON, maybe wrap it
+                        chartData = JSON.stringify({ type: 'bar', data: chartData });
+                    }
+                } else {
+                    chartData = JSON.stringify(chartData);
+                }
+
+                blocks.push({
+                    type: 'visualization',
+                    vis_type: visType as any,
+                    data: chartData
+                } as VisualizationBlock);
+                return;
+            }
+
+            // Map knowledge retrieval tools to KbRetrievalBlock or ReferencesBlock
+            const kbTools = ['search_knowledge_base', 'knowledge_retrieval', 'search_docs', 'query_docs'];
+            if (kbTools.includes(toolName)) {
+                blocks.push({
+                    type: 'tool_call',
+                    call_id: callId,
+                    tool_name: toolName,
+                    arguments: args,
+                    state: t.status === 'error' ? 'error' : (t.status === 'running' ? 'running' : 'success')
+                } as ToolCallBlock);
+
+                if (t.result) {
+                    let results = [];
+                    try {
+                        const parsed = typeof t.result === 'string' ? JSON.parse(t.result) : t.result;
+                        results = Array.isArray(parsed) ? parsed : (parsed.results || parsed.docs || [parsed]);
+                    } catch {
+                        results = [{ title: '检索结果', content: t.result }];
+                    }
+
+                    blocks.push({
+                        type: 'kb_retrieval',
+                        query: typeof args === 'object' ? (args.query || args.keyword || JSON.stringify(args)) : args,
+                        status: 'completed',
+                        results: results
+                    } as any);
+                }
+                return;
+            }
+
             // Fallback to generic ToolCallBlock
             blocks.push({
                 type: 'tool_call',
                 call_id: callId,
                 tool_name: toolName,
-                arguments: args,
-                state: t.status === 'error' ? 'error' : (t.status === 'running' ? 'running' : 'success')
+                arguments: typeof args === 'string' ? {} : args, // Do not fail if string, put in raw
+                raw_arguments: typeof args === 'string' ? args : undefined,
+                state: t.status === 'streaming' ? 'streaming' : (t.status === 'error' ? 'error' : (t.status === 'running' ? 'running' : 'success'))
             } as ToolCallBlock);
 
             if (t.result) {
@@ -277,23 +345,14 @@ export function adaptMessageToBlocks(
 
     while (currentPos < len) {
         const nextThink = raw.indexOf('<think>', currentPos);
-        const nextChart = raw.indexOf('::: echarts', currentPos);
         const nextMermaid = raw.indexOf('```mermaid', currentPos);
         const nextMarkmap = raw.indexOf('```markmap', currentPos);
-        const nextSql = raw.indexOf('```sql', currentPos);
-        const nextDoc = raw.indexOf('[DocCard:', currentPos);
-        const nextFile = raw.indexOf('::: file', currentPos);
-        const nextFileSpace = raw.indexOf(':::  file', currentPos);
         const nextToolCode = raw.indexOf('```tool_code', currentPos);
 
         const candidates = [
             { type: 'think', pos: nextThink },
-            { type: 'chart', pos: nextChart },
             { type: 'mermaid', pos: nextMermaid },
             { type: 'markmap', pos: nextMarkmap },
-            { type: 'sql', pos: nextSql },
-            { type: 'doc', pos: nextDoc },
-            { type: 'file', pos: nextFile !== -1 ? nextFile : nextFileSpace },
             { type: 'tool_code', pos: nextToolCode }
         ].filter(c => c.pos !== -1).sort((a, b) => a.pos - b.pos);
 
@@ -334,19 +393,6 @@ export function adaptMessageToBlocks(
                     state: 'thinking'
                 } as ThoughtBlock);
                 currentPos = len;
-            }
-        } else if (nextBlock.type === 'chart') {
-            const match = raw.slice(nextBlock.pos).match(/^:::\s*echarts\s*([\s\S]*?):::/);
-            if (match) {
-                blocks.push({
-                    type: 'visualization',
-                    vis_type: 'echarts',
-                    data: match[1].trim()
-                } as VisualizationBlock);
-                currentPos = nextBlock.pos + match[0].length;
-            } else {
-                textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 11));
-                currentPos = nextBlock.pos + 11;
             }
         } else if (nextBlock.type === 'mermaid') {
             const match = raw.slice(nextBlock.pos).match(/^```mermaid\s*([\s\S]*?)```/);
@@ -404,47 +450,6 @@ export function adaptMessageToBlocks(
                 } as VisualizationBlock);
                 currentPos = len;
             }
-        } else if (nextBlock.type === 'sql') {
-            const match = raw.slice(nextBlock.pos).match(/^```sql\s*([\s\S]*?)```/);
-            if (match) {
-                // We keep sql as text for now, but formatted
-                blocks.push({
-                    type: 'text',
-                    content: `\`\`\`sql\n${match[1].trim()}\n\`\`\``
-                } as TextBlock);
-                currentPos = nextBlock.pos + match[0].length;
-            } else {
-                textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 6));
-                currentPos = nextBlock.pos + 6;
-            }
-        } else if (nextBlock.type === 'doc') {
-            const match = raw.slice(nextBlock.pos).match(/^\[DocCard:\s*(.*?)\]\((.*?)\)/);
-            if (match) {
-                blocks.push({
-                    type: 'resource',
-                    resource_type: 'doc',
-                    data: { title: match[1], id: match[2] }
-                } as ResourceBlock);
-                currentPos = nextBlock.pos + match[0].length;
-            } else {
-                textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 9));
-                currentPos = nextBlock.pos + 9;
-            }
-        } else if (nextBlock.type === 'file') {
-            const match = raw.slice(nextBlock.pos).match(/^:::\s*file([\s\S]*?):::/);
-            if (match) {
-                try {
-                    blocks.push({
-                        type: 'resource',
-                        resource_type: 'file',
-                        data: JSON.parse(match[1])
-                    } as ResourceBlock);
-                } catch (e) { console.error('File JSON parse error', e); }
-                currentPos = nextBlock.pos + match[0].length;
-            } else {
-                textParts.push(raw.slice(nextBlock.pos, nextBlock.pos + 8));
-                currentPos = nextBlock.pos + 8;
-            }
         } else if (nextBlock.type === 'tool_code') {
             const match = raw.slice(nextBlock.pos).match(/^```tool_code\s*([\s\S]*?)(?:```|$)/);
             if (match) {
@@ -464,8 +469,9 @@ export function adaptMessageToBlocks(
                         type: 'tool_call',
                         call_id: `streaming-tool-${Date.now()}`,
                         tool_name: toolName,
-                        arguments: args,
-                        state: match[0].endsWith('```') ? 'success' : 'running'
+                        arguments: {},
+                        raw_arguments: args,
+                        state: match[0].endsWith('```') ? 'success' : 'streaming'
                     } as ToolCallBlock);
                 }
                 
@@ -487,9 +493,13 @@ export function adaptMessageToBlocks(
 
     // Process standalone chart_config (legacy)
     if (message.chart_config) {
+        let visType = 'echarts';
+        if (message.chart_config._type === 'd3') visType = 'd3';
+        if (message.chart_config._type === 'antv') visType = 'antv';
+        
         blocks.push({
             type: 'visualization',
-            vis_type: 'echarts',
+            vis_type: visType as any,
             data: JSON.stringify(message.chart_config)
         } as VisualizationBlock);
     }
@@ -500,6 +510,20 @@ export function adaptMessageToBlocks(
             type: 'references',
             sources: message.sources
         } as ReferencesBlock);
+    }
+
+    // 4.5 Process Media (Audio/Video)
+    if (message.media && Array.isArray(message.media)) {
+        message.media.forEach((m: any) => {
+            blocks.push({
+                type: 'media',
+                media_type: m.media_type || 'video',
+                url: m.url,
+                name: m.name,
+                cover_url: m.cover_url,
+                duration: m.duration
+            } as MediaBlock);
+        });
     }
 
     // 5. Process Error
@@ -522,6 +546,12 @@ export function adaptMessageToBlocks(
                     type: a.type || 'file',
                     size: a.file_size ?? a.size,
                 });
+            } else if (a?.type === 'd3' || a?.type === 'antv') {
+                blocks.push({
+                    type: 'visualization',
+                    vis_type: a.type as any,
+                    data: JSON.stringify(a.data)
+                } as VisualizationBlock);
             }
         }
     }

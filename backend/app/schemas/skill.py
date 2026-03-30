@@ -19,6 +19,8 @@ class SkillBase(BaseModel):
     meta_data: Optional[Dict[str, Any]] = None
     
     category: Optional[str] = None
+    execution_mode: str = "sandbox"
+    engine_route: Optional[str] = None
     author_id: Optional[str] = "system"
     is_official: bool = False
     downloads: int = 0
@@ -41,6 +43,8 @@ class SkillUpdate(BaseModel):
     output_schema: Optional[Any] = None
     meta_data: Optional[Dict[str, Any]] = None
     category: Optional[str] = None
+    execution_mode: Optional[str] = None
+    engine_route: Optional[str] = None
     is_active: Optional[bool] = None
     is_public: Optional[bool] = None
 

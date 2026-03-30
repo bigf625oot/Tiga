@@ -152,11 +152,14 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
-import { useI18n } from '../../../locales';
+// i18n can be implemented later or use a custom composable if needed
+// import { useI18n } from 'vue-i18n';
 
 dayjs.extend(duration);
 
-const { t } = useI18n();
+// const { t } = useI18n();
+// Mock t function for now
+const t = (key: string) => key;
 
 const props = defineProps<{
   agentName: string;

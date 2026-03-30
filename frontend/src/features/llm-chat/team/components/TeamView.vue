@@ -1,10 +1,7 @@
 <template>
-  <SmartQA :session-id="sessionId" :embedded="false" />
+  <BaseChatView mode="team" />
 </template>
 
 <script setup lang="ts">
-import SmartQA from '@/features/llm-chat/shared/components/SmartQA.vue';
-import { useTeamModeStore } from '@/features/llm-chat/team/store';
-
-const { sessionId } = useTeamModeStore();
+import BaseChatView from '@/features/llm-chat/shared/components/BaseChatView.vue';
 </script>

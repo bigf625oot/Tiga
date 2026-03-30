@@ -53,9 +53,17 @@ const handleEvent = (eventName: string, payload?: any) => {
           @open-doc-space="(id: string) => handleEvent('open-doc-space', id)"
           @resend-message="handleEvent('resend-message')"
         />
-        <!-- Fallback for unknown block types -->
-        <div v-else class="p-2 border border-red-500/30 bg-red-500/10 text-red-500 rounded text-xs">
-          Unknown block type: {{ block.type }}
+        <!-- Fallback for unknown block types: Graceful Degradation -->
+        <component 
+          v-else-if="BlockRendererRegistry['text']"
+          :is="BlockRendererRegistry['text']"
+          :block="{ type: 'text', content: ('content' in block ? block.content : JSON.stringify(block)) }"
+          :message-blocks="props.message.blocks"
+          :context="chatContext"
+        />
+        <div v-else class="p-2 border border-yellow-500/30 bg-yellow-500/10 text-yellow-600 rounded text-xs">
+          <!-- Fallback of last resort if text renderer is somehow missing -->
+          [Unknown Block: {{ block.type }}]
         </div>
       </div>
     </template>

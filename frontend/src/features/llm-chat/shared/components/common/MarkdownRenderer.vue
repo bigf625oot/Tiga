@@ -1,5 +1,5 @@
 <template>
-  <div class="prose dark:prose-invert max-w-none text-sm leading-normal markdown-body">
+  <div :class="[proseClass, 'max-w-none text-sm leading-normal markdown-body']">
     <component :is="renderedVNode" v-if="renderedVNode" />
     <div v-else class="contents text-zinc-400 italic text-xs">(正在加载...)</div>
   </div>
@@ -12,6 +12,10 @@ import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { visit } from 'unist-util-visit';
 import CodeBlock from './CodeBlock.vue';
 import Citation from './Citation.vue';
@@ -20,11 +24,13 @@ import MermaidRenderer from './MermaidRenderer.vue';
 import PlantUMLRenderer from './PlantUMLRenderer.vue';
 import AsciiArtRenderer from './AsciiArtRenderer.vue';
 import SourceCard from './SourceCard.vue';
-import ArtifactCard from './ArtifactCard.vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   content: string;
-}>();
+  proseClass?: string;
+}>(), {
+  proseClass: 'prose dark:prose-invert'
+});
 
 const emit = defineEmits<{
   (e: 'citation-click', index: number): void;
@@ -89,6 +95,52 @@ const remarkCitationPlugin = () => {
   };
 };
 
+// 1.5 Remark 插件：提取 doc# 引用并转化为 document-card 节点
+const remarkDocCardPlugin = () => {
+  return (tree: any) => {
+    visit(tree, 'text', (node: any, index: number | undefined, parent: any) => {
+      if (!parent) return;
+      
+      const docCardRegex = /(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?(?:[:：]\s*(?:《([^》\n]+)》|\*([^\*\n]+)\*|([^\n，。；！？\[\]]+)))?/gi;
+      if (!docCardRegex.test(node.value)) return;
+      
+      const children: any[] = [];
+      let lastIndex = 0;
+      let match;
+      
+      docCardRegex.lastIndex = 0; // reset regex
+      while ((match = docCardRegex.exec(node.value)) !== null) {
+        if (match.index > lastIndex) {
+          children.push({ type: 'text', value: node.value.slice(lastIndex, match.index) });
+        }
+        
+        const docId = match[1];
+        const title = (match[2] || match[3] || match[4] || '').trim();
+        
+        children.push({
+          type: 'document-card',
+          data: {
+            hName: 'document-card',
+            hProperties: {
+              'doc-id': docId,
+              title: title
+            }
+          }
+        });
+        
+        lastIndex = docCardRegex.lastIndex;
+      }
+      
+      if (lastIndex < node.value.length) {
+        children.push({ type: 'text', value: node.value.slice(lastIndex) });
+      }
+      
+      parent.children.splice(index, 1, ...children);
+      return index! + children.length; // skip the newly inserted nodes
+    });
+  };
+};
+
 // 2. 将 HAST 转换为 Vue VNode 的核心引擎
 const renderNode = (node: any, key: string | number = 0): any => {
   if (node.type === 'text') {
@@ -109,29 +161,27 @@ const renderNode = (node: any, key: string | number = 0): any => {
       });
     }
 
-    // 拦截 DocumentCard 节点 (兼容短划线和驼峰)
+    // 拦截 document-card 节点
     if (node.tagName === 'document-card') {
+      const rawDocId = node.properties?.docId || node.properties?.['doc-id'] || node.properties?.docid;
+      const docIdStr = String(rawDocId || '').trim();
       return h(DocumentCard, {
-        docId: node.properties.docId || node.properties['doc-id'],
-        title: node.properties.title,
+        docId: docIdStr,
+        title: node.properties?.title || '',
         key,
+        class: 'align-middle inline-flex my-1 mx-1',
         onClick: (id: string) => emit('open-doc-space', id)
-      });
-    }
-
-    // 拦截 Tiga Artifact 节点 (沙箱生成文件)
-    if (node.tagName === 'tiga-artifact') {
-      return h(ArtifactCard, {
-        type: node.properties.type,
-        url: node.properties.url,
-        name: node.properties.name,
-        key
       });
     }
 
     // 拦截 Image 节点，处理 PNG 等图片
     if (node.tagName === 'img') {
-      const src = node.properties?.src || '';
+      let src = node.properties?.src || '';
+      if (!src.startsWith('http') && !src.startsWith('/') && !src.startsWith('data:')) {
+        if (src.startsWith('chart_') || src.startsWith('image_') || src.endsWith('.png') || src.endsWith('.jpg')) {
+          src = `/uploads/${src}`;
+        }
+      }
       const alt = node.properties?.alt || '';
       return h('img', {
         src,
@@ -180,6 +230,25 @@ const renderNode = (node: any, key: string | number = 0): any => {
       });
     }
 
+    // 拦截 Table 节点
+    if (node.tagName === 'table') {
+      const props: Record<string, any> = { key };
+      if (node.properties) {
+        for (const [propKey, propValue] of Object.entries(node.properties)) {
+          if (propKey === 'className') {
+            props.class = Array.isArray(propValue) ? propValue.join(' ') : propValue;
+          } else if (propKey === 'style' && typeof propValue === 'string') {
+            props.style = parseStyle(propValue);
+          } else {
+            props[propKey] = propValue;
+          }
+        }
+      }
+      const children = (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
+      const tableVNode = h('table', props, children);
+      return h('div', { class: 'table-wrapper custom-scrollbar md-table-wrap overflow-x-auto my-4', key: `${key}-wrap` }, [tableVNode]);
+    }
+
     // 拦截 Pre 节点，回退到最简单可靠的 pre > code 纯文本渲染模式
     if (node.tagName === 'pre') {
       const codeNode = node.children?.find((c: any) => c.tagName === 'code');
@@ -200,9 +269,21 @@ const renderNode = (node: any, key: string | number = 0): any => {
         }
       }
       
+      const mermaidLangs = new Set([
+        'mermaid', 'gantt', 'flowchart', 'sequencediagram', 'classdiagram',
+        'statediagram', 'erdiagram', 'journey', 'pie', 'gitgraph',
+        'mindmap', 'timeline', 'xychart-beta', 'block-beta'
+      ]);
+
       // Mermaid 拦截
-      if (language === 'mermaid') {
-        return h(MermaidRenderer, { code: rawCode, key });
+      if (mermaidLangs.has(language.toLowerCase())) {
+        let mermaidCode = rawCode.trim();
+        // 修复甘特图等语法错误：如果 LLM 没有输出图表类型声明，自动补充
+        const lowerLang = language.toLowerCase();
+        if (lowerLang !== 'mermaid' && !mermaidCode.toLowerCase().startsWith(lowerLang)) {
+            mermaidCode = lowerLang + '\n' + mermaidCode;
+        }
+        return h(MermaidRenderer, { code: mermaidCode, key });
       }
 
       // PlantUML 拦截
@@ -253,22 +334,27 @@ const renderNode = (node: any, key: string | number = 0): any => {
 // 4. 执行 Unified 编译管线（同步版本，消除时序竞争）
 const processMarkdown = (text: string) => {
   try {
-    // Pre-process doc references into custom HTML tags before parsing to avoid AST fragmentation
-    text = text.replace(/(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?(?:[:：]\s*|\s+)(?:《([^》\n]+)》|\*([^\*\n]+)\*|([^\n，。；！？,.;!?(（\[\]]+))/gi, (match, docId, t1, t2, t3) => {
-        const title = (t1 || t2 || t3 || '').trim();
-        if (title) {
-            const safeTitle = title.replace(/"/g, '&quot;');
-            return `<document-card doc-id="${docId}" title="${safeTitle}"></document-card>`;
+    const sanitizeSchema = {
+        ...defaultSchema,
+        tagNames: [...(defaultSchema.tagNames || []), 'citation', 'document-card'],
+        attributes: {
+          ...defaultSchema.attributes,
+          '*': [...(defaultSchema.attributes?.['*'] || []), 'className', 'style'],
+          'citation': ['index'],
+          'document-card': ['docId', 'doc-id', 'docid', 'title'],
         }
-        return match;
-    });
+      };
 
     const processor = unified()
       .use(remarkParse)
       .use(remarkGfm)
+      .use(remarkMath)
       .use(remarkCitationPlugin)
+      .use(remarkDocCardPlugin)
       .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeRaw);
+      .use(rehypeRaw)
+      .use(rehypeSanitize, sanitizeSchema)
+      .use(rehypeKatex);
 
     const mdAst = processor.parse(text);
     const hastAst = processor.runSync(mdAst);

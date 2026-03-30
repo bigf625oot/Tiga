@@ -1,7 +1,7 @@
 import json
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .errors import SkillValidationError
 from .loaders.base import SkillLoader
@@ -180,6 +180,16 @@ class Skills:
                 name="get_skill_script",
                 description="Read or execute a script from a skill. Set execute=True to run the script and get output, or execute=False (default) to read the script content.",
                 entrypoint=self._get_skill_script,
+            )
+        )
+
+        # Tool: execute_skill (P10 动态路由执行器入口)
+        tools.append(
+            Function(
+                name="execute_skill",
+                description="""Directly execute a skill by its name and pass the required parameters. The system will automatically route it to the sandbox or local engine. 
+CRITICAL: If the user explicitly asks you to use a specific skill (e.g., 'docx'), you MUST use this tool to execute it instead of answering the user directly.""",
+                entrypoint=self._execute_skill,
             )
         )
 
@@ -375,11 +385,115 @@ class Skills:
                     "script_path": script_path,
                 }
             )
-        except Exception as e:
+    def _execute_skill(self, skill_name: str, **kwargs: Any) -> str:
+        """
+        [P10 Architecture] Dynamic Skill Router.
+        This is the unified entrypoint for LLM to execute a specific skill.
+        The framework will dynamically route the execution to Sandbox or LocalEngine based on the Skill's metadata.
+        
+        Args:
+            skill_name: The name of the skill to execute (e.g. 'docx').
+            **kwargs: Dynamic parameters required by the skill (e.g., markdown_content="...").
+            
+        Returns:
+            Execution result as a JSON string.
+        """
+        skill = self.get_skill(skill_name)
+        if skill is None:
+            # Fallback if LLM passed 'name' instead of 'skill_name'
+            alt_name = kwargs.get('name')
+            if alt_name:
+                skill = self.get_skill(alt_name)
+                
+        if skill is None:
+            available = ", ".join(self.get_skill_names())
             return json.dumps(
                 {
-                    "error": f"Error executing script: {e}",
-                    "skill_name": skill_name,
-                    "script_path": script_path,
+                    "error": f"Skill '{skill_name}' not found",
+                    "available_skills": available,
                 }
             )
+            
+        # 兼容 LLM 可能把参数包在 'parameters' 字典里的情况
+        parameters = kwargs.get("parameters", kwargs)
+        
+        # 路由策略分发
+        if skill.execution_mode == "local_engine":
+            log_debug(f"Routing skill '{skill_name}' to LocalEngine ({skill.engine_route})")
+            return self._route_to_local_engine(skill, parameters)
+        else:
+            log_debug(f"Routing skill '{skill_name}' to Sandbox")
+            # 默认 fallback 到要求 LLM 自己去读脚本并在沙箱里跑，
+            # 或者直接触发沙箱的通用入口 (此处为简化，提示 LLM 继续使用 run_code)
+            return json.dumps(
+                {
+                    "status": "delegated_to_sandbox",
+                    "instruction": f"The skill '{skill_name}' requires sandbox execution. Please use `get_skill_script` to read its script, and then use `run_code` or `run_shell` from SandboxTools to execute it with parameters: {parameters}"
+                }
+            )
+            
+    def _route_to_local_engine(self, skill: Skill, parameters: Dict[str, Any]) -> str:
+        """
+        将请求路由给本地的高性能纯函数微服务
+        """
+        route = skill.engine_route
+        if not route:
+            return json.dumps({"error": f"Skill '{skill.name}' is marked as local_engine but lacks 'engine_route'"})
+            
+        if route == "node:md_to_docx":
+            # 针对 MD 转 DOCX 的本地路由实现
+            try:
+                import tempfile
+                from uuid import uuid4
+                
+                # 兼容大模型传递 content 或 markdown_content 的行为
+                markdown_content = parameters.get("markdown_content") or parameters.get("content", "")
+                if not markdown_content:
+                    return json.dumps({"error": "Missing 'markdown_content' or 'content' parameter"})
+                    
+                output_filename = parameters.get("output_filename")
+                if not output_filename:
+                    output_filename = f"document_{uuid4().hex[:8]}.docx"
+                elif not output_filename.endswith(".docx"):
+                    output_filename += ".docx"
+                    
+                backend_dir = Path(__file__).resolve().parents[5]
+                uploads_dir = backend_dir / "data" / "storage"
+                uploads_dir.mkdir(parents=True, exist_ok=True)
+                output_path = uploads_dir / output_filename
+                
+                with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', suffix='.md', delete=False) as temp_md:
+                    temp_md.write(markdown_content)
+                    temp_md_path = temp_md.name
+                    
+                try:
+                    script_path = backend_dir / "app" / "services" / "agent" / "tools" / "libs" / "scripts" / "md_to_docx.js"
+                    process = subprocess.run(
+                        ['node', str(script_path), temp_md_path, str(output_path)],
+                        capture_output=True,
+                        text=True,
+                        check=False
+                    )
+                    
+                    if process.returncode != 0:
+                        return json.dumps({"error": f"Node renderer failed: {process.stderr}"})
+                finally:
+                    import os
+                    if os.path.exists(temp_md_path):
+                        os.remove(temp_md_path)
+                        
+                public_url = f"/uploads/{output_filename}"
+                
+                result_msg = (
+                    f"Conversion successful! File generated: {output_filename}\n"
+                    f"Download link: {public_url}\n"
+                    f"Please provide this link to the user in your final response: [Download Word Document]({public_url})\n"
+                    f"<tiga-artifact type=\"file\" url=\"{public_url}\" name=\"{output_filename}\"></tiga-artifact>"
+                )
+                
+                return json.dumps({"status": "success", "result": result_msg})
+                
+            except Exception as e:
+                return json.dumps({"error": f"Local engine execution failed: {str(e)}"})
+                
+        return json.dumps({"error": f"Unknown engine_route: {route}"})

@@ -32,6 +32,8 @@ class Skill:
     license: Optional[str] = None
     compatibility: Optional[str] = None
     allowed_tools: Optional[List[str]] = None
+    execution_mode: str = "sandbox"
+    engine_route: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """将技能转换为字典表示形式。"""
@@ -46,6 +48,8 @@ class Skill:
             "license": self.license,
             "compatibility": self.compatibility,
             "allowed_tools": self.allowed_tools,
+            "execution_mode": self.execution_mode,
+            "engine_route": self.engine_route,
         }
 
     @classmethod
@@ -62,4 +66,6 @@ class Skill:
             license=data.get("license"),
             compatibility=data.get("compatibility"),
             allowed_tools=data.get("allowed_tools"),
+            execution_mode=data.get("execution_mode", "sandbox"),
+            engine_route=data.get("engine_route"),
         )

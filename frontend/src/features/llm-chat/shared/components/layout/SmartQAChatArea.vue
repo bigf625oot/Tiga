@@ -1,7 +1,26 @@
 <template>
   <div class="h-full flex-1 flex flex-col min-h-0 relative min-w-0">
+    <!-- Loading Session State -->
+    <div v-if="isFetchingSession" key="loading-state" class="flex-1 flex flex-col px-4 pt-8 max-w-4xl mx-auto w-full gap-8">
+      <!-- Loading Skeleton for Messages -->
+      <div v-for="i in 3" :key="i" class="flex gap-4 w-full" :class="i % 2 === 0 ? 'flex-row-reverse' : ''">
+        <!-- Avatar Skeleton -->
+        <Skeleton class="h-8 w-8 rounded-full flex-shrink-0" />
+        <!-- Content Skeleton -->
+        <div class="flex flex-col gap-2 w-full max-w-[70%]">
+          <Skeleton class="h-4 w-24" :class="i % 2 === 0 ? 'ml-auto' : ''" />
+          <div class="space-y-2 p-4 rounded-2xl border" :class="i % 2 === 0 ? 'bg-primary/5 rounded-tr-sm border-primary/10' : 'bg-muted/40 rounded-tl-sm border-border/50'">
+            <Skeleton class="h-4 w-full" />
+            <Skeleton class="h-4 w-[90%]" />
+            <Skeleton class="h-4 w-[75%]" />
+            <Skeleton v-if="i % 2 !== 0" class="h-20 w-full mt-4 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- Empty State -->
-    <div v-if="messages.length === 0" key="empty-state" class="flex-1 flex flex-col items-center justify-start pt-[15vh] px-4 overflow-y-auto relative custom-scrollbar">
+    <div v-else-if="messages.length === 0" key="empty-state" class="flex-1 flex flex-col items-center justify-start pt-[15vh] px-4 overflow-y-auto relative custom-scrollbar">
       <div class="w-full max-w-[1000px] w-full flex flex-col items-center gap-6">
         <div class="flex flex-col items-center gap-4 transition-all duration-500 ease-in-out" 
              :class="inputValue ? 'opacity-40 scale-90 translate-y-4' : 'opacity-100'">
@@ -128,6 +147,7 @@
             @delete-message="$emit('delete-message', $event)"
             @resend-message="$emit('resend-message', $event)"
             @edit-message="$emit('edit-message', $event)"
+            @feedback="handleFeedback"
           />
         </div>
 
@@ -213,6 +233,7 @@ import SmartQAIntroFlipCards from '../message/SmartQAIntroFlipCards.vue';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getTheme } from '@/features/llm-chat/shared/constants/theme';
 import type { Agent, Message, Attachment, UserScript, ModeConfig, Team } from '@/features/llm-chat/shared/types';
 
@@ -222,6 +243,7 @@ const props = defineProps<{
   currentModeId: string | null;
   embedded: boolean;
   isLoading: boolean;
+  isFetchingSession?: boolean;
   isStreaming: boolean;
   loadingStatus?: string;
   isTaskRunning: boolean;
@@ -275,6 +297,37 @@ const handleSend = () => {
 
 const handleRemoveAttachment = (attachmentOrIndex: number | Attachment) => {
     emit('remove-attachment', attachmentOrIndex);
+};
+
+const handleFeedback = async (msg: any, rating: string) => {
+    // Check if args were passed correctly. The event might pass [message, rating] due to $event[1] trick or just separate args.
+    let targetMsg = msg;
+    let targetRating = rating;
+    
+    // Fallback normalization in case of array unpacking
+    if (Array.isArray(msg)) {
+      targetMsg = msg[0];
+      targetRating = msg[1];
+    }
+    
+    if (!targetMsg || !targetRating) return;
+    
+    // Optimistic update
+    if (!targetMsg.feedback) {
+      targetMsg.feedback = { rating: targetRating as 'like' | 'dislike' };
+    } else {
+      targetMsg.feedback.rating = targetRating;
+    }
+    
+    try {
+      if (targetMsg.id) {
+        // Assume api.post exists or we use chatService
+        // await chatService.submitFeedback(currentSessionId.value, targetMsg.id, { rating: targetRating });
+        console.log(`Feedback submitted: ${targetRating} for msg ${targetMsg.id}`);
+      }
+    } catch (e) {
+      console.error('Failed to submit feedback', e);
+    }
 };
 
 const inputValue = computed({

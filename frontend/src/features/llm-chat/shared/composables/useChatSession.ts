@@ -20,6 +20,7 @@ export function useChatSession() {
   const currentSession = ref<Session | null>(null);
   const messages = ref<Message[]>([]);
   const isLoading = ref(false);
+  const isFetchingSession = ref(false);
   const isStreaming = ref(false);
   const isStopping = ref(false);
   const loadingStatus = ref<string>('');
@@ -29,6 +30,7 @@ export function useChatSession() {
 
   const fetchSessionDetails = async (id: string) => {
     try {
+      isFetchingSession.value = true;
       console.log('[useChatSession] fetching details for:', id);
       const data = await chatService.getSession(id);
       console.log('[useChatSession] fetched data:', data);
@@ -58,6 +60,8 @@ export function useChatSession() {
           url.searchParams.delete('session_id');
           window.history.replaceState({}, '', url.toString());
       }
+    } finally {
+      isFetchingSession.value = false;
     }
   };
 
@@ -175,7 +179,14 @@ export function useChatSession() {
   ) => {
     if (isLoading.value) return;
 
+    // Prevent duplicate sending of the exact same message if we are already streaming
     if (isStreaming.value) {
+        const lastUserMsg = messages.value.slice().reverse().find(m => m.role === 'user');
+        if (lastUserMsg && lastUserMsg.content === userMsg) {
+            console.log('[useChatSession] Preventing duplicate user message during streaming');
+            return;
+        }
+
         stopGeneration();
         // Give it a tiny tick to clean up state
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -185,7 +196,7 @@ export function useChatSession() {
     loadingStatus.value = ''; // Reset status
     abortController.value = new AbortController();
 
-    // Optimistically add user message
+    // Optimistically add user message with a consistent clock
     messages.value.push({
       role: 'user',
       content: userMsg,
@@ -265,7 +276,8 @@ export function useChatSession() {
           role: 'assistant',
           content: '',
           reasoning: '',
-          timestamp: new Date().toISOString()
+          // Ensure assistant message timestamp is not older than user message
+          timestamp: messages.value.length > 0 ? messages.value[messages.value.length - 1].timestamp : new Date().toISOString()
       });
       const assistantMsg = messages.value[messages.value.length - 1];
       // 立即切换到 streaming 状态，消除 loading 空窗期
@@ -364,6 +376,7 @@ export function useChatSession() {
     currentSession,
     messages,
     isLoading,
+    isFetchingSession,
     isStreaming,
     isStopping,
     loadingStatus,

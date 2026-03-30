@@ -78,13 +78,21 @@ class AgnoStreamAdapter:
     def _handle_block(self, btype: Optional[str], raw_content: str) -> StreamEvent:
         """处理提取出来的块内容"""
         btype = btype or "unknown"
-        if btype == "echarts" and self.extract_charts:
+        if btype in ("echarts", "d3", "antv") and self.extract_charts:
             try:
                 data = json.loads(raw_content)
-                return StreamEvent(type="chart", content=data, sub_type="echarts", status="streaming")
+                return StreamEvent(type="chart", content=data, sub_type=btype, status="streaming")
             except json.JSONDecodeError as e:
-                logger.warning(f"Echarts JSON parse failed: {e}")
+                logger.warning(f"{btype} JSON parse failed: {e}")
                 return StreamEvent(type="content", content=f"\n```json\n{raw_content}\n```\n", status="streaming")
+                
+        if btype in ("audio", "video", "media"):
+            try:
+                data = json.loads(raw_content)
+                return StreamEvent(type="media", content=data, sub_type=btype, status="completed")
+            except json.JSONDecodeError:
+                # 兼容纯 URL 格式: ::: video \n https://... \n :::
+                return StreamEvent(type="media", content={"url": raw_content.strip(), "media_type": btype}, sub_type=btype, status="completed")
         
         return StreamEvent(type="content", content=f"\n```{btype}\n{raw_content}\n```\n", status="streaming")
 

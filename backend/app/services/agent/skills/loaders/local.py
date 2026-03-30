@@ -98,6 +98,8 @@ class LocalSkills(SkillLoader):
             metadata = frontmatter.get("metadata")
             compatibility = frontmatter.get("compatibility")
             allowed_tools = frontmatter.get("allowed-tools")
+            execution_mode = frontmatter.get("execution_mode", "sandbox")
+            engine_route = frontmatter.get("engine_route")
 
             # Discover scripts
             scripts = self._discover_scripts(folder)
@@ -116,6 +118,8 @@ class LocalSkills(SkillLoader):
                 license=license_info,
                 compatibility=compatibility,
                 allowed_tools=allowed_tools,
+                execution_mode=execution_mode,
+                engine_route=engine_route,
             )
 
         except SkillValidationError:

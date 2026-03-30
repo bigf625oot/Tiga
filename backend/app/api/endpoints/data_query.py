@@ -225,8 +225,7 @@ async def query_data(request: VannaRequest):
                 elif b_type == "error":
                     evt = "error"
                 elif b_type == "chart":
-                    # Backend sends "::: echarts ..." string for chart type
-                    evt = "text" 
+                    evt = "chart" 
                 
                 # Send as SSE
                 # We send the whole object so the frontend can display thinking steps properly.

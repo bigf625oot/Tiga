@@ -163,9 +163,13 @@
                 </button>
               </h4>
               <!-- rounded-lg bg-muted/30 border p-4(16px) ← radius + color + spacing tokens -->
-              <div ref="outputRef"
-                   class="rounded-lg bg-muted/30 border border-border/50 p-4 task-output-prose"
-                   v-html="renderMarkdown(selectedTask.output)">
+              <div class="rounded-lg bg-muted/30 border border-border/50 p-4 task-output-prose flex flex-col gap-2">
+                <ThoughtAccordion 
+                  v-if="parsedOutput.think" 
+                  :content="parsedOutput.think.raw" 
+                  :is-partial="parsedOutput.think.isPartial" 
+                />
+                <MarkdownRenderer :content="parsedOutput.text" />
               </div>
               <!-- running 时显示流式光标 -->
               <span v-if="selectedTask.status === 'running'"
@@ -352,6 +356,9 @@ import {
 import { marked } from 'marked';
 import mermaid from 'mermaid';
 import { useArtifact } from '@/features/llm-chat/shared/context/ArtifactContext';
+import { useMessageParser } from '@/features/llm-chat/shared/composables/useMessageParser';
+import MarkdownRenderer from '@/features/llm-chat/shared/components/common/MarkdownRenderer.vue';
+import ThoughtAccordion from '@/features/llm-chat/shared/components/blocks/ThoughtAccordion.vue';
 
 // ── Mermaid 初始化 (模块级，仅执行一次) ──
 // theme: neutral 在亮/暗两种模式下均可接受；fontFamily:inherit 跟随系统字体
@@ -385,6 +392,20 @@ const selectedTask = computed(() =>
     ? (store.tasks.find(t => t.id === store.selectedTaskId) ?? null)
     : null
 );
+
+const outputContentRef = computed(() => {
+  if (!selectedTask.value?.output) return '';
+  let processed = selectedTask.value.output.trim();
+  const mdMatch = processed.match(/^```(?:markdown|md)\s*\n([\s\S]*?)\n```$/i);
+  if (mdMatch) processed = mdMatch[1];
+  
+  // 表格分隔行 em-dash 归一化
+  return processed.replace(/^[ \t]*\|?[ \t\-—–‐―‑:|]+\|[ \t\-—–‐―‑:|]*$/gm, (line) =>
+    line.replace(/[—–‐―‑]/g, '-')
+  );
+});
+
+const { parsed: parsedOutput } = useMessageParser(outputContentRef);
 
 const goBack = () => {
   store.selectedTaskId = null;
@@ -424,44 +445,6 @@ const parsedLogs = computed(() => {
     };
   });
 });
-
-// ── Mermaid 渲染 ──
-// outputRef 指向 task-output-prose 容器；任务 completed 后扫描 .mermaid 节点并渲染
-const outputRef = ref(null);
-let _mermaidSeq = 0;
-
-const renderMermaidDiagrams = async () => {
-  await nextTick(); // 等 v-html 完成 DOM 写入
-  const container = outputRef.value;
-  if (!container) return;
-  const nodes = Array.from(
-    container.querySelectorAll('.mermaid:not([data-rendered])')
-  );
-  if (!nodes.length) return;
-  for (const node of nodes) {
-    try {
-      const id = `mmd-${++_mermaidSeq}`;
-      const { svg } = await mermaid.render(id, node.textContent.trim());
-      node.innerHTML = svg;
-    } catch (err) {
-      // 图表语法有误时降级为错误提示，不崩溃组件
-      node.innerHTML = `<pre class="mermaid-err">${err.message}</pre>`;
-    }
-    node.setAttribute('data-rendered', 'true');
-  }
-};
-
-// 仅在任务完成（非流式进行中）时渲染，避免解析不完整的 mermaid 语法
-watch(
-  () => selectedTask.value?.status,
-  (status) => { if (status === 'completed') renderMermaidDiagrams(); }
-);
-// 切换到已完成任务时立即触发
-watch(
-  selectedTask,
-  (task) => { if (task?.status === 'completed') renderMermaidDiagrams(); },
-  { immediate: true }
-);
 
 // ── Header 数据 ──
 const goalTitle = computed(() => {
@@ -556,76 +539,6 @@ const formatElapsed = (startTime, endTime) => {
   return `${Math.floor(ms / 60000)}m${Math.floor((ms % 60000) / 1000)}s`;
 };
 
-// ── Markdown 渲染 ──
-// 处理链路:
-//   1. 预处理: LLM 常用 em-dash(—/–) 作为表格分隔行，marked 只识别 ASCII `-`，
-//              逐行扫描纯分隔行并归一化，避免 table 被降级为 <p>
-//   2. marked.parse(): gfm:true 默认，输出 HTML
-//   3. 后处理①: <table> 包裹为 .md-table-wrap 实现横向滚动
-//   4. 后处理②: mermaid/gantt/flowchart fenced code block → .mermaid div
-//              (mermaid.render 在 watch 触发 DOM 更新后异步执行)
-const MERMAID_LANGS = new Set([
-  'mermaid','gantt','flowchart','sequencediagram','classdiagram',
-  'statediagram','erdiagram','journey','pie','gitgraph',
-  'mindmap','timeline','xychart-beta','block-beta',
-]);
-
-const renderMarkdown = (text) => {
-  if (!text) return '';
-
-  let processed = text.trim();
-
-  // 去除 LLM 可能包裹在最外层的 ```markdown ... ``` (会导致全部内容变为代码块)
-  const mdMatch = processed.match(/^```(?:markdown|md)\s*\n([\s\S]*?)\n```$/i);
-  if (mdMatch) {
-    processed = mdMatch[1];
-  }
-
-  // 处理 <think> 标签 (DeepSeek等模型)，前后补充空行确保 marked 能正确解析内部的 Markdown (如表格、标题)
-  processed = processed
-    .replace(/<think>/g, '<details class="think-block" open><summary>思考过程</summary>\n\n')
-    .replace(/<\/think>/g, '\n\n</details>\n\n');
-
-  // Step 1 — 表格分隔行 em-dash 归一化
-  // 匹配仅由 | 空格 : - 及各类 Unicode 破折号构成的行（即分隔行）
-  const normalized = processed.replace(/^[ \t]*\|?[ \t\-—–‐―‑:|]+\|[ \t\-—–‐―‑:|]*$/gm, (line) =>
-    line.replace(/[—–‐―‑]/g, '-')
-  );
-
-  // Step 2 — marked 解析
-  const html = marked.parse(normalized);
-
-  // Step 3 & 4 — 后处理
-  return html
-    .replace(/<table([^>]*)>/g, '<div class="md-table-wrap"><table$1>')
-    .replace(/<\/table>/g, '</table></div>')
-    .replace(
-      // 匹配 marked 输出的 fenced code block HTML
-      /<pre><code class="language-([^"]+)">([\s\S]*?)<\/code><\/pre>/g,
-      (_match, lang, encoded) => {
-        if (!MERMAID_LANGS.has(lang.toLowerCase())) return _match;
-        // marked 对 code 内容做了 HTML 实体编码，还原后传给 mermaid
-        const code = encoded
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&#39;/g, "'")
-          .replace(/&#x27;/g, "'")
-          .replace(/&quot;/g, '"');
-          
-        const lowerLang = lang.toLowerCase();
-        let mermaidCode = code.trim();
-        
-        // 修复甘特图等语法错误：如果 LLM 没有输出图表类型声明，自动补充
-        if (lowerLang !== 'mermaid' && !mermaidCode.toLowerCase().startsWith(lowerLang)) {
-            mermaidCode = lowerLang + '\n' + mermaidCode;
-        }
-
-        return `<div class="mermaid-wrap"><div class="mermaid">${mermaidCode}</div></div>`;
-      }
-    );
-};
-
 // ── Code Artifact Support ──
 const hasCodeArtifact = (text) => {
   if (!text) return false;
@@ -673,28 +586,6 @@ onBeforeUnmount(() => {});
   line-height: 1.6;
   color: hsl(var(--foreground) / 0.9);
   word-break: break-word;
-}
-.task-output-prose :deep(.think-block) {
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  background: hsl(var(--muted) / 0.4);
-  border-radius: calc(var(--radius) - 2px);
-  border-left: 3px solid hsl(var(--muted-foreground) / 0.3);
-}
-.task-output-prose :deep(.think-block summary) {
-  font-size: 12px;
-  font-weight: 500;
-  color: hsl(var(--muted-foreground));
-  cursor: pointer;
-  user-select: none;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.task-output-prose :deep(.think-block summary::before) {
-  content: '💡';
-  font-size: 14px;
 }
 .task-output-prose :deep(h1),
 .task-output-prose :deep(h2),

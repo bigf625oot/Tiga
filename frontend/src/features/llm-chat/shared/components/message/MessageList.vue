@@ -57,7 +57,8 @@
                   @delete-message="$emit('delete-message', $event)"
                   @resend-message="$emit('resend-message', $event)"
                   @edit-message="$emit('edit-message', $event)"
-              />
+      @feedback="$emit('feedback', $event, $event[1])"
+    />
           </template>
 
           <!-- 2. Loading Indicator -->
@@ -137,7 +138,7 @@ const props = defineProps<{
   currentModeId?: string | null;
 }>();
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message', 'feedback']);
 
 // Grouping Logic
 const messageGroups = computed(() => {

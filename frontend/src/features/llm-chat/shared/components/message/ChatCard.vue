@@ -35,12 +35,12 @@
       <!-- Bubble -->
       <div 
         class="relative text-sm leading-normal transition-all duration-200 min-w-0"
-        :class="[bubbleClasses, isUser ? 'shadow-sm max-w-[85%] w-fit' : 'mt-1 w-full']"
+        :class="[bubbleClasses, isUser ? 'max-w-[85%] w-fit' : 'mt-1 w-full']"
       >
         <template v-if="isUser">
             <div v-if="isEditing" class="flex flex-col gap-2 min-w-[200px]">
-                <textarea 
-                    v-model="editContent" 
+                <textarea
+                    v-model="editContent"
                     class="w-full bg-transparent text-primary-foreground placeholder:text-primary-foreground/50 resize-none outline-none border border-primary-foreground/20 rounded p-2 focus:border-primary-foreground/50 transition-colors custom-scrollbar"
                     rows="3"
                     @keydown.ctrl.enter="saveEdit"
@@ -51,7 +51,31 @@
                     <button @click="saveEdit" class="px-2 py-1 rounded bg-primary-foreground text-primary hover:bg-primary-foreground/90 transition-colors">发送</button>
                 </div>
             </div>
-            <div v-else class="user-markdown" v-html="userHtml"></div>
+            <div v-else class="flex flex-col gap-2">
+                <MarkdownRenderer 
+                    v-if="contentRef" 
+                    :content="contentRef" 
+                    proseClass="prose prose-sm max-w-none text-white prose-p:text-white prose-headings:text-white prose-strong:text-white prose-em:text-white prose-a:text-white prose-li:text-white prose-blockquote:text-white/80 prose-blockquote:border-white/30 prose-code:text-white prose-code:bg-white/10" 
+                />
+                <template v-if="userImageAttachments.length > 0">
+                    <div v-for="(img, idx) in userImageAttachments" :key="'img-' + idx" class="user-image-list flex flex-wrap gap-2">
+                        <img
+                            :src="img.url"
+                            :alt="img.alt || 'image'"
+                            class="max-w-[200px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            @click="openUrl(img.url)"
+                        />
+                    </div>
+                </template>
+                <template v-if="userFileAttachments.length > 0">
+                    <div v-for="(file, idx) in userFileAttachments" :key="'file-' + idx" class="user-file-item flex items-center gap-2 text-sm">
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-foreground/10 text-primary-foreground">
+                            <span class="font-medium">{{ file.name }}</span>
+                            <span v-if="file.size" class="text-xs opacity-70">{{ file.size }}</span>
+                        </div>
+                    </div>
+                </template>
+            </div>
         </template>
 
         <!-- Agent Mode: Rich Content -->
@@ -114,12 +138,22 @@
                   <Bookmark class="w-3.5 h-3.5" :class="{'fill-current text-amber-500 animate-pulse': isExcerptionAnimating}" />
               </button>
               <div class="w-px h-3 bg-border/40 mx-0.5"></div>
-              <button class="p-1 text-muted-foreground/40 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-all" title="赞">
-                  <ThumbsUp class="w-3.5 h-3.5" />
-              </button>
-              <button class="p-1 text-muted-foreground/40 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all" title="踩">
-                  <ThumbsDown class="w-3.5 h-3.5" />
-              </button>
+              <button 
+    class="p-1 rounded transition-all" 
+    :class="message.feedback?.rating === 'like' ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : 'text-muted-foreground/40 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'"
+    title="赞"
+    @click="$emit('feedback', message, 'like')"
+>
+    <ThumbsUp class="w-3.5 h-3.5" :class="{'fill-current': message.feedback?.rating === 'like'}" />
+</button>
+<button 
+    class="p-1 rounded transition-all" 
+    :class="message.feedback?.rating === 'dislike' ? 'text-red-600 bg-red-50 dark:bg-red-900/20' : 'text-muted-foreground/40 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'"
+    title="踩"
+    @click="$emit('feedback', message, 'dislike')"
+>
+    <ThumbsDown class="w-3.5 h-3.5" :class="{'fill-current': message.feedback?.rating === 'dislike'}" />
+</button>
           </template>
       </div>
     </div>
@@ -130,12 +164,12 @@
 import { computed, ref, watch } from 'vue';
 import dayjs from 'dayjs';
 import { Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2, Pencil, RotateCcw } from 'lucide-vue-next';
-import { useMarkdown } from '@/features/llm-chat/shared/composables/useMarkdown';
 import { formatTime, formatDuration } from '@/features/llm-chat/shared/utils/qa/dateUtils';
 import type { Message } from '@/features/llm-chat/shared/types';
 
 // 新引入的 UI 组件
 import MessageRenderer from './MessageRenderer.vue';
+import MarkdownRenderer from '@/features/llm-chat/shared/components/common/MarkdownRenderer.vue';
 import { adaptMessageToBlocks } from '@/features/llm-chat/shared/utils/MessageAdapter';
 
 const props = withDefaults(defineProps<{
@@ -159,7 +193,7 @@ const props = withDefaults(defineProps<{
   currentModeId: null,
 });
 
-const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message']);
+const emit = defineEmits(['locate-node', 'open-doc-space', 'quote-message', 'excerpt-message', 'delete-message', 'resend-message', 'edit-message', 'feedback']);
 
 const isExcerptionAnimating = ref(false);
 const isStepsExpanded = ref(true);
@@ -193,15 +227,56 @@ const handleExcerpt = () => {
 
 // Composables
 const contentRef = computed(() => props.message?.content || '');
-const { render } = useMarkdown();
-const userHtml = computed(() => {
-    return render(contentRef.value, { allowHtml: false });
-});
 
 const adaptedMessage = computed(() => {
     const adapted = adaptMessageToBlocks(props.message, props.isStreaming, props.isLast, props.currentModeId ?? undefined);
     // 确保永远返回一个有效的 ChatMessage 对象，防止 undefined 导致组件卸载
     return adapted || { id: String(Date.now()), role: 'assistant', status: 'completed', blocks: [] };
+});
+
+const userImageAttachments = computed(() => {
+    if (!props.isUser) return [];
+    const images: { url: string; alt: string }[] = [];
+    const msg = props.message;
+
+    if (msg.artifacts && Array.isArray(msg.artifacts)) {
+        for (const a of msg.artifacts as any[]) {
+            if (a?.url && (a.type === 'image' || a.media_kind === 'image' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(a.name || ''))) {
+                images.push({ url: a.url, alt: a.name || 'image' });
+            }
+        }
+    }
+
+    if (msg.images && Array.isArray(msg.images)) {
+        for (const img of msg.images as any[]) {
+            const url = img.url || img.oss_url || img.id || '';
+            if (url) {
+                images.push({ url, alt: img.name || img.alt || 'image' });
+            }
+        }
+    }
+
+    return images;
+});
+
+const userFileAttachments = computed(() => {
+    if (!props.isUser) return [];
+    const files: { name: string; url: string; size?: string }[] = [];
+    const msg = props.message;
+
+    if (msg.artifacts && Array.isArray(msg.artifacts)) {
+        for (const a of msg.artifacts as any[]) {
+            if (a?.url && !(a.type === 'image' || a.media_kind === 'image' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(a.name || ''))) {
+                files.push({
+                    name: a.name || 'file',
+                    url: a.url,
+                    size: a.size ? `${(a.size / 1024).toFixed(1)} KB` : undefined
+                });
+            }
+        }
+    }
+
+    return files;
 });
 
 watch(() => props.message.steps, (newVal, oldVal) => {
@@ -212,7 +287,7 @@ watch(() => props.message.steps, (newVal, oldVal) => {
 
 const bubbleClasses = computed(() => {
   if (props.isUser) {
-    return 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-3';
+    return 'bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm';
   } else {
     // 采用与 ChatView demo 完全一致的全宽块级布局
     return 'bg-transparent text-foreground px-0 py-0 w-full';
@@ -228,79 +303,10 @@ const avatarAlt = computed(() => (props.isUser ? 'user' : 'agent'));
 // Methods
 const copyText = (text: string) => navigator.clipboard.writeText(text || '');
 
+const openUrl = (url: string) => {
+    if (url && typeof window !== 'undefined') {
+        window.open(url, '_blank');
+    }
+};
 </script>
 
-<style scoped>
-.markdown-body { font-size: 14px; line-height: 1.5; color: hsl(var(--foreground)); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; }
-.markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: hsl(var(--foreground)); }
-.markdown-body :deep(h3) { font-size: 1.1em; display: flex; align-items: center; gap: 8px; }
-.markdown-body :deep(h3)::before { content: ''; display: inline-block; width: 4px; height: 16px; background: hsl(var(--primary)); border-radius: 2px; }
-.markdown-body :deep(p) { margin-bottom: 1em; }
-.markdown-body :deep(strong) { font-weight: 600; color: hsl(var(--foreground)); }
-.markdown-body :deep(img) { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; border: 1px solid hsl(var(--border)/0.5); }
-.markdown-body :deep(ul) { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
-.markdown-body :deep(ol) { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; }
-.markdown-body :deep(li) { margin-bottom: 0.25em; }
-.markdown-body :deep(blockquote) { border-left: 3px solid hsl(var(--border)); padding-left: 1em; color: hsl(var(--muted-foreground)); margin: 1em 0; }
-.markdown-body :deep(code) { background-color: hsl(var(--muted)); padding: 0.2em 0.4em; border-radius: 4px; font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
-.markdown-body :deep(pre code) { background-color: transparent; padding: 0; color: inherit; }
-
-.user-markdown :deep(p) { margin: 0; }
-.user-markdown :deep(p + p) { margin-top: 0.75rem; }
-.user-markdown :deep(strong) { font-weight: 600; }
-.user-markdown :deep(a) { color: inherit; text-decoration: underline; }
-.user-markdown :deep(blockquote) { margin: 0; padding-left: 0.75rem; border-left: 2px solid hsl(var(--primary-foreground) / 0.35); }
-.user-markdown :deep(ul) { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
-.user-markdown :deep(ol) { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
-.user-markdown :deep(li) { margin-bottom: 0.25rem; }
-.user-markdown :deep(pre) { 
-    background-color: hsl(var(--primary-foreground) / 0.1); 
-    padding: 1rem; 
-    border-radius: calc(var(--radius) - 2px); 
-    overflow-x: auto; 
-    margin: 0.5rem 0;
-    font-family: "Hack", monospace;
-    font-size: 0.875rem;
-}
-.user-markdown :deep(code) { 
-    background-color: hsl(var(--primary-foreground) / 0.15); 
-    padding: 0.125rem 0.25rem; 
-    border-radius: 0.25rem; 
-    font-family: "Hack", monospace;
-    font-size: 0.875rem;
-}
-.user-markdown :deep(pre code) {
-    background-color: transparent;
-    padding: 0;
-    font-size: 1em;
-    color: inherit;
-}
-.user-markdown :deep(.table-wrapper) {
-    width: 100%;
-    overflow-x: auto;
-    margin: 0.5rem 0;
-    border-radius: calc(var(--radius) - 2px);
-    border: 1px solid hsl(var(--primary-foreground) / 0.2);
-}
-.user-markdown :deep(table) {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.875rem;
-}
-.user-markdown :deep(th), .user-markdown :deep(td) {
-    border-bottom: 1px solid hsl(var(--primary-foreground) / 0.2);
-    border-right: 1px solid hsl(var(--primary-foreground) / 0.2);
-    padding: 0.5rem 0.75rem;
-}
-.user-markdown :deep(th:last-child), .user-markdown :deep(td:last-child) {
-    border-right: none;
-}
-.user-markdown :deep(tr:last-child td) {
-    border-bottom: none;
-}
-.user-markdown :deep(th) {
-    background-color: hsl(var(--primary-foreground) / 0.1);
-    font-weight: 600;
-    text-align: left;
-}
-</style>

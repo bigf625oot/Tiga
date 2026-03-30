@@ -1,5 +1,6 @@
 import type { Session, ModeType } from '@/features/llm-chat/shared/types';
-import { api } from '@/core/api/client'; // Assuming this exists based on imports in SmartQA.vue
+import { api } from '@/core/api/client';
+import { mapSessionDTOToDomain, type SessionDTO } from './chatMapper';
 
 export interface SendChatMessagePayload {
   message: string;
@@ -9,6 +10,7 @@ export interface SendChatMessagePayload {
   mode?: ModeType;
   intent?: string;
   agent_id?: string;
+  parent_id?: string;
 }
 
 type RoutedMode = 'quick' | 'solo' | 'team' | 'workflow';
@@ -57,32 +59,18 @@ const resolveChatRoute = (mode?: ModeType): ChatRouteConfig => {
 
 export const chatService = {
   async getSession(sessionId: string): Promise<Session> {
-    const res = await api.get(`/chat/sessions/${sessionId}`);
-    // 兼容 { code: 200, data: ... } 包装
-    let raw = res.data;
-    if (raw && typeof raw === 'object' && 'data' in raw && !('messages' in raw)) {
-        raw = raw.data;
-    }
-    // 映射后端字段到前端 Message 结构
-    if (raw?.messages) {
-        raw.messages = raw.messages.map((m: any) => ({
-            ...m,
-            // reasoning_content → reasoning（ThinkingBlock 使用）
-            reasoning: m.reasoning_content || m.reasoning || undefined,
-            // meta_data.stream_events → stream_events（StreamSteps 使用）
-            stream_events: m.meta_data?.stream_events || m.stream_events || undefined,
-        }));
-    }
-    return raw;
+    const res = await api.get<SessionDTO>(`/chat/sessions/${sessionId}`);
+    const dto = res.data;
+    return mapSessionDTOToDomain(dto);
   },
 
   async createSession(title: string, agentId: string | null, mode: ModeType, signal?: AbortSignal): Promise<Session> {
-    const res = await api.post('/chat/sessions', {
+    const res = await api.post<SessionDTO>('/chat/sessions', {
       title,
       agent_id: agentId,
       mode
     }, { signal });
-    return res.data;
+    return mapSessionDTOToDomain(res.data);
   },
 
   async updateSession(sessionId: string, data: Partial<Session>): Promise<void> {

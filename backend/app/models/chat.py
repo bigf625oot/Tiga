@@ -105,7 +105,13 @@ class ChatMessage(Base):
     # 原始响应 (生产环境调试非常有价值)
     raw_response = Column(JSON, nullable=True)
 
+    # 树状对话结构 (用于支持 Regenerate 多版本分支)
+    parent_id = Column(Integer, ForeignKey("chat_messages.id"), nullable=True, index=True)
+    version = Column(Integer, default=1)
+    is_active = Column(Integer, default=1) # 1 为当前激活分支，0 为历史分支
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # 关系
     session = relationship("ChatSession", back_populates="messages")
+    parent = relationship("ChatMessage", remote_side=[id], backref="children")

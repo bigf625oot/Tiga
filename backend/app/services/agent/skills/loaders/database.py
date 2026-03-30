@@ -33,5 +33,7 @@ class DatabaseLoader:
                 instructions=r.content or "",
                 source_path=f"db:{r.id}",
                 metadata=r.meta_data or None,
+                execution_mode=getattr(r, "execution_mode", "sandbox"),
+                engine_route=getattr(r, "engine_route", None)
             ))
         return skills

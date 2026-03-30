@@ -67,3 +67,6 @@ Markdown 支持：标题、加粗、斜体、引用块等基础语法。
 中部：Used tool（胶囊样式显示已调用的工具标签）。
 主体：Rich Text Content（渲染后的 Markdown 内容）。
 底部：参考文献列表（References）及操作按钮（复制、重新生成）。
+
+
+属性“_type”在类型“ChartConfig”上不存在。你是否指的是“type”?

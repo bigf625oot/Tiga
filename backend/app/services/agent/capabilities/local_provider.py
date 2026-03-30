@@ -89,6 +89,9 @@ class LocalCapabilityProvider(CapabilityProvider):
             if isinstance(t, str) and t.startswith("sb_"):
                 is_sandbox_enabled = True
                 break
+            if isinstance(t, dict) and t.get("name", "").startswith("sb_"):
+                is_sandbox_enabled = True
+                break
                 
         if is_sandbox_enabled:
             from app.services.agent.tools.libs.sandbox_tools import SandboxTools

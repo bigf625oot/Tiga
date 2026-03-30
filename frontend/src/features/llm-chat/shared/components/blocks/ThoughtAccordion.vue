@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
-import { Brain, ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 import type { ThoughtBlock } from '@/features/llm-chat/shared/types';
 
 const props = defineProps<{
@@ -25,33 +24,34 @@ watch(
   }
 );
 
-const toggle = () => {
-  isExpanded.value = !isExpanded.value;
+const handleToggle = (e: Event) => {
+  const details = e.target as HTMLDetailsElement;
+  isExpanded.value = details.open;
 };
 </script>
 
 <template>
-  <div class="rounded-xl border border-border bg-muted/30 overflow-hidden shadow-sm flex flex-col transition-all duration-300">
-    <!-- Header -->
-    <div 
-      class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
-      @click="toggle"
-    >
-      <div class="w-0.5 h-4 bg-primary/50 rounded-full"></div>
-      <Brain class="w-4 h-4 text-muted-foreground" />
-      <span class="text-sm font-medium text-muted-foreground select-none flex-1">
-        {{ block.state === 'thinking' ? 'Thinking...' : 'Thought process' }}
+  <details 
+    class="group mb-2" 
+    :open="isExpanded"
+    @toggle="handleToggle"
+  >
+    <summary class="list-none cursor-pointer flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-fit select-none">
+      <div class="w-4 h-4 rounded-full border border-border flex items-center justify-center group-open:rotate-180 transition-transform">
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <span class="text-[10px] font-bold uppercase tracking-widest">
+        {{ block.state === 'thinking' ? 'Thinking...' : 'Thought' }}
       </span>
-      <ChevronDown v-if="isExpanded" class="w-4 h-4 text-muted-foreground" />
-      <ChevronRight v-else class="w-4 h-4 text-muted-foreground" />
-    </div>
-
-    <!-- Content -->
-    <div 
-      v-show="isExpanded" 
-      class="px-4 py-3 text-sm text-foreground/80 border-t border-border/50 bg-background/50 leading-relaxed whitespace-pre-wrap"
-    >
+    </summary>
+    <div class="mt-2 pl-4 ml-2 border-l-2 border-border/50 text-xs text-muted-foreground/80 italic whitespace-pre-wrap leading-relaxed">
       {{ block.content }}
     </div>
-  </div>
+  </details>
 </template>
+
+<style scoped>
+summary::-webkit-details-marker {
+  display: none;
+}
+</style>

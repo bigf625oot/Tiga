@@ -66,22 +66,52 @@ class CRUDChat:
         db: AsyncSession, 
         session_id: str, 
         role: str, 
-        content: str, 
+        content: Optional[str] = None,
         meta_data: Optional[Dict] = None,
         reasoning_content: Optional[str] = None,
-        tool_calls: Optional[List[Dict]] = None
+        tool_calls: Optional[List[Dict]] = None,
+        tool_call_id: Optional[str] = None,
+        message_type: str = "text",
+        parent_id: Optional[int] = None,
     ) -> ChatMessage:
-        msg = ChatMessage(
-            session_id=session_id, 
-            role=role, 
-            content=content, 
+        """
+        Create a new chat message.
+        """
+        # If this message is a user message and has a parent_id,
+        # it means it's a regenerated branch. We should update is_active
+        # of other siblings to 0, though a full branch management logic is better.
+        # For now, we just insert with parent_id.
+        
+        # Calculate version if parent_id exists
+        from sqlalchemy import func
+        version = 1
+        if parent_id:
+            stmt = select(func.max(ChatMessage.version)).where(
+                ChatMessage.parent_id == parent_id,
+                ChatMessage.role == role
+            )
+            result = await db.execute(stmt)
+            max_version = result.scalar()
+            if max_version is not None:
+                version = max_version + 1
+
+        db_msg = ChatMessage(
+            session_id=session_id,
+            role=role,
+            content=content,
             meta_data=meta_data,
+            tool_calls=tool_calls,
+            tool_call_id=tool_call_id,
             reasoning_content=reasoning_content,
-            tool_calls=tool_calls
+            message_type=message_type,
+            parent_id=parent_id,
+            version=version,
+            is_active=1
         )
-        db.add(msg)
+        db.add(db_msg)
         await db.commit()
-        return msg
+        await db.refresh(db_msg)
+        return db_msg
 
     async def get_history(self, db: AsyncSession, session_id: str) -> List[ChatMessage]:
         result = await db.execute(

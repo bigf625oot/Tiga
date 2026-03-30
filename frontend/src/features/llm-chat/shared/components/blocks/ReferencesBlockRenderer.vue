@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import type { ReferencesBlock } from '@/features/llm-chat/shared/types';
 import SourceCard from '@/features/llm-chat/shared/components/common/SourceCard.vue';
 

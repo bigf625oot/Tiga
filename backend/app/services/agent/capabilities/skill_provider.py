@@ -43,8 +43,9 @@ class SkillCapabilityProvider(CapabilityProvider):
         allowed_ids = list(dict.fromkeys([i for i in allowed_ids if i]))
         
         should_enable = file_skills_config.get("enabled", False) or bool(allowed_names) or bool(allowed_ids)
-        if not should_enable:
-            return []
+        # P10 Fix: 强制默认启用 SkillToolkit，否则在未配置 allowed_skills 时模型将拿不到 execute_skill 导致幻觉
+        # if not should_enable:
+        #     return []
 
         preloaded: List[SkillObj] = []
         resolved_names: List[str] = []
@@ -59,13 +60,18 @@ class SkillCapabilityProvider(CapabilityProvider):
 
         allowed_for_runtime = list(dict.fromkeys([n for n in (allowed_names + resolved_names) if n]))
         
+        # P10 补丁：如果 enabled 为 True 但没有指定 allowed，我们传 None 给 allowed_skills，
+        # 这会让 LocalSkills loader 默认加载 path 下所有的技能，而不是加载 0 个
+        if not allowed_for_runtime and file_skills_config.get("enabled", False):
+            allowed_for_runtime = None
+            
         self.skill_toolkit = SkillToolkit(
             skills_path=skills_path_str,
-            allowed_skills=allowed_for_runtime or None,
+            allowed_skills=allowed_for_runtime,
             skills=preloaded or None,
         )
         
-        logger.info(f"Loaded SkillCapabilityProvider (allowed={len(allowed_for_runtime)})")
+        logger.info(f"Loaded SkillCapabilityProvider (allowed={len(allowed_for_runtime) if allowed_for_runtime else 'ALL'})")
         return [self.skill_toolkit]
         
     def get_system_prompt_snippet(self) -> Optional[str]:

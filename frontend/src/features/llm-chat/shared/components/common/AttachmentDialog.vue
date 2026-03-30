@@ -626,9 +626,12 @@ const sortedDocs = computed(() => {
 
   // Sort
   docs.sort((a, b) => {
-    let valA = a[sortKey.value as keyof KnowledgeDoc];
-    let valB = b[sortKey.value as keyof KnowledgeDoc];
+    let valA: any = a[sortKey.value as keyof KnowledgeDoc];
+    let valB: any = b[sortKey.value as keyof KnowledgeDoc];
     
+    if (valA === undefined) valA = '';
+    if (valB === undefined) valB = '';
+
     if (typeof valA === 'string') valA = valA.toLowerCase();
     if (typeof valB === 'string') valB = valB.toLowerCase();
 

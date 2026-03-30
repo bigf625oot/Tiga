@@ -46,7 +46,8 @@
 
       <!-- 耗时角标 — text-xs(12px) ← typography.fontSizes.xs -->
       <span v-if="elapsedTime"
-            class="flex-none text-xs font-mono text-muted-foreground/70 mt-0.5 tabular-nums">
+            class="flex-none text-xs font-mono text-muted-foreground/70 mt-0.5 tabular-nums"
+            title="任务核心执行耗时 (不含排队与渲染)">
         {{ elapsedTime }}
       </span>
     </div>
@@ -64,7 +65,7 @@
       </div>
 
       <!-- 输出字符数 -->
-      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <div class="flex items-center gap-1.5 text-xs text-muted-foreground" title="原始输出体积 (含协议与结构化数据)">
         <FileTextOutlined class="text-[11px]" />
         <span>{{ outputSummary }}</span>
       </div>

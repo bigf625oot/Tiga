@@ -33,7 +33,7 @@ test.describe('LLM Reply UI/UX Evaluation', () => {
       // 2. 带有完整过程的 AI 回复
       messages.push({
         role: 'assistant',
-        content: '根据查询结果，量子力学是物理学的一个分支...\n\n[DocCard: 量子力学导论](doc_123)\n\n::: file\n{"id": "file_456", "name": "data.csv", "size": 1024}\n:::',
+        content: '根据查询结果，量子力学是物理学的一个分支...\n\n',
         timestamp: baseTime.toISOString(),
         // 模拟 reasoning (Thought)
         reasoning: '首先我需要搜索量子力学，然后查询相关数据。',
@@ -51,6 +51,10 @@ test.describe('LLM Reply UI/UX Evaluation', () => {
         sources: [
             { id: 'doc_123', title: '量子物理基础.pdf' },
             { id: 'web_001', title: '维基百科：量子' }
+        ],
+        // 模拟文件生成
+        artifacts: [
+            { id: 'file_456', name: 'data.csv', size: 1024 }
         ]
       });
 

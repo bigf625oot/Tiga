@@ -45,6 +45,8 @@ class Skill(Base):
     
     # 业务元数据
     category = Column(String, index=True, nullable=True)
+    execution_mode = Column(String, default="sandbox", nullable=False, server_default="sandbox") # "sandbox" 或 "local_engine"
+    engine_route = Column(String, nullable=True) # 本地执行引擎的路由标识，例如 "node:md_to_docx"
     author_id = Column(String, index=True, default="system")
     is_official = Column(Boolean, default=False, index=True)
     downloads = Column(Integer, default=0, server_default="0")

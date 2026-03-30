@@ -1200,10 +1200,13 @@ const sendMessage = async () => {
               assistantMsg.steps.push(stepData);
               assistantMsg.currentStep = stepData.step;
 
-              if (['data', 'chart', 'error'].includes(stepData.type)) {
+              if (stepData.type === 'chart') {
+                assistantMsg.chart_config = typeof stepData.content === 'string' 
+                  ? JSON.parse(stepData.content.replace(/::: echarts[\s\S]*?:::/, '')) 
+                  : stepData.content;
+              } else if (['data', 'error'].includes(stepData.type)) {
                 assistantMsg.content += stepData.content;
-              }
-              if (stepData.type === 'sql') {
+              } else if (stepData.type === 'sql') {
                 assistantMsg.sql_query = stepData.content.replace(/```sql|```/g, '').trim();
               }
             } else if (stepData.content) {
@@ -1241,15 +1244,10 @@ const scrollToBottom = () => {
   });
 };
 
-const getMessageText = (content) => content.replace(/::: echarts[\s\S]*?:::/, '').trim();
+const getMessageText = (content) => content.replace(/::: echarts[\s\S]*?:::/g, '').trim();
 
 const getMessageChart = (content) => {
-  if (!content) return null;
-  const match = content.match(/::: echarts([\s\S]*?):::/);
-  if (match && match[1]) {
-    try { return JSON.parse(match[1].trim()); } catch (e) { return null; }
-  }
-  return null;
+  return null; // Logic moved to chart_config mapping directly
 };
 
 const processChartOption = (raw) => raw; // Hook for chart optimization if needed

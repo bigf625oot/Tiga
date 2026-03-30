@@ -104,6 +104,7 @@ class ChatRequest(BaseModel):
     enable_search: bool = True  # 是否启用知识库搜索
     enable_reasoning: bool = False  # 是否启用推理
     agent_id: Optional[str] = None  # 关联的智能体ID
+    parent_message_id: Optional[int] = None # 用于 Regenerate 构建对话分支树
 
 
 @router.post("/sessions/{session_id}/chat")
@@ -171,7 +172,13 @@ async def chat_session(
     async def sse_generator():
         # --- TEST INTERCEPTOR FOR SYSTEMATIC DEBUGGING ---
         if request.message.startswith("[TEST]"):
-            await crud_chat.create_message(db, session_id, "user", request.message)
+            user_msg = await crud_chat.create_message(
+                db, 
+                session_id=session_id, 
+                role="user", 
+                content=request.message,
+                parent_id=request.parent_message_id
+            )
             test_type = request.message.split(" ")[1] if " " in request.message else ""
             
             if test_type == "EMPTY_THOUGHT":
@@ -229,7 +236,13 @@ async def chat_session(
         # --- END TEST INTERCEPTOR ---
 
         # ── AgnoControlPlane 路径：支持所有模式 ──
-        await crud_chat.create_message(db, session_id, "user", request.message)
+        user_msg = await crud_chat.create_message(
+            db, 
+            session_id=session_id, 
+            role="user", 
+            content=request.message,
+            parent_id=request.parent_message_id
+        )
 
         text_parts: List[str] = []
         think_parts: List[str] = []
@@ -287,11 +300,12 @@ async def chat_session(
         # 持久化助手消息
         await crud_chat.create_message(
             db,
-            session_id,
-            "assistant",
-            "".join(text_parts),
+            session_id=session_id,
+            role="assistant",
+            content="".join(text_parts),
             meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
             reasoning_content="".join(think_parts) or None,
+            parent_id=user_msg.id
         )
 
         yield format_sse_json("done", "[DONE]")
@@ -320,6 +334,7 @@ async def chat_session_multipart(
     enable_search: bool = Form(True),
     enable_reasoning: bool = Form(False),
     agent_id: Optional[str] = Form(None),
+    parent_id: Optional[int] = Form(None),
     attachments: Optional[List[str]] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
     db: AsyncSession = Depends(get_db),
@@ -391,6 +406,19 @@ async def chat_session_multipart(
         attachment_context_parts_all.append("\n\n".join(attachment_context_parts))
     attachment_context = "\n\n".join(attachment_context_parts_all) if attachment_context_parts_all else None
 
+    user_msg_meta = {}
+    if uploaded_files:
+        user_msg_meta["files"] = uploaded_files
+
+    user_msg = await crud_chat.create_message(
+        db,
+        session_id=session_id,
+        role="user",
+        content=message,
+        parent_id=parent_id,
+        meta_data=user_msg_meta if user_msg_meta else None
+    )
+
     async def sse_generator():
         for meta in uploaded_files:
             status = (meta.get("status") or "").lower()
@@ -411,6 +439,10 @@ async def chat_session_multipart(
             }
             yield format_sse_json("file", payload)
 
+        text_parts: List[str] = []
+        think_parts: List[str] = []
+        cp_stream_events: List[Dict[str, Any]] = []
+
         async for chunk in control_plane.process_stream(
             user_input=message,
             db=db,
@@ -428,6 +460,8 @@ async def chat_session_multipart(
             debug=debug,
             ab_variant=ab_variant,
             attachments=attachments,
+            persist_user_message=False,
+            persist_assistant_message=False,
         ):
             # 映射内部事件类型到前端期望的 SSE 事件类型
             event_type = chunk.get("type", "message")
@@ -435,21 +469,44 @@ async def chat_session_multipart(
             # 兼容处理：将 content 映射为 text，think 保持为 think
             if event_type == "content":
                 sse_event = "text"
+                chunk_data = chunk.get("content", "")
+                text_parts.append(chunk_data)
             elif event_type == "think":
                 sse_event = "think"
+                chunk_data = chunk.get("content", "")
+                think_parts.append(chunk_data)
             elif event_type == "chart":
                 sse_event = "chart"
+                chunk_data = chunk
             elif event_type == "status":
                 sse_event = "status"
-                chunk = chunk.get("content", chunk)
+                chunk_data = chunk.get("content", chunk)
             elif event_type == "error":
                 sse_event = "error"
+                chunk_data = chunk
             else:
                 sse_event = event_type
-                
-            yield format_sse_json(sse_event, chunk)
+                chunk_data = chunk
 
-        yield "event: done\ndata: [DONE]\n\n"
+            cp_stream_events.append({
+                "event": sse_event,
+                "content": chunk_data,
+                "raw": chunk
+            })
+            yield format_sse_json(sse_event, chunk_data)
+
+        # 持久化助手消息
+        await crud_chat.create_message(
+            db,
+            session_id=session_id,
+            role="assistant",
+            content="".join(text_parts),
+            meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
+            reasoning_content="".join(think_parts) or None,
+            parent_id=user_msg.id
+        )
+
+        yield format_sse_json("done", "[DONE]")
         
         background_tasks.add_task(TitleGenerator.generate_title, session_id, db)
 

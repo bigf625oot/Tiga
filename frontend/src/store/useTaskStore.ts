@@ -88,12 +88,33 @@ export const useTaskStore = defineStore('taskStore', {
     },
 
     async clearCompletedTasks() {
-      const completedTasks = this.tasks.filter(
-        t => t.status === 'success' || t.status === 'SUCCESS'
-      );
+      try {
+        const params = new URLSearchParams();
+        if (this.wsUserId) params.append('user_id', this.wsUserId);
+        
+        const response = await fetch(`${API_BASE}/completed?${params}`, {
+          method: 'DELETE',
+        });
 
-      for (const task of completedTasks) {
-        await this.removeTask(task.id);
+        if (!response.ok) {
+          throw new Error('Failed to clear completed tasks');
+        }
+
+        // Update local state
+        this.tasks = this.tasks.filter(
+          t => t.status !== 'success' && t.status !== 'SUCCESS' && t.status !== 'error' && t.status !== 'FAILED'
+        );
+      } catch (error) {
+        console.error('Failed to clear completed tasks:', error);
+        
+        // Fallback to loop deletion if the batch API fails
+        const completedTasks = this.tasks.filter(
+          t => t.status === 'success' || t.status === 'SUCCESS' || t.status === 'error' || t.status === 'FAILED'
+        );
+
+        for (const task of completedTasks) {
+          await this.removeTask(task.id);
+        }
       }
     },
 

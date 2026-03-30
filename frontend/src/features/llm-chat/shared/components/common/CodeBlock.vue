@@ -2,7 +2,7 @@
 import { ref, h, defineComponent, watch } from 'vue';
 import { Check, Copy } from 'lucide-vue-next';
 import { useToast } from '@/components/ui/toast/use-toast';
-import { highlightCode, escapeHtml } from '@/features/llm-chat/shared/composables/useMarkdown';
+import { highlightCode, escapeHtml } from '@/features/llm-chat/shared/utils/markdown-utils';
 
 export default defineComponent({
   name: 'CodeBlock',

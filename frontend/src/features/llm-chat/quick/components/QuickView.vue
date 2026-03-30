@@ -1,10 +1,7 @@
 <template>
-  <SmartQA :session-id="sessionId" :embedded="false" />
+  <BaseChatView mode="quick" />
 </template>
 
 <script setup lang="ts">
-import SmartQA from '@/features/llm-chat/shared/components/SmartQA.vue';
-import { useQuickModeStore } from '@/features/llm-chat/quick/store';
-
-const { sessionId } = useQuickModeStore();
+import BaseChatView from '@/features/llm-chat/shared/components/BaseChatView.vue';
 </script>

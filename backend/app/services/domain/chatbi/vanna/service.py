@@ -583,11 +583,11 @@ class SmartDataQueryService:
         """
         step_id = 1
         
-        def wrap_msg(content: str, type_: str = "process") -> str:
+        def wrap_msg(content: Any, type_: str = "process") -> str:
             nonlocal step_id
             
-            # Ensure content is string
-            if not isinstance(content, str):
+            # Ensure content is json serializable
+            if not isinstance(content, (str, dict, list)):
                 if content is None:
                     content = ""
                 else:
@@ -687,9 +687,8 @@ class SmartDataQueryService:
                              full_content.append(msg)
                              
                              # Chart Data
-                             msg = f"\n::: echarts\n{json.dumps(chart_config, indent=2, ensure_ascii=False)}\n:::\n"
-                             yield wrap_msg(msg, "chart")
-                             full_content.append(msg)
+                             yield wrap_msg(chart_config, "chart")
+                             full_content.append("\n[生成了图表视图]\n")
                              return
                          else:
                              msg = "未能在图谱中找到相关数据。请确认：\n1. 图谱是否已构建\n2. 问题实体是否存在于图谱中"
@@ -788,10 +787,9 @@ class SmartDataQueryService:
                     generated_chart = chart
                     
                     if chart:
-                        # 使用特殊块供前端解析
-                        msg = f"\n::: echarts\n{json.dumps(chart, indent=2)}\n:::\n"
-                        yield wrap_msg(msg, "chart")
-                        full_content.append(msg)
+                        # 结构化事件下发
+                        yield wrap_msg(chart, "chart")
+                        full_content.append("\n[生成了图表视图]\n")
                     else:
                         msg = "数据特征不足以生成可视化图表。"
                         yield wrap_msg(msg, "process")

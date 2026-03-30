@@ -192,6 +192,15 @@ async def update_task_progress(
     return {"success": True}
 
 
+@router.delete("/completed")
+async def delete_completed_tasks(
+    user_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    status_list = ["SUCCESS", "FAILED"]
+    count = await async_task.soft_delete_by_status(db, user_id, status_list)
+    return {"success": True, "deleted_count": count}
+
 @router.delete("/{task_id}")
 async def delete_async_task(
     task_id: str,

@@ -158,7 +158,7 @@ class AgentAssembler:
                 instructions=[],
                 model_config={"enable_search": True},
                 tools_config=[],
-                skills_config={},
+                skills_config={"file_skills": {"enabled": True, "path": "c:/Users/fenda/.trae/skills"}},
                 knowledge_config={}
             )
 

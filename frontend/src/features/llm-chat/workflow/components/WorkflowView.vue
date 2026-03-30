@@ -1,10 +1,7 @@
 <template>
-  <SmartQA :session-id="sessionId" :embedded="false" />
+  <BaseChatView mode="workflow" />
 </template>
 
 <script setup lang="ts">
-import SmartQA from '@/features/llm-chat/shared/components/SmartQA.vue';
-import { useWorkflowModeStore } from '@/features/llm-chat/workflow/store';
-
-const { sessionId } = useWorkflowModeStore();
+import BaseChatView from '@/features/llm-chat/shared/components/BaseChatView.vue';
 </script>
