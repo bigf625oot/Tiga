@@ -8,28 +8,34 @@ export function createChatHandlers(
     normalizeThink: (data: any) => string,
     agentRunIdRef?: { value: string | null }
 ): Partial<StreamEventHandlers> {
+    const handleText = (data: any) => {
+        let textChunk = data;
+        if (typeof textChunk !== 'string') {
+            const rawContent = textChunk.content;
+            textChunk = typeof rawContent === 'object' && rawContent !== null
+                ? JSON.stringify(rawContent, null, 2)
+                : (rawContent || normalizeThink(textChunk));
+        }
+        assistantMsg.content = (assistantMsg.content || '') + textChunk;
+        workflowStore.appendOutput(textChunk);
+    };
+
+    const handleThink = (data: any) => {
+        let thinking = data;
+        if (typeof thinking !== 'string') {
+            const rawContent = thinking.content;
+            thinking = typeof rawContent === 'object' && rawContent !== null
+                ? JSON.stringify(rawContent, null, 2)
+                : (rawContent || normalizeThink(thinking));
+        }
+        assistantMsg.reasoning = (assistantMsg.reasoning || '') + thinking;
+    };
+
     return {
-        text: (data: any) => {
-            let textChunk = data;
-            if (typeof textChunk !== 'string') {
-                const rawContent = textChunk.content;
-                textChunk = typeof rawContent === 'object' && rawContent !== null 
-                    ? JSON.stringify(rawContent, null, 2) 
-                    : (rawContent || normalizeThink(textChunk));
-            }
-            assistantMsg.content = (assistantMsg.content || '') + textChunk;
-            workflowStore.appendOutput(textChunk);
-        },
-        think: (data: any) => {
-            let thinking = data;
-            if (typeof thinking !== 'string') {
-                const rawContent = thinking.content;
-                thinking = typeof rawContent === 'object' && rawContent !== null 
-                    ? JSON.stringify(rawContent, null, 2) 
-                    : (rawContent || normalizeThink(thinking));
-            }
-            assistantMsg.reasoning = (assistantMsg.reasoning || '') + thinking;
-        },
+        text: handleText,
+        text_delta: handleText,
+        think: handleThink,
+        think_delta: handleThink,
         sources: (data: any) => { assistantMsg.sources = data; },
         file: (data: any) => { 
             let fileData = data;

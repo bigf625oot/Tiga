@@ -10,6 +10,7 @@ class ChatMessageBase(BaseModel):
     content: Optional[str] = Field(None, description=_("Content of the message"))
     reasoning_content: Optional[str] = Field(None, description=_("Chain of thought or reasoning content"))
     tool_calls: Optional[List[Dict[str, Any]]] = Field(None, description=_("List of tool calls made in this message"))
+    tools: Optional[List[Dict[str, Any]]] = Field(None, description=_("Materialized tool states for UI rendering"))
     tool_call_id: Optional[str] = Field(None, description=_("ID of the tool call this message responds to"))
     message_type: str = Field("text", description=_("Type of the message (text, image, etc.)"))
     meta_data: Optional[Dict[str, Any]] = Field(None, description=_("Additional metadata for the message"))

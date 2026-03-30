@@ -32,13 +32,14 @@ export interface ThoughtBlock {
 export interface PlanStep {
   id: string;
   text: string;
-  status: 'pending' | 'running' | 'completed';
+  status: 'pending' | 'running' | 'completed' | 'error';
 }
 
 export interface PlanBlock {
   type: 'plan';
   steps: PlanStep[];
 }
+
 
 export interface TextBlock {
   type: 'text';
@@ -165,10 +166,10 @@ export interface SoloLayoutBlock {
 
 export type ContentBlock = 
   | ThoughtBlock
-  | PlanBlock
   | TextBlock
   | ToolCallBlock
   | ToolResultBlock
+  | PlanBlock
   | TerminalBlock
   | ActionBlock
   | SearchBlock

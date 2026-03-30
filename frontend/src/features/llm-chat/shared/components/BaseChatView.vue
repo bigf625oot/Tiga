@@ -1,5 +1,5 @@
 <template>
-  <SmartQA :session-id="sessionId" :embedded="false" />
+  <SmartQA :session-id="sessionId" :embedded="false" :initial-mode="mode" />
 </template>
 
 <script setup lang="ts">

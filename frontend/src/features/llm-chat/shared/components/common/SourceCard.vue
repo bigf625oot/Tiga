@@ -75,6 +75,19 @@ const cardClickHandler = () => {
   }
 };
 
+const faviconUrl = computed(() => {
+  if (props.source.favicon) return props.source.favicon;
+  if (props.type === 'web' && props.source.url) {
+    try {
+      const url = new URL(props.source.url);
+      return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+});
+
 const isClickable = computed(() => !!props.source.url);
 </script>
 
@@ -107,11 +120,12 @@ const isClickable = computed(() => !!props.source.url);
         :class="iconSizeClasses"
       >
         <img
-          v-if="type === 'web' && source.favicon"
-          :src="source.favicon"
-          class="w-1/2 h-1/2 object-contain"
+          v-if="type === 'web' && faviconUrl"
+          :src="faviconUrl"
+          class="w-3/5 h-3/5 object-contain"
           loading="lazy"
           :alt="getDomain(source.url || '')"
+          @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
         />
         <component
           v-else

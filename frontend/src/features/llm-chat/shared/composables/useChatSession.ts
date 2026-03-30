@@ -7,6 +7,12 @@ import type {
   Session, Message, Attachment, ModeType, StreamEventItem,
 } from '@/features/llm-chat/shared/types';
 
+declare global {
+  interface Window {
+    _lastStreamEndTime?: number;
+  }
+}
+
 /**
  * Manages chat session state, message streaming, and workflow integration.
  * 
@@ -42,8 +48,14 @@ export function useChatSession() {
       if (isLoading.value || isStreaming.value || messages.value.some(m => m.status === 'sending')) {
           console.log('[useChatSession] skip overwriting messages because user already sent a new message');
       } else {
-          messages.value = data.messages || [];
-          console.log('[useChatSession] messages set to:', messages.value.length, 'items');
+          // Additional protection: Only overwrite if we aren't within 1s of a stream finishing
+          // to prevent race conditions with backend persistence.
+          if (!window._lastStreamEndTime || Date.now() - window._lastStreamEndTime > 1500) {
+              messages.value = data.messages || [];
+              console.log('[useChatSession] messages set to:', messages.value.length, 'items');
+          } else {
+              console.log('[useChatSession] skip overwriting messages due to recent stream end race condition protection');
+          }
       }
       
       // Initialize workflow state if needed
@@ -357,6 +369,7 @@ export function useChatSession() {
       } finally {
           isLoading.value = false;
           isStreaming.value = false;
+          window._lastStreamEndTime = Date.now();
           
           if (workflowStore.isRunning) {
               workflowStore.isRunning = false;

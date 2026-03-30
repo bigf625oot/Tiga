@@ -188,6 +188,7 @@ import { useChartOptions } from '@/features/llm-chat/shared/composables/useChart
 import { formatDuration, formatFileSize } from '@/features/llm-chat/shared/utils/qa/dateUtils';
 import { useArtifact } from '@/features/llm-chat/shared/context/ArtifactContext';
 import ClaudeArtifactCard from '@/features/llm-chat/shared/components/common/ClaudeArtifactCard.vue';
+import { useMessageParser } from '@/features/llm-chat/shared/composables/useMessageParser';
 
 // ── Props & emits ───────────────────────────────────────────────────
 const props = defineProps<{
@@ -290,12 +291,18 @@ const artifactLinks = computed<ArtifactLink[]>(() => {
 });
 
 // ── Thinking content ─────────────────────────────────────────────────
+const messageContentRef = computed(() => props.message.content || '');
+const { parsed: parsedMessage } = useMessageParser(messageContentRef);
+
 const thinkingContent = computed(() => {
   if (props.message.reasoning) {
     return { raw: props.message.reasoning, isPartial: isRunning.value };
   }
   if (props.message.meta_data?.reasoning) {
     return { raw: props.message.meta_data.reasoning, isPartial: false };
+  }
+  if (parsedMessage.value.think) {
+    return { raw: parsedMessage.value.think.raw, isPartial: parsedMessage.value.think.isPartial };
   }
   return null;
 });

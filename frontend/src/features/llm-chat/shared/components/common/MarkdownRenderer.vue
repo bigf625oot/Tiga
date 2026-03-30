@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, h, resolveComponent, shallowRef, onMounted, onUnmounted } from 'vue';
+import { watch, h, shallowRef, onMounted, onUnmounted } from 'vue';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
@@ -95,7 +95,7 @@ const remarkCitationPlugin = () => {
   };
 };
 
-// 1.5 Remark 插件：提取 doc# 引用并转化为 document-card 节点
+// 1.5 Remark 插件：提取 doc# 引用并将其作为纯文本保留，或者根据需求转换为其他内联格式，但不再转换为巨大的卡片
 const remarkDocCardPlugin = () => {
   return (tree: any) => {
     visit(tree, 'text', (node: any, index: number | undefined, parent: any) => {
@@ -117,15 +117,18 @@ const remarkDocCardPlugin = () => {
         const docId = match[1];
         const title = (match[2] || match[3] || match[4] || '').trim();
         
+        // 我们不再将其转换为 document-card 节点，而是转换为轻量的 citation 或简单的强调文本
+        // 这里我们选择将其转换为一个简单的文本或者带下划线的内联引用
         children.push({
-          type: 'document-card',
+          type: 'element',
           data: {
-            hName: 'document-card',
+            hName: 'span',
             hProperties: {
-              'doc-id': docId,
-              title: title
+              className: 'text-indigo-400 font-medium cursor-pointer hover:underline',
+              'data-doc-id': docId
             }
-          }
+          },
+          children: [{ type: 'text', value: `[文档: ${title || docId}]` }]
         });
         
         lastIndex = docCardRegex.lastIndex;
@@ -161,7 +164,7 @@ const renderNode = (node: any, key: string | number = 0): any => {
       });
     }
 
-    // 拦截 document-card 节点
+    // 拦截 document-card 节点 (兼容旧数据)
     if (node.tagName === 'document-card') {
       const rawDocId = node.properties?.docId || node.properties?.['doc-id'] || node.properties?.docid;
       const docIdStr = String(rawDocId || '').trim();
@@ -172,6 +175,16 @@ const renderNode = (node: any, key: string | number = 0): any => {
         class: 'align-middle inline-flex my-1 mx-1',
         onClick: (id: string) => emit('open-doc-space', id)
       });
+    }
+
+    // 拦截具有 data-doc-id 的 span (新的轻量内联引用)
+    if (node.tagName === 'span' && node.properties?.['data-doc-id']) {
+      const docIdStr = String(node.properties['data-doc-id']).trim();
+      return h('span', {
+        class: node.properties.className || 'text-indigo-400 font-medium cursor-pointer hover:underline',
+        onClick: () => emit('open-doc-space', docIdStr),
+        key
+      }, node.children ? node.children.map((c: any, i: number) => renderNode(c, `${key}-${i}`)) : []);
     }
 
     // 拦截 Image 节点，处理 PNG 等图片
@@ -210,24 +223,17 @@ const renderNode = (node: any, key: string | number = 0): any => {
         ]);
       }
 
-      // 获取 a 标签内的文本内容作为 title
-      let title = '';
-      const extractText = (n: any) => {
-        if (n.type === 'text') title += n.value;
-        if (n.children) n.children.forEach(extractText);
-      };
-      node.children?.forEach(extractText);
-
-      return h(SourceCard, {
-        source: {
-          url: href,
-          title: title || href
-        },
-        type: 'web',
-        size: 'sm',
-        class: 'my-2 inline-flex w-full max-w-sm align-middle', // inline-flex for better alignment
+      // 提取链接文本
+      const children = (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
+      
+      // 不再将普通链接转换为巨型 SourceCard，而是保留为原生带样式的内联链接 <a> 标签
+      return h('a', {
+        href,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        class: 'text-primary hover:underline break-words',
         key
-      });
+      }, children);
     }
 
     // 拦截 Table 节点

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+import tiktoken
 from typing import Dict, Any, Optional, AsyncGenerator, List, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
@@ -44,6 +45,8 @@ class OrchestrationContext:
     full_reasoning: str = ""
     collected_tools: List[Dict[str, Any]] = field(default_factory=list)
 
+from app.services.agent.utils.stream_adapter import StreamEventType
+
 class StreamAggregator:
     """流式聚合器：在不阻塞流响应的情况下，实时收集数据用于最后入库"""
     def __init__(self):
@@ -56,31 +59,68 @@ class StreamAggregator:
         ctype = chunk.get("type", "message")
         content = chunk.get("content")
         
-        # 将内部事件类型映射为前端期望的 SSE 事件类型，并收集以供持久化
+        # 兼容处理和映射
         sse_event = ctype
-        if ctype == "content":
-            sse_event = "text"
+        
+        # 精简 raw 字段，移除可能引起内存溢出的超大内容 (如知识库检索结果)
+        raw_chunk = dict(chunk)
+        if ctype == StreamEventType.KNOWLEDGE_RETRIEVED.value and "data" in raw_chunk:
+            # 不保存完整的检索片段到 meta_data 序列化中
+            raw_chunk["data"] = {"chunks": "[Truncated for persistence]"}
             
         self.stream_events.append({
             "event": sse_event,
             "content": content if content is not None else chunk,
-            "raw": chunk
+            "raw": raw_chunk
         })
 
-        if ctype == "content" and isinstance(content, str):
+        if ctype == StreamEventType.TEXT_DELTA.value and isinstance(content, str):
             self.content.append(content)
-        elif ctype in ("think", "reasoning", "reasoning_content") and isinstance(content, str):
+        elif ctype == StreamEventType.THINK_DELTA.value and isinstance(content, str):
             self.reasoning.append(content)
-        elif ctype == "run_output":
+        elif ctype == StreamEventType.RUN_COMPLETED.value:
             # 聚合 Tool Call 详情
             data = chunk.get("data") or chunk.get("content")
             if isinstance(data, dict) and "tools" in data:
                 for t in data["tools"]:
                     tid = t.get("tool_call_id") or f"unknown_{time.time()}"
                     self.tool_calls[tid] = t
+        elif ctype in (StreamEventType.TOOL_CALL_START.value, StreamEventType.TOOL_CALL_END.value, StreamEventType.TOOL_CALL_ERROR.value):
+            data = chunk.get("content")
+            if isinstance(data, dict):
+                tid = data.get("tool_call_id")
+                if not tid:
+                    tid = f"unknown_{len(self.tool_calls)}"
+                
+                if tid not in self.tool_calls:
+                    self.tool_calls[tid] = {
+                        "tool_call_id": tid,
+                        "function": {
+                            "name": data.get("tool"),
+                            "arguments": data.get("args") or {}
+                        }
+                    }
+                else:
+                    # 增量参数更新 (如果 args 有更新则覆盖)
+                    new_args = data.get("args")
+                    if new_args and new_args != self.tool_calls[tid]["function"].get("arguments"):
+                        self.tool_calls[tid]["function"]["arguments"] = new_args
+                
+                if ctype in (StreamEventType.TOOL_CALL_END.value, StreamEventType.TOOL_CALL_ERROR.value):
+                    self.tool_calls[tid]["result"] = data.get("output")
+                    if data.get("is_error"):
+                        self.tool_calls[tid]["error"] = data.get("logs")
+                    
+                    # 记录耗时指标
+                    event_data = chunk.get("data")
+                    if isinstance(event_data, dict) and "latency" in event_data:
+                        self.tool_calls[tid]["latency"] = event_data["latency"]
 
     def finalize(self) -> Tuple[str, str, List[Dict[str, Any]], List[Dict[str, Any]]]:
         return "".join(self.content), "".join(self.reasoning), list(self.tool_calls.values()), self.stream_events
+
+# Keep references to background tasks to prevent them from being garbage collected
+_background_tasks: set[asyncio.Task] = set()
 
 class AgnoControlPlane:
     """
@@ -132,20 +172,36 @@ class AgnoControlPlane:
             # Step 1: 预热 (模型解析)
             await self._ensure_models(db)
 
-            # Step 2: 极致并行 (NLU, RAG, History 同时启动)
-            # 我们不等待所有任务完成，而是先启动，按需 await
+            # 1. 确保用户输入优先落库 (Sync to avoid DB concurrency issues)
+            await self._init_history(ctx)
+
+            # 2. 并行执行 NLU 意图识别与 RAG 知识检索
+            # 使用 asyncio.gather 并处理异常，防止单点故障导致全链路崩溃
             nlu_task = asyncio.create_task(self._resolve_intent(ctx))
             rag_task = asyncio.create_task(self._fetch_knowledge(ctx))
-            history_init_task = asyncio.create_task(self._init_history(ctx))
 
             yield {"type": "status", "content": "正在编排上下文..."}
 
-            # Step 3: 等待核心决策数据 (NLU)
-            ctx.intent = await nlu_task
-            await history_init_task # 确保用户消息已落库
-            
-            # Step 4: 等待知识增强 (RAG)
-            ctx.knowledge_fragment = await rag_task
+            try:
+                results = await asyncio.gather(nlu_task, rag_task, return_exceptions=True)
+                
+                # 处理 NLU 结果
+                if isinstance(results[0], Exception):
+                    logger.error(f"NLU failed: {results[0]}")
+                    ctx.intent = None
+                else:
+                    ctx.intent = results[0]
+                    
+                # 处理 RAG 结果
+                if isinstance(results[1], Exception):
+                    logger.error(f"RAG failed: {results[1]}")
+                    ctx.knowledge_fragment = ""
+                else:
+                    ctx.knowledge_fragment = results[1]
+            except Exception as e:
+                logger.error(f"Parallel initialization failed: {e}")
+                ctx.intent = None
+                ctx.knowledge_fragment = ""
             
             # Step 5: 构造增强输入
             augmented_input = self._build_prompt(ctx)
@@ -179,8 +235,9 @@ class AgnoControlPlane:
                 _persist_task = asyncio.create_task(self._finalize_session_safe(
                     ctx.session_id, ctx.start_time, ctx.intent, content, reasoning, tools, stream_events
                 ))
-                # Attach to event loop's running tasks set to survive caller scope
-                asyncio.get_event_loop().call_soon(lambda: None)  # yield point ensures task is scheduled
+                # Add strong reference to prevent GC
+                _background_tasks.add(_persist_task)
+                _persist_task.add_done_callback(_background_tasks.discard)
 
     async def _resolve_intent(self, ctx: OrchestrationContext) -> IntentResult:
         """带强制逻辑、启发式预判与超时回退的意图识别 (O(1) -> O(N) 降级策略)"""
@@ -231,6 +288,20 @@ class AgnoControlPlane:
                 parameters={},
             )
 
+    def _truncate_tokens(self, text: str, max_tokens: int = 12000) -> str:
+        """使用 tiktoken 精确截断，保留前文关键信息"""
+        if not text:
+            return text
+        try:
+            encoding = tiktoken.get_encoding("cl100k_base")
+            tokens = encoding.encode(text)
+            if len(tokens) <= max_tokens:
+                return text
+            return encoding.decode(tokens[:max_tokens]) + "\n...[Truncated due to token limit]..."
+        except Exception as e:
+            logger.warning(f"Token truncation failed: {e}, falling back to character slice")
+            return text[:max_tokens * 3]
+
     async def _fetch_knowledge(self, ctx: OrchestrationContext) -> str:
         """多路知识获取：附件上下文 + RAG"""
         if not ctx.kwargs.get("enable_knowledge", True):
@@ -262,7 +333,7 @@ class AgnoControlPlane:
         if knowledge_str:
             combined += f"--- Retrieved Knowledge ---\n{knowledge_str}\n"
             
-        return combined[:12000] # Token 窗口安全截断
+        return self._truncate_tokens(combined, max_tokens=12000) # 精确 Token 截断
 
     def _build_prompt(self, ctx: OrchestrationContext) -> str:
         """

@@ -29,6 +29,7 @@ import { MODES } from '@/features/llm-chat/shared/constants';
 const props = defineProps<{
   sessionId: string | null;
   embedded: boolean;
+  initialMode?: string;
 }>();
 
 defineEmits(['refresh-sessions', 'update:sessionId']);
@@ -39,7 +40,7 @@ const blobColors = computed(() => isDark.value
   ? ['rgba(99, 102, 241, 0.15)', 'rgba(59, 130, 246, 0.15)', 'rgba(168, 85, 247, 0.15)']
   : ['rgba(99, 102, 241, 0.12)', 'rgba(59, 130, 246, 0.12)', 'rgba(168, 85, 247, 0.12)']);
 
-const currentMode = ref('quick');
+const currentMode = ref(props.initialMode || 'quick');
 const useTaskUI = computed(() => currentMode.value !== 'quick');
 
 const currentModeId = computed(() => {
@@ -62,7 +63,7 @@ const resolvedComponent = computed(() => {
 
 const loadMode = async (sid: string | null) => {
     if (!sid) {
-        currentMode.value = 'quick';
+        currentMode.value = props.initialMode || 'quick';
         return;
     }
     try {
@@ -70,10 +71,10 @@ const loadMode = async (sid: string | null) => {
         if (session && session.mode) {
             currentMode.value = session.mode;
         } else {
-            currentMode.value = 'quick';
+            currentMode.value = props.initialMode || 'quick';
         }
     } catch (e) {
-        currentMode.value = 'quick';
+        currentMode.value = props.initialMode || 'quick';
     }
 };
 

@@ -92,6 +92,10 @@ class ChatMessage(Base):
     tool_calls = Column(JSON, nullable=True) 
     tool_call_id = Column(String(100), nullable=True) # 当 role=tool 时，关联对应的调用 ID
 
+    # 前端UI状态的物化视图 (Materialized View for UI Tools)
+    # 用于解决飞行态与静止态异构的问题，结构：[{"id": "...", "name": "...", "args": {...}, "status": "..."}]
+    tools = Column(JSON, nullable=True)
+
     # 消息元数据
     message_type = Column(String(20), default="text") # text, image, file, chart
     meta_data = Column(JSON, nullable=True)           # 存储 UI 渲染需要的配置

@@ -17,8 +17,9 @@ export function useChatEngine(props: { sessionId: string | null; embedded?: bool
 
     // UI State
     const input = ref('');
-    const defaults = getSmartQADefaults(props.sessionId);
-    const mode = ref<ModeType>(defaults.mode);
+    const initialModeConfig = MODES.find(m => m.id === initialModeId);
+    const initialModeValue = (initialModeConfig ? initialModeConfig.value : 'quick') as ModeType;
+    const mode = ref<ModeType>(initialModeValue);
     const currentModeId = ref<string | null>(initialModeId);
     
     // Feature States

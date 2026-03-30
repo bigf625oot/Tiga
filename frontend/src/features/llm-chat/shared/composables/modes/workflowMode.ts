@@ -99,6 +99,7 @@ export function createWorkflowHandlers(
                 startTime: Date.now()
             });
         },
+        tool_start: function(data) { this.tool_call?.(data); },
         call: function(data) { this.tool_call?.(data); },
         tool_output: (data: any) => {
             workflowStore.handleAgentEvent(data as AgentEvent);
@@ -124,6 +125,8 @@ export function createWorkflowHandlers(
                 }
             }
         },
+        tool_end: function(data) { this.tool_output?.(data); },
+        tool_error: function(data) { this.tool_output?.(data); },
         result: function(data) { this.tool_output?.(data); },
         artifact: (data: any) => workflowStore.handleAgentEvent(data as AgentEvent),
         status: (data: any) => {

@@ -3,6 +3,8 @@ import { computed, inject } from 'vue';
 import type { ChatMessage } from '@/features/llm-chat/shared/types';
 import { BlockRendererRegistry } from '../blocks/BlockRendererRegistry';
 import { ChatContextKey } from '@/features/llm-chat/shared/context/ChatContext';
+import DocumentCard from '@/features/llm-chat/shared/components/common/DocumentCard.vue';
+import SourceCard from '@/features/llm-chat/shared/components/common/SourceCard.vue';
 
 const props = defineProps<{
   message: ChatMessage;
@@ -31,6 +33,53 @@ const handleEvent = (eventName: string, payload?: any) => {
     emit(eventName as any);
   }
 };
+
+// 提取所有文本块中的 doc# 引用，用于在底部集中展示卡片
+const extractedDocIds = computed(() => {
+  const docs = new Map<string, { id: string; title: string }>();
+  
+  props.message.blocks.forEach(block => {
+    if (block.type === 'text') {
+      const text = ('content' in block ? block.content : '') as string;
+      const docCardRegex = /(?:[•▪·\-\*]\s*)?\*?\*?doc#\s*(\d+)\*?\*?(?:[:：]\s*(?:《([^》\n]+)》|\*([^\*\n]+)\*|([^\n，。；！？\[\]]+)))?/gi;
+      
+      let match;
+      while ((match = docCardRegex.exec(text)) !== null) {
+        const docId = match[1];
+        const title = (match[2] || match[3] || match[4] || '').trim();
+        if (!docs.has(docId)) {
+          docs.set(docId, { id: docId, title });
+        }
+      }
+    }
+  });
+  
+  return Array.from(docs.values());
+});
+
+// 提取所有文本块中的 Markdown 链接 [text](url) 用于在底部集中展示为参考网页卡片
+const extractedLinks = computed(() => {
+  const links = new Map<string, { url: string; title: string }>();
+  
+  props.message.blocks.forEach(block => {
+    if (block.type === 'text') {
+      const text = ('content' in block ? block.content : '') as string;
+      // 匹配标准的 Markdown 链接，但排除可能产生冲突的图片 ![alt](url)
+      const linkRegex = /(?<!\!)\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
+      
+      let match;
+      while ((match = linkRegex.exec(text)) !== null) {
+        const title = match[1].trim();
+        const url = match[2].trim();
+        if (!links.has(url)) {
+          links.set(url, { url, title });
+        }
+      }
+    }
+  });
+  
+  return Array.from(links.values());
+});
 </script>
 
 <template>
@@ -67,5 +116,35 @@ const handleEvent = (eventName: string, payload?: any) => {
         </div>
       </div>
     </template>
+
+    <!-- Appended Document Cards extracted from text -->
+    <div v-if="extractedDocIds.length > 0" class="mt-2 flex flex-col gap-2">
+      <div class="text-[11px] text-muted-foreground/60 font-medium px-1 uppercase tracking-widest">相关文档</div>
+      <div class="flex flex-wrap gap-2">
+        <DocumentCard
+          v-for="docInfo in extractedDocIds"
+          :key="docInfo.id"
+          :doc-id="docInfo.id"
+          :title="docInfo.title"
+          class="w-full max-w-[320px]"
+          @click="handleEvent('open-doc-space', docInfo.id)"
+        />
+      </div>
+    </div>
+
+    <!-- Appended Web Source Cards extracted from text links -->
+    <div v-if="extractedLinks.length > 0" class="mt-1 flex flex-col gap-2">
+      <div class="text-[11px] text-muted-foreground/60 font-medium px-1 uppercase tracking-widest">参考网页</div>
+      <div class="flex flex-wrap gap-2">
+        <SourceCard
+          v-for="(link, idx) in extractedLinks"
+          :key="`link-${idx}`"
+          :source="{ url: link.url, title: link.title }"
+          type="web"
+          size="sm"
+          class="w-full max-w-[320px]"
+        />
+      </div>
+    </div>
   </div>
 </template>

@@ -31,11 +31,16 @@ export function useSmartQALayout() {
 
   const updateIsDesktop = () => {
     if (typeof window === 'undefined') return;
-    isDesktop.value = window.matchMedia('(min-width: 1280px)').matches;
+    // Lower threshold to 1024px (lg) to ensure side-by-side view works on smaller screens like laptops
+    isDesktop.value = window.matchMedia('(min-width: 1024px)').matches;
   };
 
   const leftPaneStyle = computed(() => {
-    if (!isDesktop.value) return {};
+    if (!isDesktop.value) {
+      if (isLeftCollapsed.value) return { height: '0', flex: '0 0 0', overflow: 'hidden' };
+      if (isRightCollapsed.value) return { height: '100%', flex: '1 1 100%' };
+      return { flex: '1 1 50%', height: '50%' };
+    }
     if (isLeftCollapsed.value) return { width: '0', flex: '0 0 0', overflow: 'hidden' };
     if (isRightCollapsed.value) return { width: '100%', flex: '1 1 100%' };
     const pct = Math.round(splitRatio.value * 10000) / 100;
@@ -43,7 +48,11 @@ export function useSmartQALayout() {
   });
 
   const rightPaneStyle = computed(() => {
-    if (!isDesktop.value) return {};
+    if (!isDesktop.value) {
+      if (isRightCollapsed.value) return { height: '0', flex: '0 0 0', overflow: 'hidden', borderTop: 'none' };
+      if (isLeftCollapsed.value) return { height: '100%', flex: '1 1 100%' };
+      return { flex: '1 1 50%', height: '50%', borderTop: '1px solid hsl(var(--border))' };
+    }
     if (isRightCollapsed.value) return { width: '0', flex: '0 0 0', overflow: 'hidden' };
     if (isLeftCollapsed.value) return { width: '100%', flex: '1 1 100%' };
     const pct = Math.round((1 - splitRatio.value) * 10000) / 100;
@@ -55,7 +64,7 @@ export function useSmartQALayout() {
       isLeftCollapsed.value = false;
       return;
     }
-    if (isRightCollapsed.value) isRightCollapsed.value = false;
+    if (isDesktop.value && isRightCollapsed.value) isRightCollapsed.value = false;
     isLeftCollapsed.value = true;
   };
 
@@ -64,7 +73,7 @@ export function useSmartQALayout() {
       isRightCollapsed.value = false;
       return;
     }
-    if (isLeftCollapsed.value) isLeftCollapsed.value = false;
+    if (isDesktop.value && isLeftCollapsed.value) isLeftCollapsed.value = false;
     isRightCollapsed.value = true;
   };
 

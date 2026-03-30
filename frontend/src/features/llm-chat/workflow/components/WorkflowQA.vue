@@ -37,7 +37,7 @@
 
       <!-- Right Pane: Task -->
       <div v-show="!isRightCollapsed"
-        class="w-full h-[420px] xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-muted/30 z-20 transition-all duration-150 flex flex-col overflow-hidden"
+        class="w-full h-1/2 xl:h-auto xl:flex-1 xl:min-w-0 xl:w-auto flex-shrink-0 bg-muted/30 z-20 transition-all duration-150 flex flex-col overflow-hidden"
         :style="rightPaneStyle">
         <SmartQATaskPanel
           ref="taskPanelRef"

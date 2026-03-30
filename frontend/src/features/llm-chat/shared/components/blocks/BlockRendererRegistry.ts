@@ -3,7 +3,7 @@ import { defineAsyncComponent } from 'vue';
 // Using defineAsyncComponent for lazy loading blocks to improve initial render performance
 export const BlockRendererRegistry: Record<string, any> = {
   thought: defineAsyncComponent(() => import('./ThoughtAccordion.vue')),
-  plan: defineAsyncComponent(() => import('./ThoughtAccordion.vue')),
+  plan: defineAsyncComponent(() => import('./blocks/PlanBlockRenderer.vue')),
   tool_call: defineAsyncComponent(() => import('./blocks/ToolBlockRenderer.vue')),
   action: defineAsyncComponent(() => import('./blocks/ActionBlockRenderer.vue')),
   terminal: defineAsyncComponent(() => import('./TerminalBlock.vue')),

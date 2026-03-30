@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import type { ThoughtBlock } from '@/features/llm-chat/shared/types';
+import MarkdownRenderer from '@/features/llm-chat/shared/components/common/MarkdownRenderer.vue';
 
 const props = defineProps<{
   block: ThoughtBlock;
@@ -28,6 +29,13 @@ const handleToggle = (e: Event) => {
   const details = e.target as HTMLDetailsElement;
   isExpanded.value = details.open;
 };
+
+const blockContent = computed(() => {
+  let text = props.block.content || '';
+  // Clean up potential <think> tags if they were included in the string
+  text = text.replace(/^<think>\n?/, '').replace(/\n?<\/think>$/, '');
+  return text.trim();
+});
 </script>
 
 <template>
@@ -45,7 +53,8 @@ const handleToggle = (e: Event) => {
       </span>
     </summary>
     <div class="mt-2 pl-4 ml-2 border-l-2 border-border/50 text-xs text-muted-foreground/80 italic whitespace-pre-wrap leading-relaxed">
-      {{ block.content }}
+      <MarkdownRenderer v-if="blockContent" :content="blockContent" prose-class="thought-prose" />
+      <span v-else class="text-muted-foreground/50">无思考过程数据</span>
     </div>
   </details>
 </template>
@@ -53,5 +62,32 @@ const handleToggle = (e: Event) => {
 <style scoped>
 summary::-webkit-details-marker {
   display: none;
+}
+:deep(.thought-prose) {
+  color: inherit !important;
+  font-size: inherit !important;
+  font-style: inherit !important;
+  line-height: inherit !important;
+  max-width: none;
+}
+:deep(.thought-prose p) {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+:deep(.thought-prose p:first-child) {
+  margin-top: 0;
+}
+:deep(.thought-prose p:last-child) {
+  margin-bottom: 0;
+}
+:deep(.thought-prose pre) {
+  font-style: normal;
+  background-color: hsl(var(--muted));
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+}
+:deep(.thought-prose code) {
+  font-family: monospace;
 }
 </style>

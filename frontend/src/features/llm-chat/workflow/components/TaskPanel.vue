@@ -166,8 +166,11 @@
               <div class="rounded-lg bg-muted/30 border border-border/50 p-4 task-output-prose flex flex-col gap-2">
                 <ThoughtAccordion 
                   v-if="parsedOutput.think" 
-                  :content="parsedOutput.think.raw" 
-                  :is-partial="parsedOutput.think.isPartial" 
+                  :block="{
+                    type: 'thought',
+                    content: parsedOutput.think.raw,
+                    state: parsedOutput.think.isPartial ? 'thinking' : 'collapsed'
+                  }"
                 />
                 <MarkdownRenderer :content="parsedOutput.text" />
               </div>

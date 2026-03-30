@@ -5,7 +5,6 @@ import type {
   ToolCallBlock,
   ToolResultBlock,
   ActionBlock,
-  PlanBlock,
   TerminalBlock,
   SearchBlock,
   VisualizationBlock,
@@ -44,10 +43,6 @@ export const isToolResultBlock = (block: ContentBlock): block is ToolResultBlock
 
 export const isActionBlock = (block: ContentBlock): block is ActionBlock => {
   return block.type === 'action';
-};
-
-export const isPlanBlock = (block: ContentBlock): block is PlanBlock => {
-  return block.type === 'plan';
 };
 
 export const isTerminalBlock = (block: ContentBlock): block is TerminalBlock => {

@@ -572,17 +572,34 @@ export const useWorkflowStore = defineStore('workflow', () => {
         if (data.type === 'artifacts') { handleArtifacts(data); return; }
 
         // --- Legacy tool_call (step-based) ---
-        if (data.type === 'tool_call') {
-            const toolInfo = data.tool;
-            const logMsg = toolInfo.status === 'started'
-                ? `🔧 调用工具: ${toolInfo.tool_name}\n参数: ${JSON.stringify(toolInfo.tool_args)}`
-                : `✅ 工具 ${toolInfo.tool_name} 执行完成\n结果: ${toolInfo.result || '无'}`;
+        if (data.type === 'tool_call' || data.type === 'tool_start') {
+            const toolInfo = data.tool || data.content || {};
+            const logMsg = (toolInfo.status === 'started' || !toolInfo.status)
+                ? `🔧 调用工具: ${toolInfo.tool_name || toolInfo.tool || toolInfo.name}\n参数: ${JSON.stringify(toolInfo.tool_args || toolInfo.args || toolInfo.arguments)}`
+                : `✅ 工具 ${toolInfo.tool_name || toolInfo.tool || toolInfo.name} 执行完成\n结果: ${toolInfo.result || '无'}`;
+            
+            // 尝试找到最近的任务
+            const activeTask = tasks.value.find(t => t.status === 'running') || tasks.value[tasks.value.length - 1];
+            if (activeTask) {
+                activeTask.logs.push(logMsg);
+            } else {
+                addLog(logMsg, (toolInfo.status === 'started' || !toolInfo.status) ? 'info' : 'success', data.step || 'execute');
+            }
+            return;
+        }
 
-            addLog(logMsg, toolInfo.status === 'started' ? 'info' : 'success', data.step || 'execute');
-
-            const runningTask = tasks.value.find(t => t.status === 'running');
-            if (runningTask) {
-                runningTask.logs.push(logMsg);
+        if (data.type === 'tool_output' || data.type === 'tool_end' || data.type === 'tool_error') {
+            const toolInfo = data.content || data || {};
+            const isError = toolInfo.is_error || data.type === 'tool_error';
+            const logMsg = isError
+                ? `❌ 工具 ${toolInfo.tool || toolInfo.name} 执行失败: ${toolInfo.logs?.join('\n') || toolInfo.error}`
+                : `✅ 工具 ${toolInfo.tool || toolInfo.name} 执行成功`;
+            
+            const activeTask = tasks.value.find(t => t.status === 'running') || tasks.value[tasks.value.length - 1];
+            if (activeTask) {
+                activeTask.logs.push(logMsg);
+            } else {
+                addLog(logMsg, isError ? 'error' : 'success', data.step || 'execute');
             }
             return;
         }
@@ -807,7 +824,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
             // tool_call / call：工具调用开始
             case 'tool_call':
-            case 'call': {
+            case 'call':
+            case 'tool_start': {
                 const info = event.content as AgentToolCallInfo;
                 const taskId = event.task_id || info.task_id;
                 const task = taskId ? tasks.value.find(t => t.id === taskId) : undefined;
@@ -823,7 +841,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
             // tool_output / result：工具执行结果 + 日志
             case 'tool_output':
-            case 'result': {
+            case 'result':
+            case 'tool_end':
+            case 'tool_error': {
                 const info = event.content as AgentObservationInfo;
                 const taskId = event.task_id || info.task_id;
                 const task = taskId ? tasks.value.find(t => t.id === taskId) : undefined;
@@ -831,7 +851,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
                     const toolName = info.tool || (info as any).name;
                     const tc = [...task.toolCalls].reverse().find(tc => tc.tool_name === toolName && tc.status === 'running');
                     if (tc) {
-                        tc.status = info.is_error ? 'failed' : 'completed';
+                        const isError = info.is_error || event.type === 'tool_error';
+                        tc.status = isError ? 'failed' : 'completed';
                         // Capture output to display search results or other tool outputs
                         tc.result = typeof (info.output || (info as any).result) === 'string' 
                             ? (info.output || (info as any).result) 

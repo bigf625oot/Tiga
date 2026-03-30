@@ -269,9 +269,26 @@ async def chat_session(
             attachment_context=kb_scope_context,
         ):
             event_type = chunk.get("type", "message")
-            if event_type == "content":
+            
+            # 强行拦截并格式化，避免嵌套 JSON 字符串直接流出
+            if isinstance(chunk.get("content"), dict) and event_type in ("content", "text_delta"):
+                logger.warning(f"Unexpected dict in content frame: {chunk}")
+                inner_chunk = chunk["content"]
+                event_type = inner_chunk.get("type", "message")
+                chunk = inner_chunk
+
+            if event_type == "content" or event_type == "text_delta":
                 sse_event = "text"
                 chunk_data = chunk.get("content", "")
+                if isinstance(chunk_data, str) and chunk_data.strip().startswith('{"type":') and '"status":' in chunk_data:
+                     try:
+                         parsed = __import__("json").loads(chunk_data)
+                         if parsed.get("type") == "text_delta":
+                             chunk_data = parsed.get("content", "")
+                         else:
+                             continue
+                     except Exception:
+                         pass
                 text_parts.append(chunk_data)
             elif event_type == "think":
                 sse_event = "think"
@@ -297,6 +314,57 @@ async def chat_session(
             })
             yield format_sse_json(sse_event, chunk_data)
 
+        # 提取 tools 状态用于物化视图
+        materialized_tools = []
+        if cp_stream_events:
+            for ev in cp_stream_events:
+                event_type = ev.get("event")
+                content = ev.get("content")
+                if event_type in ("tool_call", "call", "tool_start"):
+                    info = content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": str(info)}
+                    
+                    tool_id = info.get("tool_call_id") or info.get("id") or str(uuid.uuid4())
+                    tool_name = info.get("tool") or info.get("name") or "unknown_tool"
+                    args = info.get("args") or info.get("arguments") or {}
+                    materialized_tools.append({
+                        "id": tool_id,
+                        "name": tool_name,
+                        "args": args,
+                        "status": "running"
+                    })
+                elif event_type in ("tool_output", "result", "tool_end", "tool_error"):
+                    info = content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": "unknown_tool", "output": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": "unknown_tool", "output": str(info)}
+                    
+                    tool_name = info.get("tool") or info.get("name")
+                    is_error = info.get("is_error", False)
+                    result_data = info.get("result") or info.get("output")
+                    if not isinstance(result_data, str):
+                        import json
+                        result_data = json.dumps(result_data, ensure_ascii=False)
+                    
+                    # Find the last running tool with matching name
+                    for t in reversed(materialized_tools):
+                        if t["name"] == tool_name and t["status"] == "running":
+                            t["status"] = "error" if is_error else "success"
+                            t["result"] = result_data
+                            break
+
         # 持久化助手消息
         await crud_chat.create_message(
             db,
@@ -304,6 +372,7 @@ async def chat_session(
             role="assistant",
             content="".join(text_parts),
             meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
+            tools=materialized_tools if materialized_tools else None,
             reasoning_content="".join(think_parts) or None,
             parent_id=user_msg.id
         )
@@ -466,10 +535,28 @@ async def chat_session_multipart(
             # 映射内部事件类型到前端期望的 SSE 事件类型
             event_type = chunk.get("type", "message")
             
-            # 兼容处理：将 content 映射为 text，think 保持为 think
-            if event_type == "content":
+            # 强行拦截并格式化，避免嵌套 JSON 字符串直接流出
+            if isinstance(chunk.get("content"), dict) and event_type in ("content", "text_delta"):
+                # 如果底层意外地将控制对象当做了 content 吐出，在这里解包
+                logger.warning(f"Unexpected dict in content frame: {chunk}")
+                inner_chunk = chunk["content"]
+                event_type = inner_chunk.get("type", "message")
+                chunk = inner_chunk
+                
+            if event_type == "content" or event_type == "text_delta":
                 sse_event = "text"
                 chunk_data = chunk.get("content", "")
+                if isinstance(chunk_data, str) and chunk_data.strip().startswith('{"type":') and '"status":' in chunk_data:
+                     # Fallback in case a raw JSON string made its way here
+                     try:
+                         parsed = __import__("json").loads(chunk_data)
+                         if parsed.get("type") == "text_delta":
+                             chunk_data = parsed.get("content", "")
+                         else:
+                             # It's another type of control frame hiding in text
+                             continue
+                     except Exception:
+                         pass
                 text_parts.append(chunk_data)
             elif event_type == "think":
                 sse_event = "think"
@@ -495,6 +582,57 @@ async def chat_session_multipart(
             })
             yield format_sse_json(sse_event, chunk_data)
 
+        # 提取 tools 状态用于物化视图
+        materialized_tools = []
+        if cp_stream_events:
+            for ev in cp_stream_events:
+                event_type = ev.get("event")
+                content = ev.get("content")
+                if event_type in ("tool_call", "call", "tool_start"):
+                    info = content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": str(info)}
+                    
+                    tool_id = info.get("tool_call_id") or info.get("id") or str(uuid.uuid4())
+                    tool_name = info.get("tool") or info.get("name") or "unknown_tool"
+                    args = info.get("args") or info.get("arguments") or {}
+                    materialized_tools.append({
+                        "id": tool_id,
+                        "name": tool_name,
+                        "args": args,
+                        "status": "running"
+                    })
+                elif event_type in ("tool_output", "result", "tool_end", "tool_error"):
+                    info = content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": "unknown_tool", "output": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": "unknown_tool", "output": str(info)}
+                    
+                    tool_name = info.get("tool") or info.get("name")
+                    is_error = info.get("is_error", False)
+                    result_data = info.get("result") or info.get("output")
+                    if not isinstance(result_data, str):
+                        import json
+                        result_data = json.dumps(result_data, ensure_ascii=False)
+                    
+                    # Find the last running tool with matching name
+                    for t in reversed(materialized_tools):
+                        if t["name"] == tool_name and t["status"] == "running":
+                            t["status"] = "error" if is_error else "success"
+                            t["result"] = result_data
+                            break
+
         # 持久化助手消息
         await crud_chat.create_message(
             db,
@@ -502,6 +640,7 @@ async def chat_session_multipart(
             role="assistant",
             content="".join(text_parts),
             meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
+            tools=materialized_tools if materialized_tools else None,
             reasoning_content="".join(think_parts) or None,
             parent_id=user_msg.id
         )

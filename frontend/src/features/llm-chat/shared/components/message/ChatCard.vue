@@ -18,7 +18,7 @@
     <!-- Message Content Wrapper -->
     <div 
       class="flex flex-col flex-1 min-w-0" 
-      :class="[isUser ? 'items-end' : 'items-start']"
+      :class="isUser ? 'items-end' : 'items-start'"
     >
       <!-- Sender Name & Time (Agent) -->
       <div v-if="!isUser" class="flex items-center gap-2 mb-1 px-1">
@@ -35,7 +35,7 @@
       <!-- Bubble -->
       <div 
         class="relative text-sm leading-normal transition-all duration-200 min-w-0"
-        :class="[bubbleClasses, isUser ? 'max-w-[85%] w-fit' : 'mt-1 w-full']"
+        :class="[bubbleClasses, isUser ? 'max-w-[85%]' : 'mt-1 w-full']"
       >
         <template v-if="isUser">
             <div v-if="isEditing" class="flex flex-col gap-2 min-w-[200px]">
@@ -51,11 +51,11 @@
                     <button @click="saveEdit" class="px-2 py-1 rounded bg-primary-foreground text-primary hover:bg-primary-foreground/90 transition-colors">发送</button>
                 </div>
             </div>
-            <div v-else class="flex flex-col gap-2">
+            <div v-else class="flex flex-col">
                 <MarkdownRenderer 
                     v-if="contentRef" 
                     :content="contentRef" 
-                    proseClass="prose prose-sm max-w-none text-white prose-p:text-white prose-headings:text-white prose-strong:text-white prose-em:text-white prose-a:text-white prose-li:text-white prose-blockquote:text-white/80 prose-blockquote:border-white/30 prose-code:text-white prose-code:bg-white/10" 
+                    proseClass="prose prose-sm max-w-none text-white prose-p:text-white prose-p:m-0 prose-headings:text-white prose-strong:text-white prose-em:text-white prose-a:text-white prose-li:text-white prose-blockquote:text-white/80 prose-blockquote:border-white/30 prose-code:text-white prose-code:bg-white/10" 
                 />
                 <template v-if="userImageAttachments.length > 0">
                     <div v-for="(img, idx) in userImageAttachments" :key="'img-' + idx" class="user-image-list flex flex-wrap gap-2">
@@ -162,7 +162,6 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import dayjs from 'dayjs';
 import { Copy, ThumbsUp, ThumbsDown, Quote, Bookmark, Brain, ChevronRight, Trash2, Pencil, RotateCcw } from 'lucide-vue-next';
 import { formatTime, formatDuration } from '@/features/llm-chat/shared/utils/qa/dateUtils';
 import type { Message } from '@/features/llm-chat/shared/types';
@@ -287,7 +286,7 @@ watch(() => props.message.steps, (newVal, oldVal) => {
 
 const bubbleClasses = computed(() => {
   if (props.isUser) {
-    return 'bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm';
+    return 'bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-2 shadow-sm inline-block break-words';
   } else {
     // 采用与 ChatView demo 完全一致的全宽块级布局
     return 'bg-transparent text-foreground px-0 py-0 w-full';

@@ -165,7 +165,8 @@ const diffContent = computed(() => {
         <div v-if="toolResult">
           <div class="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Result</div>
           <div class="bg-muted/50 p-2.5 rounded-md overflow-x-auto border border-border/50 max-h-[200px] custom-scrollbar" :class="{'border-destructive/50 bg-destructive/5': toolResult.is_error}">
-            <pre class="text-xs font-mono whitespace-pre-wrap" :class="toolResult.is_error ? 'text-destructive' : 'text-foreground/90'">{{ toolResult.content }}</pre>
+            <pre v-if="typeof toolResult.content === 'string' && !toolResult.content.startsWith('[') && !toolResult.content.startsWith('{')" class="text-xs font-mono whitespace-pre-wrap" :class="toolResult.is_error ? 'text-destructive' : 'text-foreground/90'">{{ toolResult.content }}</pre>
+            <pre v-else class="text-xs font-mono whitespace-pre-wrap" :class="toolResult.is_error ? 'text-destructive' : 'text-foreground/90'">{{ typeof toolResult.content === 'string' ? (toolResult.content.length > 500 ? toolResult.content.substring(0, 500) + '\n\n... (Result truncated for display)' : toolResult.content) : JSON.stringify(toolResult.content, null, 2).substring(0, 500) + '\n\n... (Result truncated for display)' }}</pre>
           </div>
         </div>
       </div>

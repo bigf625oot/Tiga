@@ -8,6 +8,7 @@ export interface MessageDTO {
     status?: string;
     reasoning_content?: string;
     reasoning?: string;
+    tools?: any[];
     meta_data?: {
         stream_events?: any[];
         [key: string]: any;
@@ -48,6 +49,7 @@ export const mapMessageDTOToDomain = (dto: MessageDTO): Message => {
         reasoning: dto.reasoning_content || dto.reasoning || undefined,
         stream_events: metaData.stream_events || dto.stream_events || undefined,
         artifacts: artifacts.length > 0 ? artifacts : undefined,
+        tools: dto.tools || dto.tool_calls || undefined,
     } as Message;
 };
 
