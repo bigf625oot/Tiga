@@ -43,7 +43,7 @@ class SkillCapabilityProvider(CapabilityProvider):
         allowed_ids = list(dict.fromkeys([i for i in allowed_ids if i]))
         
         should_enable = file_skills_config.get("enabled", False) or bool(allowed_names) or bool(allowed_ids)
-        # P10 Fix: 强制默认启用 SkillToolkit，否则在未配置 allowed_skills 时模型将拿不到 execute_skill 导致幻觉
+        # 强制默认启用 SkillToolkit，否则在未配置 allowed_skills 时模型将拿不到 execute_skill 导致幻觉
         # if not should_enable:
         #     return []
 

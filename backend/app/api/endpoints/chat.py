@@ -104,6 +104,7 @@ class ChatRequest(BaseModel):
     enable_search: bool = True  # 是否启用知识库搜索
     enable_reasoning: bool = False  # 是否启用推理
     agent_id: Optional[str] = None  # 关联的智能体ID
+    parent_id: Optional[int] = None # 兼容 frontend 传来的 parent_id
     parent_message_id: Optional[int] = None # 用于 Regenerate 构建对话分支树
 
 
@@ -236,13 +237,26 @@ async def chat_session(
         # --- END TEST INTERCEPTOR ---
 
         # ── AgnoControlPlane 路径：支持所有模式 ──
-        user_msg = await crud_chat.create_message(
-            db, 
-            session_id=session_id, 
-            role="user", 
-            content=request.message,
-            parent_id=request.parent_message_id
-        )
+        req_parent_id = request.parent_id or request.parent_message_id
+        
+        # 幂等性/防抖处理：如果最近的一条用户消息内容与 parent_id 完全一致，则复用该消息（防止网络重试导致生成孤儿节点）
+        history = await crud_chat.get_history(db, session_id)
+        duplicate_msg = None
+        if history:
+            last_msg = history[-1]
+            if last_msg.role == "user" and last_msg.content == request.message and last_msg.parent_id == req_parent_id:
+                duplicate_msg = last_msg
+                
+        if duplicate_msg:
+            user_msg = duplicate_msg
+        else:
+            user_msg = await crud_chat.create_message(
+                db, 
+                session_id=session_id, 
+                role="user", 
+                content=request.message,
+                parent_id=req_parent_id
+            )
 
         text_parts: List[str] = []
         think_parts: List[str] = []
@@ -319,9 +333,9 @@ async def chat_session(
         if cp_stream_events:
             for ev in cp_stream_events:
                 event_type = ev.get("event")
-                content = ev.get("content")
+                raw_content = ev.get("content")
                 if event_type in ("tool_call", "call", "tool_start"):
-                    info = content
+                    info = raw_content
                     if isinstance(info, str):
                         import json
                         try:
@@ -331,9 +345,11 @@ async def chat_session(
                     elif not isinstance(info, dict):
                         info = {"tool": str(info)}
                     
-                    tool_id = info.get("tool_call_id") or info.get("id") or str(uuid.uuid4())
-                    tool_name = info.get("tool") or info.get("name") or "unknown_tool"
-                    args = info.get("args") or info.get("arguments") or {}
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_id = payload.get("tool_call_id") or payload.get("id") or str(uuid.uuid4())
+                    tool_name = payload.get("tool") or payload.get("name") or "unknown_tool"
+                    args = payload.get("args") or payload.get("arguments") or {}
                     materialized_tools.append({
                         "id": tool_id,
                         "name": tool_name,
@@ -341,7 +357,7 @@ async def chat_session(
                         "status": "running"
                     })
                 elif event_type in ("tool_output", "result", "tool_end", "tool_error"):
-                    info = content
+                    info = raw_content
                     if isinstance(info, str):
                         import json
                         try:
@@ -351,9 +367,11 @@ async def chat_session(
                     elif not isinstance(info, dict):
                         info = {"tool": "unknown_tool", "output": str(info)}
                     
-                    tool_name = info.get("tool") or info.get("name")
-                    is_error = info.get("is_error", False)
-                    result_data = info.get("result") or info.get("output")
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_name = payload.get("tool") or payload.get("name")
+                    is_error = payload.get("is_error", False)
+                    result_data = payload.get("result") or payload.get("output")
                     if not isinstance(result_data, str):
                         import json
                         result_data = json.dumps(result_data, ensure_ascii=False)
@@ -371,7 +389,7 @@ async def chat_session(
             session_id=session_id,
             role="assistant",
             content="".join(text_parts),
-            meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
+            meta_data=None,  # 移除 stream_events，避免存储冗余数据导致数据膨胀
             tools=materialized_tools if materialized_tools else None,
             reasoning_content="".join(think_parts) or None,
             parent_id=user_msg.id
@@ -479,14 +497,27 @@ async def chat_session_multipart(
     if uploaded_files:
         user_msg_meta["files"] = uploaded_files
 
-    user_msg = await crud_chat.create_message(
-        db,
-        session_id=session_id,
-        role="user",
-        content=message,
-        parent_id=parent_id,
-        meta_data=user_msg_meta if user_msg_meta else None
-    )
+    # 幂等性/防抖处理：如果最近的一条用户消息内容与 parent_id 完全一致，则复用该消息
+    history = await crud_chat.get_history(db, session_id)
+    duplicate_msg = None
+    if history:
+        last_msg = history[-1]
+        if last_msg.role == "user" and last_msg.content == message and last_msg.parent_id == parent_id:
+            # 简单对比，如果有文件就不复用了，为了安全起见
+            if not uploaded_files:
+                duplicate_msg = last_msg
+
+    if duplicate_msg:
+        user_msg = duplicate_msg
+    else:
+        user_msg = await crud_chat.create_message(
+            db,
+            session_id=session_id,
+            role="user",
+            content=message,
+            parent_id=parent_id,
+            meta_data=user_msg_meta if user_msg_meta else None
+        )
 
     async def sse_generator():
         for meta in uploaded_files:
@@ -587,9 +618,9 @@ async def chat_session_multipart(
         if cp_stream_events:
             for ev in cp_stream_events:
                 event_type = ev.get("event")
-                content = ev.get("content")
+                raw_content = ev.get("content")
                 if event_type in ("tool_call", "call", "tool_start"):
-                    info = content
+                    info = raw_content
                     if isinstance(info, str):
                         import json
                         try:
@@ -599,9 +630,11 @@ async def chat_session_multipart(
                     elif not isinstance(info, dict):
                         info = {"tool": str(info)}
                     
-                    tool_id = info.get("tool_call_id") or info.get("id") or str(uuid.uuid4())
-                    tool_name = info.get("tool") or info.get("name") or "unknown_tool"
-                    args = info.get("args") or info.get("arguments") or {}
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_id = payload.get("tool_call_id") or payload.get("id") or str(uuid.uuid4())
+                    tool_name = payload.get("tool") or payload.get("name") or "unknown_tool"
+                    args = payload.get("args") or payload.get("arguments") or {}
                     materialized_tools.append({
                         "id": tool_id,
                         "name": tool_name,
@@ -609,7 +642,7 @@ async def chat_session_multipart(
                         "status": "running"
                     })
                 elif event_type in ("tool_output", "result", "tool_end", "tool_error"):
-                    info = content
+                    info = raw_content
                     if isinstance(info, str):
                         import json
                         try:
@@ -619,9 +652,11 @@ async def chat_session_multipart(
                     elif not isinstance(info, dict):
                         info = {"tool": "unknown_tool", "output": str(info)}
                     
-                    tool_name = info.get("tool") or info.get("name")
-                    is_error = info.get("is_error", False)
-                    result_data = info.get("result") or info.get("output")
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_name = payload.get("tool") or payload.get("name")
+                    is_error = payload.get("is_error", False)
+                    result_data = payload.get("result") or payload.get("output")
                     if not isinstance(result_data, str):
                         import json
                         result_data = json.dumps(result_data, ensure_ascii=False)
@@ -639,7 +674,7 @@ async def chat_session_multipart(
             session_id=session_id,
             role="assistant",
             content="".join(text_parts),
-            meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
+            meta_data=None,  # 移除 stream_events，避免存储冗余数据导致数据膨胀
             tools=materialized_tools if materialized_tools else None,
             reasoning_content="".join(think_parts) or None,
             parent_id=user_msg.id

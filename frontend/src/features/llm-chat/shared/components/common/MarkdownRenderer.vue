@@ -144,6 +144,41 @@ const remarkDocCardPlugin = () => {
   };
 };
 
+// 1.6 Remark 插件：动态清理孤立的中括号纯文本标签（例如 [源自网络]、[自身知识]、[搜索结果] 等）
+// 避免前端硬编码枚举，提升架构扩展性
+const remarkSourceLabelPlugin = () => {
+  return (tree: any) => {
+    visit(tree, 'text', (node: any, index: number | undefined, parent: any) => {
+      if (!parent) return;
+      
+      // 匹配独立的 [文字] 格式，且内部不包含换行或链接特殊字符
+      // 为了防止误伤正常的 Markdown 语法（如图片 ![alt] 或链接 [text](url) 的前半部分）
+      // 我们通过 AST 结构上下文来确保它只是一个纯文本节点，并且前后没有紧跟括号 (
+      const labelRegex = /\[([^\]\n]{2,10})\]/g;
+      
+      if (!labelRegex.test(node.value)) return;
+      
+      // 检查父节点是否为 link、image 或 citation 等，如果是，说明它是合法语法的一部分，不应过滤
+      if (['link', 'image', 'citation', 'document-card'].includes(parent.tagName || parent.type)) {
+        return;
+      }
+      
+      // 过滤策略：只过滤那些典型的“元信息”标签特征
+      // 我们将其替换为空，同时记录日志或保留容错能力
+      node.value = node.value.replace(labelRegex, (match: string, content: string): string => {
+        // 放行纯数字（如引用的 [1] 留给 remarkCitationPlugin 处理）
+        if (/^\d+$/.test(content)) return match;
+        
+        // 如果是一些系统性的短语，直接吃掉。由于大模型常在句末附加，我们连同可能的前置空格一起处理
+        return '';
+      });
+      
+      // 清理可能产生的多余尾部空格
+      node.value = node.value.replace(/\s+$/, '');
+    });
+  };
+};
+
 // 2. 将 HAST 转换为 Vue VNode 的核心引擎
 const renderNode = (node: any, key: string | number = 0): any => {
   if (node.type === 'text') {
@@ -224,6 +259,28 @@ const renderNode = (node: any, key: string | number = 0): any => {
       }
 
       // 提取链接文本
+      let title = '';
+      const extractText = (n: any) => {
+        if (n.type === 'text') title += n.value;
+        if (n.children) n.children.forEach(extractText);
+      };
+      (node.children || []).forEach(extractText);
+      title = title.trim();
+
+      // 判断是否为搜索引擎返回的参考链接（例如文本包含 "源自网络", "来源", "source" 等）
+      if (title.includes('源自网络') || title.includes('来源') || title.match(/^\[?(source|ref|参考)\]?$/i)) {
+        return h(SourceCard, {
+          source: {
+            url: href,
+            title: title || href
+          },
+          type: 'web',
+          size: 'sm',
+          class: 'my-2 inline-flex w-full max-w-sm align-middle', // inline-flex for better alignment
+          key
+        });
+      }
+
       const children = (node.children || []).map((c: any, i: number) => renderNode(c, `${key}-${i}`));
       
       // 不再将普通链接转换为巨型 SourceCard，而是保留为原生带样式的内联链接 <a> 标签
@@ -342,12 +399,13 @@ const processMarkdown = (text: string) => {
   try {
     const sanitizeSchema = {
         ...defaultSchema,
-        tagNames: [...(defaultSchema.tagNames || []), 'citation', 'document-card'],
+        tagNames: [...(defaultSchema.tagNames || []), 'citation', 'document-card', 'tiga-artifact'],
         attributes: {
           ...defaultSchema.attributes,
           '*': [...(defaultSchema.attributes?.['*'] || []), 'className', 'style'],
           'citation': ['index'],
           'document-card': ['docId', 'doc-id', 'docid', 'title'],
+          'tiga-artifact': ['type', 'url', 'name'],
         }
       };
 
@@ -357,6 +415,7 @@ const processMarkdown = (text: string) => {
       .use(remarkMath)
       .use(remarkCitationPlugin)
       .use(remarkDocCardPlugin)
+      .use(remarkSourceLabelPlugin)
       .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeRaw)
       .use(rehypeSanitize, sanitizeSchema)

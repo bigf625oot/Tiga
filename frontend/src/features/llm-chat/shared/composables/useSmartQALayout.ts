@@ -1,6 +1,11 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { DEFAULT_SPLIT_RATIO, STORAGE_KEYS } from '@/features/llm-chat/shared/constants';
 
+const isLeftCollapsed = ref(false);
+const isRightCollapsed = ref(false);
+const isDesktop = ref(false);
+const splitRatio = ref(DEFAULT_SPLIT_RATIO);
+
 /**
  * Manages the layout of the SmartQA component, including the split pane ratio,
  * collapse state of side panels, and responsive behavior.
@@ -8,10 +13,6 @@ import { DEFAULT_SPLIT_RATIO, STORAGE_KEYS } from '@/features/llm-chat/shared/co
  * @returns Layout state and control functions
  */
 export function useSmartQALayout() {
-  const isLeftCollapsed = ref(false);
-  const isRightCollapsed = ref(false);
-  const isDesktop = ref(false);
-  const splitRatio = ref(DEFAULT_SPLIT_RATIO);
   const splitContainerRef = ref<HTMLElement | null>(null);
 
   const readSplitRatio = () => {

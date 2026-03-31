@@ -23,6 +23,25 @@ export function createWorkflowHandlers(
                     ...inner,
                     tasks: taskList,
                 } as AgentExecutionPlan);
+                
+                // Sync to assistantMsg.steps so PlanProcessor can render it in the chat bubble
+                if (!assistantMsg.steps) assistantMsg.steps = [];
+                taskList.forEach((t: any, idx: number) => {
+                    let title = t.title || t.name || t.description || `步骤 ${idx + 1}`;
+                    if (typeof title !== 'string') {
+                        title = JSON.stringify(title);
+                    }
+                    // Only add if not already present
+                    const stepId = String(t.id || t.task_id || idx);
+                    if (!assistantMsg.steps!.some((s: any) => String(s.id) === stepId)) {
+                        assistantMsg.steps!.push({
+                            step: idx,
+                            content: title,
+                            id: stepId,
+                            status: 'pending'
+                        } as any);
+                    }
+                });
             }
         },
         plan: (data: any) => {

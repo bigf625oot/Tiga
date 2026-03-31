@@ -243,8 +243,8 @@ class AgnoControlPlane:
         """带强制逻辑、启发式预判与超时回退的意图识别 (O(1) -> O(N) 降级策略)"""
         mode_hint = self._get_forced_intent(ctx.kwargs)
         
-        # 1. 显式意图短路 (O(1))：如果前端明确指定了 quick 或 chat 模式，直接短路 NLU
-        if mode_hint in ("quick", "chat"):
+        # 1. 显式意图短路 (O(1))：如果前端明确指定了模式，直接短路 NLU
+        if mode_hint in ("quick", "chat", "task", "team", "workflow", "data_query", "kg_qa"):
             return IntentResult(
                 intent=mode_hint,
                 paradigm=IntentResult.resolve_paradigm(mode_hint),
@@ -398,8 +398,7 @@ class AgnoControlPlane:
                     "duration_ms": duration,
                     "intent": intent.intent.value if isinstance(intent.intent, Enum) else str(intent.intent) if intent else "unknown",
                 }
-                if stream_events:
-                    meta_data["stream_events"] = stream_events
+                # 不保存 stream_events 以避免数据库冗余膨胀
                     
                 await history.add_message(
                     session_id,

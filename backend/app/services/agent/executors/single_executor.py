@@ -123,6 +123,9 @@ class SingleExecutor(BaseExecutor):
                 history_msgs=history_msgs
             )
             
+            if not plan_manifest:
+                raise ValueError("Failed to generate a valid execution plan after maximum attempts.")
+            
             # [Validation] 强制计划确定性校验，阻断不合规规划
             if self.plan_validator:
                 plan_dict = {"tasks": [t.dict() for t in plan_manifest.tasks]}

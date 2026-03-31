@@ -60,9 +60,9 @@
 
               <!-- Knowledge Center -->
               <div class="space-y-3">
-                 <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">知识中心</h4>
+                 <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">知识底座</h4>
                  <div v-for="(item, index) in [
-                    { name: '知识图谱', icon: Network, action: 'knowledge_graph', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                    { name: '数据资产', icon: Network, action: 'knowledge_graph', color: 'text-amber-500', bg: 'bg-amber-500/10' },
                     { name: '关系修复', icon: Share2, action: 'relation_fix', color: 'text-amber-500', bg: 'bg-amber-500/10' },
                     { name: '知识库', icon: Database, action: 'knowledge', color: 'text-amber-500', bg: 'bg-amber-500/10' },
                     { name: '数据库', icon: Database, action: 'database', color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -787,9 +787,9 @@ const agentSidebarItems: SidebarItem[] = [
 ];
 
 const knowledgeSidebarItems: SidebarItem[] = [
-    { type: 'group', label: '知识图谱' },
-    { id: 'knowledge_graph', label: '知识图谱', icon: Network },
-    { id: 'relation_fix', label: '图谱治理', icon: Share2 },
+    { type: 'group', label: '数据资产' },
+    { id: 'knowledge_graph', label: '数据资产', icon: Network },
+    { id: 'relation_fix', label: '数据治理', icon: Share2 },
     { type: 'group', label: '资源中心' },
     { id: 'knowledge', label: '知识库', icon: Database },
     { id: 'database', label: '数据库', icon: Database },

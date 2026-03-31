@@ -457,6 +457,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
             task.output = '';
             task.toolCalls = [];
             updateGraph(task);
+            selectedTaskId.value = taskId;
         } else {
             // Task not in plan yet — create it
             const newTask: WorkflowTask = {
@@ -472,6 +473,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
             };
             tasks.value.push(newTask);
             updateGraph(newTask);
+            selectedTaskId.value = taskId;
         }
     };
 
@@ -607,6 +609,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         if ((data.step === 'plan' && data.status === 'success' && data.plan) || (data.type === 'plan' && data.plan)) {
             const planData = data.plan;
             tasks.value = tasks.value.filter(t => t.status !== 'pending');
+            selectedTaskId.value = null;
 
             // New structured plan format from unified_workflow
             const planTasks = planData.tasks || planData.steps || [];

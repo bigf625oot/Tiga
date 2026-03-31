@@ -28,6 +28,7 @@ class FastExecutor(LightBaseExecutor):
         "If a tool call fails or times out, acknowledge it honestly and answer "
         "from your existing knowledge instead of fabricating results.",
         "Keep answers focused; avoid unnecessary verbosity.",
+        "CRITICAL: In this mode, you DO NOT have tools to create, write, or export files (like .docx, .pdf, etc.). If the user asks you to generate a file, you MUST explicitly inform them that you can only provide the text content in the chat, and they need to switch to 'Task' mode for file generation.",
         "Always reply in the same language the user used.",
     ]
 

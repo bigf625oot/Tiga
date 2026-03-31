@@ -1,0 +1,495 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "TiGA Logo" [ref=e7]
+      - button [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+    - button "新建对话" [ref=e12] [cursor=pointer]:
+      - img [ref=e13]
+      - generic [ref=e14]: 新建对话
+    - generic [ref=e15]:
+      - button "任务" [ref=e16] [cursor=pointer]
+      - button "智能体" [ref=e17] [cursor=pointer]
+      - button "知识中心" [ref=e18] [cursor=pointer]
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - button "智能问答" [expanded] [ref=e23] [cursor=pointer]:
+            - img [ref=e24]
+            - heading "智能问答" [level=4] [ref=e26]
+          - generic [ref=e27]: "6"
+        - generic [ref=e29]:
+          - generic [ref=e31] [cursor=pointer]:
+            - img "近期天气与五一上海旅行计划" [ref=e33]
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - generic [ref=e36]: 近期天气与五一上海旅行计划
+                - button [ref=e37]:
+                  - img [ref=e38]
+              - generic [ref=e42]: 2026-03-31 11:33
+          - generic [ref=e44] [cursor=pointer]:
+            - img "问候" [ref=e46]
+            - generic [ref=e47]:
+              - generic [ref=e48]:
+                - generic [ref=e49]: 问候
+                - button [ref=e50]:
+                  - img [ref=e51]
+              - generic [ref=e55]: 2026-03-31 10:57
+          - generic [ref=e57] [cursor=pointer]:
+            - img "初次问候" [ref=e59]
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - generic [ref=e62]: 初次问候
+                - button [ref=e63]:
+                  - img [ref=e64]
+              - generic [ref=e68]: 2026-03-31 10:56
+          - generic [ref=e70] [cursor=pointer]:
+            - img "助手功能简介" [ref=e72]
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - generic [ref=e75]: 助手功能简介
+                - button [ref=e76]:
+                  - img [ref=e77]
+              - generic [ref=e81]: 2026-03-31 10:50
+          - generic [ref=e83] [cursor=pointer]:
+            - img "问答助手您好" [ref=e85]
+            - generic [ref=e86]:
+              - generic [ref=e87]:
+                - generic [ref=e88]: 问答助手您好
+                - button [ref=e89]:
+                  - img [ref=e90]
+              - generic [ref=e94]: 2026-03-31 10:33
+          - generic [ref=e96] [cursor=pointer]:
+            - img "问候" [ref=e98]
+            - generic [ref=e99]:
+              - generic [ref=e100]:
+                - generic [ref=e101]: 问候
+                - button [ref=e102]:
+                  - img [ref=e103]
+              - generic [ref=e107]: 2026-03-31 07:21
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - button "快问快答" [expanded] [ref=e110] [cursor=pointer]:
+            - img [ref=e111]
+            - heading "快问快答" [level=4] [ref=e113]
+          - generic [ref=e114]: "3"
+        - generic [ref=e116]:
+          - generic [ref=e118] [cursor=pointer]:
+            - img "检索最近一周日本的天气情况，帮我做一个五" [ref=e120]
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - generic [ref=e123]: 检索最近一周日本的天气情况，帮我做一个五
+                - button [ref=e124]:
+                  - img [ref=e125]
+              - generic [ref=e129]: 2026-03-31 11:23
+          - generic [ref=e131] [cursor=pointer]:
+            - img "初次问候" [ref=e133]
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]: 初次问候
+                - button [ref=e137]:
+                  - img [ref=e138]
+              - generic [ref=e142]: 2026-03-31 07:15
+          - generic [ref=e144] [cursor=pointer]:
+            - img "检索最近一周日本的天气情况，帮我做一个五" [ref=e146]
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - generic [ref=e149]: 检索最近一周日本的天气情况，帮我做一个五
+                - button [ref=e150]:
+                  - img [ref=e151]
+              - generic [ref=e155]: 2026-03-31 11:41
+      - generic [ref=e156]:
+        - generic [ref=e157]:
+          - button "自规划任务" [expanded] [ref=e158] [cursor=pointer]:
+            - img [ref=e159]
+            - heading "自规划任务" [level=4] [ref=e161]
+          - generic [ref=e162]: "2"
+        - generic [ref=e164]:
+          - generic [ref=e166] [cursor=pointer]:
+            - img "日本五一攻略" [ref=e168]
+            - generic [ref=e169]:
+              - generic [ref=e170]:
+                - generic [ref=e171]: 日本五一攻略
+                - button [ref=e172]:
+                  - img [ref=e173]
+              - generic [ref=e177]: 2026-03-31 11:05
+          - generic [ref=e179] [cursor=pointer]:
+            - img "五一日本旅游攻略" [ref=e181]
+            - generic [ref=e182]:
+              - generic [ref=e183]:
+                - generic [ref=e184]: 五一日本旅游攻略
+                - button [ref=e185]:
+                  - img [ref=e186]
+              - generic [ref=e190]: 2026-03-31 07:23
+    - generic [ref=e192] [cursor=pointer]:
+      - generic [ref=e193]:
+        - img "Avatar" [ref=e194]
+        - img [ref=e196]
+      - generic [ref=e199]:
+        - paragraph [ref=e200]: 管理员
+        - paragraph [ref=e201]: 数字化转型部
+      - generic [ref=e202]:
+        - button [ref=e203]:
+          - img [ref=e204]
+        - button "Toggle theme" [ref=e207]:
+          - img [ref=e208]
+          - generic [ref=e214]: Toggle theme
+  - main [ref=e215]:
+    - generic [ref=e219]:
+      - generic [ref=e220]:
+        - generic [ref=e221]:
+          - generic [ref=e222]:
+            - img [ref=e224]
+            - img "Agent" [ref=e227]
+          - generic [ref=e228]:
+            - generic [ref=e229] [cursor=pointer]:
+              - heading "检索最近一周日本的天气情况，帮我做一个五" [level=2] [ref=e230]
+              - img [ref=e231]
+            - generic [ref=e234]:
+              - generic [ref=e235]: Quick
+              - generic [ref=e237]: "|"
+              - generic [ref=e238]: 2026-03-31 11:41
+        - button [ref=e240] [cursor=pointer]:
+          - img [ref=e241]
+      - generic [ref=e243]:
+        - generic:
+          - generic [ref=e244]:
+            - generic [ref=e245]:
+              - heading "文件" [level=3] [ref=e246]
+              - generic [ref=e247]: "0"
+            - button [ref=e248] [cursor=pointer]:
+              - img [ref=e249]
+          - generic [ref=e252]:
+            - generic [ref=e253]:
+              - img [ref=e254]
+              - textbox "搜索文件..." [ref=e257]
+            - generic [ref=e258]:
+              - generic [ref=e259]:
+                - button [ref=e260] [cursor=pointer]:
+                  - img [ref=e261]
+                - button [ref=e263] [cursor=pointer]:
+                  - img [ref=e264]
+              - generic [ref=e268] [cursor=pointer]:
+                - text: "来源: 全部"
+                - img [ref=e269]
+              - button "添加文件" [ref=e271] [cursor=pointer]:
+                - img [ref=e272]
+                - text: 添加文件
+          - separator
+          - generic [ref=e273]:
+            - img [ref=e275]
+            - paragraph [ref=e276]: 暂无文件
+            - paragraph [ref=e277]: 上传文档以开始分析
+            - button "立即上传" [ref=e278] [cursor=pointer]
+        - button [ref=e280] [cursor=pointer]:
+          - img [ref=e281]
+        - generic [ref=e286]:
+          - generic [ref=e288]:
+            - generic [ref=e290]:
+              - generic [ref=e292]:
+                - generic:
+                  - time: 2026-03-31 19:41
+                - generic [ref=e293]:
+                  - img "user" [ref=e295]
+                  - generic [ref=e296]:
+                    - paragraph [ref=e301]: 检索最近一周日本的天气情况，帮我做一个五一日本旅游的攻略，生成一个docx文档
+                    - generic [ref=e302]:
+                      - button "编辑" [ref=e303] [cursor=pointer]:
+                        - img [ref=e304]
+                      - button "复制" [ref=e307] [cursor=pointer]:
+                        - img [ref=e308]
+                      - button "重新发送" [ref=e311] [cursor=pointer]:
+                        - img [ref=e312]
+                      - button "删除" [ref=e315] [cursor=pointer]:
+                        - img [ref=e316]
+              - generic [ref=e321]:
+                - img "agent" [ref=e323]
+                - generic [ref=e324]:
+                  - generic [ref=e325]:
+                    - generic [ref=e326]: 快问快答
+                    - generic [ref=e327]: 2026-03-31 19:41
+                    - generic [ref=e328]: 耗时 1m54s
+                  - generic [ref=e331]:
+                    - generic [ref=e334] [cursor=pointer]:
+                      - img [ref=e335]
+                      - generic [ref=e338]: Searched the web
+                      - img [ref=e339]
+                    - generic [ref=e343] [cursor=pointer]:
+                      - img [ref=e344]
+                      - generic [ref=e347]: Searched the web
+                      - img [ref=e348]
+                    - generic [ref=e352] [cursor=pointer]:
+                      - img [ref=e353]
+                      - generic [ref=e356]: Searched the web
+                      - img [ref=e357]
+                    - generic [ref=e361] [cursor=pointer]:
+                      - img [ref=e362]
+                      - generic [ref=e365]: Searched the web
+                      - img [ref=e366]
+                    - generic [ref=e370] [cursor=pointer]:
+                      - img [ref=e371]
+                      - generic [ref=e374]: Searched the web
+                      - img [ref=e375]
+                    - generic [ref=e379] [cursor=pointer]:
+                      - img [ref=e380]
+                      - generic [ref=e383]: Searched the web
+                      - img [ref=e384]
+                    - generic [ref=e388] [cursor=pointer]:
+                      - img [ref=e389]
+                      - generic [ref=e392]: Searched the web
+                      - img [ref=e393]
+                    - group [ref=e396]:
+                      - generic "Thought" [ref=e397] [cursor=pointer]:
+                        - img [ref=e399]
+                        - generic [ref=e401]: Thought
+                    - generic [ref=e404]:
+                      - paragraph [ref=e405]:
+                        - strong [ref=e406]: 五一日本旅游攻略与天气指南
+                        - emphasis [ref=e407]: 最后更新：2024年4月29日
+                      - separator [ref=e408]
+                      - heading "一、最近一周日本天气情况（4月29日‑5月5日）" [level=3] [ref=e409]
+                      - paragraph [ref=e410]:
+                        - strong [ref=e411]: 东京地区
+                      - list [ref=e412]:
+                        - listitem [ref=e413]:
+                          - strong [ref=e414]: 气温
+                          - text: ：日间15‑25°C，夜间10‑15°C
+                        - listitem [ref=e415]:
+                          - strong [ref=e416]: 天气
+                          - text: ：以多云为主，偶有阵雨，降水概率约30%
+                        - listitem [ref=e417]:
+                          - strong [ref=e418]: 建议
+                          - text: ：携带薄外套、折叠伞，昼夜温差较大
+                      - paragraph [ref=e419]:
+                        - strong [ref=e420]: 关西（大阪、京都）
+                      - list [ref=e421]:
+                        - listitem [ref=e422]:
+                          - strong [ref=e423]: 气温
+                          - text: ：日间18‑26°C，夜间12‑18°C
+                        - listitem [ref=e424]:
+                          - strong [ref=e425]: 天气
+                          - text: ：晴到多云，午后可能出现零星小雨
+                        - listitem [ref=e426]:
+                          - strong [ref=e427]: 建议
+                          - text: ：防晒与雨具兼备
+                      - paragraph [ref=e428]:
+                        - strong [ref=e429]: 北海道（札幌）
+                      - list [ref=e430]:
+                        - listitem [ref=e431]:
+                          - strong [ref=e432]: 气温
+                          - text: ：日间10‑18°C，夜间5‑10°C
+                        - listitem [ref=e433]:
+                          - strong [ref=e434]: 天气
+                          - text: ：晴朗干燥，早晚较凉
+                        - listitem [ref=e435]:
+                          - strong [ref=e436]: 建议
+                          - text: ：准备防风外套、薄毛衣
+                      - blockquote [ref=e437]:
+                        - paragraph [ref=e438]:
+                          - strong [ref=e439]: 天气来源
+                          - text: ：AccuWeather、日本气象协会、weather.com.cn 的7日预报与历史数据。
+                      - separator [ref=e440]
+                      - heading "二、7天经典行程推荐（关东＋关西）" [level=3] [ref=e441]
+                      - table [ref=e443]:
+                        - rowgroup [ref=e444]:
+                          - row "天数 地区 重点活动 住宿建议" [ref=e445]:
+                            - columnheader "天数" [ref=e446]
+                            - columnheader "地区" [ref=e447]
+                            - columnheader "重点活动" [ref=e448]
+                            - columnheader "住宿建议" [ref=e449]
+                        - rowgroup [ref=e450]:
+                          - row "第1‑3天 东京 浅草寺、晴空塔、秋叶原、涩谷十字路口、新宿御苑 新宿/涩谷商务酒店" [ref=e451]:
+                            - cell "第1‑3天" [ref=e452]:
+                              - strong [ref=e453]: 第1‑3天
+                            - cell "东京" [ref=e454]:
+                              - strong [ref=e455]: 东京
+                            - cell "浅草寺、晴空塔、秋叶原、涩谷十字路口、新宿御苑" [ref=e456]
+                            - cell "新宿/涩谷商务酒店" [ref=e457]
+                          - row "第4天 富士山 河口湖观光、忍野八海、富士急乐园（可选） 河口湖温泉旅馆" [ref=e458]:
+                            - cell "第4天" [ref=e459]:
+                              - strong [ref=e460]: 第4天
+                            - cell "富士山" [ref=e461]:
+                              - strong [ref=e462]: 富士山
+                            - cell "河口湖观光、忍野八海、富士急乐园（可选）" [ref=e463]
+                            - cell "河口湖温泉旅馆" [ref=e464]
+                          - row "第5‑6天 大阪 心斋桥购物、道顿堀美食、大阪城、环球影城 心斋桥附近酒店" [ref=e465]:
+                            - cell "第5‑6天" [ref=e466]:
+                              - strong [ref=e467]: 第5‑6天
+                            - cell "大阪" [ref=e468]:
+                              - strong [ref=e469]: 大阪
+                            - cell "心斋桥购物、道顿堀美食、大阪城、环球影城" [ref=e470]
+                            - cell "心斋桥附近酒店" [ref=e471]
+                          - row "第7天 京都 伏见稻荷大社、清水寺、祇园花见小路 京都站周边酒店" [ref=e472]:
+                            - cell "第7天" [ref=e473]:
+                              - strong [ref=e474]: 第7天
+                            - cell "京都" [ref=e475]:
+                              - strong [ref=e476]: 京都
+                            - cell "伏见稻荷大社、清水寺、祇园花见小路" [ref=e477]
+                            - cell "京都站周边酒店" [ref=e478]
+                      - paragraph [ref=e479]:
+                        - strong [ref=e480]: 行程亮点
+                        - text: ：
+                      - list [ref=e481]:
+                        - listitem [ref=e482]:
+                          - strong [ref=e483]: 东京
+                          - text: ：现代都市与传统文化交融，适合购物与美食。
+                        - listitem [ref=e484]:
+                          - strong [ref=e485]: 富士山
+                          - text: ：自然风光与温泉体验，摄影圣地。
+                        - listitem [ref=e486]:
+                          - strong [ref=e487]: 大阪
+                          - text: ：活力十足的商业与娱乐中心。
+                        - listitem [ref=e488]:
+                          - strong [ref=e489]: 京都
+                          - text: ：古都风情，神社寺庙巡礼。
+                      - separator [ref=e490]
+                      - heading "三、实用信息速查" [level=3] [ref=e491]
+                      - paragraph [ref=e492]:
+                        - strong [ref=e493]: 交通
+                      - list [ref=e494]:
+                        - listitem [ref=e495]:
+                          - strong [ref=e496]: JR Pass
+                          - text: ：适合跨城市移动，提前在海外购买更划算。
+                        - listitem [ref=e497]:
+                          - strong [ref=e498]: 地铁卡
+                          - text: ：Suica/Pasmo 卡可用于东京、大阪等地公共交通。
+                        - listitem [ref=e499]:
+                          - strong [ref=e500]: 机场接送
+                          - text: ：成田/羽田机场有利木津巴士、电车直达市区。
+                      - paragraph [ref=e501]:
+                        - strong [ref=e502]: 住宿
+                      - list [ref=e503]:
+                        - listitem [ref=e504]:
+                          - strong [ref=e505]: 东京
+                          - text: ：新宿、涩谷交通便利，酒店价格中等。
+                        - listitem [ref=e506]:
+                          - strong [ref=e507]: 大阪
+                          - text: ：心斋桥、难波地区购物美食集中。
+                        - listitem [ref=e508]:
+                          - strong [ref=e509]: 温泉旅馆
+                          - text: ：富士山河口湖或箱根地区体验日式温泉。
+                      - paragraph [ref=e510]:
+                        - strong [ref=e511]: 美食
+                      - list [ref=e512]:
+                        - listitem [ref=e513]:
+                          - strong [ref=e514]: 寿司
+                          - text: ：东京筑地市场或高级寿司店。
+                        - listitem [ref=e515]:
+                          - strong [ref=e516]: 拉面
+                          - text: ：一兰、一风堂等连锁店或当地名店。
+                        - listitem [ref=e517]:
+                          - strong [ref=e518]: 和牛
+                          - text: ：神户牛、松阪牛专门店。
+                        - listitem [ref=e519]:
+                          - strong [ref=e520]: 街边小吃
+                          - text: ：章鱼烧、大阪烧、关东煮。
+                      - paragraph [ref=e521]:
+                        - strong [ref=e522]: 注意事项
+                      - list [ref=e523]:
+                        - listitem [ref=e524]:
+                          - strong [ref=e525]: 签证
+                          - text: ：中国公民需提前办理旅游签证，材料包括护照、照片、行程单等。
+                        - listitem [ref=e526]:
+                          - strong [ref=e527]: 保险
+                          - text: ：建议购买海外旅行保险，覆盖医疗与意外。
+                        - listitem [ref=e528]:
+                          - strong [ref=e529]: 货币
+                          - text: ：日元现金仍很重要，部分小店只接受现金。
+                        - listitem [ref=e530]:
+                          - strong [ref=e531]: 语言
+                          - text: ：主要旅游区英语标识较多，可下载翻译App辅助。
+                        - listitem [ref=e532]:
+                          - strong [ref=e533]: 礼仪
+                          - text: ：公共场所保持安静，排队守秩序，温泉入浴前先淋浴。
+                      - paragraph [ref=e534]:
+                        - strong [ref=e535]: 安全提醒
+                      - list [ref=e536]:
+                        - listitem [ref=e537]: 保管好护照和财物，避免夜间独自前往偏僻区域。
+                        - listitem [ref=e538]:
+                          - text: 如遇紧急情况，拨打
+                          - strong [ref=e539]: 110（报警）
+                          - text: 或
+                          - strong [ref=e540]: 119（急救）
+                          - text: 。
+                        - listitem [ref=e541]: 中国驻日使领馆联系方式：东京 +81‑3‑3403‑3388。
+                      - separator [ref=e542]
+                      - heading "四、文档生成说明" [level=3] [ref=e543]
+                      - paragraph [ref=e544]:
+                        - text: 本攻略已整合最新天气预报与旅游信息，内容精炼、实用性强。
+                        - strong [ref=e545]: 信息主要来源
+                        - text: ：[源自网络]（AccuWeather、日本气象协会、旅游攻略网站、中国驻日使领馆公告）。
+                      - blockquote [ref=e546]:
+                        - paragraph [ref=e547]:
+                          - strong [ref=e548]: 提示
+                          - text: ：天气情况可能随时变化，出行前请再次查询实时预报。祝您五一日本之旅愉快！
+                      - separator [ref=e549]
+                      - paragraph [ref=e550]:
+                        - strong [ref=e551]: 文件已保存为
+                        - text: ：
+                        - code [ref=e552]: 五一日本旅游攻略.md
+                        - text: （可直接用文本编辑器或Markdown查看器打开，亦可另存为.docx格式）。
+                  - generic [ref=e553]:
+                    - button "复制" [ref=e554] [cursor=pointer]:
+                      - img [ref=e555]
+                    - button "引用" [ref=e558] [cursor=pointer]:
+                      - img [ref=e559]
+                    - button "摘录到秒记" [ref=e562] [cursor=pointer]:
+                      - img [ref=e563]
+                    - button "赞" [ref=e566] [cursor=pointer]:
+                      - img [ref=e567]
+                    - button "踩" [ref=e569] [cursor=pointer]:
+                      - img [ref=e570]
+            - generic:
+              - generic:
+                - generic:
+                  - generic [ref=e573] [cursor=pointer]:
+                    - generic: 开始
+                  - generic [ref=e574] [cursor=pointer]:
+                    - generic: 检索最近一周日本的天气情况，帮...
+                  - generic [ref=e575] [cursor=pointer]:
+                    - generic: 最新消息
+          - generic [ref=e578]:
+            - generic:
+              - button "切换模式"
+            - generic [ref=e579]:
+              - textbox "生成一份周报模板..." [ref=e580]
+              - generic [ref=e581]:
+                - generic [ref=e582]:
+                  - button [ref=e583] [cursor=pointer]:
+                    - img [ref=e584]
+                  - button "联网" [ref=e586] [cursor=pointer]:
+                    - img [ref=e587]
+                    - generic [ref=e590]: 联网
+                  - generic [ref=e594]:
+                    - img [ref=e596]
+                    - generic [ref=e597]: 快问快答
+                  - generic [ref=e598]:
+                    - generic [ref=e599]:
+                      - generic: Enter
+                      - generic [ref=e600]: 发送
+                    - generic [ref=e601]:
+                      - generic: Shift + Enter
+                      - generic [ref=e602]: 换行
+                - generic [ref=e603] [cursor=pointer]:
+                  - button [disabled]:
+                    - img
+      - generic [ref=e604]:
+        - generic [ref=e605]:
+          - generic [ref=e606]:
+            - img [ref=e607]
+            - heading "秒记列表" [level=3] [ref=e609]
+            - generic [ref=e610]: "0"
+          - button [ref=e611] [cursor=pointer]:
+            - img [ref=e612]
+        - generic [ref=e616]:
+          - img [ref=e617]
+          - paragraph [ref=e619]: 暂无摘录内容
+          - paragraph [ref=e620]: 点击消息上的书签图标进行摘录
+  - region "Notifications (F8)":
+    - list
+  - button [ref=e623] [cursor=pointer]:
+    - img [ref=e625]
+```
