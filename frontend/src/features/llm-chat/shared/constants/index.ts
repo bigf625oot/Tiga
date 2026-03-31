@@ -19,7 +19,8 @@ export const MODES: ModeConfig[] = [
 export const STORAGE_KEYS = {
     SPLIT_RATIO: 'smartqa-split-ratio',
     IS_NETWORK_SEARCH_ENABLED: 'isNetworkSearchEnabled',
-    DEFAULT_AGENT_ID: 'defaultAgentId'
+    DEFAULT_AGENT_ID: 'defaultAgentId',
+    WORKFLOW_STATE: (sessionId: string) => `workflow-${sessionId}`
 };
 
 export const DEFAULT_SPLIT_RATIO = 0.6;

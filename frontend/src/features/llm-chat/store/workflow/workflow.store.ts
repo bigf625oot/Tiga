@@ -4,6 +4,7 @@ import type {
     AgentEvent, AgentExecutionPlan, AgentToolCallInfo,
     AgentObservationInfo, AgentArtifactCard, AgentTaskStartInfo,
 } from '@/features/llm-chat/shared/types';
+import { STORAGE_KEYS } from '@/features/llm-chat/shared/constants';
 
 export interface TaskToolCall {
     tool_name: string;
@@ -155,26 +156,22 @@ export const useWorkflowStore = defineStore('workflow', () => {
     };
 
     let saveTimeout: any;
+    // 增加节流保存逻辑，避免在高频输出时阻塞，同时允许 solo 模式在流式输出中增量持久化
     const debouncedSave = () => {
         clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(saveStateToBackend, 2000);
+        saveTimeout = setTimeout(saveStateToBackend, 1500);
     };
 
-    watch([tasks, logs, documents, currentStep], () => {
+    watch([tasks, logs, isRunning], () => {
         if (sessionId.value) {
-            // localStorage 作为高频实时镜像（内存速度，无锁竞争）
-            localStorage.setItem(`workflow-${sessionId.value}`, JSON.stringify({
+            localStorage.setItem(STORAGE_KEYS.WORKFLOW_STATE(sessionId.value), JSON.stringify({
                 tasks: tasks.value,
                 logs: logs.value,
-                documents: documents.value,
+                isRunning: isRunning.value,
                 currentStep: currentStep.value
             }));
-            // Streaming 期间 tasks/logs 高频变更（每个 SSE 事件），
-            // 若此时触发 PUT 请求会造成 SQLite 并发写锁竞争（database is locked）。
-            // 策略：isRunning 时只写 localStorage，流结束后通过 isRunning watcher 统一持久化。
-            if (!isRunning.value) {
-                debouncedSave();
-            }
+            // Allow saving even when running for real-time persistence (optimistic locking style)
+            debouncedSave();
         }
     }, { deep: true });
 

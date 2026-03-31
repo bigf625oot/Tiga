@@ -753,7 +753,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
             except Exception as e:
                 logger.warning(f"Failed to load chunks cache: {e}")
 
-    def search_doc_chunks(self, doc_id: int, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search_doc_chunks(self, doc_id: int, query: str, top_k: int = 5, min_score: float = 0.0) -> List[Dict[str, Any]]:
         if not self.rag:
             self._init_rag()
         if not self.rag:
@@ -786,7 +786,8 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                                 preview = self._chunks_cache[cid]
 
                             score = float(getattr(r, "score", 0.0) or 0.0)
-                            candidates.append({"id": cid, "content": preview, "score": score, "file_path": fp})
+                            if score >= min_score:
+                                candidates.append({"id": cid, "content": preview, "score": score, "file_path": fp})
                     else:
                         preview = ""
                         try:
@@ -798,14 +799,15 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
 
                         if preview and marker in preview:
                             score = float(getattr(r, "score", 0.0) or 0.0)
-                            candidates.append(
-                                {
-                                    "id": cid,
-                                    "content": preview,
-                                    "score": score,
-                                    "file_path": f"doc#{doc_id}:Unknown",
-                                }
-                            )
+                            if score >= min_score:
+                                candidates.append(
+                                    {
+                                        "id": cid,
+                                        "content": preview,
+                                        "score": score,
+                                        "file_path": f"doc#{doc_id}:Unknown",
+                                    }
+                                )
                 candidates.sort(key=lambda x: x["score"], reverse=True)
                 return candidates[:top_k]
         except Exception as e:
@@ -1063,7 +1065,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
         except Exception as e:
             logger.error(f"LightRAG rebuild failed: {e}")
 
-    def search_chunks(self, query: str, top_k: int = 5, doc_ids: Optional[List[int]] = None) -> List[Dict[str, Any]]:
+    def search_chunks(self, query: str, top_k: int = 5, doc_ids: Optional[List[int]] = None, min_score: float = 0.0) -> List[Dict[str, Any]]:
         if not self.rag:
             self._init_rag()
         if not self.rag:
@@ -1076,7 +1078,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
             storage = getattr(self.rag, "chunks_vdb", None)
             if hasattr(storage, "search"):
                 # Retrieve more candidates if filtering is needed
-                fetch_k = top_k * 5 if doc_ids else top_k
+                fetch_k = top_k * 5 if (doc_ids or min_score > 0) else top_k
                 res = storage.search(query, top_k=fetch_k)
                 items = []
                 
@@ -1092,6 +1094,9 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                             cid = r.get("id") or r.get("__id__")
                     except Exception:
                         pass
+                    
+                    if score < min_score:
+                        continue
                     
                     # Doc ID Filtering
                     doc_id = None
@@ -1133,7 +1138,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
             logger.warning(f"LightRAG chunk search failed: {e}")
         return []
 
-    def search_entities(self, query: str, top_k: int = 20) -> List[Dict[str, Any]]:
+    def search_entities(self, query: str, top_k: int = 20, min_score: float = 0.0) -> List[Dict[str, Any]]:
         if not self.rag:
             self._init_rag()
         if not self.rag:
@@ -1157,7 +1162,7 @@ You are a helpful, rigorous, and intelligent assistant. You must answer the user
                     except Exception:
                         pass
 
-                    if entity_name:
+                    if entity_name and score >= min_score:
                         items.append({"entity_name": entity_name, "score": score})
                 return items
         except Exception as e:

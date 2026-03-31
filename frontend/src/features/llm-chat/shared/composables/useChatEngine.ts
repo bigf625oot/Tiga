@@ -239,8 +239,10 @@ export function useChatEngine(props: { sessionId: string | null; embedded?: bool
         if (isWorkflowMode.value || mode.value === 'solo' || mode.value === 'team') {
             workflowStore.initWorkflow(currentSessionId.value);
             workflowStore.isRunning = true;
-            workflowStore.tasks = [];
-            workflowStore.logs = [];
+            if (!workflowStore.tasks || workflowStore.tasks.length === 0) {
+                workflowStore.tasks = [];
+                workflowStore.logs = [];
+            }
         }
 
                 if (mediaFiles.length > 0) {

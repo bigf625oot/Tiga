@@ -24,7 +24,7 @@ except Exception as e:
     mcp = MockMCP()
 
 @mcp.tool()
-async def search_knowledge_base(query: str, num_documents: int = 5, doc_ids: Optional[List[int]] = None) -> str:
+async def search_knowledge_base(query: str, num_documents: int = 5, doc_ids: Optional[List[int]] = None, min_score: float = 0.4) -> str:
     """
     Search the knowledge base for relevant document chunks using vector similarity.
     
@@ -32,6 +32,7 @@ async def search_knowledge_base(query: str, num_documents: int = 5, doc_ids: Opt
         query: The search query to find relevant information.
         num_documents: The number of document chunks to return (default: 5).
         doc_ids: Optional list of document IDs to filter the search scope.
+        min_score: Minimum similarity score threshold (default: 0.4) to filter out irrelevant results.
     """
     try:
         # Check if LightRAG is initialized
@@ -39,7 +40,7 @@ async def search_knowledge_base(query: str, num_documents: int = 5, doc_ids: Opt
             return "Knowledge base service is not initialized yet. Please contact administrator."
             
         # Directly call the singleton engine
-        results = lightrag_engine.search_chunks(query, top_k=num_documents, doc_ids=doc_ids)
+        results = lightrag_engine.search_chunks(query, top_k=num_documents, doc_ids=doc_ids, min_score=min_score)
         
         if not results:
             if doc_ids:
@@ -88,7 +89,10 @@ async def query_knowledge_graph(query: str, mode: str = "mix") -> str:
 
         # Use LightRAG's query_async method which supports mix, local, global modes
         # This matches the capabilities of the Knowledge Center frontend
-        return await lightrag_engine.query_async(query, mode=mode)
+        result = await lightrag_engine.query_async(query, mode=mode)
+        if not result or len(str(result).strip()) < 10:
+             return "知识图谱中未找到与该问题强相关的内容，请尝试换一种问法或提供更多上下文。"
+        return result
     except Exception as e:
         return f"Error querying knowledge graph: {str(e)}"
 

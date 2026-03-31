@@ -163,7 +163,7 @@ const handleOpenArtifact = async () => {
       // 图片类型：直接把 URL 当作 content 传给面板（ArtifactEditor 支持图片 URL）
       if (contentType.startsWith('image/') || props.type === 'image') {
         contextOpenArtifact({
-          type: 'image',
+          type: 'image' as any,
           content: props.url, // 图片用 URL 而非 base64
           title: props.title
         });

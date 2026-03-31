@@ -238,7 +238,8 @@ export interface Message {
   type?: string;
   status?: MessageStatus;
   reasoning?: string;
-  steps?: { content: string; step: number }[];
+  steps?: { id?: string; content: string; step?: number; status?: string; title?: string; description?: string; [key: string]: any }[];
+  tools?: any[];
   stream_events?: StreamEventItem[];
   chart_config?: ChartConfig;
   sources?: MessageSource[];
@@ -339,6 +340,9 @@ export type AgentEventType =
   | 'task_start'
   | 'tool_call'
   | 'call'
+  | 'tool_start'
+  | 'tool_end'
+  | 'tool_error'
   | 'tool_output'
   | 'result'
   | 'artifact'

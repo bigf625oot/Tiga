@@ -365,56 +365,48 @@ function computeExecution() {
     const tools: ResolvedToolCall[] = buildResolvedTools(rawTools);
 
     return steps.map((s: any, idx: number) => {
-      const chunkSize = Math.ceil(tools.length / steps.length) || 1;
-      const stepTools = tools.filter((_: any, ti: number) =>
-        ti >= idx * chunkSize && ti < (idx + 1) * chunkSize,
-      );
+      // P10 修复：基于显式的 ID 映射而不是脆弱的均分切片算法
+      const stepId = String(s.step ?? s.id ?? idx);
+      
+      // 首先尝试通过显式的 task_id 关联
+      let stepTools = tools.filter((t: any) => t.task_id && String(t.task_id) === stepId);
+      
+      // 兼容性降级：如果都没有 task_id 且是旧数据，保留均分逻辑的底线
+      if (stepTools.length === 0 && !tools.some((t: any) => t.task_id)) {
+          const chunkSize = Math.ceil(tools.length / steps.length) || 1;
+          stepTools = tools.filter((_: any, ti: number) =>
+            ti >= idx * chunkSize && ti < (idx + 1) * chunkSize,
+          );
+      }
 
       let title = s.content || s.description || s.title || `步骤 ${idx + 1}`;
       if (typeof title !== 'string') {
         title = JSON.stringify(title);
       }
 
-      return {
-        id: String(s.step ?? s.id ?? idx),
-        title,
-        toolCalls: stepTools,
-        elapsed: undefined, // 后端未下发耗时时留空
-        _stepToolsLen: stepTools.length,
-        _hasRunningTool: stepTools.some((t: any) => t.status === 'running'),
-        _hasErrorTool: stepTools.some((t: any) => t.status === 'error')
-      };
-    }).map((step: any, idx: number, arr: any[]) => {
-      let status: ExecStep['status'] = 'pending';
-
-      if (step._hasErrorTool) {
-        status = 'error';
-      } else if (step._hasRunningTool) {
-        status = 'running';
-      } else if (step._stepToolsLen > 0) {
-        status = 'done';
-      } else {
-        if (!isRunning.value) {
-          const anyError = arr.some(a => a._hasErrorTool);
-          status = anyError ? 'pending' : 'done';
-        } else {
-          const allPrevDone = arr.slice(0, idx).every(prev =>
-            prev._stepToolsLen > 0 && !prev._hasErrorTool && !prev._hasRunningTool
-          );
-          if (allPrevDone) {
-            status = 'running';
-          } else {
-            status = 'pending';
-          }
-        }
+      // 直接使用来自 workflowMode 中注入的确切状态
+      let exactStatus = s.status || 'pending';
+      
+      const hasErrorTool = stepTools.some((t: any) => t.status === 'error');
+      const hasRunningTool = stepTools.some((t: any) => t.status === 'running');
+      
+      // 如果工具报错了，强制为 error
+      if (hasErrorTool) {
+          exactStatus = 'error';
+      } else if (hasRunningTool && exactStatus !== 'done') {
+          // 如果工具在运行且未被标记为 done，则为 running
+          exactStatus = 'running';
+      } else if (!isRunning.value && exactStatus !== 'done' && exactStatus !== 'error') {
+          // 流已经结束，所有没出错的 pending/running 必须强制收敛到 done
+          exactStatus = 'done';
       }
 
       return {
-        id: step.id,
-        title: step.title,
-        status,
-        toolCalls: step.toolCalls,
-        elapsed: step.elapsed
+        id: stepId,
+        title,
+        status: exactStatus,
+        toolCalls: stepTools,
+        elapsed: undefined // 后端未下发耗时时留空
       };
     });
   });
@@ -437,6 +429,7 @@ function buildResolvedTools(rawTools: any[]): ResolvedToolCall[] {
     args: t.args ?? t.arguments,
     result: t.result,
     status: t.status || 'running',
+    task_id: t.task_id
   }));
 }
 

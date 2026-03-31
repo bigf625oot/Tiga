@@ -224,7 +224,7 @@ CRITICAL: If the user explicitly asks you to use a specific skill (e.g., 'docx')
             }
         )
 
-    def _get_skill_reference(self, skill_name: str, reference_path: str) -> str:
+    def _get_skill_reference(self, skill_name: str, reference_path: Optional[str] = None) -> str:
         """Load a reference document from a skill.
 
         Args:
@@ -234,6 +234,12 @@ CRITICAL: If the user explicitly asks you to use a specific skill (e.g., 'docx')
         Returns:
             A JSON string with the reference content.
         """
+        if reference_path is None:
+            return json.dumps({
+                "error": "Missing required argument 'reference_path'. You must specify which reference to load.",
+                "hint": f"First call get_skill_instructions('{skill_name}') to see the available references."
+            })
+
         skill = self.get_skill(skill_name)
         if skill is None:
             available = ", ".join(self.get_skill_names())
@@ -285,7 +291,7 @@ CRITICAL: If the user explicitly asks you to use a specific skill (e.g., 'docx')
     def _get_skill_script(
         self,
         skill_name: str,
-        script_path: str,
+        script_path: Optional[str] = None,
         execute: bool = False,
         args: Optional[List[str]] = None,
         timeout: int = 30,
@@ -302,6 +308,12 @@ CRITICAL: If the user explicitly asks you to use a specific skill (e.g., 'docx')
         Returns:
             A JSON string with either the script content or execution results.
         """
+        if script_path is None:
+            return json.dumps({
+                "error": "Missing required argument 'script_path'. You must specify which script to read or execute.",
+                "hint": f"First call get_skill_instructions('{skill_name}') to see the available scripts."
+            })
+
         skill = self.get_skill(skill_name)
         if skill is None:
             available = ", ".join(self.get_skill_names())

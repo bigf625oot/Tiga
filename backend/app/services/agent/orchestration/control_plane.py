@@ -231,7 +231,7 @@ class AgnoControlPlane:
             # Step 7: 非阻塞持久化 — 使用新 session 避免请求 session 关闭竞态
             # 持有 task 引用防止被 GC 提前回收
             content, reasoning, tools, stream_events = aggregator.finalize()
-            if persist_assistant_message and (content or reasoning or stream_events):
+            if persist_assistant_message and (content or reasoning or tools or stream_events):
                 _persist_task = asyncio.create_task(self._finalize_session_safe(
                     ctx.session_id, ctx.start_time, ctx.intent, content, reasoning, tools, stream_events
                 ))

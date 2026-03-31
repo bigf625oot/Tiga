@@ -10,6 +10,7 @@ import type {
 declare global {
   interface Window {
     _lastStreamEndTime?: number;
+    _lastStreamSessionId?: string | null;
   }
 }
 
@@ -50,8 +51,24 @@ export function useChatSession() {
       } else {
           // Additional protection: Only overwrite if we aren't within 1s of a stream finishing
           // to prevent race conditions with backend persistence.
-          if (!window._lastStreamEndTime || Date.now() - window._lastStreamEndTime > 1500) {
-              messages.value = data.messages || [];
+          // IMPORTANT: Also check if the last stream was for THIS session ID, otherwise switching
+          // to a different session immediately after a stream ends will block loading messages.
+          const isRecentStream = window._lastStreamEndTime && (Date.now() - window._lastStreamEndTime < 1500);
+          const isSameSessionStream = window._lastStreamSessionId === id;
+          
+          if (!isRecentStream || !isSameSessionStream) {
+              // Merge strategy instead of overwrite to preserve optimistic state
+              const backendMessages = data.messages || [];
+              if (messages.value.length === 0) {
+                  messages.value = backendMessages;
+              } else {
+                  // If we have messages, only append ones we don't have
+                  const existingIds = new Set(messages.value.map(m => m.id).filter(Boolean));
+                  const newMessages = backendMessages.filter((m: any) => !existingIds.has(m.id));
+                  if (newMessages.length > 0) {
+                      messages.value = [...messages.value, ...newMessages];
+                  }
+              }
               console.log('[useChatSession] messages set to:', messages.value.length, 'items');
           } else {
               console.log('[useChatSession] skip overwriting messages due to recent stream end race condition protection');
@@ -59,18 +76,71 @@ export function useChatSession() {
       }
       
       // Initialize workflow state if needed
-      workflowStore.initWorkflow(id, data.workflow_state);
+              workflowStore.initWorkflow(id, data.workflow_state);
+              
+              // Reconstruct steps and tools for task mode messages if backend didn't persist them
+              if (data.workflow_state?.tasks?.length > 0) {
+                  // In workflow mode, chat messages might not be saved. Reconstruct them if empty.
+                  if (messages.value.length === 0) {
+                      messages.value.push({
+                          role: 'user',
+                          content: data.title || '任务对话',
+                          timestamp: new Date().toISOString()
+                      });
+                      messages.value.push({
+                          role: 'assistant',
+                          content: '已启动任务规划模式。',
+                          isSystem: true,
+                          timestamp: new Date().toISOString()
+                      });
+                  }
+
+                  const lastAssistantMsg = messages.value.slice().reverse().find(m => m.role === 'assistant');
+                  if (lastAssistantMsg) {
+                      if (!lastAssistantMsg.steps || lastAssistantMsg.steps.length === 0) {
+                          lastAssistantMsg.steps = data.workflow_state.tasks.map((t: any, idx: number) => ({
+                              step: idx,
+                              content: t.name,
+                              id: String(t.id || idx),
+                              status: t.status
+                          }));
+                      }
+                      
+                      if (!lastAssistantMsg.tools || lastAssistantMsg.tools.length === 0) {
+                          const reconstructedTools: any[] = [];
+                          data.workflow_state.tasks.forEach((t: any) => {
+                              if (t.toolCalls && t.toolCalls.length > 0) {
+                                  t.toolCalls.forEach((tc: any) => {
+                                      reconstructedTools.push({
+                                          id: `recon-${Math.random().toString(36).slice(2)}`,
+                                          name: tc.tool_name,
+                                          args: tc.tool_args,
+                                          status: tc.status,
+                                          result: tc.result,
+                                          task_id: t.id
+                                      });
+                                  });
+                              }
+                          });
+                          if (reconstructedTools.length > 0) {
+                              lastAssistantMsg.tools = reconstructedTools;
+                          }
+                      }
+                  }
+              }
     } catch (e) {
       console.error("Failed to fetch session details", e);
-      // Reset session if not found or error
-      currentSessionId.value = null;
-      currentSession.value = null;
-      messages.value = [];
-      // Optionally clear URL param
-      const url = new URL(window.location.href);
-      if (url.searchParams.has('session_id')) {
-          url.searchParams.delete('session_id');
-          window.history.replaceState({}, '', url.toString());
+      // Don't reset session if we are actively streaming or loading
+      if (!isLoading.value && !isStreaming.value) {
+          currentSessionId.value = null;
+          currentSession.value = null;
+          messages.value = [];
+          // Optionally clear URL param
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('session_id')) {
+              url.searchParams.delete('session_id');
+              window.history.replaceState({}, '', url.toString());
+          }
       }
     } finally {
       isFetchingSession.value = false;
@@ -101,14 +171,19 @@ export function useChatSession() {
               abortController.value = null;
           }
       } finally {
+          // Immediately reset loading states so session switches don't get blocked
+          isLoading.value = false;
+          isStreaming.value = false;
+          
           // Capture current state to avoid overwriting new requests
           const currentAbortController = abortController.value;
+          const stoppedSessionId = currentSessionId.value; // Capture the session ID being stopped
           setTimeout(() => {
               isStopping.value = false;
-              // Only reset if no new request has started
+              // Trigger final persist locally if needed by firing a fake stream end
               if (abortController.value === currentAbortController) {
-                  isLoading.value = false;
-                  isStreaming.value = false;
+                  window._lastStreamEndTime = Date.now();
+                  window._lastStreamSessionId = stoppedSessionId;
               }
           }, 300);
       }
@@ -207,7 +282,7 @@ export function useChatSession() {
     isLoading.value = true;
     loadingStatus.value = ''; // Reset status
     abortController.value = new AbortController();
-
+    
     // Optimistically add user message with a consistent clock
     messages.value.push({
       role: 'user',
@@ -216,20 +291,26 @@ export function useChatSession() {
       // Handle attachments display if needed, but for now just text
     });
 
+    let targetSessionId = currentSessionId.value;
+
     try {
       if (!currentSessionId.value) {
         // Auto create session if not exists
         await createNewSession(userMsg.slice(0, 20), agentId || null, mode);
+        targetSessionId = currentSessionId.value;
       }
       
-      if (!currentSessionId.value) throw new Error("Failed to create session");
+      if (!targetSessionId) throw new Error("Failed to create session");
 
-      // Initialize workflow store so it's ready to accept events from /chat SSE
+        // Initialize workflow store so it's ready to accept events from /chat SSE
       if (mode === 'solo' || mode === 'team') {
-          workflowStore.initWorkflow(currentSessionId.value);
+          workflowStore.initWorkflow(targetSessionId);
           workflowStore.isRunning = true;
-          workflowStore.tasks = [];
-          workflowStore.logs = [];
+          // Clear only if empty to prevent UI flicker
+          if (!workflowStore.tasks || workflowStore.tasks.length === 0) {
+              workflowStore.tasks = [];
+              workflowStore.logs = [];
+          }
       }
 
       const payload = {
@@ -242,7 +323,7 @@ export function useChatSession() {
       };
 
       const response = await chatService.sendChatMessage(
-        currentSessionId.value, 
+        targetSessionId, 
         payload,
         abortController.value.signal
       );
@@ -268,8 +349,10 @@ export function useChatSession() {
         });
       }
     } finally {
-      isLoading.value = false;
-      isStreaming.value = false;
+      if (currentSessionId.value === targetSessionId) {
+          isLoading.value = false;
+          isStreaming.value = false;
+      }
       abortController.value = null;
     }
   };
@@ -283,6 +366,7 @@ export function useChatSession() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       const startTime = Date.now();
+      const streamSessionId = currentSessionId.value; // Capture the session ID for this stream
 
       messages.value.push({
           role: 'assistant',
@@ -351,9 +435,14 @@ export function useChatSession() {
                                   if (eventType === 'error') {
                                       assistantMsg.content = (assistantMsg.content || '') + `\n\n**系统错误**: ${fallbackContent}\n`;
                                   } else if (eventType === 'message' || eventType === 'text') {
-                                      assistantMsg.content = (assistantMsg.content || '') + fallbackContent;
+                                      // Only append if it's not already at the end to prevent duplicates
+                                      if (!assistantMsg.content?.endsWith(fallbackContent)) {
+                                          assistantMsg.content = (assistantMsg.content || '') + fallbackContent;
+                                      }
                                   } else {
-                                      assistantMsg.content = (assistantMsg.content || '') + `\n\n**[${eventType}]**: ${fallbackContent}\n`;
+                                      if (!assistantMsg.content?.includes(fallbackContent)) {
+                                          assistantMsg.content = (assistantMsg.content || '') + `\n\n**[${eventType}]**: ${fallbackContent}\n`;
+                                      }
                                   }
                               }
                           }
@@ -367,13 +456,19 @@ export function useChatSession() {
       } catch (e) {
           console.error(e);
       } finally {
-          isLoading.value = false;
-          isStreaming.value = false;
+          // Only reset loading states if we haven't switched sessions
+          if (currentSessionId.value === streamSessionId) {
+              isLoading.value = false;
+              isStreaming.value = false;
+          }
           window._lastStreamEndTime = Date.now();
+          window._lastStreamSessionId = streamSessionId;
           
-          if (workflowStore.isRunning) {
+          if (workflowStore.isRunning && currentSessionId.value === streamSessionId) {
               workflowStore.isRunning = false;
               workflowStore.addLog('Execution completed', 'success');
+              // Force a final flush to backend
+              window._lastStreamEndTime = Date.now();
           }
 
           // Set duration when stream ends
