@@ -78,6 +78,21 @@ class Neo4jSource(BaseSource):
         
         try:
             async with driver.session() as session:
+                # 0. 尝试获取所有 Databases (图空间)
+                try:
+                    result = await session.run("SHOW DATABASES YIELD name")
+                    async for record in result:
+                        db_name = record["name"]
+                        metadata_list.append(MetadataModel(
+                            name=db_name,
+                            type="database",
+                            description=f"图数据库/空间: {db_name}",
+                            schema_info={}
+                        ))
+                except Exception:
+                    # 社区版或权限不足时可能会报错，忽略该错误
+                    pass
+
                 # 1. 获取所有节点标签及其大致数量
                 result = await session.run("CALL db.labels()")
                 async for record in result:

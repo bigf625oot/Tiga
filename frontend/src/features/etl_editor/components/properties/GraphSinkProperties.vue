@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { usePipelineStore } from '../../composables/usePipelineStore';
 import { dataSourceApi, type DataSource } from '@/features/data_etl/api';
 import { Label } from '@/components/ui/label';
@@ -26,11 +26,25 @@ const loading = ref(false);
 const connections = ref<DataSource[]>([]);
 const activeTab = ref('basic');
 
+const getDataSourceDedupKey = (ds: DataSource) => {
+  const url = ds.url?.trim();
+  if (url) return `${ds.type}|${url}|${ds.username ?? ''}|${ds.database ?? ''}`;
+  const host = ds.host?.trim() ?? '';
+  const port = ds.port ?? '';
+  return `${ds.type}|${host}|${port}|${ds.username ?? ''}|${ds.database ?? ''}|${ds.name}`;
+};
+
 const fetchConnections = async () => {
   loading.value = true;
   try {
     const dataSources = await dataSourceApi.list();
-    connections.value = dataSources.filter(ds => ds.type === 'neo4j');
+    const neo4jConnections = dataSources.filter(ds => ds.type === 'neo4j');
+    const uniq = new Map<string, DataSource>();
+    for (const ds of neo4jConnections) {
+      const key = getDataSourceDedupKey(ds);
+      if (!uniq.has(key)) uniq.set(key, ds);
+    }
+    connections.value = Array.from(uniq.values());
   } catch (e) {
     console.error('Failed to fetch graph connections', e);
   } finally {
@@ -50,6 +64,32 @@ const updateConfig = (key: string, value: any) => {
 const config = computed(() => node.value?.data?.config || {});
 const nodeMappings = computed(() => config.value.node_mappings || []);
 const edgeMappings = computed(() => config.value.edge_mappings || []);
+
+const graphDatabases = ref<string[]>([]);
+const fetchingDatabases = ref(false);
+
+const fetchGraphDatabases = async (connectionId?: number) => {
+  if (!connectionId) {
+    graphDatabases.value = [];
+    return;
+  }
+  fetchingDatabases.value = true;
+  try {
+    const meta = await dataSourceApi.fetchMetadata(connectionId);
+    graphDatabases.value = meta
+      .filter((m: any) => m.type === 'database')
+      .map((m: any) => m.name);
+  } catch (e) {
+    console.error('Failed to fetch graph databases', e);
+    graphDatabases.value = [];
+  } finally {
+    fetchingDatabases.value = false;
+  }
+};
+
+watch(() => config.value.connection_id, (newId) => {
+  fetchGraphDatabases(newId);
+}, { immediate: true });
 
 // --- Node Mapping Logic ---
 const newNodeLabel = ref('');
@@ -153,12 +193,22 @@ const removeEdgeMapping = (index: number) => {
                 <FolderInput class="w-3.5 h-3.5 text-muted-foreground" />
                 目标图谱名称 (Graph Name)
               </Label>
-              <Input 
-                :model-value="config.graph_name || 'default'"
-                @update:model-value="(v) => updateConfig('graph_name', v)"
-                placeholder="default"
-              />
-              <p class="text-[10px] text-muted-foreground">如果目标支持多图谱，请指定名称。</p>
+              <div class="relative">
+                <Input 
+                  :list="`graph-databases-list-${node?.id || 'default'}`"
+                  :model-value="config.graph_name || 'default'"
+                  @update:model-value="(v) => updateConfig('graph_name', v)"
+                  placeholder="default"
+                  :disabled="fetchingDatabases"
+                />
+                <datalist :id="`graph-databases-list-${node?.id || 'default'}`">
+                  <option v-for="db in graphDatabases" :key="db" :value="db" />
+                </datalist>
+              </div>
+              <p class="text-[10px] text-muted-foreground">
+                <span v-if="fetchingDatabases" class="text-blue-500 mr-1">正在加载可用图谱...</span>
+                如果目标支持多图谱，请选择或指定名称。
+              </p>
             </div>
 
             <div class="space-y-2">
