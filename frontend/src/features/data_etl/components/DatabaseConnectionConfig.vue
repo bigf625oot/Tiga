@@ -33,6 +33,8 @@ import { useToast } from '@/components/ui/toast/use-toast';
 import { Loader2, HelpCircle, CheckCircle2, XCircle, Database, Server, Settings2 } from 'lucide-vue-next';
 import { dataSourceApi } from '@/features/data_etl/api';
 
+import { encryptForTransmission } from '@/core/utils/crypto';
+
 const { toast } = useToast();
 
 interface DBConfig {
@@ -190,7 +192,7 @@ const saveConfiguration = async () => {
     host: config.host,
     port: config.port,
     username: config.user,
-    password: config.password,
+    password: encryptForTransmission(config.password),
     database: config.dbName,
     config: {
       mode: config.mode,
@@ -292,7 +294,7 @@ const testConnection = async (type: 'graph' | 'vector') => {
       host: config.host,
       port: config.port,
       username: config.user,
-      password: config.password,
+      password: encryptForTransmission(config.password),
       database: config.dbName,
       config: {
         mode: config.mode,

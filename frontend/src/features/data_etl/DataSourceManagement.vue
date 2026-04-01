@@ -1700,8 +1700,8 @@ const mapFormToPayload = (formData: typeof form.value): DataSourceCreate => {
       host: formData.host,
       port: formData.port,
       username: formData.username,
-      password: formData.authType === 'password' ? formData.password : undefined,
-      private_key: formData.authType === 'key' ? formData.privateKey : undefined,
+      password: formData.authType === 'password' && formData.password ? encryptForTransmission(formData.password) : undefined,
+      private_key: formData.authType === 'key' && formData.privateKey ? encryptForTransmission(formData.privateKey) : undefined,
       config: {
         provider: formData.sftpProvider,
         path: formData.sftpRemotePath,
@@ -1748,7 +1748,7 @@ const mapFormToPayload = (formData: typeof form.value): DataSourceCreate => {
       host: formData.dbHost,
       port: formData.dbPort,
       username: formData.dbUsername,
-      password: formData.dbPassword,
+      password: formData.dbPassword ? encryptForTransmission(formData.dbPassword) : '',
       database: formData.dbName,
       config: {
         type: formData.dbType,
@@ -1808,8 +1808,8 @@ const mapFormToPayload = (formData: typeof form.value): DataSourceCreate => {
         seeyon_dept_ids: formData.seeyonDeptIds,
         seeyon_include_attachments: formData.seeyonIncludeAttachments
       },
-      token: formData.apiAuthType === 'bearer' ? formData.apiAuthToken : undefined,
-      api_key: formData.apiAuthType === 'apikey' ? formData.apiAuthKeyValue : undefined
+      token: formData.apiAuthType === 'bearer' && formData.apiAuthToken ? encryptForTransmission(formData.apiAuthToken) : undefined,
+      api_key: formData.apiAuthType === 'apikey' && formData.apiAuthKeyValue ? encryptForTransmission(formData.apiAuthKeyValue) : undefined
     };
   }
 

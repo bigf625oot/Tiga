@@ -27,6 +27,7 @@ from app.crud.data_source import data_source as crud_data_source
 from app.schemas.data_source import DataSourceCreate, DataSourceOut, DataSourceTest, DataSourceUpdate, DataSourceTestResult
 from app.strategies import get_strategy
 from app.models.domain import MetadataModel
+from app.utils.crypto_utils import decrypt_transmission_field
 
 router = APIRouter()
 
@@ -52,6 +53,15 @@ async def create_data_source(
     """
     Create new data source.
     """
+    if data_source_in.password:
+        data_source_in.password = decrypt_transmission_field(data_source_in.password)
+    if data_source_in.api_key:
+        data_source_in.api_key = decrypt_transmission_field(data_source_in.api_key)
+    if data_source_in.private_key:
+        data_source_in.private_key = decrypt_transmission_field(data_source_in.private_key)
+    if data_source_in.token:
+        data_source_in.token = decrypt_transmission_field(data_source_in.token)
+
     return await crud_data_source.create(db, obj_in=data_source_in)
 
 
@@ -64,6 +74,15 @@ async def test_connection(
     Test connection using strategy pattern.
     """
     try:
+        if config.password:
+            config.password = decrypt_transmission_field(config.password)
+        if config.api_key:
+            config.api_key = decrypt_transmission_field(config.api_key)
+        if config.private_key:
+            config.private_key = decrypt_transmission_field(config.private_key)
+        if config.token:
+            config.token = decrypt_transmission_field(config.token)
+
         # Construct config dict from input
         cfg = config.model_dump()
         
@@ -95,6 +114,16 @@ async def update_data_source(
     data_source_obj = await crud_data_source.get(db, id)
     if not data_source_obj:
         raise HTTPException(status_code=404, detail="Data source not found")
+        
+    if data_source_in.password:
+        data_source_in.password = decrypt_transmission_field(data_source_in.password)
+    if data_source_in.api_key:
+        data_source_in.api_key = decrypt_transmission_field(data_source_in.api_key)
+    if data_source_in.private_key:
+        data_source_in.private_key = decrypt_transmission_field(data_source_in.private_key)
+    if data_source_in.token:
+        data_source_in.token = decrypt_transmission_field(data_source_in.token)
+
     return await crud_data_source.update(db, db_obj=data_source_obj, obj_in=data_source_in)
 
 

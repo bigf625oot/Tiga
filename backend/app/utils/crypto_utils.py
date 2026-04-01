@@ -74,3 +74,33 @@ def decrypt_field(ciphertext: str) -> str:
         return plaintext.decode('utf-8')
     except Exception as e:
         raise ValueError(f"Decryption failed: {str(e)}")
+
+def decrypt_transmission_field(ciphertext: str) -> str:
+    """
+    Decrypts a transmission-encrypted field from the frontend.
+    The frontend uses AES-256-CBC with a fixed key and IV.
+    """
+    if not ciphertext or not ciphertext.startswith("enc_trans::"):
+        return ciphertext
+        
+    try:
+        actual_ciphertext = ciphertext.replace("enc_trans::", "")
+        data = base64.b64decode(actual_ciphertext)
+        
+        # Frontend fixed key and IV
+        key = b'Tiga_Transmission_Key_32bytes!!!'
+        iv = b'Tiga_Init_16byte'
+        
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        
+        padded_plaintext = decryptor.update(data) + decryptor.finalize()
+        
+        unpadder = padding.PKCS7(128).unpadder()
+        plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
+        
+        return plaintext.decode('utf-8')
+    except Exception as e:
+        # If decryption fails, it might not be properly encrypted or corrupted.
+        # Fallback to returning the original string or handle securely.
+        return ciphertext

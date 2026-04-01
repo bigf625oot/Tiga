@@ -4,6 +4,8 @@ import { usePipelineStore } from '../../composables/usePipelineStore';
 import { dataSourceApi, type DataSource } from '@/features/data_etl/api';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,7 +19,9 @@ import {
   CircleDot,
   ArrowRight,
   Plus,
-  Trash2
+  Trash2,
+  Check,
+  ChevronsUpDown
 } from 'lucide-vue-next';
 
 const store = usePipelineStore();
@@ -68,6 +72,9 @@ const edgeMappings = computed(() => config.value.edge_mappings || []);
 const graphDatabases = ref<string[]>([]);
 const fetchingDatabases = ref(false);
 
+const openGraphNamePopover = ref(false);
+const graphNameSearchTerm = ref('');
+
 const fetchGraphDatabases = async (connectionId?: number) => {
   if (!connectionId) {
     graphDatabases.value = [];
@@ -87,8 +94,11 @@ const fetchGraphDatabases = async (connectionId?: number) => {
   }
 };
 
-watch(() => config.value.connection_id, (newId) => {
-  fetchGraphDatabases(newId);
+watch(() => config.value.connection_id, async (newId, oldId) => {
+  await fetchGraphDatabases(newId);
+  if (oldId !== undefined && graphDatabases.value.length > 0 && !graphDatabases.value.includes(config.value.graph_name)) {
+    updateConfig('graph_name', graphDatabases.value[0]);
+  }
 }, { immediate: true });
 
 // --- Node Mapping Logic ---
@@ -193,18 +203,67 @@ const removeEdgeMapping = (index: number) => {
                 <FolderInput class="w-3.5 h-3.5 text-muted-foreground" />
                 目标图谱名称 (Graph Name)
               </Label>
-              <div class="relative">
-                <Input 
-                  :list="`graph-databases-list-${node?.id || 'default'}`"
-                  :model-value="config.graph_name || 'default'"
-                  @update:model-value="(v) => updateConfig('graph_name', v)"
-                  placeholder="default"
-                  :disabled="fetchingDatabases"
-                />
-                <datalist :id="`graph-databases-list-${node?.id || 'default'}`">
-                  <option v-for="db in graphDatabases" :key="db" :value="db" />
-                </datalist>
-              </div>
+              <Popover v-model:open="openGraphNamePopover">
+                <PopoverTrigger as-child>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    :aria-expanded="openGraphNamePopover"
+                    class="w-full justify-between px-3 font-normal"
+                    :disabled="fetchingDatabases"
+                  >
+                    <span class="truncate">{{ config.graph_name || 'default' }}</span>
+                    <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent class="w-full p-0">
+                  <Command v-model:searchTerm="graphNameSearchTerm">
+                    <CommandInput placeholder="搜索或输入新的图谱名称..." />
+                    <CommandEmpty>
+                      <Button
+                        variant="ghost"
+                        class="w-full justify-start text-sm px-2 py-1.5 h-auto font-normal text-muted-foreground"
+                        @click="() => {
+                          updateConfig('graph_name', graphNameSearchTerm || 'default');
+                          openGraphNamePopover = false;
+                        }"
+                      >
+                        <Plus class="mr-2 h-4 w-4" />
+                        创建 / 使用 "{{ graphNameSearchTerm }}"
+                      </Button>
+                    </CommandEmpty>
+                    <CommandList>
+                      <CommandGroup>
+                        <CommandItem
+                          v-for="db in graphDatabases"
+                          :key="db"
+                          :value="db"
+                          @select="() => {
+                            updateConfig('graph_name', db);
+                            openGraphNamePopover = false;
+                          }"
+                        >
+                          <Check
+                            :class="['mr-2 h-4 w-4', config.graph_name === db ? 'opacity-100' : 'opacity-0']"
+                          />
+                          {{ db }}
+                        </CommandItem>
+                        <CommandItem
+                          v-if="graphNameSearchTerm && !graphDatabases.includes(graphNameSearchTerm)"
+                          :value="graphNameSearchTerm"
+                          @select="() => {
+                            updateConfig('graph_name', graphNameSearchTerm);
+                            openGraphNamePopover = false;
+                          }"
+                        >
+                          <Plus class="mr-2 h-4 w-4 text-muted-foreground" />
+                          创建 / 使用 "{{ graphNameSearchTerm }}"
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <p class="text-[10px] text-muted-foreground">
                 <span v-if="fetchingDatabases" class="text-blue-500 mr-1">正在加载可用图谱...</span>
                 如果目标支持多图谱，请选择或指定名称。
