@@ -56,14 +56,34 @@
 
         <ScrollArea class="flex-1 min-h-0">
           <div class="p-6">
-            <div v-if="tasks.length === 0 && !isLoading" class="flex flex-col items-center justify-center h-[40vh] text-muted-foreground opacity-60">
-              <img src="/Placeholder/null.svg" alt="暂无任务" class="w-12 h-12 mb-4" />
-              <p class="text-sm">当前没有运行中的任务</p>
-            </div>
+            <Empty
+              v-if="tasks.length === 0 && !isLoading"
+              title="暂无任务"
+              description="当前没有运行中的任务"
+              class="min-h-[calc(100vh-160px)]"
+            />
 
-            <div v-else-if="isLoading && tasks.length === 0" class="flex flex-col items-center justify-center h-[40vh] text-muted-foreground">
-              <Loader2 class="w-8 h-8 animate-spin mb-4" />
-              <p class="text-sm">加载中...</p>
+            <div v-else-if="isLoading && tasks.length === 0" class="flex items-center justify-center min-h-[calc(100vh-160px)]">
+              <Card class="w-full max-w-sm border-border/50 shadow-sm">
+                <CardHeader class="space-y-1">
+                  <CardTitle class="text-base">加载中</CardTitle>
+                  <CardDescription class="text-xs">正在获取任务列表</CardDescription>
+                </CardHeader>
+                <CardContent class="space-y-4">
+                  <div class="flex items-center gap-3">
+                    <Skeleton class="h-8 w-8 rounded-full" />
+                    <div class="flex-1 space-y-2">
+                      <Skeleton class="h-3 w-3/4" />
+                      <Skeleton class="h-2 w-1/2" />
+                    </div>
+                  </div>
+                  <Skeleton class="h-2 w-full" />
+                  <div class="flex items-center justify-between">
+                    <Skeleton class="h-2 w-16" />
+                    <Skeleton class="h-2 w-12" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <div v-else class="space-y-4">
@@ -168,8 +188,17 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { storeToRefs } from 'pinia';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Empty } from '@/components/ui/empty';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,

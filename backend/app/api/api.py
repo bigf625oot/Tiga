@@ -23,9 +23,11 @@ from app.api.endpoints import (
     service_categories,
     service_market,
     tools,
-    task_mode,
-    relation_fix,
     sandbox,
+    task_mode,
+    task_runs,
+    task_templates,
+    relation_fix,
     tasks,
     async_tasks,
     openclaw,
@@ -45,8 +47,9 @@ api_router.include_router(pathway_router, prefix="/pathway", tags=["pathway"])
 api_router.include_router(nodes.router, prefix="/nodes", tags=["nodes"])
 api_router.include_router(openclaw.router, prefix="/openclaw", tags=["openclaw"])
 api_router.include_router(agent.router, prefix="/agent", tags=["agent-gateway"])
-api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(task_runs.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(async_tasks.router, prefix="/async/tasks", tags=["async-tasks"])
+api_router.include_router(tasks.router, prefix="/executions", tags=["executions"])
 api_router.include_router(sandbox.router, prefix="/sandbox", tags=["sandbox"])
 api_router.include_router(relation_fix.router, prefix="/relation-fix", tags=["relation-fix"])
 api_router.include_router(tools.router, prefix="/tools", tags=["tools"])
@@ -74,5 +77,6 @@ api_router.include_router(skills.router, prefix="/skills", tags=["skills"])
 api_router.include_router(service_categories.router, prefix="/service-categories", tags=["service-categories"])
 api_router.include_router(service_market.router, prefix="/service-market", tags=["service-market"])
 api_router.include_router(task_mode.router, prefix="/task-mode", tags=["task-mode"])
+api_router.include_router(task_templates.router, prefix="/task-templates", tags=["task-templates"])
 api_router.include_router(system_config.router, prefix="/system-config", tags=["system-config"])
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])

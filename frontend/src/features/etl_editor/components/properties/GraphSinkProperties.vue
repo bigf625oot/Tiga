@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
 import { usePipelineStore } from '../../composables/usePipelineStore';
-import { pipelineApi } from '@/features/etl_editor/api/pipeline';
+import { dataSourceApi, type DataSource } from '@/features/data_etl/api';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -23,13 +23,14 @@ import {
 const store = usePipelineStore();
 const node = computed(() => store.selectedNode);
 const loading = ref(false);
-const connections = ref<any[]>([]);
+const connections = ref<DataSource[]>([]);
 const activeTab = ref('basic');
 
 const fetchConnections = async () => {
   loading.value = true;
   try {
-    connections.value = await pipelineApi.getSystemConnections('graph');
+    const dataSources = await dataSourceApi.list();
+    connections.value = dataSources.filter(ds => ds.type === 'neo4j');
   } catch (e) {
     console.error('Failed to fetch graph connections', e);
   } finally {
@@ -123,7 +124,7 @@ const removeEdgeMapping = (index: number) => {
               </Label>
               <Select 
                 :model-value="config.connection_id?.toString()"
-                @update:model-value="(v) => updateConfig('connection_id', v)"
+                @update:model-value="(v) => updateConfig('connection_id', Number(v))"
                 :disabled="loading"
               >
                 <SelectTrigger>
@@ -134,7 +135,7 @@ const removeEdgeMapping = (index: number) => {
                     <SelectItem 
                       v-for="conn in connections" 
                       :key="conn.id" 
-                      :value="conn.id"
+                      :value="conn.id.toString()"
                     >
                       {{ conn.name }} ({{ conn.type }})
                     </SelectItem>

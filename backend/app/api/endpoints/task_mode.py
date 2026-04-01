@@ -35,6 +35,12 @@ from app.schemas.task_mode import (
     TaskVersionResponse,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
+# TODO(Deprecation): This module is kept for backward compatibility with older configurations.
+# Please migrate to `/api/v1/task-templates` (implemented in task_templates.py).
+logger.warning("The /api/v1/task-mode endpoints are deprecated and will be removed in a future version. Please use /api/v1/task-templates instead.")
 
 router = APIRouter()
 

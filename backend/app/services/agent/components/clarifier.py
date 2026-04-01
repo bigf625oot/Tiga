@@ -1,3 +1,4 @@
+import json
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
 from agno.agent import Agent
@@ -18,6 +19,7 @@ class IntentClarifier:
         # 默认采用与全局一致的模型，但在实际生产中建议注入较小/较快的模型 (如 gpt-4o-mini 或 deepseek-chat)
         self.model = ModelFactory.create_model(llm_model) if llm_model else None
         
+        schema_str = json.dumps(ClarificationResult.model_json_schema(), ensure_ascii=False)
         self.agent = Agent(
             model=self.model,
             description="你是一个高级任务前置分析器。你的任务是在系统执行复杂的步骤规划前，判断用户的请求是否足够清晰、是否具备必要的上下文信息。",
@@ -26,9 +28,9 @@ class IntentClarifier:
                 "2. 这是一个 'Task'（任务执行）场景。判断用户是否提供了执行任务的明确目标和关键参数。",
                 "3. 如果输入非常宽泛、模糊（例如只有'帮我写个代码'、'分析一下数据'而没有具体方向），必须判断为模糊（is_ambiguous=True）。",
                 "4. 如果判断为模糊，请直接输出一句友好、专业的反问句（clarification_question），引导用户提供缺失的信息。",
-                "5. 你的响应必须是严格的 JSON 格式。"
+                "5. 你的响应必须是严格的 JSON 格式，不要包含任何 Markdown 代码块标签。",
+                f"### JSON Schema:\n{schema_str}"
             ],
-            output_schema=ClarificationResult,
             markdown=False
         )
 
@@ -45,7 +47,23 @@ class IntentClarifier:
         try:
             # 采用强结构的响应模型
             response = await self.agent.arun(prompt)
-            return response.content
+            raw_data = response.content if hasattr(response, "content") else response
+            # 尝试解析 JSON
+            from app.services.agent.schemas.plan import JsonFixer
+            import re
+            
+            if isinstance(raw_data, ClarificationResult):
+                return raw_data
+                
+            text = str(raw_data)
+            # 简单提取 JSON
+            match = re.search(r"\{.*\}", text, re.DOTALL)
+            if match:
+                text = match.group(0)
+            
+            cleaned = JsonFixer.clean(text)
+            data = json.loads(cleaned)
+            return ClarificationResult.model_validate(data)
         except Exception as e:
             # 托底策略：如果澄清器自身发生异常，降级为“放行”，由下游引擎自行处理
             return ClarificationResult(

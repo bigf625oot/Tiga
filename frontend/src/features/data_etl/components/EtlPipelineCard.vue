@@ -1,96 +1,168 @@
 <template>
   <Card
-    class="group relative overflow-hidden transition-all duration-300 cursor-pointer flex flex-col h-full min-h-[190px]"
-    :class="selected ? 'border-primary shadow-md bg-primary/5 ring-1 ring-primary' : 'border-muted hover:shadow-lg hover:border-primary/40 bg-gradient-to-br from-card to-muted/10 hover:-translate-y-1'"
+    class="group relative flex flex-col h-full min-h-[200px] overflow-hidden transition-all duration-200"
+    :class="[
+      selected ? 'border-primary ring-1 ring-primary shadow-sm bg-primary/5' : 'border-border hover:border-primary/50 hover:shadow-md bg-card',
+      'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+    ]"
     role="button"
     tabindex="0"
+    aria-label="编辑数据流"
     @click="$emit('edit')"
     @keydown.enter.prevent="$emit('edit')"
     @keydown.space.prevent="$emit('edit')"
   >
-    <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full -mr-8 -mt-8 transition-opacity opacity-40 group-hover:opacity-80"></div>
+    <!-- 头部：包含复选框、状态标签和操作菜单 -->
+    <div class="flex items-center justify-between p-4 pb-2 relative z-10">
+      <div class="flex items-center gap-3" @click.stop>
+        <Checkbox 
+          :checked="selected" 
+          @update:checked="$emit('toggleSelect')" 
+          aria-label="选择数据流" 
+          class="transition-colors"
+        />
+        <Badge :variant="statusBadgeVariant" class="px-2 py-0.5 text-xs font-medium flex items-center gap-1.5">
+          <span class="relative flex h-2 w-2" v-if="isRunning">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
+          </span>
+          <span class="relative flex h-2 w-2 rounded-full bg-current opacity-70" v-else></span>
+          {{ statusLabel }}
+        </Badge>
+      </div>
 
-    <div class="absolute left-3 top-3 z-20" @click.stop>
-      <Checkbox :checked="selected" @update:checked="$emit('toggleSelect')" aria-label="选择" />
+      <!-- 操作菜单 -->
+      <div class="flex items-center" @click.stop>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground opacity-60 group-hover:opacity-100 transition-opacity">
+              <MoreVertical class="h-4 w-4" />
+              <span class="sr-only">打开菜单</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-40">
+            <DropdownMenuItem @click="$emit('edit')">
+              <Pencil class="mr-2 h-4 w-4" />
+              <span>编辑</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="$emit('duplicate')">
+              <Copy class="mr-2 h-4 w-4" />
+              <span>复制</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem class="text-destructive focus:text-destructive focus:bg-destructive/10" @click="$emit('delete')">
+              <Trash2 class="mr-2 h-4 w-4" />
+              <span>删除</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
 
-    <div class="absolute right-2 top-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted/80">
-            <MoreVertical class="h-4 w-4 text-muted-foreground" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem class="cursor-pointer" @click="$emit('edit')">
-            <Pencil class="mr-2 h-4 w-4" /> 编辑
-          </DropdownMenuItem>
-          <DropdownMenuItem class="cursor-pointer" @click="$emit('duplicate')">
-            <Copy class="mr-2 h-4 w-4" /> 复制
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem class="text-destructive focus:text-destructive cursor-pointer" @click="$emit('delete')">
-            <Trash2 class="mr-2 h-4 w-4" /> 删除
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-
-    <CardHeader class="p-5 pb-3 space-y-0 relative z-10">
-      <div class="flex items-start gap-4 w-full overflow-hidden">
-        <div class="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden shadow-sm text-white font-semibold text-sm" :class="statusColorClass">
-          {{ initial }}
+    <!-- 主体内容 -->
+    <div class="px-4 py-2 flex-1 flex flex-col gap-2 relative z-10">
+      <div class="flex items-start gap-3">
+        <div 
+          class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 shadow-sm"
+          :class="statusColorClass"
+        >
+          <Workflow class="h-5 w-5 text-white/90" v-if="!initial || initial === '—'" />
+          <span v-else class="text-white font-semibold text-sm">{{ initial }}</span>
         </div>
-        <div class="space-y-1.5 flex-1 min-w-0">
-          <CardTitle class="text-base font-bold leading-tight tracking-tight truncate" :title="pipeline?.name">
-            {{ pipeline?.name }}
-          </CardTitle>
-          <div class="flex items-center gap-2">
-            <Badge :variant="statusBadgeVariant" class="capitalize text-[10px] font-medium px-1.5 py-0 h-5 rounded-md">
-              {{ statusLabel }}
-            </Badge>
-            <span class="text-[10px] text-muted-foreground/60 font-mono truncate max-w-[160px]">
-              ID: {{ String(pipeline?.id) }}
-            </span>
+        <div class="space-y-1 min-w-0 flex-1">
+          <TooltipProvider :delay-duration="300">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <h3 class="font-semibold text-base leading-tight truncate text-foreground group-hover:text-primary transition-colors">
+                  {{ pipeline?.name || '未命名数据流' }}
+                </h3>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{{ pipeline?.name || '未命名数据流' }}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <p class="text-xs text-muted-foreground font-mono truncate">
+            ID: {{ String(pipeline?.id || '—') }}
+          </p>
+        </div>
+      </div>
+
+      <!-- 统计信息网格 -->
+      <div class="grid grid-cols-2 gap-4 mt-4 bg-muted/30 rounded-lg p-3 border border-border/50">
+        <div class="space-y-1">
+          <div class="flex items-center text-xs text-muted-foreground gap-1">
+            <Clock class="h-3 w-3" />
+            <span>最近运行</span>
+          </div>
+          <div class="text-sm font-medium text-foreground/90 truncate" :title="lastRunText">
+            {{ lastRunText }}
+          </div>
+        </div>
+        <div class="space-y-1">
+          <div class="flex items-center text-xs text-muted-foreground gap-1">
+            <Calendar class="h-3 w-3" />
+            <span>创建时间</span>
+          </div>
+          <div class="text-sm font-medium text-foreground/90 truncate" :title="createdAtText">
+            {{ createdAtText }}
           </div>
         </div>
       </div>
-    </CardHeader>
+    </div>
 
-    <CardContent class="p-5 pt-2 pb-4 min-h-[5rem] relative z-10">
-      <div class="grid grid-cols-2 gap-3 text-xs">
-        <div class="text-muted-foreground">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground/60">最近运行</div>
-          <div class="text-foreground/80 truncate">{{ lastRunText }}</div>
-        </div>
-        <div class="text-muted-foreground">
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground/60">创建时间</div>
-          <div class="text-foreground/80 truncate">{{ createdAtText }}</div>
-        </div>
+    <!-- 底部操作栏 -->
+    <div class="px-4 py-3 mt-auto border-t border-border/40 bg-muted/10 flex items-center justify-between relative z-10">
+      <div class="flex items-center" @click.stop>
+        <TooltipProvider :delay-duration="200">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button 
+                :variant="isRunning ? 'secondary' : 'default'" 
+                size="sm" 
+                class="h-8 gap-1.5 shadow-sm" 
+                :class="isRunning ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20' : 'bg-primary text-primary-foreground hover:bg-primary/90'"
+                @click="$emit('toggleStatus')"
+              >
+                <Pause v-if="isRunning" class="h-3.5 w-3.5" />
+                <Play v-else class="h-3.5 w-3.5" />
+                <span class="text-xs">{{ isRunning ? '暂停运行' : '启动数据流' }}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{{ isRunning ? '暂停当前数据流' : '立即启动数据流' }}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
-    </CardContent>
-
-    <CardFooter class="p-5 pt-0 flex items-center justify-between mt-auto border-t border-border/30 pt-3 relative z-10">
-      <Button variant="ghost" size="icon" class="h-8 w-8" :title="isRunning ? '暂停' : '启动'" @click.stop="$emit('toggleStatus')">
-        <Pause v-if="isRunning" class="h-4 w-4 text-amber-500" />
-        <Play v-else class="h-4 w-4 text-green-500" />
-      </Button>
-      <span class="text-[10px] text-muted-foreground/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+      
+      <span class="text-xs text-muted-foreground/60 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
         {{ sortHint }}
       </span>
-    </CardFooter>
+    </div>
   </Card>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PropType } from 'vue'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { MoreVertical, Pencil, Copy, Trash2, Play, Pause } from 'lucide-vue-next'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { 
+  MoreVertical, 
+  Pencil, 
+  Copy, 
+  Trash2, 
+  Play, 
+  Pause,
+  Workflow,
+  Clock,
+  Calendar
+} from 'lucide-vue-next'
 
 const props = defineProps({
   pipeline: { type: Object, required: true },

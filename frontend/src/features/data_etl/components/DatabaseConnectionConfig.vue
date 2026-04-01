@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, watch, onMounted } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Loader2, HelpCircle, CheckCircle2, XCircle, Database, Server, Settings2 } from 'lucide-vue-next';
+import { dataSourceApi } from '@/features/data_etl/api';
 
 const { toast } = useToast();
 
@@ -63,6 +64,7 @@ const graphDB = reactive<DBConfig>({
   allowed_tables: '',
   sensitive_fields: ''
 });
+const graphDBId = ref<number | null>(null);
 
 const vectorDB = reactive<DBConfig>({
   type: 'milvus',
@@ -78,11 +80,165 @@ const vectorDB = reactive<DBConfig>({
   allowed_tables: '',
   sensitive_fields: ''
 });
+const vectorDBId = ref<number | null>(null);
+
+const isSaving = ref(false);
+
+const loadConfigurations = async () => {
+  try {
+    const dataSources = await dataSourceApi.list();
+    
+    // Find Neo4j config
+    const neo4jConfig = dataSources.find(ds => ds.type === 'neo4j' || ds.type === 'janusgraph' || ds.type === 'nebula');
+    if (neo4jConfig) {
+      graphDBId.value = neo4jConfig.id;
+      graphDB.type = neo4jConfig.type;
+      graphDB.host = neo4jConfig.host || 'localhost';
+      graphDB.port = neo4jConfig.port || 7687;
+      graphDB.dbName = neo4jConfig.database || 'neo4j';
+      graphDB.user = neo4jConfig.username || 'neo4j';
+      
+      if (neo4jConfig.config) {
+        graphDB.mode = neo4jConfig.config.mode || 'standalone';
+        graphDB.clusterNodes = neo4jConfig.config.clusterNodes || '';
+        graphDB.ssl = neo4jConfig.config.ssl || false;
+        graphDB.timeout = neo4jConfig.config.timeout || 30;
+        graphDB.allowed_tables = neo4jConfig.config.allowed_tables || '';
+        graphDB.sensitive_fields = neo4jConfig.config.sensitive_fields || '';
+      }
+      
+      // 自动测试连接状态
+      setTimeout(async () => {
+        try {
+          const metadata = await dataSourceApi.fetchMetadata(neo4jConfig.id);
+          if (Array.isArray(metadata)) {
+            graphConnected.value = true;
+            const nodeLabels = metadata.filter(m => m.type === 'node_label');
+            graphStats.nodeCount = nodeLabels.reduce((acc, m) => acc + (m.schema_info?.count || 0), 0);
+            graphStats.relationshipCount = metadata.filter(m => m.type === 'relationship_type').reduce((acc, m) => acc + (m.schema_info?.count || 0), 0);
+            graphStats.entityTypes = nodeLabels.length;
+          }
+        } catch (e) {
+          graphConnected.value = false;
+        }
+      }, 500);
+    }
+
+    // Find Vector DB config
+    const vectorConfig = dataSources.find(ds => ds.type === 'milvus' || ds.type === 'pinecone' || ds.type === 'qdrant' || ds.type === 'weaviate');
+    if (vectorConfig) {
+      vectorDBId.value = vectorConfig.id;
+      vectorDB.type = vectorConfig.type;
+      vectorDB.host = vectorConfig.host || 'localhost';
+      vectorDB.port = vectorConfig.port || 19530;
+      vectorDB.dbName = vectorConfig.database || 'default';
+      vectorDB.user = vectorConfig.username || 'root';
+      
+      if (vectorConfig.config) {
+        vectorDB.mode = vectorConfig.config.mode || 'standalone';
+        vectorDB.clusterNodes = vectorConfig.config.clusterNodes || '';
+        vectorDB.ssl = vectorConfig.config.ssl || false;
+        vectorDB.timeout = vectorConfig.config.timeout || 30;
+        vectorDB.allowed_tables = vectorConfig.config.allowed_tables || '';
+        vectorDB.sensitive_fields = vectorConfig.config.sensitive_fields || '';
+      }
+      
+      // 自动测试连接状态
+      setTimeout(async () => {
+        try {
+          const metadata = await dataSourceApi.fetchMetadata(vectorConfig.id);
+          if (Array.isArray(metadata)) {
+            vectorConnected.value = true;
+          }
+        } catch (e) {
+          vectorConnected.value = false;
+        }
+      }, 500);
+    }
+  } catch (e) {
+    console.error('Failed to load database configurations', e);
+  }
+};
+
+onMounted(() => {
+  loadConfigurations();
+});
+
+const saveConfiguration = async () => {
+  if (!activeDrawer.value) return;
+
+  const isGraph = activeDrawer.value === 'graph';
+  const config = isGraph ? graphDB : vectorDB;
+  const currentId = isGraph ? graphDBId.value : vectorDBId.value;
+  const dbType = isGraph ? '图数据库' : '向量数据库';
+
+  const error = validateForm(config);
+  if (error) {
+    toast({
+      title: '参数错误',
+      description: error,
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  isSaving.value = true;
+  
+  const payload = {
+    name: `系统${dbType} (${config.type})`,
+    type: config.type,
+    host: config.host,
+    port: config.port,
+    username: config.user,
+    password: config.password,
+    database: config.dbName,
+    config: {
+      mode: config.mode,
+      clusterNodes: config.clusterNodes,
+      ssl: config.ssl,
+      timeout: config.timeout,
+      allowed_tables: config.allowed_tables,
+      sensitive_fields: config.sensitive_fields
+    }
+  };
+
+  try {
+    if (currentId) {
+      await dataSourceApi.update(currentId, payload);
+    } else {
+      const result = await dataSourceApi.create(payload);
+      if (isGraph) {
+        graphDBId.value = result.id;
+      } else {
+        vectorDBId.value = result.id;
+      }
+    }
+    toast({
+      title: '保存成功',
+      description: `${dbType}配置已保存`,
+    });
+    closeDrawer();
+  } catch (e: any) {
+    toast({
+      title: '保存失败',
+      description: e.message || '未知错误',
+      variant: 'destructive',
+    });
+  } finally {
+    isSaving.value = false;
+  }
+};
 
 const isGraphTesting = ref(false);
 const isVectorTesting = ref(false);
-const graphConnected = ref(true);
+const graphConnected = ref(false);
 const vectorConnected = ref(false);
+
+const graphStats = reactive({
+  nodeCount: null as number | null,
+  relationshipCount: null as number | null,
+  entityTypes: null as number | null
+});
 
 const activeDrawer = ref<'graph' | 'vector' | null>(null);
 
@@ -122,26 +278,57 @@ const testConnection = async (type: 'graph' | 'vector') => {
 
   loadingRef.value = true;
 
-  // Mock API call
-  try {
-    await new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate random success/failure
-        Math.random() > 0.3 ? resolve(true) : reject(new Error('连接超时'));
-      }, 1500);
-    });
+  if (type === 'graph') {
+    graphStats.nodeCount = null;
+    graphStats.relationshipCount = null;
+    graphStats.entityTypes = null;
+  }
 
-    connectedRef.value = true;
-    toast({
-      title: '连接成功',
-      description: `已成功连接到 ${config.type} 数据库`,
-      class: 'bg-green-500 text-white border-green-600',
-    });
-  } catch (err) {
+  // Call real API
+  try {
+    const payload = {
+      name: `系统${type === 'graph' ? '图数据库' : '向量数据库'} (${config.type})`,
+      type: config.type,
+      host: config.host,
+      port: config.port,
+      username: config.user,
+      password: config.password,
+      database: config.dbName,
+      config: {
+        mode: config.mode,
+        clusterNodes: config.clusterNodes,
+        ssl: config.ssl,
+        timeout: config.timeout
+      }
+    };
+    
+    const result = await dataSourceApi.testConnection(payload);
+    
+    if (result.success) {
+      connectedRef.value = true;
+      if (type === 'graph' && result.details) {
+        graphStats.nodeCount = result.details.node_count;
+        graphStats.relationshipCount = result.details.relationship_count;
+        graphStats.entityTypes = result.details.entity_types || 0;
+      }
+      toast({
+        title: '连接成功',
+        description: `已成功连接到 ${config.type} 数据库`,
+        class: 'bg-green-500 text-white border-green-600',
+      });
+    } else {
+      connectedRef.value = false;
+      toast({
+        title: '连接失败',
+        description: result.message || '配置信息有误或网络不通',
+        variant: 'destructive',
+      });
+    }
+  } catch (err: any) {
     connectedRef.value = false;
     toast({
-      title: '连接失败',
-      description: err instanceof Error ? err.message : '未知错误',
+      title: '连接异常',
+      description: err.message || '未知错误',
       variant: 'destructive',
     });
   } finally {
@@ -154,7 +341,7 @@ const testConnection = async (type: 'graph' | 'vector') => {
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start">
     <!-- Graph Database Card -->
     <Card 
-      class="group relative hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between h-[220px] bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer"
+      class="group relative hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between min-h-[220px] bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer"
       @click="openDrawer('graph')"
     >
       <!-- 连接状态顶部色条 -->
@@ -201,6 +388,7 @@ const testConnection = async (type: 'graph' | 'vector') => {
           </div>
         </div>
 
+        <!-- Status Indicator -->
         <div class="flex items-center justify-between mt-auto pt-1">
           <div class="flex items-center gap-2">
             <div class="relative flex h-2.5 w-2.5">
@@ -212,12 +400,28 @@ const testConnection = async (type: 'graph' | 'vector') => {
             </span>
           </div>
         </div>
+
+        <!-- Stats (Visible when connected) -->
+        <div v-if="graphConnected" class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">节点数</div>
+            <div class="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">{{ graphStats.nodeCount?.toLocaleString() || 0 }}</div>
+          </div>
+          <div class="border-l border-r border-slate-100 dark:border-slate-800">
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">关系数</div>
+            <div class="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">{{ graphStats.relationshipCount?.toLocaleString() || 0 }}</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">实体类数</div>
+            <div class="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400 truncate px-1" :title="graphStats.entityTypes?.toLocaleString() || '0'">{{ graphStats.entityTypes?.toLocaleString() || 0 }}</div>
+          </div>
+        </div>
       </CardContent>
     </Card>
 
     <!-- Vector Database Card -->
     <Card 
-      class="group relative hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between h-[220px] bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer"
+      class="group relative hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between min-h-[220px] bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer"
       @click="openDrawer('vector')"
     >
       <div class="absolute top-0 left-0 right-0 h-1.5" :class="vectorConnected ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'"></div>
@@ -279,19 +483,22 @@ const testConnection = async (type: 'graph' | 'vector') => {
 
     <!-- Right Drawer for Configuration -->
     <Sheet :open="activeDrawer !== null" @update:open="(val) => !val && closeDrawer()">
-      <SheetContent class="sm:max-w-[500px] dark:bg-slate-950 dark:border-slate-800 overflow-y-auto custom-scrollbar">
-        <SheetHeader class="mb-6">
-          <SheetTitle class="dark:text-slate-50">
-            {{ activeDrawer === 'graph' ? '图数据库配置' : '向量数据库配置' }}
-          </SheetTitle>
-          <SheetDescription class="dark:text-slate-400">
-            {{ activeDrawer === 'graph' ? '配置 Neo4j 或 JanusGraph 连接信息' : '配置 Milvus、Pinecone 或 Qdrant 连接信息' }}
-          </SheetDescription>
-        </SheetHeader>
+      <SheetContent class="sm:max-w-[500px] dark:bg-slate-950 dark:border-slate-800 flex flex-col p-0">
+        <div class="p-6 pb-0 shrink-0">
+          <SheetHeader class="mb-6">
+            <SheetTitle class="dark:text-slate-50">
+              {{ activeDrawer === 'graph' ? '图数据库配置' : '向量数据库配置' }}
+            </SheetTitle>
+            <SheetDescription class="dark:text-slate-400">
+              {{ activeDrawer === 'graph' ? '配置 Neo4j 或 JanusGraph 连接信息' : '配置 Milvus、Pinecone 或 Qdrant 连接信息' }}
+            </SheetDescription>
+          </SheetHeader>
+        </div>
 
-        <!-- Graph DB Form -->
-        <div v-if="activeDrawer === 'graph'" class="space-y-6 pb-20">
-          <div class="space-y-3">
+        <div class="flex-1 overflow-y-auto p-6 pt-0 custom-scrollbar">
+          <!-- Graph DB Form -->
+          <div v-if="activeDrawer === 'graph'" class="space-y-6">
+            <div class="space-y-3">
             <Label class="text-sm font-medium dark:text-slate-200">数据库类型</Label>
             <Select v-model="graphDB.type">
               <SelectTrigger class="w-full dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200">
@@ -381,7 +588,7 @@ const testConnection = async (type: 'graph' | 'vector') => {
         </div>
 
         <!-- Vector DB Form -->
-        <div v-else-if="activeDrawer === 'vector'" class="space-y-6 pb-20">
+        <div v-else-if="activeDrawer === 'vector'" class="space-y-6">
           <div class="space-y-3">
             <Label class="text-sm font-medium dark:text-slate-200">数据库类型</Label>
             <Select v-model="vectorDB.type">
@@ -472,7 +679,9 @@ const testConnection = async (type: 'graph' | 'vector') => {
           </div>
         </div>
 
-        <SheetFooter class="absolute bottom-0 left-0 right-0 p-6 bg-white dark:bg-slate-950 border-t dark:border-slate-800 flex flex-row gap-3">
+        </div>
+
+        <SheetFooter class="p-6 bg-white dark:bg-slate-950 border-t dark:border-slate-800 flex flex-row gap-3 mt-auto shrink-0">
           <Button 
             variant="outline" 
             class="flex-1"
@@ -482,7 +691,14 @@ const testConnection = async (type: 'graph' | 'vector') => {
             <Loader2 v-if="activeDrawer === 'graph' ? isGraphTesting : isVectorTesting" class="mr-2 h-4 w-4 animate-spin" />
             测试连接
           </Button>
-          <Button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white" @click="closeDrawer">保存配置</Button>
+          <Button 
+            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white" 
+            @click="saveConfiguration"
+            :disabled="isSaving"
+          >
+            <Loader2 v-if="isSaving" class="mr-2 h-4 w-4 animate-spin" />
+            保存配置
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

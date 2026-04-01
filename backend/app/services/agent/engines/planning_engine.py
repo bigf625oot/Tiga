@@ -214,19 +214,20 @@ class PlanningEngine:
             
         model_instance = ModelFactory.create_model(self.llm_model)
         
+        schema_str = json.dumps(TaskPlan.model_json_schema(), ensure_ascii=False)
         agent = Agent(
             name="Master-Architect",
             model=model_instance,
             instructions=[
                 "你是一位资深架构师，负责基于第一性原理将复杂目标拆解为执行任务流 (TaskPlan)。",
-                "【强制要求】：必须输出符合 JSON Schema 的纯 JSON 结构，拒绝任何 Markdown 代码块标签。",
+                "【强制要求】：必须输出符合以下 JSON Schema 的纯 JSON 结构，拒绝任何 Markdown 代码块标签。",
+                f"### JSON Schema:\n{schema_str}",
                 "【工具原则】：从 Catalog 中精确挑选工具 (tool_name)。",
                 "【依赖原则】：任务依赖必须严格构成有向无环图 (DAG)，依赖的前置任务必须真实存在且不能成环。",
                 "Important Rules for `executor_role`:\n- Based on the tools required for a task, you MUST assign a reasonable and descriptive `executor_role` (e.g. 'websearch', 'data_analyst', 'coder', 'researcher').\n- This role helps the downstream system understand the context of the task.",
                 f"### 可用工具库 (Catalog)：\n{await self._filter_capabilities(user_goal)}"
             ],
-            # 采用 Agent 的强结构化输出能力
-            output_schema=TaskPlan,
+            # 取消使用 Agent 的强结构化输出能力，避免 agno 内部解析失败导致内容丢失，转而依赖 Tiga 自研解析器
             retries=1 # 将重试逻辑提升至外层进行带上下文的深度重试
         )
 

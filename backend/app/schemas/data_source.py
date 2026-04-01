@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 
 from pydantic import BaseModel
 
@@ -62,3 +62,4 @@ class DataSourceTestResult(BaseModel):
     success: bool
     message: str
     error_type: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None

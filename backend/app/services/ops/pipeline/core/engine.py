@@ -2,6 +2,7 @@ import multiprocessing
 import time
 from typing import Dict, Any, Union
 import pathway as pw
+import logging
 from app.services.ops.pipeline.core.config import PathwayJobConfig
 from app.services.ops.pipeline.core.models import DAGPipeline
 from app.services.ops.pipeline.connectors.source import get_source
@@ -11,6 +12,22 @@ from app.services.ops.pipeline.operators.cleaning import apply_operator
 from app.services.ops.pipeline.core.parser import DAGParser
 from app.services.ops.pipeline.core.exceptions import ConfigurationError, PathwayException
 from app.core.logger import logger
+from app.services.ops.pipeline.core.runtime import allocate_monitoring_port
+
+
+def _setup_job_file_logging(settings: Dict[str, Any] | None) -> None:
+    log_file = (settings or {}).get("log_file")
+    if not log_file:
+        return
+    try:
+        root = logging.getLogger()
+        handler = logging.FileHandler(log_file, encoding="utf-8")
+        handler.setLevel(root.level or logging.INFO)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
+    except Exception:
+        return
 
 def _run_dag(pipeline: DAGPipeline):
     """Run a DAG-based pipeline."""
@@ -18,11 +35,14 @@ def _run_dag(pipeline: DAGPipeline):
     setup_logging()
     
     try:
+        _setup_job_file_logging(pipeline.settings)
+        logger.info(f"Pathway DAG job starting: {pipeline.name}")
         parser = DAGParser()
         parser.parse(pipeline)
         
-        monitoring_port = pipeline.settings.get("monitoring_port", 8081)
-        pw.run(monitoring_dashboard_address=f"0.0.0.0:{monitoring_port}")
+        with_http_server = bool((pipeline.settings or {}).get("with_http_server", True))
+        logger.info(f"Pathway DAG job running: {pipeline.name} (with_http_server={with_http_server})")
+        pw.run(with_http_server=with_http_server)
     except Exception as e:
         logger.error(f"Pathway DAG job {pipeline.name} failed: {e}", exc_info=True)
 
@@ -33,6 +53,8 @@ def _run_job(config: PathwayJobConfig):
     setup_logging()
     
     try:
+        _setup_job_file_logging(config.settings)
+        logger.info(f"Pathway job starting: {config.name}")
         # 1. Sources
         tables = []
         for source_conf in config.sources:
@@ -61,8 +83,9 @@ def _run_job(config: PathwayJobConfig):
             sink.write(current_table, sink_conf.config)
 
         # 4. Run
-        monitoring_port = config.settings.get("monitoring_port", 8081)
-        pw.run(monitoring_dashboard_address=f"0.0.0.0:{monitoring_port}")
+        with_http_server = bool((config.settings or {}).get("with_http_server", True))
+        logger.info(f"Pathway job running: {config.name} (with_http_server={with_http_server})")
+        pw.run(with_http_server=with_http_server)
 
     except Exception as e:
         logger.error(f"Pathway job {config.name} failed: {e}", exc_info=True)
@@ -73,7 +96,7 @@ class PathwayEngine:
     def __init__(self):
         self.active_jobs: Dict[str, multiprocessing.Process] = {}
 
-    def start_job(self, job_config: Union[PathwayJobConfig, DAGPipeline]):
+    def start_job(self, job_config: Union[PathwayJobConfig, DAGPipeline]) -> int:
         """Start a pathway job in a separate process."""
         if job_config.name in self.active_jobs:
             if self.active_jobs[job_config.name].is_alive():
@@ -82,17 +105,27 @@ class PathwayEngine:
                 # Cleanup dead process
                 del self.active_jobs[job_config.name]
 
-        target_func = _run_dag if isinstance(job_config, DAGPipeline) else _run_job
+        if isinstance(job_config, DAGPipeline):
+            settings = dict(job_config.settings or {})
+            settings.setdefault("monitoring_port", allocate_monitoring_port())
+            job_config = job_config.model_copy(update={"settings": settings})
+            target_func = _run_dag
+        else:
+            settings = dict(job_config.settings or {})
+            settings.setdefault("monitoring_port", allocate_monitoring_port())
+            job_config = job_config.model_copy(update={"settings": settings})
+            target_func = _run_job
 
         process = multiprocessing.Process(
             target=target_func,
             args=(job_config,),
             name=f"pathway-{job_config.name}",
-            daemon=True
+            daemon=False
         )
         process.start()
         self.active_jobs[job_config.name] = process
         logger.info(f"Started Pathway job: {job_config.name} (PID: {process.pid})")
+        return int(process.pid or 0)
 
     def stop_job(self, job_name: str):
         """Stop a running pathway job."""
@@ -114,33 +147,16 @@ class PathwayEngine:
             return "running" if process.is_alive() else "stopped"
         return "not_found"
 
+    def get_job_exitcode(self, job_name: str) -> int | None:
+        if job_name in self.active_jobs:
+            return self.active_jobs[job_name].exitcode
+        return None
+
     def get_job_metrics(self, job_name: str) -> Dict[str, Any]:
-        """
-        Get runtime metrics for a running job.
-        For now, this returns simulated data for visualization purposes.
-        In a real scenario, this would query the Pathway monitoring endpoint.
-        """
-        import random
-        
         status = self.get_job_status(job_name)
         if status != "running":
             return {}
-            
-        # Simulate metrics for demonstration
-        # Returns a dict keyed by node_id (if we knew them) or just generic metrics
-        # Since engine doesn't track node IDs directly, we'll return a generic structure
-        # that the API layer can map to actual node IDs.
-        
-        # However, to map to specific nodes, the caller (API) needs to provide node IDs.
-        # So we'll return a "generator" function or just raw data that the API can distribute.
-        
-        # Let's return a simple randomizer helper that the API can use
-        return {
-            "timestamp": time.time(),
-            "status": "running",
-            "global_eps": random.randint(50, 500),
-            "global_latency": random.uniform(5.0, 50.0)
-        }
+        return {}
 
 
 # Singleton instance

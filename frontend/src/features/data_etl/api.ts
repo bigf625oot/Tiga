@@ -218,6 +218,7 @@ export interface DataSourceTestResult {
   success: boolean;
   message: string;
   error_type?: string;
+  details?: Record<string, any>;
 }
 
 export interface ContextManagementConfig {

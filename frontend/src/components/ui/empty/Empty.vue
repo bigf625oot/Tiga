@@ -23,10 +23,7 @@ const delegatedProps = computed(() => {
 <template>
   <div :class="cn('flex h-full min-h-[350px] flex-col items-center justify-center space-y-1 p-8 text-center animate-in fade-in-50', props.class)">
     <div class="flex items-center justify-center mb-4 text-muted-foreground/20">
-      <slot name="image">
-        <component :is="image" v-if="image" :class="cn('h-16 w-16', imageClass)" />
-        <Inbox v-else :class="cn('h-16 w-16', imageClass)" />
-      </slot>
+      <img src="/Placeholder/null.svg" alt="empty" class="h-8 w-8" />
     </div>
     <h3 v-if="title" class="text-lg font-medium tracking-tight text-foreground">
       {{ title }}

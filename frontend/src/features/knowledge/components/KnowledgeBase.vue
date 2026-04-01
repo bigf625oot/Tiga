@@ -60,7 +60,7 @@
                         <Share2 class="w-3.5 h-3.5" />
                         全局图谱
                     </Button>
-                    <TooltipProvider v-if="activeTab === 'personal'">
+                    <!-- <TooltipProvider v-if="activeTab === 'personal'">
                         <Tooltip>
                             <TooltipTrigger as-child>
                                 <Button variant="ghost" size="icon" class="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" @click="confirmCleanVector" :disabled="cleaningVector">
@@ -71,7 +71,7 @@
                                 <p>清空向量库</p>
                             </TooltipContent>
                         </Tooltip>
-                    </TooltipProvider>
+                    </TooltipProvider> -->
                 </div>
             </div>
         </div>

@@ -18,7 +18,8 @@ Tiga/
 │   │   │   ├── agent/    # 智能体核心 (Planner, Skills, Tools)
 │   │   │   ├── graph/    # 图谱关系修复与管理
 │   │   │   ├── openclaw/ # 分布式任务节点与网关
-│   │   │   ├── pathway/  # 实时数据流 ETL 引擎
+│   │   │   ├── ops/pipeline/  # Pathway 实时数据流 ETL 引擎
+│   │   │   ├── platform/task_engine/ # 统一任务引擎与 Adapter (Celery, Pathway 等)
 │   │   │   ├── rag/      # RAG 引擎 (LightRAG, GraphitiRAG)
 │   │   │   └── sandbox/  # 代码沙箱 (E2B, Codebox)
 │   └── ...
@@ -49,6 +50,7 @@ Tiga/
 | **图谱治理**   | **Relation Fix**：可视化的知识图谱关系检测与修复工具，支持实体属性编辑、关系增删改、操作回滚                   |
 | **数据智能**   | Vanna Text-to-SQL；Smart Data Query；自动图表生成与指标管理                           |
 | **实时流处理**  | **Pathway** 引擎集成，支持实时数据连接、清洗、结构化与 AI 算子编排                                |
+| **统一任务引擎** | **TaskEngineService**：抽象底层异步、执行流与 Celery 分布式调度，提供一致的任务模板(TaskTemplate)与运行追踪(TaskRun) |
 | **分布式执行**  | **OpenClaw**：分布式任务节点管理，支持负载均衡、心跳监测与任务分发                                  |
 | **安全沙箱**   | 集成 E2B 与 Codebox，支持安全执行 Python/Node.js 代码与文件操作                           |
 | **MCP 支持** | 全面支持 Model Context Protocol，可作为 MCP Client 连接多种 MCP Server               |
@@ -97,6 +99,14 @@ Tiga/
     *   **严格防幻觉机制**：注入强制性 Prompt 边界，生成带有 `[n]` 格式的参考来源索引，支持内容级别的精确溯源。
     *   **灵活的基础设施**：默认内置 LanceDB + NetworkX（开箱即用），支持无缝切换至生产级的 Qdrant/Milvus + Neo4j。
 *   **应用场景**：超长财报/法务文档解析、复杂实体关系（如企业股权、人物图谱）推理问答、企业内部制度精准查询。
+
+### 6. ⚙️ 统一任务调度 (Task Engine)
+抽象了底层运行执行逻辑，提供一致的“任务模板 (TaskTemplate)”到“运行实例 (TaskRun)”的闭环流转。
+*   **优势**：
+    *   **统一入口**：统一创建、追踪与销毁（Progress/WebSocket），无论底层是什么执行器，前端视角保持一致。
+    *   **引擎适配器**：内置多套 Adapter，按需分发到进程内协程（AsyncTasks）、编排引擎（ExecutionTask）、流处理进程（Pathway）。
+    *   **分布式扩展**：原生集成 Celery 适配器，支持横向扩展高并发耗时任务。
+*   **应用场景**：数据抽取清洗后台执行、复杂 LLM Workflow 编排调度、耗时报告生成任务等。
 
 ***
 
@@ -150,6 +160,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # 安装Redis
 docker run -d --name tiga-redis -p 6379:6379 redis:alpine
+
+# 启动 Celery Worker（可选，用于执行 task_type="CELERY" 的分布式任务）
+# celery -A app.core.celery_app worker --loglevel=info
 ```
 
 API 文档：`http://localhost:8000/docs`

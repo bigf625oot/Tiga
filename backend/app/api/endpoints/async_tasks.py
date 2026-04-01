@@ -16,8 +16,13 @@ from app.schemas.async_task import (
 from app.core.task_progress import task_progress
 from app.core.websocket_manager import ws_manager
 
+# Deprecated alias route
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# TODO(Deprecation): This module is kept for backward compatibility with frontend.
+# Please migrate to `/api/v1/tasks` (implemented in task_runs.py).
+logger.warning("The /api/v1/async/tasks endpoints are deprecated and will be removed in a future version. Please use /api/v1/tasks instead.")
 
 
 @router.post("/", response_model=AsyncTaskCreateResponse, status_code=202)

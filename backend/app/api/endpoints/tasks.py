@@ -1,18 +1,13 @@
 """
-Tasks Endpoint
-前端接口：
-- HTTP POST `/tasks/` 接口作用：创建新任务
-- HTTP GET `/tasks/{task_id}` 接口作用：获取指定任务详情
-前端功能：
-- 管理和配置任务
-- 支持任务的查询、创建和详情查看
-前端文件：
-- `app/frontend/src/pages/Tasks.vue`
+Execution Tasks Endpoint
+对外接口（当前挂载在 /api/v1/executions）：
+- HTTP POST `/executions/`：创建执行任务（ExecutionTask）
+- HTTP GET `/executions/{task_id}`：获取执行任务详情（含子任务）
 功能模块：
-- 任务管理
+- 执行编排引擎（任务拆分、子任务调度）
 """
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db, AsyncSessionLocal
 from app.schemas.task import TaskCreate, TaskResponse, SubTaskResponse
@@ -29,7 +24,6 @@ async def run_in_background(task_id: str, prompt: str):
 @router.post("/", response_model=TaskResponse)
 async def create_task(
     payload: TaskCreate, 
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     task = await crud_task.create(db, payload)

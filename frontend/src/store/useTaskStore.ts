@@ -11,8 +11,8 @@ export interface Task {
   step?: string;
 }
 
-const API_BASE = '/api/v1/async/tasks';
-const WS_BASE = `ws://${window.location.host}/api/v1/async/tasks/ws`;
+const API_BASE = '/api/v1/tasks';
+const WS_BASE = `ws://${window.location.host}/api/v1/tasks/ws`;
 
 export const useTaskStore = defineStore('taskStore', {
   state: () => ({
