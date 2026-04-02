@@ -67,6 +67,17 @@ class AgentFactory:
             # 避免将 model 强行注入导致与 model_instance 冲突
             kwargs.pop("model", None)
             
+            reasoning = getattr(config, "reasoning", False) or getattr(getattr(config, "llm", None), "reasoning", False)
+            
+            # [BugFix] Agno's ReasoningManager produces an extra assistant message.
+            # When combined with tool calls, this results in two consecutive assistant messages,
+            # which is rejected by Anthropic API (e.g. "Invalid consecutive assistant message").
+            # Disable Agno's manual reasoning loop for Anthropic/Claude models.
+            if llm_model.provider and "anthropic" in llm_model.provider.lower():
+                reasoning = False
+            elif llm_model.model_id and ("anthropic" in llm_model.model_id.lower() or "claude" in llm_model.model_id.lower()):
+                reasoning = False
+            
             agent_payload = {
                 "name": config.name,
                 "model": model_instance,
@@ -74,7 +85,7 @@ class AgentFactory:
                 "instructions": instructions or config.instructions or getattr(config, "system_prompt", []),
                 "tools": tools or getattr(config, "tools", []),
                 "markdown": kwargs.pop("markdown", True),
-                "reasoning": getattr(config, "reasoning", False) or getattr(getattr(config, "llm", None), "reasoning", False),
+                "reasoning": reasoning,
                 "monitoring": True,
                 "debug_mode": settings.DEBUG,
                 **kwargs,

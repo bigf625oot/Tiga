@@ -178,6 +178,7 @@ async def get_pipeline(pipeline_id: int, db: AsyncSession = Depends(get_db)):
             for node in nodes:
                 if "data" not in node:
                     node["data"] = {}
+                # Set specific node status, e.g., if we want to simulate some nodes failing
                 node["data"]["status"] = "running"
                 node["data"]["metrics"] = {
                     "eps": metrics.get("global_eps", 0),
@@ -186,7 +187,9 @@ async def get_pipeline(pipeline_id: int, db: AsyncSession = Depends(get_db)):
         else:
             for node in nodes:
                 if "data" in node:
-                    node["data"]["status"] = "idle"
+                    # Maintain last status if it failed
+                    if node["data"].get("status") != "error":
+                        node["data"]["status"] = "idle"
                     node["data"]["metrics"] = None
             
     return db_job

@@ -1,17 +1,18 @@
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
-# SQLite 单写者约束：QueuePool 多连接并发写必然触发 "database is locked"。
-# StaticPool 强制全进程共享单一底层连接，将所有写操作串行化，从根源消除锁竞争。
-# 代价：牺牲读并发（可接受，SQLite 非生产级数据库）。
+# SQLite 默认使用 QueuePool，配合 WAL 模式和 busy_timeout 即可很好地处理并发。
+# 不要使用 StaticPool，因为它会在多个异步请求间共享同一个连接，导致事务状态混乱（如 rollback 串线）。
 _engine_kwargs = {"echo": False}
 if "sqlite" in settings.database_url:
-    _engine_kwargs["connect_args"] = {"check_same_thread": False}
-    _engine_kwargs["poolclass"] = StaticPool
+    # 增加 timeout 防止 database is locked
+    _engine_kwargs["connect_args"] = {"check_same_thread": False, "timeout": 15}
+    # 使用默认的 QueuePool 或 NullPool，不要用 StaticPool
+    _engine_kwargs["poolclass"] = NullPool
 
 engine = create_async_engine(settings.database_url, **_engine_kwargs)
 
