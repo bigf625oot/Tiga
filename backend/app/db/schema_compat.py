@@ -46,6 +46,14 @@ def _extract_default_sql(column) -> str | None:
     return _sql_literal(arg)
 
 
+def _normalize_sqlite_default(col_type_sql: str, default_sql: str | None) -> str | None:
+    if default_sql is None:
+        return None
+    if col_type_sql.upper() == "JSON" and default_sql in ("{}", "[]"):
+        return "'" + default_sql + "'"
+    return default_sql
+
+
 async def ensure_sqlite_schema_compat(conn: AsyncConnection) -> None:
     try:
         result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
@@ -82,7 +90,7 @@ async def ensure_sqlite_schema_compat(conn: AsyncConnection) -> None:
             except Exception:
                 continue
 
-            default_sql = _extract_default_sql(column)
+            default_sql = _normalize_sqlite_default(col_type_sql, _extract_default_sql(column))
             parts = [
                 "ALTER TABLE",
                 _quote_ident(table.name),
@@ -101,3 +109,15 @@ async def ensure_sqlite_schema_compat(conn: AsyncConnection) -> None:
                 logger.info("SQLite schema compat applied: %s", stmt)
             except Exception as e:
                 logger.warning("SQLite schema compat failed: %s (%s)", stmt, e)
+
+    if "pathway_jobs" in existing_tables:
+        try:
+            await conn.execute(
+                text(
+                    "UPDATE pathway_jobs "
+                    "SET status = lower(status) "
+                    "WHERE status IN ('CREATED', 'RUNNING', 'STOPPED', 'FAILED')"
+                )
+            )
+        except Exception:
+            return

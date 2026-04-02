@@ -20,9 +20,26 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Handle Errors (401/403)
+// Response Interceptor: Handle Errors (401/403) and standard envelope
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const resData = response.data;
+    
+    // 统一处理 {code, data, message} 标准外壳
+    if (resData && typeof resData === 'object' && 'code' in resData) {
+      if (resData.code === 200 || resData.code === 0) {
+        // 剥离外壳，替换为真实数据
+        response.data = resData.data;
+      } else {
+        // 业务级错误
+        const errMsg = resData.message || resData.msg || '业务处理失败';
+        message.error(errMsg);
+        return Promise.reject(new Error(errMsg));
+      }
+    }
+    
+    return response;
+  },
   (error) => {
     const { response } = error;
     if (response) {

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_system_config import system_config as crud_system_config
+from app.crud.system_config import system_config as crud_system_config
 from app.db.session import get_db
 from app.schemas.system_config import ContextMemoryConfig, BasicSettingsConfig
 

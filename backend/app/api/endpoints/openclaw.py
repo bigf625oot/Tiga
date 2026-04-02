@@ -28,7 +28,7 @@ from app.schemas.openclaw import (
     OpenClawNode, OpenClawActivity, OpenClawStat, OpenClawPlugin,
     CreateTaskRequest, OpenClawHealth, OpenClawInfo, ToolsInvokeRequest
 )
-from app.services.openclaw.gateway.service import OpenClawService
+from app.services.ops.openclaw.gateway.service import OpenClawService
 from app.models.openclaw_task import OpenClawTask
 from app.models.node import Node
 from app.models.chat import ChatSession, ChatMessage

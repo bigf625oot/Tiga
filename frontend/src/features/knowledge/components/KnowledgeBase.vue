@@ -60,7 +60,7 @@
                         <Share2 class="w-3.5 h-3.5" />
                         全局图谱
                     </Button>
-                    <TooltipProvider v-if="activeTab === 'personal'">
+                    <!-- <TooltipProvider v-if="activeTab === 'personal'">
                         <Tooltip>
                             <TooltipTrigger as-child>
                                 <Button variant="ghost" size="icon" class="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shadow-sm transition-all hover:scale-105 active:scale-95 flex-shrink-0" @click="confirmCleanVector" :disabled="cleaningVector">
@@ -71,7 +71,7 @@
                                 <p>清空向量库</p>
                             </TooltipContent>
                         </Tooltip>
-                    </TooltipProvider>
+                    </TooltipProvider> -->
                 </div>
             </div>
         </div>
@@ -522,7 +522,7 @@ const fetchFiles = async (reset = false, silent = false) => {
         }
         
         // Check if we need to poll (if any file is in transient state)
-        const hasPending = files.value.some(f => ['上传中', '已上传', '解析中'].includes(f.status_text));
+        const hasPending = files.value.some(f => !['已完成', '失败'].includes(f.status_text));
         if (hasPending) {
             startPolling();
         } else {
@@ -723,12 +723,15 @@ const handleFileUpload = async (e) => {
     uploading.value = true;
     const formData = new FormData();
     formData.append('file', file);
+    
+    // 构建 Query 参数，解决与后端 FastAPI Query() 绑定的协议失配问题
+    const params = {};
     if (currentFolderId.value) {
-        formData.append('parent_id', currentFolderId.value);
+        params.parent_id = currentFolderId.value;
     }
     
     try {
-        await api.post('/knowledge/upload', formData);
+        await api.post('/knowledge/upload', formData, { params });
         message.success("上传成功，正在索引中...");
         fetchFiles(true);
     } catch (e) {

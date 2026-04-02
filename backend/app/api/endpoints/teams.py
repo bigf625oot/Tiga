@@ -18,7 +18,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
-from app.crud.crud_team import team as crud_team
+from app.crud.team import team as crud_team
 from app.schemas.team import TeamCreate, TeamResponse, TeamUpdate
 from datetime import datetime
 

@@ -15,7 +15,7 @@ Sandbox Endpoint
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-from app.services.sandbox.codebox import codebox_service
+from app.services.platform.sandbox.e2b_sandbox import sandbox_service
 import uuid
 import os
 import json
@@ -60,7 +60,8 @@ async def run_sandbox_code(request: GenerateRequest):
         
     # Execute
     # Pass session_id to allow persistent context
-    result = await codebox_service.execute(code_to_run, session_id=session_id)
+    result = await sandbox_service.execute(code_to_run, session_id=session_id)
+    result_dict = result.model_dump()
     
     # Log result to file as requested
     try:
@@ -69,14 +70,14 @@ async def run_sandbox_code(request: GenerateRequest):
         output_file = os.path.join(output_dir, f"{session_id}.json")
         
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
+            json.dump(result_dict, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logger.error(f"Failed to save result file: {e}")
         
     return SandboxResponse(
         session_id=session_id,
-        status=result["status"],
-        result=result
+        status=result.status,
+        result=result_dict
     )
 
 # --- WebSocket Streaming ---
@@ -146,7 +147,7 @@ async def websocket_sandbox_stream(websocket: WebSocket, session_id: str):
                 # Send start status
                 await websocket.send_json({"type": "status", "content": "running"})
                 
-                result = await codebox_service.execute(
+                result = await sandbox_service.execute(
                     code, 
                     session_id=session_id,
                     on_stdout=on_stdout,
@@ -158,7 +159,7 @@ async def websocket_sandbox_stream(websocket: WebSocket, session_id: str):
                 await consumer_task
                 
                 # Send final result
-                await websocket.send_json({"type": "result", "result": result})
+                await websocket.send_json({"type": "result", "result": result.model_dump()})
                 await websocket.send_json({"type": "status", "content": "success"})
                 
             except json.JSONDecodeError:

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { usePipelineStore } from '../../composables/usePipelineStore';
-import { pipelineApi } from '@/features/etl_editor/api/pipeline';
+import { dataSourceApi, type DataSource } from '@/features/data_etl/api';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,19 +19,36 @@ import {
   CircleDot,
   ArrowRight,
   Plus,
-  Trash2
+  Trash2,
+  Check,
+  ChevronsUpDown
 } from 'lucide-vue-next';
 
 const store = usePipelineStore();
 const node = computed(() => store.selectedNode);
 const loading = ref(false);
-const connections = ref<any[]>([]);
+const connections = ref<DataSource[]>([]);
 const activeTab = ref('basic');
+
+const getDataSourceDedupKey = (ds: DataSource) => {
+  const url = ds.url?.trim();
+  if (url) return `${ds.type}|${url}|${ds.username ?? ''}|${ds.database ?? ''}`;
+  const host = ds.host?.trim() ?? '';
+  const port = ds.port ?? '';
+  return `${ds.type}|${host}|${port}|${ds.username ?? ''}|${ds.database ?? ''}|${ds.name}`;
+};
 
 const fetchConnections = async () => {
   loading.value = true;
   try {
-    connections.value = await pipelineApi.getSystemConnections('graph');
+    const dataSources = await dataSourceApi.list();
+    const neo4jConnections = dataSources.filter(ds => ds.type === 'neo4j');
+    const uniq = new Map<string, DataSource>();
+    for (const ds of neo4jConnections) {
+      const key = getDataSourceDedupKey(ds);
+      if (!uniq.has(key)) uniq.set(key, ds);
+    }
+    connections.value = Array.from(uniq.values());
   } catch (e) {
     console.error('Failed to fetch graph connections', e);
   } finally {
@@ -49,6 +68,38 @@ const updateConfig = (key: string, value: any) => {
 const config = computed(() => node.value?.data?.config || {});
 const nodeMappings = computed(() => config.value.node_mappings || []);
 const edgeMappings = computed(() => config.value.edge_mappings || []);
+
+const graphDatabases = ref<string[]>([]);
+const fetchingDatabases = ref(false);
+
+const openGraphNamePopover = ref(false);
+const graphNameSearchTerm = ref('');
+
+const fetchGraphDatabases = async (connectionId?: number) => {
+  if (!connectionId) {
+    graphDatabases.value = [];
+    return;
+  }
+  fetchingDatabases.value = true;
+  try {
+    const meta = await dataSourceApi.fetchMetadata(connectionId);
+    graphDatabases.value = meta
+      .filter((m: any) => m.type === 'database')
+      .map((m: any) => m.name);
+  } catch (e) {
+    console.error('Failed to fetch graph databases', e);
+    graphDatabases.value = [];
+  } finally {
+    fetchingDatabases.value = false;
+  }
+};
+
+watch(() => config.value.connection_id, async (newId, oldId) => {
+  await fetchGraphDatabases(newId);
+  if (oldId !== undefined && graphDatabases.value.length > 0 && !graphDatabases.value.includes(config.value.graph_name)) {
+    updateConfig('graph_name', graphDatabases.value[0]);
+  }
+}, { immediate: true });
 
 // --- Node Mapping Logic ---
 const newNodeLabel = ref('');
@@ -123,7 +174,7 @@ const removeEdgeMapping = (index: number) => {
               </Label>
               <Select 
                 :model-value="config.connection_id?.toString()"
-                @update:model-value="(v) => updateConfig('connection_id', v)"
+                @update:model-value="(v) => updateConfig('connection_id', Number(v))"
                 :disabled="loading"
               >
                 <SelectTrigger>
@@ -134,7 +185,7 @@ const removeEdgeMapping = (index: number) => {
                     <SelectItem 
                       v-for="conn in connections" 
                       :key="conn.id" 
-                      :value="conn.id"
+                      :value="conn.id.toString()"
                     >
                       {{ conn.name }} ({{ conn.type }})
                     </SelectItem>
@@ -152,12 +203,71 @@ const removeEdgeMapping = (index: number) => {
                 <FolderInput class="w-3.5 h-3.5 text-muted-foreground" />
                 目标图谱名称 (Graph Name)
               </Label>
-              <Input 
-                :model-value="config.graph_name || 'default'"
-                @update:model-value="(v) => updateConfig('graph_name', v)"
-                placeholder="default"
-              />
-              <p class="text-[10px] text-muted-foreground">如果目标支持多图谱，请指定名称。</p>
+              <Popover v-model:open="openGraphNamePopover">
+                <PopoverTrigger as-child>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    :aria-expanded="openGraphNamePopover"
+                    class="w-full justify-between px-3 font-normal"
+                    :disabled="fetchingDatabases"
+                  >
+                    <span class="truncate">{{ config.graph_name || 'default' }}</span>
+                    <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent class="w-full p-0">
+                  <Command v-model:searchTerm="graphNameSearchTerm">
+                    <CommandInput placeholder="搜索或输入新的图谱名称..." />
+                    <CommandEmpty>
+                      <Button
+                        variant="ghost"
+                        class="w-full justify-start text-sm px-2 py-1.5 h-auto font-normal text-muted-foreground"
+                        @click="() => {
+                          updateConfig('graph_name', graphNameSearchTerm || 'default');
+                          openGraphNamePopover = false;
+                        }"
+                      >
+                        <Plus class="mr-2 h-4 w-4" />
+                        创建 / 使用 "{{ graphNameSearchTerm }}"
+                      </Button>
+                    </CommandEmpty>
+                    <CommandList>
+                      <CommandGroup>
+                        <CommandItem
+                          v-for="db in graphDatabases"
+                          :key="db"
+                          :value="db"
+                          @select="() => {
+                            updateConfig('graph_name', db);
+                            openGraphNamePopover = false;
+                          }"
+                        >
+                          <Check
+                            :class="['mr-2 h-4 w-4', config.graph_name === db ? 'opacity-100' : 'opacity-0']"
+                          />
+                          {{ db }}
+                        </CommandItem>
+                        <CommandItem
+                          v-if="graphNameSearchTerm && !graphDatabases.includes(graphNameSearchTerm)"
+                          :value="graphNameSearchTerm"
+                          @select="() => {
+                            updateConfig('graph_name', graphNameSearchTerm);
+                            openGraphNamePopover = false;
+                          }"
+                        >
+                          <Plus class="mr-2 h-4 w-4 text-muted-foreground" />
+                          创建 / 使用 "{{ graphNameSearchTerm }}"
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p class="text-[10px] text-muted-foreground">
+                <span v-if="fetchingDatabases" class="text-blue-500 mr-1">正在加载可用图谱...</span>
+                如果目标支持多图谱，请选择或指定名称。
+              </p>
             </div>
 
             <div class="space-y-2">

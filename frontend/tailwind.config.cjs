@@ -19,6 +19,9 @@ module.exports = {
       },
     },
     extend: {
+      transitionTimingFunction: {
+        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
       fontFamily: {
         sans: [
           'DIN Alternate',
@@ -31,6 +34,9 @@ module.exports = {
           'Roboto',
           'Helvetica Neue',
           'Arial',
+          'PingFang SC',
+          'Hiragino Sans GB',
+          'Microsoft YaHei',
           'sans-serif',
         ],
         mono: [
@@ -42,6 +48,9 @@ module.exports = {
           'Consolas',
           'Liberation Mono',
           'Courier New',
+          'PingFang SC',
+          'Hiragino Sans GB',
+          'Microsoft YaHei',
           'monospace',
         ],
       },
@@ -134,7 +143,29 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      typography: (theme) => ({
+        DEFAULT: {
+          css: {
+            pre: {
+              backgroundColor: 'transparent',
+              padding: '0',
+              margin: '0',
+            },
+            code: {
+              backgroundColor: 'transparent',
+              padding: '0',
+              margin: '0',
+            },
+            'code::before': {
+              content: '""',
+            },
+            'code::after': {
+              content: '""',
+            },
+          },
+        },
+      }),
     },
   },
-  plugins: [animate],
+  plugins: [animate, require('@tailwindcss/typography')],
 }

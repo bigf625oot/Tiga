@@ -1,0 +1,449 @@
+import asyncio
+import logging
+import time
+import tiktoken
+from typing import Dict, Any, Optional, AsyncGenerator, List, Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.i18n import _
+from app.models.llm_model import LLMModel
+from app.services.agent.orchestration.nlu import NluService
+from app.services.agent.schemas.intent import IntentResult
+from app.services.agent.storage.session_history import SessionHistory
+from app.services.intelligence.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
+
+logger = logging.getLogger("agno.control_plane")
+
+@dataclass
+class OrchestrationContext:
+    """
+    编排上下文：贯穿请求全生命周期的状态机
+    这里采用了“宽表”模式（Context Object Pattern）来承载三大范式（Lite, Agentic, Specialized）的异构上下文。
+    - Lite (对话流): 依赖 knowledge_fragment, history_manager
+    - Agentic (工作流/智能体): 依赖 collected_tools, 计划与执行状态 (通过 kwargs 穿透)
+    - Specialized (领域编译器): 依赖领域 Schema (如 DB Schema, KG Schema)
+    """
+    user_input: str
+    db: AsyncSession
+    session_id: str
+    kwargs: Dict[str, Any]
+    start_time: float = field(default_factory=time.time)
+    intent: Optional[IntentResult] = None
+    
+    # --- 多范式上下文载体 ---
+    # 1. Lite / RAG Context
+    knowledge_fragment: str = ""
+    history_manager: Optional[SessionHistory] = None
+    
+    # 2. Specialized Context (Data Query / KG QA)
+    domain_schema: str = ""
+    
+    # 3. Execution State
+    full_response: str = ""
+    full_reasoning: str = ""
+    collected_tools: List[Dict[str, Any]] = field(default_factory=list)
+
+from app.services.agent.utils.stream_adapter import StreamEventType
+
+class StreamAggregator:
+    """流式聚合器：在不阻塞流响应的情况下，实时收集数据用于最后入库"""
+    def __init__(self):
+        self.content = []
+        self.reasoning = []
+        self.tool_calls = {}
+        self.stream_events = []
+
+    def consume(self, chunk: Dict[str, Any]):
+        ctype = chunk.get("type", "message")
+        content = chunk.get("content")
+        
+        # 兼容处理和映射
+        sse_event = ctype
+        
+        # 精简 raw 字段，移除可能引起内存溢出的超大内容 (如知识库检索结果)
+        raw_chunk = dict(chunk)
+        if ctype == StreamEventType.KNOWLEDGE_RETRIEVED.value and "data" in raw_chunk:
+            # 不保存完整的检索片段到 meta_data 序列化中
+            raw_chunk["data"] = {"chunks": "[Truncated for persistence]"}
+            
+        self.stream_events.append({
+            "event": sse_event,
+            "content": content if content is not None else chunk,
+            "raw": raw_chunk
+        })
+
+        if ctype == StreamEventType.TEXT_DELTA.value and isinstance(content, str):
+            self.content.append(content)
+        elif ctype == StreamEventType.THINK_DELTA.value and isinstance(content, str):
+            self.reasoning.append(content)
+        elif ctype == StreamEventType.RUN_COMPLETED.value:
+            # 聚合 Tool Call 详情
+            data = chunk.get("data") or chunk.get("content")
+            if isinstance(data, dict) and "tools" in data:
+                for t in data["tools"]:
+                    tid = t.get("tool_call_id") or f"unknown_{time.time()}"
+                    self.tool_calls[tid] = t
+        elif ctype in (StreamEventType.TOOL_CALL_START.value, StreamEventType.TOOL_CALL_END.value, StreamEventType.TOOL_CALL_ERROR.value):
+            data = chunk.get("content")
+            if isinstance(data, dict):
+                tid = data.get("tool_call_id")
+                if not tid:
+                    tid = f"unknown_{len(self.tool_calls)}"
+                
+                if tid not in self.tool_calls:
+                    self.tool_calls[tid] = {
+                        "tool_call_id": tid,
+                        "function": {
+                            "name": data.get("tool"),
+                            "arguments": data.get("args") or {}
+                        }
+                    }
+                else:
+                    # 增量参数更新 (如果 args 有更新则覆盖)
+                    new_args = data.get("args")
+                    if new_args and new_args != self.tool_calls[tid]["function"].get("arguments"):
+                        self.tool_calls[tid]["function"]["arguments"] = new_args
+                
+                if ctype in (StreamEventType.TOOL_CALL_END.value, StreamEventType.TOOL_CALL_ERROR.value):
+                    self.tool_calls[tid]["result"] = data.get("output")
+                    if data.get("is_error"):
+                        self.tool_calls[tid]["error"] = data.get("logs")
+                    
+                    # 记录耗时指标
+                    event_data = chunk.get("data")
+                    if isinstance(event_data, dict) and "latency" in event_data:
+                        self.tool_calls[tid]["latency"] = event_data["latency"]
+
+    def finalize(self) -> Tuple[str, str, List[Dict[str, Any]], List[Dict[str, Any]]]:
+        return "".join(self.content), "".join(self.reasoning), list(self.tool_calls.values()), self.stream_events
+
+# Keep references to background tasks to prevent them from being garbage collected
+_background_tasks: set[asyncio.Task] = set()
+
+class AgnoControlPlane:
+    """
+    智能体控制平面：基于协程编排的异步引擎。
+    采用了策略模式处理业务逻辑，并发模型处理 I/O 密集型任务。
+    """
+
+    def __init__(self, llm_model: Optional[LLMModel] = None):
+        self.llm_model = llm_model
+
+    async def stop(self) -> None:
+        return None
+
+    async def process(
+        self,
+        user_input: str,
+        db: AsyncSession,
+        session_id: str,
+        **kwargs: Any,
+    ) -> str:
+        """
+        同步执行方法（等待完整结果返回）。
+        """
+        full_response = ""
+        async for chunk in self.process_stream(user_input, db, session_id, **kwargs):
+            if chunk.get("type") == "content":
+                content = chunk.get("content")
+                if isinstance(content, str):
+                    full_response += content
+            elif chunk.get("type") == "error":
+                full_response += f"\n[Error: {chunk.get('content')}]"
+        return full_response
+
+    async def process_stream(
+        self,
+        user_input: str,
+        db: AsyncSession,
+        session_id: str,
+        **kwargs: Any,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        核心编排入口：实现极致并行的 RAG + NLU + History 加载。
+        """
+        ctx = OrchestrationContext(user_input=user_input, db=db, session_id=session_id, kwargs=kwargs)
+        aggregator = StreamAggregator()
+        persist_assistant_message = bool(ctx.kwargs.get("persist_assistant_message", True))
+
+        try:
+            # Step 1: 预热 (模型解析)
+            await self._ensure_models(db)
+
+            # 1. 确保用户输入优先落库 (Sync to avoid DB concurrency issues)
+            await self._init_history(ctx)
+
+            # 2. 并行执行 NLU 意图识别与 RAG 知识检索
+            # 使用 asyncio.gather 并处理异常，防止单点故障导致全链路崩溃
+            nlu_task = asyncio.create_task(self._resolve_intent(ctx))
+            rag_task = asyncio.create_task(self._fetch_knowledge(ctx))
+
+            yield {"type": "status", "content": "正在编排上下文..."}
+
+            try:
+                results = await asyncio.gather(nlu_task, rag_task, return_exceptions=True)
+                
+                # 处理 NLU 结果
+                if isinstance(results[0], Exception):
+                    logger.error(f"NLU failed: {results[0]}")
+                    ctx.intent = None
+                else:
+                    ctx.intent = results[0]
+                    
+                # 处理 RAG 结果
+                if isinstance(results[1], Exception):
+                    logger.error(f"RAG failed: {results[1]}")
+                    ctx.knowledge_fragment = ""
+                else:
+                    ctx.knowledge_fragment = results[1]
+            except Exception as e:
+                logger.error(f"Parallel initialization failed: {e}")
+                ctx.intent = None
+                ctx.knowledge_fragment = ""
+            
+            # Step 5: 构造增强输入
+            augmented_input = self._build_prompt(ctx)
+
+            # Step 6: 路由分发与流式输出 — 将已解析的 intent 直接注入 router，消除第二次 NLU 调用
+            from app.services.agent.orchestration.router import ModeRouter
+            router = ModeRouter(self.llm_model)
+            executor, intent = await router.route_request(ctx.user_input, db, kwargs, resolved_intent=ctx.intent)
+            
+            logger.info(f"Routing to {executor.__class__.__name__} for intent {intent.intent}")
+
+            raw_stream = executor.execute(augmented_input, intent, db=db, session_id=session_id, **kwargs)
+            async for chunk in raw_stream:
+                # 统一类型契约：将 StreamEvent 实体转化为字典，消除对象与字典的边界模糊 (P10 Determinism)
+                if hasattr(chunk, "to_dict"):
+                    chunk = chunk.to_dict()
+                elif hasattr(chunk, "__dict__") and not isinstance(chunk, dict):
+                    chunk = vars(chunk)
+                    
+                aggregator.consume(chunk)
+                yield chunk
+
+        except Exception as e:
+            logger.error(f"Control Plane Pipeline Failure: {e}", exc_info=True)
+            yield {"type": "error", "content": f"System orchestration error: {str(e)}"}
+        finally:
+            # Step 7: 非阻塞持久化 — 使用新 session 避免请求 session 关闭竞态
+            # 持有 task 引用防止被 GC 提前回收
+            content, reasoning, tools, stream_events = aggregator.finalize()
+            if persist_assistant_message and (content or reasoning or tools or stream_events):
+                _persist_task = asyncio.create_task(self._finalize_session_safe(
+                    ctx.session_id, ctx.start_time, ctx.intent, content, reasoning, tools, stream_events
+                ))
+                # Add strong reference to prevent GC
+                _background_tasks.add(_persist_task)
+                _persist_task.add_done_callback(_background_tasks.discard)
+
+    async def _resolve_intent(self, ctx: OrchestrationContext) -> IntentResult:
+        """带强制逻辑、启发式预判与超时回退的意图识别 (O(1) -> O(N) 降级策略)"""
+        mode_hint = self._get_forced_intent(ctx.kwargs)
+        
+        # 1. 显式意图短路 (O(1))：如果前端明确指定了模式，直接短路 NLU
+        if mode_hint in ("quick", "chat", "task", "team", "workflow", "data_query", "kg_qa"):
+            return IntentResult(
+                intent=mode_hint,
+                paradigm=IntentResult.resolve_paradigm(mode_hint),
+                confidence=1.0,
+                reasoning="Bypassed NLU due to explicit mode selection",
+                parameters={},
+            )
+
+        # 2. 启发式预判拦截 (O(1))：通过正则与长度快速识别典型的 task/chat，避免滥用 LLM
+        from app.services.agent.orchestration.router import _heuristic_classify
+        heuristic_intent = _heuristic_classify(ctx.user_input)
+        if heuristic_intent and heuristic_intent.confidence > 0.8:
+            logger.info(f"NLU Short-circuit via heuristic: {heuristic_intent.intent}")
+            return heuristic_intent
+
+        # 3. 深度语义识别 (O(N))：使用 NLU Service 进行大模型意图分类
+        try:
+            nlu_service = NluService(self.llm_model)
+            # 严格限时 NLU，不能让分析影响响应速度
+            return await asyncio.wait_for(
+                nlu_service.analyze(
+                    ctx.user_input, 
+                    mode_hint=mode_hint, 
+                    session_id=ctx.session_id, 
+                    db=ctx.db
+                ), 
+                timeout=8.0
+            )
+        except Exception as e:
+            logger.warning(f"NLU failed or timed out: {e}. Falling back safely.")
+            
+            fallback_intent = mode_hint or (heuristic_intent.intent if heuristic_intent else "chat")
+            if not mode_hint and ctx.kwargs.get("agent_id"):
+                fallback_intent = "task"
+                
+            return IntentResult(
+                intent=fallback_intent,
+                paradigm=IntentResult.resolve_paradigm(fallback_intent),
+                confidence=0.0,
+                reasoning=f"Control plane fallback: {e}",
+                parameters={},
+            )
+
+    def _truncate_tokens(self, text: str, max_tokens: int = 12000) -> str:
+        """使用 tiktoken 精确截断，保留前文关键信息"""
+        if not text:
+            return text
+        try:
+            encoding = tiktoken.get_encoding("cl100k_base")
+            tokens = encoding.encode(text)
+            if len(tokens) <= max_tokens:
+                return text
+            return encoding.decode(tokens[:max_tokens]) + "\n...[Truncated due to token limit]..."
+        except Exception as e:
+            logger.warning(f"Token truncation failed: {e}, falling back to character slice")
+            return text[:max_tokens * 3]
+
+    async def _fetch_knowledge(self, ctx: OrchestrationContext) -> str:
+        """多路知识获取：附件上下文 + RAG"""
+        if not ctx.kwargs.get("enable_knowledge", True):
+            return ""
+
+        doc_ids = ctx.kwargs.get("doc_ids") or []
+        attachment_ctx = ctx.kwargs.get("attachment_context", "")
+
+        results = []
+        if doc_ids:
+            try:
+                # 假设 lightrag_engine.search_chunks 已经异步化或在线程池运行
+                rag_results = await asyncio.to_thread(
+                    lightrag_engine.search_chunks, 
+                    query=ctx.user_input, 
+                    top_k=6, 
+                    doc_ids=doc_ids
+                )
+                for r in rag_results:
+                    content = r.get("content") or r.get("preview") or ""
+                    results.append(f"[Source: {r.get('title', 'Unknown')}]: {content[:500]}")
+            except Exception as e:
+                logger.error(f"RAG Retrieval error: {e}")
+
+        knowledge_str = "\n".join(results)
+        combined = ""
+        if attachment_ctx:
+            combined += f"--- Attachment Content ---\n{attachment_ctx}\n"
+        if knowledge_str:
+            combined += f"--- Retrieved Knowledge ---\n{knowledge_str}\n"
+            
+        return self._truncate_tokens(combined, max_tokens=12000) # 精确 Token 截断
+
+    def _build_prompt(self, ctx: OrchestrationContext) -> str:
+        """
+        构建增强提示词 (Prompt Injection)
+        根据底层架构范式 (Paradigm) 进行策略性上下文注入，避免 RAG 污染 Agent 的核心指令 (P10 Determinism)。
+        """
+        if not ctx.knowledge_fragment:
+            return ctx.user_input
+        
+        paradigm = ctx.intent.paradigm if ctx.intent else "lite"
+        
+        if paradigm == "agentic":
+            return (
+                f"Background Knowledge:\n{ctx.knowledge_fragment}\n\n"
+                f"Task Directive: {ctx.user_input}\n\n"
+                f"Execute the task logically. The background knowledge is for your reference."
+            )
+        elif paradigm == "specialized":
+            return (
+                f"Domain Context:\n{ctx.knowledge_fragment}\n\n"
+                f"Query/Execution: {ctx.user_input}"
+            )
+        else:
+            # Lite paradigm (Chat/RAG)
+            return (
+                f"Relevant Context:\n{ctx.knowledge_fragment}\n\n"
+                f"User Question: {ctx.user_input}\n\n"
+                f"Please answer based on the context above."
+            )
+
+    async def _init_history(self, ctx: OrchestrationContext):
+        """初始化会话并保存用户消息"""
+        try:
+            ctx.history_manager = SessionHistory(ctx.db)
+            await ctx.history_manager.ensure_session(
+                ctx.session_id, 
+                user_id="system_user", 
+                agent_id=ctx.kwargs.get("agent_id")
+            )
+            if bool(ctx.kwargs.get("persist_user_message", True)):
+                await ctx.history_manager.add_message(ctx.session_id, "user", ctx.user_input)
+        except Exception as e:
+            logger.error(f"History init failed: {e}")
+
+    async def _finalize_session_safe(
+        self,
+        session_id: str,
+        start_time: float,
+        intent: Optional[IntentResult],
+        content: str,
+        reasoning: str,
+        tools: List[Dict[str, Any]],
+        stream_events: List[Dict[str, Any]] = None,
+    ):
+        """收尾工作：用独立 session 保存回复，避免与请求 session 生命周期冲突"""
+        from app.db.session import AsyncSessionLocal
+        duration = int((time.time() - start_time) * 1000)
+        try:
+            async with AsyncSessionLocal() as db:
+                history = SessionHistory(db)
+                meta_data = {
+                    "duration_ms": duration,
+                    "intent": intent.intent.value if isinstance(intent.intent, Enum) else str(intent.intent) if intent else "unknown",
+                }
+                # 不保存 stream_events 以避免数据库冗余膨胀
+                    
+                await history.add_message(
+                    session_id,
+                    "assistant",
+                    content,
+                    reasoning_content=reasoning,
+                    tool_calls=tools if tools else None,
+                    meta_data=meta_data
+                )
+            logger.debug(f"Session {session_id} persisted in {duration}ms")
+        except Exception as e:
+            logger.error(f"Final persistence failed: {e}")
+
+    async def _ensure_models(self, db: AsyncSession):
+        """确保 LLM 模型已解析"""
+        if not self.llm_model:
+            from app.services.platform.llm.resolver import resolve_chat_llm_model
+            self.llm_model = await resolve_chat_llm_model(db)
+
+    def _get_forced_intent(self, kwargs: Dict) -> Optional[str]:
+        """
+        从请求参数中提取并归一化强制意图。
+        消除冗余的 Identity Map (如 "chat": "chat")，分离别名解析与合法性校验，保证架构的确定性。
+        """
+        requested = kwargs.get("mode") or kwargs.get("intent_override")
+        if not isinstance(requested, str) or not requested.strip():
+            return None
+
+        requested = requested.lower().strip()
+
+        # 1. 别名降维解析 (Alias Resolution)
+        aliases = {
+            "plan": "task",
+            "solo": "task",
+            "flow": "workflow",
+            "data": "data_query",
+            "kg": "kg_qa"
+        }
+        normalized_mode = aliases.get(requested, requested)
+
+        # 2. 领域词汇白名单校验 (Domain Vocabulary Validation)
+        valid_modes = {"quick", "chat", "task", "team", "workflow", "data_query", "kg_qa"}
+        
+        if normalized_mode in valid_modes:
+            return normalized_mode
+            
+        logger.warning(f"Unrecognized mode requested: {requested}. Ignoring forced intent.")
+        return None

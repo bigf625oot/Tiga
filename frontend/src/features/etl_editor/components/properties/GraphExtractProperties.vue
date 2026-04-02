@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import { usePipelineStore } from '../../composables/usePipelineStore';
 import { llmApi, type Model } from '../../api/llm';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,20 +23,42 @@ import {
   AlertCircle
 } from 'lucide-vue-next';
 
-const store = usePipelineStore();
-const node = computed(() => store.selectedNode);
+const props = defineProps<{
+  config?: any;
+}>();
+
+const emit = defineEmits<{
+  (e: 'update-config', keyOrObject: string | Record<string, any>, value?: any): void;
+}>();
+
 const availableModels = ref<Model[]>([]);
 const activeTab = ref('ontology');
 
-// --- Helpers ---
-const updateConfig = (key: string, value: any) => {
-  if (node.value && node.value.data) {
-    const newConfig = { ...(node.value.data.config || {}), [key]: value };
-    store.updateNodeData(node.value.id, { config: newConfig });
+const defaultPrompt = `你是一个专业的知识图谱提取专家。
+请从提供的文本中提取出符合以下本体定义的实体和关系。
+请确保提取的结果准确无误，并且严格遵循给定的实体和关系类型。
+以 JSON 格式输出结果，包含 'entities' 和 'relations' 两个数组。`;
+
+const defaultFewShot = `[
+  {
+    "text": "苹果公司（Apple Inc.）由史蒂夫·乔布斯（Steve Jobs）在加利福尼亚州创立。",
+    "entities": [
+      { "id": "e1", "name": "苹果公司", "type": "Organization" },
+      { "id": "e2", "name": "史蒂夫·乔布斯", "type": "Person" },
+      { "id": "e3", "name": "加利福尼亚州", "type": "Location" }
+    ],
+    "relations": [
+      { "source": "e1", "target": "e2", "type": "FOUNDED_BY" },
+      { "source": "e1", "target": "e3", "type": "LOCATED_IN" }
+    ]
   }
+]`;
+
+const updateConfig = (keyOrObject: string | Record<string, any>, value?: any) => {
+  emit('update-config', keyOrObject, value);
 };
 
-const config = computed(() => node.value?.data?.config || {});
+const config = computed(() => props.config || {});
 
 // --- Lifecycle ---
 onMounted(async () => {
@@ -46,6 +67,33 @@ onMounted(async () => {
     availableModels.value = res.filter(m => m.is_active && m.model_type !== 'embedding');
   } catch (e) {
     console.error('Failed to fetch LLM models', e);
+  }
+  
+  // Initialize defaults if missing
+  if (props.config) {
+    const updates: Record<string, any> = {};
+    if (props.config.custom_prompt === undefined) {
+      updates.custom_prompt = defaultPrompt;
+    }
+    if (props.config.few_shot_examples === undefined) {
+      updates.few_shot_examples = defaultFewShot;
+    }
+    if (props.config.coref_enabled === undefined) {
+      updates.coref_enabled = false;
+    }
+    if (props.config.entity_resolution_enabled === undefined) {
+      updates.entity_resolution_enabled = false;
+    }
+    if (props.config.strict_mode === undefined) {
+      updates.strict_mode = true;
+    }
+    if (props.config.max_depth === undefined) {
+      updates.max_depth = 1;
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      updateConfig(updates);
+    }
   }
 });
 
@@ -118,15 +166,15 @@ const validationErrors = computed(() => {
       <div class="space-y-1">
         <Label>提取模型 (Extraction Model)</Label>
         <Select 
-          :model-value="config.model_id"
-          @update:model-value="(v) => updateConfig('model_id', v)"
+          :model-value="config.model_id?.toString()"
+          @update:model-value="(v) => updateConfig('model_id', Number(v))"
         >
           <SelectTrigger>
             <SelectValue placeholder="选择大语言模型..." />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem v-for="m in availableModels" :key="m.model_id" :value="m.model_id">
+              <SelectItem v-for="m in availableModels" :key="m.id" :value="m.id.toString()">
                 {{ m.name }} ({{ m.provider }})
               </SelectItem>
             </SelectGroup>
@@ -177,6 +225,7 @@ const validationErrors = computed(() => {
                     placeholder="输入实体类型并回车..." 
                     class="h-8 text-xs" 
                     @keyup.enter="addEntityType" 
+                    @blur="addEntityType"
                   />
                   <Button size="sm" variant="secondary" class="h-8 w-8 p-0" @click="addEntityType">
                     <Plus class="w-4 h-4" />
@@ -220,6 +269,7 @@ const validationErrors = computed(() => {
                     placeholder="输入关系类型并回车..." 
                     class="h-8 text-xs" 
                     @keyup.enter="addRelationType" 
+                    @blur="addRelationType"
                   />
                   <Button size="sm" variant="secondary" class="h-8 w-8 p-0" @click="addRelationType">
                     <Plus class="w-4 h-4" />
@@ -263,6 +313,7 @@ const validationErrors = computed(() => {
                     placeholder="输入属性名称并回车..." 
                     class="h-8 text-xs" 
                     @keyup.enter="addProperty" 
+                    @blur="addProperty"
                   />
                   <Button size="sm" variant="secondary" class="h-8 w-8 p-0" @click="addProperty">
                     <Plus class="w-4 h-4" />
@@ -352,7 +403,7 @@ const validationErrors = computed(() => {
               <Label>系统提示词 (System Prompt Override)</Label>
               <p class="text-xs text-muted-foreground">自定义用于指导 LLM 进行提取的提示词。保留为空以使用默认策略。</p>
               <Textarea 
-                placeholder="你是一个知识图谱提取专家..." 
+                :placeholder="defaultPrompt" 
                 class="min-h-[200px] font-mono text-xs leading-relaxed"
                 :model-value="config.custom_prompt"
                 @update:model-value="(v) => updateConfig('custom_prompt', v)"
@@ -363,7 +414,7 @@ const validationErrors = computed(() => {
               <Label>示例 (Few-shot Examples)</Label>
               <p class="text-xs text-muted-foreground">提供 JSON 格式的示例以提高提取准确性。</p>
               <Textarea 
-                placeholder='[{"text": "Apple released the iPhone.", "entities": [...]}]' 
+                :placeholder="defaultFewShot" 
                 class="min-h-[150px] font-mono text-xs"
                 :model-value="config.few_shot_examples"
                 @update:model-value="(v) => updateConfig('few_shot_examples', v)"

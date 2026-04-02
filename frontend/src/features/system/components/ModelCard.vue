@@ -224,7 +224,8 @@ const getProviderCountry = (provider: string) => {
         'vertexai': 'us',
         'aliyun': 'cn',
         'dashscope': 'cn',
-        'deepseek': 'cn'
+        'deepseek': 'cn',
+        'siliconflow': 'cn'
     };
     const key = provider?.toLowerCase().trim() || '';
     return countryMap[key] || '';

@@ -15,7 +15,7 @@ Tools Endpoint
 from fastapi import APIRouter, Depends
 from app.api import deps
 from app.models.user_tool import UserTool
-from app.services.eah_agent.tools.registry import discover_tools
+from app.services.agent.tools.registry import discover_tools
 
 router = APIRouter()
 
@@ -24,6 +24,9 @@ async def list_available_tools():
     """
     List all available tools and their configuration schemas.
     """
+    # Now that we've unified tool discovery, we can still use the local registry discovery 
+    # to list available tools. We can also add MCP/Skill providers if needed, but for now
+    # local tools are the static ones.
     return discover_tools(include_metadata=True)
 
 @router.post("/{tool_id}/invoke")

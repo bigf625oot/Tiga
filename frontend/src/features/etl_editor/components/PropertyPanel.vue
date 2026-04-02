@@ -121,9 +121,14 @@ const updateLabel = (value: string | number) => {
   }
 };
 
-const updateConfig = (key: string, value: any) => {
+const updateConfig = (keyOrObject: string | Record<string, any>, value?: any) => {
   if (node.value && node.value.data) {
-    const newConfig = { ...(node.value.data.config || {}), [key]: value };
+    let newConfig;
+    if (typeof keyOrObject === 'string') {
+      newConfig = { ...(node.value.data.config || {}), [keyOrObject]: value };
+    } else {
+      newConfig = { ...(node.value.data.config || {}), ...keyOrObject };
+    }
     store.updateNodeData(node.value.id, { config: newConfig });
   }
 };
@@ -976,7 +981,10 @@ const updateConfig = (key: string, value: any) => {
 
         <!-- Knowledge Graph Extraction Config -->
         <template v-if="node.data?.subType === TransformType.GRAPH_EXTRACT">
-           <GraphExtractProperties />
+           <GraphExtractProperties 
+             :config="node.data?.config"
+             @update-config="updateConfig"
+           />
         </template>
         
         <!-- Knowledge Retrieval (RAG) Config -->

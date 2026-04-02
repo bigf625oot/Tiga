@@ -4,10 +4,10 @@
         <div class="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <h2 class="text-lg font-semibold tracking-tight">图谱控制台</h2>
+                    <h2 class="text-lg font-semibold tracking-tight">数据资产控制台</h2>
                     <div class="h-4 w-px bg-border"></div>
                     <p class="text-muted-foreground text-xs truncate max-w-xl">
-                        探索实体间的关联关系，支持多维度的筛选与时序分析。
+                        探索数据资产间的关联关系，支持多维度的筛选与时序分析。
                     </p>
                 </div>
                 <div class="flex items-center space-x-2">

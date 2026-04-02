@@ -1,0 +1,62 @@
+<template>
+  <div class="h-full flex flex-col bg-background overflow-hidden">
+    <div class="bg-background border-b px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <LayoutDashboard class="w-4 h-4 text-muted-foreground" />
+        <h3 class="text-sm font-semibold">任务空间</h3>
+        <Badge 
+          :variant="store.isRunning ? 'default' : 'secondary'"
+          class="ml-1 px-1.5 py-0 h-5 text-[10px] font-normal"
+        >
+          {{ store.isRunning ? '执行中' : '空闲' }}
+        </Badge>
+      </div>
+      <Button variant="ghost" size="icon" class="h-6 w-6" @click="$emit('close')">
+        <X class="w-4 h-4 text-muted-foreground" />
+      </Button>
+    </div>
+
+    <div class="flex-1 min-h-0 overflow-hidden bg-background relative">
+      <div class="h-full">
+        <TaskPanel
+          ref="taskPanelRef"
+          embedded
+          :showEmbeddedHeader="false"
+          :sessionId="sessionId"
+          :agentName="agentName"
+          :isWorkflowMode="isWorkflowMode"
+          :attachmentsCount="attachmentsCount"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, watch, onMounted, computed } from 'vue';
+import { useWorkflowStore } from '@/features/llm-chat/store/workflow/workflow.store';
+import TaskPanel from '@/features/llm-chat/workflow/components/TaskPanel.vue';
+import { Badge } from '@/components/ui/badge';
+import { LayoutDashboard, X } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+
+const props = defineProps({
+  sessionId: { type: String, default: '' },
+  agentName: { type: String, default: '' },
+  isWorkflowMode: { type: Boolean, default: true },
+  attachmentsCount: { type: Number, default: 0 }
+});
+
+const emit = defineEmits(['close']);
+
+const store = useWorkflowStore();
+const taskPanelRef = ref(null);
+
+const openTaskLogs = () => {
+  taskPanelRef.value?.openLogDrawer?.();
+};
+
+defineExpose({
+  openTaskLogs
+});
+</script>

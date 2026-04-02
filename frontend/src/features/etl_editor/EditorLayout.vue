@@ -42,6 +42,15 @@ const handleSaveSchedule = async (config: any) => {
   }
 };
 
+const handleSavePipeline = async () => {
+  try {
+    await store.savePipeline();
+    toast({ title: '保存成功', description: '流水线已成功保存' });
+  } catch (e) {
+    toast({ title: '保存失败', description: '无法保存流水线', variant: 'destructive' });
+  }
+};
+
 
 watch(() => props.pipelineId, (newId) => {
   if (newId) {
@@ -208,7 +217,7 @@ const isPropertyPanelOpen = computed({
             <span class="hidden sm:inline">定时</span>
           </Button>
 
-          <Button variant="outline" size="sm" class="gap-2 h-8" @click="store.savePipeline" :disabled="store.loading">
+          <Button variant="outline" size="sm" class="gap-2 h-8" @click="handleSavePipeline" :disabled="store.loading">
             <Save class="w-4 h-4" />
             <span class="hidden sm:inline">保存</span>
           </Button>

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 import logging
-from app.services.llm.factory import ModelFactory
+from app.services.platform.llm.factory import ModelFactory
 from app.models.llm_model import LLMModel
 from agno.agent import Agent
 from app.db.session import AsyncSessionLocal
@@ -130,7 +130,7 @@ class ContextCompressor:
         """Initialize a default agent if none was provided"""
         try:
             async with AsyncSessionLocal() as db:
-                from app.services.llm.resolver import resolve_fast_llm_model
+                from app.services.platform.llm.resolver import resolve_fast_llm_model
                 active_model = await resolve_fast_llm_model(db)
                 
                 if active_model:

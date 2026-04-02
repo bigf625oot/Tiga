@@ -14,7 +14,8 @@ from starlette.requests import Request
 from app.api.api import api_router
 from app.core.bootstrap import apply_patches
 from app.core.config import settings
-from app.core.exceptions import global_exception_handler
+from app.core.exceptions import global_exception_handler, http_exception_handler
+from fastapi import HTTPException
 from app.core.logger import logger, setup_logging
 from app.core.i18n import _
 
@@ -50,7 +51,7 @@ async def lifespan(app: FastAPI):
     from app.db.session import AsyncSessionLocal
 
     try:
-        from app.crud.crud_task_mode import task_mode as crud_task_mode
+        from app.crud.task_mode import task_mode as crud_task_mode
 
         async with AsyncSessionLocal() as db:
             await crud_task_mode.purge_expired_logs(db)
@@ -58,7 +59,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to purge expired task logs: {e}")
 
     # Initialize Knowledge Base with DB Config
-    from app.services.rag.knowledge_base import kb_service
+    from app.services.intelligence.knowledge.rag.knowledge_base import kb_service
 
     try:
         async with AsyncSessionLocal() as db:
@@ -67,12 +68,16 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize Knowledge Base config: {e}")
 
     # Start Node Monitoring Task
-    from app.services.openclaw.node.monitor import node_monitor
+    from app.services.ops.openclaw.node.monitor import node_monitor
     await node_monitor.start()
 
     # Start Task Worker
-    from app.services.openclaw.task.execution import task_worker
+    from app.services.ops.openclaw.task.execution import task_worker
     await task_worker.start()
+
+    # Start Async Task Worker Pool
+    from app.core.worker_pool import task_pool
+    await task_pool.start()
 
     # Initialize Redis Streams
     from app.core.task_stream import task_stream
@@ -80,13 +85,14 @@ async def lifespan(app: FastAPI):
     logger.info(_("Redis Task Stream infrastructure initialized."))
 
     # Start Task Lifecycle Scheduler
-    from app.services.task.scheduler import scheduler
+    from app.services.ops.task.scheduler import scheduler
     await scheduler.start()
     logger.info(_("Task lifecycle scheduler started."))
 
     yield
     # Shutdown: Close connections
     logger.info(_("Shutting down..."))
+    await task_pool.stop()
     await task_worker.stop()
     await node_monitor.stop()
     await scheduler.stop()
@@ -107,6 +113,7 @@ app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/o
 
 # Global Exception Handler
 app.add_exception_handler(Exception, global_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 
 # Trace ID Middleware
 app.add_middleware(TraceIDMiddleware)
@@ -122,7 +129,8 @@ app.add_middleware(
 
 # 挂载上传目录以本地访问
 # 修复：使用绝对路径 backend/data/storage 作为上传目录
-BACKEND_DIR = Path(__file__).resolve().parents[1]  # backend/
+# parents[0]=app, parents[1]=backend
+BACKEND_DIR = Path(__file__).resolve().parents[1]
 UPLOADS_DIR = BACKEND_DIR / "data" / "storage"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")

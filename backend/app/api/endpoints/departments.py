@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
-from app.crud.crud_user import department as crud_department
+from app.crud.user import department as crud_department
 from app.api import deps
 from app.schemas.user import Department, DepartmentCreate, DepartmentUpdate
 

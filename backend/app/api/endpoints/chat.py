@@ -34,13 +34,13 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_agent import agent as crud_agent
-from app.crud.crud_chat import chat as crud_chat
+from app.crud.agent import agent as crud_agent
+from app.crud.chat import chat as crud_chat
 from app.db.session import get_db
 from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatSessionUpdate
 from app.core.sse import format_sse_json
-from app.services.media.chat_attachments import ingest_chat_file, normalize_doc_ids
-from app.services.eah_agent.core.agent_title_generator import TitleGenerator
+from app.services.domain.media.chat_attachments import ingest_chat_file, normalize_doc_ids
+from app.services.agent.utils.title_generator import TitleGenerator
 from app.models.knowledge import KnowledgeDocument
 
 router = APIRouter()
@@ -104,17 +104,24 @@ class ChatRequest(BaseModel):
     enable_search: bool = True  # 是否启用知识库搜索
     enable_reasoning: bool = False  # 是否启用推理
     agent_id: Optional[str] = None  # 关联的智能体ID
+    parent_id: Optional[int] = None # 兼容 frontend 传来的 parent_id
+    parent_message_id: Optional[int] = None # 用于 Regenerate 构建对话分支树
 
 
 @router.post("/sessions/{session_id}/chat")
-async def chat_session(session_id: str, request: ChatRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def chat_session(
+    session_id: str, 
+    request: ChatRequest, 
+    background_tasks: BackgroundTasks, 
+    db: AsyncSession = Depends(get_db)
+):
     """
     统一聊天端点，根据意图路由到适当的处理程序。
     支持: Chat, Task, Team, Workflow, Data Query, KG QA.
     """
     # New Control Plane
-    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
-    from app.services.llm.resolver import resolve_chat_llm_model
+    from app.services.agent.orchestration.control_plane import AgnoControlPlane
+    from app.services.platform.llm.resolver import resolve_chat_llm_model
     
     # Get active model for ControlPlane
     # In a real scenario, we might resolve this better or pass None to let ControlPlane resolve default
@@ -164,8 +171,92 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
 
     # Use SSE
     async def sse_generator():
+        # --- TEST INTERCEPTOR FOR SYSTEMATIC DEBUGGING ---
+        if request.message.startswith("[TEST]"):
+            user_msg = await crud_chat.create_message(
+                db, 
+                session_id=session_id, 
+                role="user", 
+                content=request.message,
+                parent_id=request.parent_message_id
+            )
+            test_type = request.message.split(" ")[1] if " " in request.message else ""
+            
+            if test_type == "EMPTY_THOUGHT":
+                # 场景：空 Thought 返回
+                yield format_sse_json("think", "")
+                yield format_sse_json("text", "这是没有思考过程的直接回复。")
+                yield format_sse_json("done", "[DONE]")
+                return
+                
+            elif test_type == "OUT_OF_ORDER":
+                # 场景：SSE 消息乱序
+                yield format_sse_json("text", "这是第一段正文。")
+                yield format_sse_json("call", {"tool": "search", "args": {"query": "test"}})
+                yield format_sse_json("text", "这是第二段正文。")
+                yield format_sse_json("result", {"tool": "search", "output": "搜索结果"})
+                yield format_sse_json("done", "[DONE]")
+                return
+                
+            elif test_type == "JSON_ESCAPE":
+                # 场景：JSON 转义字符攻击
+                # 包含极多 \n 和 " 等
+                malicious = "破坏性测试: \n \"\"\" {\"k\": \"v\\n\"} \r\n"
+                yield format_sse_json("text", malicious)
+                yield format_sse_json("done", "[DONE]")
+                return
+
+            elif test_type == "LONG_PLAN":
+                # 场景：Plan 描述过长
+                long_desc = "这是一个非常非常长的计划步骤描述，" * 10
+                yield format_sse_json("step", {"id": 1, "content": long_desc})
+                yield format_sse_json("text", "计划已生成。")
+                yield format_sse_json("done", "[DONE]")
+                return
+
+            elif test_type == "TOOL_ERROR":
+                # 场景：工具执行失败
+                yield format_sse_json("call", {"tool": "python", "args": {"code": "print(1/0)"}})
+                yield format_sse_json("result", {"tool": "python", "is_error": True, "output": "ZeroDivisionError: division by zero"})
+                yield format_sse_json("text", "执行失败。")
+                yield format_sse_json("done", "[DONE]")
+                return
+                
+            elif test_type == "RECURSIVE_THINK":
+                # 场景：递归思考
+                yield format_sse_json("think", "第一步：分析问题\n")
+                yield format_sse_json("think", "第二步：嵌套推导 -> a^2 + b^2 = c^2\n")
+                yield format_sse_json("text", "分析完毕。")
+                yield format_sse_json("done", "[DONE]")
+                return
+
+            # Default fallback for unhandled test types
+            yield format_sse_json("text", f"Test {test_type} executed.")
+            yield format_sse_json("done", "[DONE]")
+            return
+        # --- END TEST INTERCEPTOR ---
+
         # ── AgnoControlPlane 路径：支持所有模式 ──
-        await crud_chat.create_message(db, session_id, "user", request.message)
+        req_parent_id = request.parent_id or request.parent_message_id
+        
+        # 幂等性/防抖处理：如果最近的一条用户消息内容与 parent_id 完全一致，则复用该消息（防止网络重试导致生成孤儿节点）
+        history = await crud_chat.get_history(db, session_id)
+        duplicate_msg = None
+        if history:
+            last_msg = history[-1]
+            if last_msg.role == "user" and last_msg.content == request.message and last_msg.parent_id == req_parent_id:
+                duplicate_msg = last_msg
+                
+        if duplicate_msg:
+            user_msg = duplicate_msg
+        else:
+            user_msg = await crud_chat.create_message(
+                db, 
+                session_id=session_id, 
+                role="user", 
+                content=request.message,
+                parent_id=req_parent_id
+            )
 
         text_parts: List[str] = []
         think_parts: List[str] = []
@@ -175,6 +266,7 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
             user_input=request.message,
             db=db,
             session_id=session_id,
+            user_id=session.user_id if session and session.user_id else "default_user",
             agent_id=effective_agent_id,
             mode=effective_mode,
             intent_override=request.intent,
@@ -191,9 +283,26 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
             attachment_context=kb_scope_context,
         ):
             event_type = chunk.get("type", "message")
-            if event_type == "content":
+            
+            # 强行拦截并格式化，避免嵌套 JSON 字符串直接流出
+            if isinstance(chunk.get("content"), dict) and event_type in ("content", "text_delta"):
+                logger.warning(f"Unexpected dict in content frame: {chunk}")
+                inner_chunk = chunk["content"]
+                event_type = inner_chunk.get("type", "message")
+                chunk = inner_chunk
+
+            if event_type == "content" or event_type == "text_delta":
                 sse_event = "text"
                 chunk_data = chunk.get("content", "")
+                if isinstance(chunk_data, str) and chunk_data.strip().startswith('{"type":') and '"status":' in chunk_data:
+                     try:
+                         parsed = __import__("json").loads(chunk_data)
+                         if parsed.get("type") == "text_delta":
+                             chunk_data = parsed.get("content", "")
+                         else:
+                             continue
+                     except Exception:
+                         pass
                 text_parts.append(chunk_data)
             elif event_type == "think":
                 sse_event = "think"
@@ -204,7 +313,7 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
                 chunk_data = chunk
             elif event_type == "status":
                 sse_event = "status"
-                chunk_data = chunk
+                chunk_data = chunk.get("content", chunk)
             elif event_type == "error":
                 sse_event = "error"
                 chunk_data = chunk
@@ -212,17 +321,78 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
                 sse_event = event_type
                 chunk_data = chunk
 
-            cp_stream_events.append({"type": sse_event, "content": chunk_data})
+            cp_stream_events.append({
+                "event": sse_event,
+                "content": chunk_data,
+                "raw": chunk
+            })
             yield format_sse_json(sse_event, chunk_data)
+
+        # 提取 tools 状态用于物化视图
+        materialized_tools = []
+        if cp_stream_events:
+            for ev in cp_stream_events:
+                event_type = ev.get("event")
+                raw_content = ev.get("content")
+                if event_type in ("tool_call", "call", "tool_start"):
+                    info = raw_content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": str(info)}
+                    
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_id = payload.get("tool_call_id") or payload.get("id") or str(uuid.uuid4())
+                    tool_name = payload.get("tool") or payload.get("name") or "unknown_tool"
+                    args = payload.get("args") or payload.get("arguments") or {}
+                    materialized_tools.append({
+                        "id": tool_id,
+                        "name": tool_name,
+                        "args": args,
+                        "status": "running"
+                    })
+                elif event_type in ("tool_output", "result", "tool_end", "tool_error"):
+                    info = raw_content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": "unknown_tool", "output": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": "unknown_tool", "output": str(info)}
+                    
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_name = payload.get("tool") or payload.get("name")
+                    is_error = payload.get("is_error", False)
+                    result_data = payload.get("result") or payload.get("output")
+                    if not isinstance(result_data, str):
+                        import json
+                        result_data = json.dumps(result_data, ensure_ascii=False)
+                    
+                    # Find the last running tool with matching name
+                    for t in reversed(materialized_tools):
+                        if t["name"] == tool_name and t["status"] == "running":
+                            t["status"] = "error" if is_error else "success"
+                            t["result"] = result_data
+                            break
 
         # 持久化助手消息
         await crud_chat.create_message(
             db,
-            session_id,
-            "assistant",
-            "".join(text_parts),
-            meta_data={"stream_events": cp_stream_events} if cp_stream_events else None,
+            session_id=session_id,
+            role="assistant",
+            content="".join(text_parts),
+            meta_data=None,  # 移除 stream_events，避免存储冗余数据导致数据膨胀
+            tools=materialized_tools if materialized_tools else None,
             reasoning_content="".join(think_parts) or None,
+            parent_id=user_msg.id
         )
 
         yield format_sse_json("done", "[DONE]")
@@ -239,6 +409,7 @@ async def chat_session(session_id: str, request: ChatRequest, background_tasks: 
 @router.post("/sessions/{session_id}/chat_multipart")
 async def chat_session_multipart(
     session_id: str,
+    background_tasks: BackgroundTasks,
     message: str = Form(...),
     stream: bool = Form(True),
     mode: Optional[str] = Form(None),
@@ -250,12 +421,13 @@ async def chat_session_multipart(
     enable_search: bool = Form(True),
     enable_reasoning: bool = Form(False),
     agent_id: Optional[str] = Form(None),
+    parent_id: Optional[int] = Form(None),
     attachments: Optional[List[str]] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
-    from app.services.llm.resolver import resolve_chat_llm_model
+    from app.services.agent.orchestration.control_plane import AgnoControlPlane
+    from app.services.platform.llm.resolver import resolve_chat_llm_model
 
     llm_model = await resolve_chat_llm_model(db)
     control_plane = AgnoControlPlane(llm_model=llm_model)
@@ -321,6 +493,32 @@ async def chat_session_multipart(
         attachment_context_parts_all.append("\n\n".join(attachment_context_parts))
     attachment_context = "\n\n".join(attachment_context_parts_all) if attachment_context_parts_all else None
 
+    user_msg_meta = {}
+    if uploaded_files:
+        user_msg_meta["files"] = uploaded_files
+
+    # 幂等性/防抖处理：如果最近的一条用户消息内容与 parent_id 完全一致，则复用该消息
+    history = await crud_chat.get_history(db, session_id)
+    duplicate_msg = None
+    if history:
+        last_msg = history[-1]
+        if last_msg.role == "user" and last_msg.content == message and last_msg.parent_id == parent_id:
+            # 简单对比，如果有文件就不复用了，为了安全起见
+            if not uploaded_files:
+                duplicate_msg = last_msg
+
+    if duplicate_msg:
+        user_msg = duplicate_msg
+    else:
+        user_msg = await crud_chat.create_message(
+            db,
+            session_id=session_id,
+            role="user",
+            content=message,
+            parent_id=parent_id,
+            meta_data=user_msg_meta if user_msg_meta else None
+        )
+
     async def sse_generator():
         for meta in uploaded_files:
             status = (meta.get("status") or "").lower()
@@ -341,10 +539,15 @@ async def chat_session_multipart(
             }
             yield format_sse_json("file", payload)
 
+        text_parts: List[str] = []
+        think_parts: List[str] = []
+        cp_stream_events: List[Dict[str, Any]] = []
+
         async for chunk in control_plane.process_stream(
             user_input=message,
             db=db,
             session_id=session_id,
+            user_id=session.user_id if session and session.user_id else "default_user",
             agent_id=effective_agent_id,
             mode=effective_mode,
             intent_override=intent,
@@ -357,27 +560,129 @@ async def chat_session_multipart(
             debug=debug,
             ab_variant=ab_variant,
             attachments=attachments,
+            persist_user_message=False,
+            persist_assistant_message=False,
         ):
             # 映射内部事件类型到前端期望的 SSE 事件类型
             event_type = chunk.get("type", "message")
             
-            # 兼容处理：将 content 映射为 text，think 保持为 think
-            if event_type == "content":
+            # 强行拦截并格式化，避免嵌套 JSON 字符串直接流出
+            if isinstance(chunk.get("content"), dict) and event_type in ("content", "text_delta"):
+                # 如果底层意外地将控制对象当做了 content 吐出，在这里解包
+                logger.warning(f"Unexpected dict in content frame: {chunk}")
+                inner_chunk = chunk["content"]
+                event_type = inner_chunk.get("type", "message")
+                chunk = inner_chunk
+                
+            if event_type == "content" or event_type == "text_delta":
                 sse_event = "text"
+                chunk_data = chunk.get("content", "")
+                if isinstance(chunk_data, str) and chunk_data.strip().startswith('{"type":') and '"status":' in chunk_data:
+                     # Fallback in case a raw JSON string made its way here
+                     try:
+                         parsed = __import__("json").loads(chunk_data)
+                         if parsed.get("type") == "text_delta":
+                             chunk_data = parsed.get("content", "")
+                         else:
+                             # It's another type of control frame hiding in text
+                             continue
+                     except Exception:
+                         pass
+                text_parts.append(chunk_data)
             elif event_type == "think":
                 sse_event = "think"
+                chunk_data = chunk.get("content", "")
+                think_parts.append(chunk_data)
             elif event_type == "chart":
                 sse_event = "chart"
+                chunk_data = chunk
             elif event_type == "status":
                 sse_event = "status"
+                chunk_data = chunk.get("content", chunk)
             elif event_type == "error":
                 sse_event = "error"
+                chunk_data = chunk
             else:
                 sse_event = event_type
-                
-            yield format_sse_json(sse_event, chunk)
+                chunk_data = chunk
 
-        yield "event: done\ndata: [DONE]\n\n"
+            cp_stream_events.append({
+                "event": sse_event,
+                "content": chunk_data,
+                "raw": chunk
+            })
+            yield format_sse_json(sse_event, chunk_data)
+
+        # 提取 tools 状态用于物化视图
+        materialized_tools = []
+        if cp_stream_events:
+            for ev in cp_stream_events:
+                event_type = ev.get("event")
+                raw_content = ev.get("content")
+                if event_type in ("tool_call", "call", "tool_start"):
+                    info = raw_content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": str(info)}
+                    
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_id = payload.get("tool_call_id") or payload.get("id") or str(uuid.uuid4())
+                    tool_name = payload.get("tool") or payload.get("name") or "unknown_tool"
+                    args = payload.get("args") or payload.get("arguments") or {}
+                    materialized_tools.append({
+                        "id": tool_id,
+                        "name": tool_name,
+                        "args": args,
+                        "status": "running"
+                    })
+                elif event_type in ("tool_output", "result", "tool_end", "tool_error"):
+                    info = raw_content
+                    if isinstance(info, str):
+                        import json
+                        try:
+                            info = json.loads(info)
+                        except Exception:
+                            info = {"tool": "unknown_tool", "output": info}
+                    elif not isinstance(info, dict):
+                        info = {"tool": "unknown_tool", "output": str(info)}
+                    
+                    payload = info.get("content") if isinstance(info.get("content"), dict) else info
+                    
+                    tool_name = payload.get("tool") or payload.get("name")
+                    is_error = payload.get("is_error", False)
+                    result_data = payload.get("result") or payload.get("output")
+                    if not isinstance(result_data, str):
+                        import json
+                        result_data = json.dumps(result_data, ensure_ascii=False)
+                    
+                    # Find the last running tool with matching name
+                    for t in reversed(materialized_tools):
+                        if t["name"] == tool_name and t["status"] == "running":
+                            t["status"] = "error" if is_error else "success"
+                            t["result"] = result_data
+                            break
+
+        # 持久化助手消息
+        await crud_chat.create_message(
+            db,
+            session_id=session_id,
+            role="assistant",
+            content="".join(text_parts),
+            meta_data=None,  # 移除 stream_events，避免存储冗余数据导致数据膨胀
+            tools=materialized_tools if materialized_tools else None,
+            reasoning_content="".join(think_parts) or None,
+            parent_id=user_msg.id
+        )
+
+        yield format_sse_json("done", "[DONE]")
+        
+        background_tasks.add_task(TitleGenerator.generate_title, session_id, db)
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
@@ -394,7 +699,7 @@ async def resume_stream(
     前端断线后携带 agent_run_id 和最后一条事件的 Redis ID 调用此接口，
     服务端从 Redis Stream 中重放该位置之后的所有事件。
     """
-    from app.services.eah_agent.core.agent_control_plane import AgnoControlPlane
+    from app.services.agent.orchestration.control_plane import AgnoControlPlane
     
     control_plane = AgnoControlPlane()
 

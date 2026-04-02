@@ -1,10 +1,10 @@
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.crud.crud_async_task import async_task, async_task_log
+from app.crud.async_task import async_task, async_task_log
 from app.schemas.async_task import (
     AsyncTaskCreate,
     AsyncTaskResponse,
@@ -16,14 +16,18 @@ from app.schemas.async_task import (
 from app.core.task_progress import task_progress
 from app.core.websocket_manager import ws_manager
 
+# Deprecated alias route
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# TODO(Deprecation): This module is kept for backward compatibility with frontend.
+# Please migrate to `/api/v1/tasks` (implemented in task_runs.py).
+logger.warning("The /api/v1/async/tasks endpoints are deprecated and will be removed in a future version. Please use /api/v1/tasks instead.")
 
 
 @router.post("/", response_model=AsyncTaskCreateResponse, status_code=202)
 async def create_async_task(
     payload: AsyncTaskCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ):
@@ -39,7 +43,8 @@ async def create_async_task(
 
     await task_progress.publish_update(task.id, user_id or "anonymous")
 
-    background_tasks.add_task(process_task_background, task.id, task.task_type)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(process_task_background, task.id, task.task_type, user_id or "anonymous")
 
     return AsyncTaskCreateResponse(
         task_id=task.id,
@@ -48,7 +53,7 @@ async def create_async_task(
     )
 
 
-async def process_task_background(task_id: str, task_type: str):
+async def process_task_background(task_id: str, task_type: str, user_id: str = "system"):
     from app.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
@@ -57,7 +62,7 @@ async def process_task_background(task_id: str, task_type: str):
                 db, task_id, 10, "RUNNING", "开始处理", "initializing"
             )
             await task_progress.set_progress(task_id, 10, "RUNNING", "开始处理", "initializing")
-            await task_progress.publish_update(task_id, "system")
+            await task_progress.publish_update(task_id, user_id)
 
             await async_task_log.create(db, task_id, 10, "RUNNING", "开始处理", "initializing")
 
@@ -66,7 +71,7 @@ async def process_task_background(task_id: str, task_type: str):
                     db, task_id, i, "RUNNING", f"处理中... {i}%", f"step_{i}"
                 )
                 await task_progress.set_progress(task_id, i, "RUNNING", f"处理中... {i}%", f"step_{i}")
-                await task_progress.publish_update(task_id, "system")
+                await task_progress.publish_update(task_id, user_id)
                 await async_task_log.create(db, task_id, i, "RUNNING", f"处理中", f"step_{i}")
                 import asyncio
                 await asyncio.sleep(0.5)
@@ -78,7 +83,7 @@ async def process_task_background(task_id: str, task_type: str):
                 result={"download_url": f"/uploads/{task_id}.zip"}
             )
             await task_progress.set_progress(task_id, 100, "SUCCESS", "任务完成", "completed")
-            await task_progress.publish_update(task_id, "system")
+            await task_progress.publish_update(task_id, user_id)
 
         except Exception as e:
             logger.error(f"Task {task_id} failed: {e}")
@@ -87,7 +92,7 @@ async def process_task_background(task_id: str, task_type: str):
                 error_message=str(e)
             )
             await task_progress.set_progress(task_id, 0, "FAILED", f"任务失败: {str(e)}", "error")
-            await task_progress.publish_update(task_id, "system")
+            await task_progress.publish_update(task_id, user_id)
 
 
 @router.get("/", response_model=AsyncTaskListResponse)
@@ -192,12 +197,26 @@ async def update_task_progress(
     return {"success": True}
 
 
+@router.delete("/completed")
+async def delete_completed_tasks(
+    user_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    status_list = ["SUCCESS", "FAILED"]
+    count = await async_task.soft_delete_by_status(db, user_id, status_list)
+    return {"success": True, "deleted_count": count}
+
 @router.delete("/{task_id}")
 async def delete_async_task(
     task_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    success = await async_task.soft_delete(db, task_id)
+    try:
+        success = await async_task.soft_delete(db, task_id)
+    except Exception as e:
+        logger.error(f"Failed to soft delete task {task_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Database error while deleting task: {str(e)}")
+
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
 

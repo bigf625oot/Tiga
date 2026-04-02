@@ -18,6 +18,7 @@ import {
 import { LayoutGrid, Redo, Undo } from 'lucide-vue-next';
 import { useTheme } from '@/composables/useTheme';
 import type { NodeData } from '../types/pipeline';
+import RunStatsCard from './RunStatsCard.vue';
 
 // Styles
 import '@vue-flow/core/dist/style.css';
@@ -239,6 +240,31 @@ const edgeOptions = computed(() => ({
         <Button variant="ghost" size="icon" class="h-8 w-8" @click="store.redo" :disabled="!store.canRedo">
           <Redo class="w-4 h-4" />
         </Button>
+      </div>
+
+      <!-- Left Bottom Stats Card -->
+      <div class="absolute bottom-4 left-4 z-10" v-if="store.isRunning">
+        <RunStatsCard 
+          :metrics="[
+            { label: '节点数', value: store.nodes.length },
+            { label: '运行中', value: store.nodes.filter(n => n.data?.status === 'running').length },
+            { label: '异常', value: store.nodes.filter(n => n.data?.status === 'error').length },
+            { 
+              label: '吞吐量', 
+              value: store.nodes.reduce((acc, n) => acc + (n.data?.metrics?.eps || 0), 0).toString(), 
+              unit: 'eps', 
+              trend: 'up',
+              description: '当前流水线每秒处理的事件数'
+            },
+            { 
+              label: '延迟', 
+              value: Math.max(...store.nodes.map(n => n.data?.metrics?.latency || 0), 0).toFixed(1).toString(), 
+              unit: 'ms',
+              description: '当前流水线最大处理延迟'
+            }
+          ]"
+          :lastRunAt="store.currentPipeline?.last_run_at"
+        />
       </div>
     </VueFlow>
   </div>

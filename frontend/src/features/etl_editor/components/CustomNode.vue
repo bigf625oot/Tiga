@@ -127,8 +127,13 @@ const configSummary = computed(() => {
       return { label: '地址', value: config.url };
     }
   }
-  if (subType === SourceType.FILE_UPLOAD && config.filename) {
-    return { label: '文件', value: config.filename };
+  if (subType === SourceType.FILE_UPLOAD) {
+    const filePath = config.file_path || config.filename;
+    if (filePath) {
+      const fileName = filePath.split(/[\/\\]/).pop() || filePath;
+      return { label: '文件', value: fileName };
+    }
+    return { label: '状态', value: '待上传' };
   }
   if (subType === SourceType.GENERIC_SQL && config.query) {
     return { label: '查询', value: '自定义 SQL' };
@@ -143,6 +148,9 @@ const configSummary = computed(() => {
   }
   if ((subType === SinkType.CLICKHOUSE || subType === SinkType.POSTGRES) && config.table) {
     return { label: '表名', value: config.table };
+  }
+  if (subType === SinkType.NEO4J && config.connection_id) {
+    return { label: '图谱', value: config.graph_name || '默认图谱' };
   }
   if (subType === SinkType.ELASTICSEARCH && config.index) {
     return { label: '索引', value: config.index };
@@ -160,6 +168,9 @@ const configSummary = computed(() => {
   }
   if (subType === TransformType.VECTOR_EMBEDDING) {
     return { label: '模型', value: config.model || 'text-embedding-3' };
+  }
+  if (subType === TransformType.GRAPH_EXTRACT) {
+    return { label: '模型', value: config.model_id ? `已选模型 (ID: ${config.model_id})` : '待配置' };
   }
 
   // Fallback for demo/empty state if needed, or just return null to hide

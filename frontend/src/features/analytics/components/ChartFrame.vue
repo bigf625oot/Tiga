@@ -42,14 +42,18 @@ const sendData = () => {
   if (!iframeRef.value || !iframeRef.value.contentWindow || !loaded.value) return;
   
   try {
+    // We must clone the option to remove Vue reactive proxies and any non-clonable properties,
+    // otherwise postMessage might throw a DataCloneError when switching tabs/re-rendering.
+    const rawOption = JSON.parse(JSON.stringify(props.option));
+    
     iframeRef.value.contentWindow.postMessage({
       type: 'RENDER_CHART',
-      data: props.option
+      data: rawOption
     }, '*');
     loading.value = false;
   } catch (e) {
     console.error("Failed to send chart data", e);
-    error.value = "图表渲染通信失败";
+    error.value = "图表渲染通信失败: " + e.message;
     loading.value = false;
   }
 };

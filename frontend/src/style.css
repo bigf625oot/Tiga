@@ -10,13 +10,8 @@
   unicode-range: U+30-39;
 }
 
-@font-face {
-  font-family: 'Hack';
-  src: url('/fonts/Hack-Italic-3.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
+/* Hack Regular 暂无字体文件，仅注册 italic 变体；
+   font-mono 在 font-style:normal 时回退至 ui-monospace / SF Mono / Consolas */
 @font-face {
   font-family: 'Hack';
   src: url('/fonts/Hack-Italic-3.ttf') format('truetype');
@@ -184,4 +179,16 @@ html, body {
 }
 .code-block-wrapper pre code.shiki {
   background-color: transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 2px;
 }

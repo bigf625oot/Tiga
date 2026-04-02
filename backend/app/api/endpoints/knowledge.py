@@ -19,7 +19,7 @@ import shutil
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, select
@@ -27,11 +27,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.knowledge import DocumentStatus, KnowledgeChat, KnowledgeDocument
-from app.services.rag.knowledge.parser import parse_local_file
-from app.services.rag.knowledge_base import UPLOAD_DIR, kb_service
-from app.services.rag.retrieval.engines.lightrag import lightrag_engine
-from app.services.storage.service import storage_service
-from app.services.rag.qa import qa_service
+from app.services.intelligence.knowledge.extractor.document_parser import parse_local_file
+from app.services.intelligence.knowledge.rag.knowledge_base import UPLOAD_DIR, kb_service
+from app.services.intelligence.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.platform.storage.service import storage_service
+from app.services.intelligence.knowledge.rag.generation.qa import qa_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,7 @@ async def background_delete_cleanup(filename: str, oss_key: str = None):
 class CreateFolderRequest(BaseModel):
     name: str
     parent_id: Optional[int] = None
+    knowledge_base_id: Optional[str] = None
 
 
 @router.post("/folder")
@@ -68,7 +69,8 @@ async def create_folder(request: CreateFolderRequest, db: AsyncSession = Depends
     stmt = select(KnowledgeDocument).where(
         KnowledgeDocument.filename == request.name,
         KnowledgeDocument.is_folder,
-        KnowledgeDocument.parent_id == request.parent_id
+        KnowledgeDocument.parent_id == request.parent_id,
+        KnowledgeDocument.knowledge_base_id == request.knowledge_base_id
     )
     result = await db.execute(stmt)
     if result.scalars().first():
@@ -78,6 +80,7 @@ async def create_folder(request: CreateFolderRequest, db: AsyncSession = Depends
         filename=request.name,
         is_folder=True,
         parent_id=request.parent_id,
+        knowledge_base_id=request.knowledge_base_id,
         status=DocumentStatus.INDEXED, # Folders are always "indexed" / ready
         file_size=0
     )
@@ -132,7 +135,12 @@ async def safe_update_progress(doc_id: int, done: int, total: int, extra: str = 
 
 
 async def background_incremental_index(doc_id: int, segments: List[str]):
-    try:
+    logger.info(f"开始增量后台处理 文档ID={doc_id} (使用 Saga 模式)")
+    from app.core.saga import SagaOrchestrator, SagaStep
+    
+    saga = SagaOrchestrator(f"Doc_Incr_Index_{doc_id}")
+
+    async def step_incremental_index(ctx):
         async with AsyncSessionLocal() as db:
             await lightrag_engine.ensure_initialized(db)
         total = len(segments) + 1  # +1 for the first segment done in upload_and_index
@@ -141,8 +149,7 @@ async def background_incremental_index(doc_id: int, segments: List[str]):
         def get_stats():
             try:
                 import networkx as nx
-
-                from app.services.rag.config.settings import LIGHTRAG_DIR
+                from app.services.intelligence.knowledge.rag.config.settings import LIGHTRAG_DIR
 
                 p = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
                 if not p.exists():
@@ -154,132 +161,158 @@ async def background_incremental_index(doc_id: int, segments: List[str]):
                 return 0, 0
 
         for i, seg in enumerate(segments):
-            try:
-                logger.info(f"[Async Incremental] Processing chunk {i + 1}/{len(segments)} (size={len(seg)})...")
-                # Update status: Processing...
-                await safe_update_progress(doc_id, done, total, extra=f"(processing part {done + 1}/{total})")
+            logger.info(f"[Async Incremental] Processing chunk {i + 1}/{len(segments)} (size={len(seg)})...")
+            await safe_update_progress(doc_id, done, total, extra=f"(processing part {done + 1}/{total})")
 
-                await lightrag_engine.insert_text_async(seg, description=f"doc#{doc_id}:part{done + 1}/{total}")
-                done += 1
+            await lightrag_engine.insert_text_async(seg, description=f"doc#{doc_id}:part{done + 1}/{total}")
+            done += 1
 
-                # Update status: Done with part, show graph size
-                n, e = get_stats()
-                await safe_update_progress(doc_id, done, total, extra=f"(graph: {n}n/{e}e)")
+            n, e = get_stats()
+            await safe_update_progress(doc_id, done, total, extra=f"(graph: {n}n/{e}e)")
 
-            except Exception as e:
-                logger.exception(f"增量索引失败 doc={doc_id} chunk={i}: {e}")
-                await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"增量索引失败: {str(e)}")
-                return  # Stop processing on error
-
-        # Finalize: mark as indexed when all parts done
         await safe_update_status(doc_id, DocumentStatus.INDEXED, msg=f"index_progress:{total}/{total}")
+        
+        # We need the display name for potential compensation
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
+            _doc = result.scalars().first()
+            display_name = _doc.filename if _doc and _doc.filename else f"doc#{doc_id}"
+        return {"display_name": display_name}
+
+    async def compensate_incremental_index(ctx):
+        display_name = ctx.get("Incremental_Index_result", {}).get("display_name")
+        if display_name:
+            logger.info(f"[Saga Rollback] 清理 LightRAG 增量数据: {display_name}")
+            try:
+                import asyncio
+                await asyncio.to_thread(kb_service.delete_document, display_name)
+            except Exception as e:
+                logger.error(f"[Saga Rollback] LightRAG 增量清理失败: {e}")
+
+    saga.add_step(SagaStep(name="Incremental_Index", execute=step_incremental_index, compensate=compensate_incremental_index))
+
+    try:
+        success = await saga.run()
+        if not success:
+            await safe_update_status(doc_id, DocumentStatus.FAILED, msg="增量处理失败，已触发 Saga 回滚补偿")
     except Exception as e:
         logger.exception(f"后台增量索引任务失败 doc={doc_id}: {e}")
         await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"系统错误: {str(e)}")
 
 
 async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_filename: str):
-    logger.info(f"开始后台处理 文档ID={doc_id}")
+    logger.info(f"开始后台处理 文档ID={doc_id} (使用 Saga 模式)")
 
     # 标记处理是否成功，用于决定是否清理临时文件
     process_success = False
 
-    try:
+    from app.core.saga import SagaOrchestrator, SagaStep
+    
+    saga = SagaOrchestrator(f"Doc_Index_{doc_id}")
+    
+    async def step_upload_oss(ctx):
         # --- Step 1: Upload to OSS ---
         oss_key = f"knowledge/{unique_filename}"
-        oss_url = None
-        try:
-            logger.info(
-                f"OSS上传前检查 路径={temp_file_path} 存在={os.path.exists(temp_file_path)} 大小={os.path.getsize(temp_file_path) if os.path.exists(temp_file_path) else 0}"
-            )
-            oss_url = storage_service.upload_file_path(oss_key, temp_file_path)
-            await safe_update_status(doc_id, DocumentStatus.UPLOADED, msg=None, oss_key=oss_key, oss_url=oss_url)
-            logger.info(f"OSS上传成功 文档ID={doc_id} 键={oss_key} URL={oss_url}")
-        except Exception as e:
-            logger.error(f"OSS上传失败: {e}", exc_info=True)
-            await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"OSS 上传失败: {str(e)}")
-            return
+        logger.info(
+            f"OSS上传前检查 路径={temp_file_path} 存在={os.path.exists(temp_file_path)} 大小={os.path.getsize(temp_file_path) if os.path.exists(temp_file_path) else 0}"
+        )
+        oss_url = storage_service.upload_file_path(oss_key, temp_file_path)
+        await safe_update_status(doc_id, DocumentStatus.UPLOADED, msg=None, oss_key=oss_key, oss_url=oss_url)
+        logger.info(f"OSS上传成功 文档ID={doc_id} 键={oss_key} URL={oss_url}")
+        return {"oss_key": oss_key, "oss_url": oss_url}
+        
+    async def compensate_upload_oss(ctx):
+        oss_key = ctx.get("Upload_OSS_result", {}).get("oss_key")
+        if oss_key:
+            logger.info(f"[Saga Rollback] 删除 OSS 文件: {oss_key}")
+            try:
+                storage_service.delete_file(oss_key)
+            except Exception as e:
+                logger.error(f"[Saga Rollback] OSS 删除失败: {e}")
 
+    async def step_index_lightrag(ctx):
         # --- Step 2: Indexing via LightRAG ---
         await safe_update_status(doc_id, DocumentStatus.PARSING)
+        async with AsyncSessionLocal() as db:
+            await lightrag_engine.ensure_initialized(db)
+            result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
+            _doc = result.scalars().first()
+            display_name = _doc.filename if _doc and _doc.filename else unique_filename
+            
+        exists = os.path.exists(temp_file_path)
+        size = os.path.getsize(temp_file_path) if exists else 0
+        logger.info(f"解析前检查 路径={temp_file_path} 存在={exists} 大小={size}")
+
+        import asyncio
+        text = await asyncio.to_thread(parse_local_file, str(temp_file_path))
+
+        logger.info(f"解析文本长度={len(text or '')}")
+        if not text:
+            raise RuntimeError("解析到的文本为空，无法索引")
+
+        max_first = 5000  
+        seg_size = 20000  
+        first = text[:max_first]
+        rest = text[max_first:]
+
+        segments = [rest[i : i + seg_size] for i in range(0, len(rest), seg_size)] if rest else []
+        total = len(segments) + 1
+        logger.info(
+            f"[Document Processing] Chunking result: {total} parts (including first part). Seg size: {seg_size}"
+        )
+
+        await safe_update_status(
+            doc_id, DocumentStatus.INDEXING, msg=f"index_progress:0/{total} (正在提取图谱...)"
+        )
+
+        await lightrag_engine.insert_text_async(first, description=f"doc#{doc_id}:{display_name}")
+        
         try:
-            async with AsyncSessionLocal() as db:
-                await lightrag_engine.ensure_initialized(db)
-                result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
-                _doc = result.scalars().first()
-                display_name = _doc.filename if _doc and _doc.filename else unique_filename
-            exists = os.path.exists(temp_file_path)
-            size = os.path.getsize(temp_file_path) if exists else 0
-            logger.info(f"解析前检查 路径={temp_file_path} 存在={exists} 大小={size}")
-
-            # [Optimization] Run parsing in thread pool to avoid blocking event loop
-            import asyncio
-
-            text = await asyncio.to_thread(parse_local_file, str(temp_file_path))
-
-            logger.info(f"解析文本长度={len(text or '')}")
-            if not text:
-                raise RuntimeError("解析到的文本为空，无法索引")
-
-            max_first = 5000  # [Optimization] Reduce first chunk size for faster feedback
-            seg_size = 20000  # Smaller segments for more granular progress updates
-            first = text[:max_first]
-            rest = text[max_first:]
-
-            segments = [rest[i : i + seg_size] for i in range(0, len(rest), seg_size)] if rest else []
-            total = len(segments) + 1
-            logger.info(
-                f"[Document Processing] Chunking result: {total} parts (including first part). Seg size: {seg_size}"
-            )
-
-            # Initial status
-            await safe_update_status(
-                doc_id, DocumentStatus.INDEXING, msg=f"index_progress:0/{total} (正在提取图谱...)"
-            )
-
-            await lightrag_engine.insert_text_async(first, description=f"doc#{doc_id}:{display_name}")
-            try:
-                import networkx as nx
-
-                from app.services.rag.config.settings import LIGHTRAG_DIR
-
-                gp = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
-                if gp.exists():
-                    G = nx.read_graphml(str(gp))
-                    logger.info(
-                        f"首段索引后图谱 节点={G.number_of_nodes()} 边={G.number_of_edges()} 文件大小={os.path.getsize(gp)}"
-                    )
-                else:
-                    logger.info("首段索引后图谱文件缺失")
-            except Exception as e:
-                logger.warning(f"图谱检查失败: {e}")
-
-            if segments:
-                import asyncio
-
-                try:
-                    asyncio.create_task(background_incremental_index(doc_id, segments))
-                except Exception:
-                    await background_incremental_index(doc_id, segments)
-            else:
-                await safe_update_status(doc_id, DocumentStatus.INDEXED, msg=f"index_progress:{total}/{total}")
-
-            logger.info(f"索引完成 文档ID={doc_id}")
-            process_success = True  # 标记处理成功
+            import networkx as nx
+            from app.services.intelligence.knowledge.rag.config.settings import LIGHTRAG_DIR
+            gp = LIGHTRAG_DIR / "graph_chunk_entity_relation.graphml"
+            if gp.exists():
+                G = nx.read_graphml(str(gp))
+                logger.info(
+                    f"首段索引后图谱 节点={G.number_of_nodes()} 边={G.number_of_edges()} 文件大小={os.path.getsize(gp)}"
+                )
         except Exception as e:
-            import traceback
+            logger.warning(f"图谱检查失败: {e}")
 
-            error_trace = traceback.format_exc()
-            logger.error(f"LightRAG 索引文档失败 id={doc_id}: {e}")
-            logger.error(f"详细堆栈:\n{error_trace}")
-            await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"LightRAG 索引失败: {str(e)}")
+        if segments:
+            from app.core.worker_pool import task_pool
+            await task_pool.submit_task(background_incremental_index, doc_id, segments)
+        else:
+            await safe_update_status(doc_id, DocumentStatus.INDEXED, msg=f"index_progress:{total}/{total}")
 
+        logger.info(f"首段索引完成 文档ID={doc_id}")
+        return {"display_name": display_name}
+        
+    async def compensate_index_lightrag(ctx):
+        display_name = ctx.get("Index_LightRAG_result", {}).get("display_name")
+        if display_name:
+            logger.info(f"[Saga Rollback] 清理 LightRAG 数据: {display_name}")
+            try:
+                import asyncio
+                await asyncio.to_thread(kb_service.delete_document, display_name)
+            except Exception as e:
+                logger.error(f"[Saga Rollback] LightRAG 清理失败: {e}")
+
+    # Add steps to Saga Orchestrator
+    saga.add_step(SagaStep(name="Upload_OSS", execute=step_upload_oss, compensate=compensate_upload_oss))
+    saga.add_step(SagaStep(name="Index_LightRAG", execute=step_index_lightrag, compensate=compensate_index_lightrag))
+
+    try:
+        success = await saga.run()
+        if success:
+            process_success = True
+        else:
+            await safe_update_status(doc_id, DocumentStatus.FAILED, msg="处理失败，已触发 Saga 回滚补偿")
     except Exception as e:
-        logger.error(f"后台处理错误: {e}", exc_info=True)
+        logger.error(f"Saga 后台处理错误: {e}", exc_info=True)
         await safe_update_status(doc_id, DocumentStatus.FAILED, msg=f"系统错误: {str(e)}")
     finally:
         # Cleanup Temp File
-        # 只有在处理成功时才删除文件，失败时保留以便排查
         if process_success and os.path.exists(temp_file_path):
             try:
                 os.remove(temp_file_path)
@@ -292,20 +325,22 @@ async def background_upload_and_index(doc_id: int, temp_file_path: str, unique_f
 
 @router.post("/upload")
 async def upload_document(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     parent_id: Optional[int] = Query(None),
+    knowledge_base_id: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
-    logger.info(f"收到上传请求 文件={file.filename} parent_id={parent_id}")
+    logger.info(f"收到上传请求 文件={file.filename} parent_id={parent_id} knowledge_base_id={knowledge_base_id}")
     # 1. Save to Temp File (for indexing)
     file_ext = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     temp_file_path = UPLOAD_DIR / unique_filename
 
     try:
-        with open(temp_file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        import aiofiles
+        async with aiofiles.open(temp_file_path, "wb") as buffer:
+            while chunk := await file.read(8192):
+                await buffer.write(chunk)
         exists = os.path.exists(temp_file_path)
         size = os.path.getsize(temp_file_path) if exists else 0
         logger.info(f"已保存临时文件 路径={temp_file_path} 存在={exists} 大小={size}")
@@ -320,7 +355,8 @@ async def upload_document(
             oss_url=None,
             file_size=file_size,
             status=DocumentStatus.UPLOADING,
-            parent_id=parent_id
+            parent_id=parent_id,
+            knowledge_base_id=knowledge_base_id
         )
         db.add(new_doc)
         await db.commit()
@@ -328,7 +364,8 @@ async def upload_document(
         logger.info(f"已创建文档记录 id={new_doc.id} 文件名={new_doc.filename} 大小={file_size}")
 
         # 3. Trigger Background Task (OSS Upload + Indexing)
-        background_tasks.add_task(background_upload_and_index, new_doc.id, str(temp_file_path), unique_filename)
+        from app.core.worker_pool import task_pool
+        await task_pool.submit_task(background_upload_and_index, new_doc.id, str(temp_file_path), unique_filename)
 
         return new_doc
 
@@ -337,20 +374,22 @@ async def upload_document(
         # Cleanup if failed
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
-        raise HTTPException(status_code=500, detail=str(e))
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"文件上传失败: {str(e)}")
 
 @router.post("/{doc_id}/retry")
 async def retry_document(
     doc_id: int,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
     doc = result.scalars().first()
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        from app.core.exceptions import EntityNotFoundException
+        raise EntityNotFoundException(entity="KnowledgeDocument", identifier=str(doc_id))
     if doc.is_folder:
-        raise HTTPException(status_code=400, detail="Cannot retry a folder")
+        from app.core.exceptions import InvalidEntityException
+        raise InvalidEntityException(detail="Cannot retry a folder")
     
     # Check if temp file exists, if not try to download from OSS
     temp_file_path = None
@@ -362,20 +401,23 @@ async def retry_document(
                 storage_service.download_file(doc.oss_key, temp_file_path)
             except Exception as e:
                 logger.error(f"Failed to download from OSS for retry: {e}")
-                raise HTTPException(status_code=500, detail="文件不存在本地且从存储恢复失败，请重新上传")
+                from app.core.exceptions import ServiceException
+                raise ServiceException(detail="文件不存在本地且从存储恢复失败，请重新上传")
     else:
         # 尝试通过名字找
         unique_filename = doc.filename
         temp_file_path = str(UPLOAD_DIR / unique_filename)
         if not os.path.exists(temp_file_path):
-             raise HTTPException(status_code=400, detail="文件未正确上传或已丢失，请重新上传")
+             from app.core.exceptions import InvalidEntityException
+             raise InvalidEntityException(detail="文件未正确上传或已丢失，请重新上传")
         
     doc.status = DocumentStatus.PARSING
     doc.error_message = None
     await db.commit()
     
     # Trigger background task
-    background_tasks.add_task(background_upload_and_index, doc.id, temp_file_path, unique_filename)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(background_upload_and_index, doc.id, temp_file_path, unique_filename)
     
     return {"status": "success", "message": "Retrying..."}
 
@@ -385,11 +427,12 @@ async def list_documents(
     parent_id: Optional[int] = Query(None),
     keyword: Optional[str] = Query(None),
     show_deleted: bool = Query(False),
+    knowledge_base_id: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    logger.info(f"查询文档列表 parent_id={parent_id} keyword={keyword} show_deleted={show_deleted} page={page}")
+    logger.info(f"查询文档列表 parent_id={parent_id} keyword={keyword} show_deleted={show_deleted} knowledge_base_id={knowledge_base_id} page={page}")
     stmt = select(KnowledgeDocument)
     
     if not show_deleted:
@@ -397,6 +440,12 @@ async def list_documents(
 
     if keyword:
         stmt = stmt.where(KnowledgeDocument.filename.ilike(f"%{keyword}%"))
+
+    if knowledge_base_id is not None:
+        stmt = stmt.where(KnowledgeDocument.knowledge_base_id == knowledge_base_id)
+    else:
+        # Compatibility: return global docs (no knowledge_base_id) if not requested
+        stmt = stmt.where(KnowledgeDocument.knowledge_base_id.is_(None))
 
     if parent_id is None:
         if not keyword: # Only filter by parent_id if not searching globally
@@ -484,7 +533,6 @@ class BatchDeleteRequest(BaseModel):
 @router.post("/batch_delete")
 async def batch_delete_documents(
     request: BatchDeleteRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     logger.info(f"批量删除文档/文件夹 ids={request.item_ids}")
@@ -557,7 +605,7 @@ async def move_documents(
 
 
 @router.delete("/{doc_id}")
-async def delete_document(doc_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def delete_document(doc_id: int, db: AsyncSession = Depends(get_db)):
     logger.info(f"删除文档 {doc_id}")
     result = await db.execute(select(KnowledgeDocument).filter(KnowledgeDocument.id == doc_id))
     doc = result.scalars().first()
@@ -575,9 +623,12 @@ async def delete_document(doc_id: int, background_tasks: BackgroundTasks, db: As
 
     # 2. Schedule background cleanup (OSS + LightRAG)
     try:
-        background_tasks.add_task(background_delete_cleanup, filename, oss_key)
+        from app.core.worker_pool import task_pool
+
+        await task_pool.submit_task(background_delete_cleanup, filename, oss_key)
     except Exception as e:
         logger.warning(f"调度后台清理失败: {e}")
+
         # Best-effort immediate cleanup if scheduling fails
         try:
             await background_delete_cleanup(filename, oss_key)
@@ -585,6 +636,75 @@ async def delete_document(doc_id: int, background_tasks: BackgroundTasks, db: As
             logger.warning(f"Immediate cleanup failed: {e}")
 
     return {"status": "deleted"}
+
+
+@router.get("/{doc_id}/file")
+async def stream_document_file(doc_id: int, db: AsyncSession = Depends(get_db)):
+    doc = await db.get(KnowledgeDocument, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not doc.oss_key:
+        raise HTTPException(status_code=400, detail="Document has no file")
+
+    from app.services.platform.storage.local import LocalStorage
+    import urllib.parse
+
+    file_ext = os.path.splitext(doc.filename)[1].lower()
+    content_type = "application/pdf" if file_ext == ".pdf" else "application/octet-stream"
+
+    # RFC 5987 encoding for non-ASCII filenames to avoid latin-1 encoding errors in HTTP headers
+    try:
+        safe_name_ascii = doc.filename.encode("ascii").decode("ascii")
+        disposition = f'inline; filename="{safe_name_ascii}"'
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        encoded_name = urllib.parse.quote(doc.filename, safe="")
+        disposition = f"inline; filename*=UTF-8''{encoded_name}"
+
+    # Local storage: serve directly via FileResponse (supports Range, no temp copy)
+    if isinstance(storage_service.provider, LocalStorage):
+        from fastapi.responses import FileResponse
+        file_path = os.path.join(storage_service.provider.upload_dir, doc.oss_key)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found on disk")
+        return FileResponse(file_path, media_type=content_type, headers={"Content-Disposition": disposition})
+
+    # OSS/S3: redirect to presigned URL.
+    # The browser's PDF viewer requires HTTP Range and Content-Length to seek to the xref table
+    # at the end of the file. StreamingResponse uses chunked transfer encoding which lacks both,
+    # causing the PDF viewer to fail with "Failed to load PDF document" on larger files.
+    # Redirecting to the native OSS/S3 URL offloads the Range processing to the object storage.
+    from fastapi.responses import RedirectResponse
+    
+    params = {
+        "response-content-type": content_type,
+        "response-content-disposition": disposition
+    }
+    
+    presigned_url = storage_service.provider.generate_presigned_url(
+        doc.oss_key, 
+        expiration=3600, 
+        params=params
+    )
+    
+    if presigned_url:
+        return RedirectResponse(url=presigned_url)
+    else:
+        raise HTTPException(status_code=500, detail="Failed to generate storage URL")
+
+
+@router.get("/{doc_id}/meta")
+async def get_document_meta(doc_id: int, db: AsyncSession = Depends(get_db)):
+    doc = await db.get(KnowledgeDocument, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {
+        "id": doc.id,
+        "filename": doc.filename,
+        "file_size": doc.file_size,
+        "status": doc.status,
+        "created_at": doc.created_at,
+        "updated_at": doc.updated_at,
+    }
 
 
 @router.get("/{doc_id}/content")
@@ -611,7 +731,8 @@ async def get_document_content(doc_id: int, db: AsyncSession = Depends(get_db)):
         return {"content": content, "filename": doc.filename}
     except Exception as e:
         logger.error(f"获取文档内容失败 id={doc_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve content: {str(e)}")
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"获取文档内容失败: {str(e)}")
     finally:
         # Cleanup
         if temp_path and os.path.exists(temp_path):
@@ -695,7 +816,7 @@ async def get_document_graph(doc_id: int, request: Request, db: AsyncSession = D
 
 @router.get("/graph")
 async def get_global_graph(request: Request, db: AsyncSession = Depends(get_db)):
-    from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+    from app.services.intelligence.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 
     await lightrag_engine.ensure_initialized(db)
     data = lightrag_engine.get_graph_data()
@@ -782,7 +903,8 @@ async def clear_qa_history(doc_id: int, session_id: str = Query(None), db: Async
     except Exception as e:
         logger.error(f"清空问答历史失败: {e}")
         await db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail=f"清空问答历史失败: {str(e)}")
 
 
 @router.get("/{doc_id}/qa/history")

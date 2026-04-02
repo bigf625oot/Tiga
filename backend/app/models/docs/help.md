@@ -49,21 +49,20 @@
 ---
 
 ## 3. 工作流建模 (Workflow)
-**文件**: `workflow.py`, `agent_workflow.py`
+**文件**: `agent_workflow.py`
 
 基于图结构的任务编排系统，支持版本管理和可视化定义。
 
 ### 核心字段设计
-*   **版本控制体系**:
-    *   `id` (UUID): 每次修改发布都会生成新 ID。
-    *   `original_id`: 溯源 ID，将同一工作流的不同版本串联起来。
-    *   `version` (Integer): 递增版本号。
-    *   `is_latest` / `is_draft`: 状态标识位，方便快速查询最新发布版或草稿。
+*   **基本信息**:
+    *   `id` (String): 主键。
+    *   `name` / `description`: 名称与描述。
+    *   `is_template`: 是否为模板。
+    *   `is_active`: 状态标识位。
 *   **图结构定义**:
     *   `definition` (JSON): 核心字段，存储前端可视化编辑器生成的节点 (Nodes) 和连线 (Edges) 的拓扑结构。
-    *   `webhook_url` (可选): 支持将工作流注册为外部系统（如 N8N）的触发器。
-*   **运行参数**:
-    *   `input_variables` / `runtime_config`: 定义工作流启动时需要的参数格式和环境配置。
+*   **其他**:
+    *   `tags` (JSON): 分类标签。
 
 ---
 

@@ -186,7 +186,21 @@
               </div>
 
               <div v-else-if="item.type === 'database'" class="mb-4">
-                <div class="grid grid-cols-2 gap-4 m-4">
+                <div v-if="['neo4j', 'janusgraph', 'nebula'].includes((item.metrics?.db_type || item.config?.type || '').toLowerCase())" class="grid grid-cols-2 gap-4 m-4">
+                  <div>
+                    <div class="text-xs text-muted-foreground mb-0.5">节点总数</div>
+                    <div class="text-xl font-semibold text-emerald-600 leading-none">
+                      {{ formatNumber(item.metrics?.node_count || 0) }} <span class="text-xs font-normal text-muted-foreground">个</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-muted-foreground mb-0.5">关系总数</div>
+                    <div class="text-xl font-semibold text-blue-600 leading-none">
+                      {{ formatNumber(item.metrics?.relationship_count || 0) }} <span class="text-xs font-normal text-muted-foreground">条</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="grid grid-cols-2 gap-4 m-4">
                   <div>
                     <div class="text-xs text-muted-foreground mb-0.5">数据表</div>
                     <div class="text-xl font-semibold text-purple-600 leading-none">
@@ -203,7 +217,7 @@
                 <div>
                     <Badge variant="outline" class="gap-1.5 text-xs font-medium text-muted-foreground">
                       <Database class="w-3.5 h-3.5" />
-                      {{ item.metrics?.db_type || '未知类型' }}
+                      {{ item.metrics?.db_type || item.config?.type || '未知类型' }}
                     </Badge>
                 </div>
               </div>
@@ -1550,17 +1564,30 @@ const loadDatabaseMetrics = async () => {
         const metadata = await dataSourceApi.fetchMetadata(item.id);
         
         if (Array.isArray(metadata)) {
-          const tableCount = metadata.length;
-          // Calculate total records from metadata schema_info
-          const totalRecords = metadata.reduce((acc, table) => {
-            const rc = table.schema_info?.row_count;
-            return acc + (typeof rc === 'number' ? rc : 0);
-          }, 0);
-
-          const metricsData = {
-            table_count: tableCount,
-            total_records: totalRecords
-          };
+          let metricsData: any = {};
+          
+          const dbType = (item.metrics?.db_type || item.config?.type || '').toLowerCase();
+          const isGraph = ['neo4j', 'janusgraph', 'nebula'].includes(dbType);
+          
+          if (isGraph) {
+            const nodeCount = metadata.filter(m => m.type === 'node_label').reduce((acc, m) => acc + (m.schema_info?.count || 0), 0);
+            const relCount = metadata.filter(m => m.type === 'relationship_type').reduce((acc, m) => acc + (m.schema_info?.count || 0), 0);
+            metricsData = {
+              node_count: nodeCount,
+              relationship_count: relCount
+            };
+          } else {
+            const tableCount = metadata.length;
+            // Calculate total records from metadata schema_info
+            const totalRecords = metadata.reduce((acc, table) => {
+              const rc = table.schema_info?.row_count;
+              return acc + (typeof rc === 'number' ? rc : 0);
+            }, 0);
+            metricsData = {
+              table_count: tableCount,
+              total_records: totalRecords
+            };
+          }
 
           // Update item
           item.metrics = { ...item.metrics, ...metricsData };
@@ -1673,8 +1700,8 @@ const mapFormToPayload = (formData: typeof form.value): DataSourceCreate => {
       host: formData.host,
       port: formData.port,
       username: formData.username,
-      password: formData.authType === 'password' ? formData.password : undefined,
-      private_key: formData.authType === 'key' ? formData.privateKey : undefined,
+      password: formData.authType === 'password' && formData.password ? encryptForTransmission(formData.password) : undefined,
+      private_key: formData.authType === 'key' && formData.privateKey ? encryptForTransmission(formData.privateKey) : undefined,
       config: {
         provider: formData.sftpProvider,
         path: formData.sftpRemotePath,
@@ -1721,7 +1748,7 @@ const mapFormToPayload = (formData: typeof form.value): DataSourceCreate => {
       host: formData.dbHost,
       port: formData.dbPort,
       username: formData.dbUsername,
-      password: formData.dbPassword,
+      password: formData.dbPassword ? encryptForTransmission(formData.dbPassword) : '',
       database: formData.dbName,
       config: {
         type: formData.dbType,
@@ -1781,8 +1808,8 @@ const mapFormToPayload = (formData: typeof form.value): DataSourceCreate => {
         seeyon_dept_ids: formData.seeyonDeptIds,
         seeyon_include_attachments: formData.seeyonIncludeAttachments
       },
-      token: formData.apiAuthType === 'bearer' ? formData.apiAuthToken : undefined,
-      api_key: formData.apiAuthType === 'apikey' ? formData.apiAuthKeyValue : undefined
+      token: formData.apiAuthType === 'bearer' && formData.apiAuthToken ? encryptForTransmission(formData.apiAuthToken) : undefined,
+      api_key: formData.apiAuthType === 'apikey' && formData.apiAuthKeyValue ? encryptForTransmission(formData.apiAuthKeyValue) : undefined
     };
   }
 

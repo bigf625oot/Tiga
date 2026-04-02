@@ -4,10 +4,10 @@
     <header class="h-14 flex-none px-4 border-b bg-background/95 backdrop-blur flex items-center justify-between z-20">
       <div class="flex items-center gap-4 flex-1">
         <div class="flex items-center gap-3">
-          <h2 class="text-lg font-semibold tracking-tight">图谱治理</h2>
+          <h2 class="text-lg font-semibold tracking-tight">数据治理</h2>
+          <div class="h-4 w-px bg-border/60"></div>
+          <span class="text-sm text-muted-foreground font-medium">通过智能诊断发现潜在的关系缺失，或手动搜索定位特定实体进行维护。</span>
         </div>
-        
-        <div class="h-4 w-px bg-border/60"></div>
         
         <!-- Global Search (Hidden in step 0) -->
         <div 

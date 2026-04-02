@@ -821,7 +821,7 @@ const testConnection = async () => {
         const res = await fetch('/api/v1/data_query/connect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ config: payload })
         });
         
         if (res.ok) {
@@ -859,7 +859,7 @@ const saveAndConnect = async () => {
         const connRes = await fetch('/api/v1/data_query/connect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ config: payload })
         });
         
         if (!connRes.ok) {

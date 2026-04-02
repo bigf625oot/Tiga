@@ -108,7 +108,7 @@
                           <div class="flex items-center gap-2">
                             <Database class="h-3 w-3" />
                             <span>{{ ds.name }}</span>
-                            <span class="text-xs text-muted-foreground ml-2">({{ ds.type }})</span>
+                            <span class="text-xs text-muted-foreground ml-2">({{ ds.type === 'database' ? ds.config?.type : ds.type }})</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -360,6 +360,7 @@
           </div>
 
           <div v-for="(msg, index) in messages" :key="msg._id || index"
+            v-show="msg.role === 'user' || msg.content || (msg.steps && msg.steps.length > 0) || msg.sql_query || msg.chart_config || (isStreaming && index === messages.length - 1)"
             :class="['flex gap-4 group', msg.role === 'user' ? 'flex-row-reverse' : '']">
 
             <!-- Avatar -->
@@ -415,7 +416,7 @@
                   </Collapsible>
 
                   <!-- Main Content / Tabs -->
-                  <div v-if="msg.content || msg.sql_query">
+                  <div v-if="msg.content || msg.sql_query || (isStreaming && index === messages.length - 1)">
                     <Tabs :defaultValue="getMsgViewMode(msg._id)" class="w-full"
                       @update:modelValue="(v) => setMsgViewMode(msg._id, v)">
                       <div class="flex items-center justify-between mb-2" v-if="msg.sql_query">
@@ -434,7 +435,7 @@
                         <div v-if="msg.content"
                           class="markdown-body prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent"
                           v-html="renderMarkdown(getMessageText(msg.content))" @click="handleContentClick"></div>
-                        <div v-else-if="isStreaming" class="space-y-2">
+                        <div v-else-if="isStreaming" class="space-y-2 mt-2">
                           <Skeleton class="h-4 w-3/4" />
                           <Skeleton class="h-4 w-1/2" />
                         </div>
@@ -709,7 +710,11 @@ onMounted(async () => {
 const fetchDataSources = async () => {
   try {
     const list = await dataSourceApi.list({ limit: 100 });
-    dataSources.value = list.filter(ds => ['mysql', 'postgresql', 'sqlite', 'clickhouse', 'snowflake'].includes(ds.type));
+    const items = Array.isArray(list) ? list : (list.items || []);
+    dataSources.value = items.filter(ds => {
+      const type = ds.type === 'database' ? ds.config?.type : ds.type;
+      return ['mysql', 'postgresql', 'sqlite', 'clickhouse', 'snowflake'].includes(type);
+    });
   } catch (e) {
     console.error("Failed to load data sources", e);
   }
@@ -869,7 +874,7 @@ const testConnection = async () => {
     const res = await fetch('/api/v1/data_query/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config.value)
+      body: JSON.stringify({ config: config.value })
     });
 
     if (res.ok) {
@@ -899,7 +904,7 @@ const saveAndConnect = async () => {
     const connRes = await fetch('/api/v1/data_query/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config.value)
+      body: JSON.stringify({ config: config.value })
     });
 
     if (!connRes.ok) {
@@ -1159,6 +1164,8 @@ const sendMessage = async () => {
     isStreaming.value = true;
 
     let buffer = '';
+    let currentEvent = 'text';
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -1169,23 +1176,50 @@ const sendMessage = async () => {
       buffer = lines.pop() || '';
 
       for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const stepData = JSON.parse(line);
-          if (stepData.step && stepData.content) {
-            stepData.timestamp = Date.now();
-            assistantMsg.steps.push(stepData);
-            assistantMsg.currentStep = stepData.step;
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
 
-            if (['data', 'chart', 'error'].includes(stepData.type)) {
+        if (trimmedLine.startsWith('event:')) {
+          currentEvent = trimmedLine.substring(6).trim();
+          continue;
+        }
+
+        if (trimmedLine.startsWith('data:')) {
+          const dataStr = trimmedLine.substring(5).trim();
+          if (dataStr === '[DONE]') continue;
+          
+          try {
+            const stepData = JSON.parse(dataStr);
+            // Backend might send meta events
+            if (currentEvent === 'meta') {
+              continue;
+            }
+
+            if (stepData.step && stepData.content) {
+              stepData.timestamp = Date.now();
+              assistantMsg.steps.push(stepData);
+              assistantMsg.currentStep = stepData.step;
+
+              if (stepData.type === 'chart') {
+                assistantMsg.chart_config = typeof stepData.content === 'string' 
+                  ? JSON.parse(stepData.content.replace(/::: echarts[\s\S]*?:::/, '')) 
+                  : stepData.content;
+              } else if (['data', 'error'].includes(stepData.type)) {
+                assistantMsg.content += stepData.content;
+              } else if (stepData.type === 'sql') {
+                assistantMsg.sql_query = stepData.content.replace(/```sql|```/g, '').trim();
+              }
+            } else if (stepData.content) {
+              // Handle cases where step is not present but content is
               assistantMsg.content += stepData.content;
             }
-            if (stepData.type === 'sql') {
-              assistantMsg.sql_query = stepData.content.replace(/```sql|```/g, '').trim();
+          } catch (e) {
+            console.warn('Failed to parse step', e, dataStr);
+            // Fallback: just append the raw string if it's not JSON
+            if (typeof dataStr === 'string' && !dataStr.startsWith('{')) {
+               assistantMsg.content += dataStr;
             }
           }
-        } catch (e) {
-          console.warn('Failed to parse step', e);
         }
       }
       scrollToBottom();
@@ -1210,15 +1244,10 @@ const scrollToBottom = () => {
   });
 };
 
-const getMessageText = (content) => content.replace(/::: echarts[\s\S]*?:::/, '').trim();
+const getMessageText = (content) => content.replace(/::: echarts[\s\S]*?:::/g, '').trim();
 
 const getMessageChart = (content) => {
-  if (!content) return null;
-  const match = content.match(/::: echarts([\s\S]*?):::/);
-  if (match && match[1]) {
-    try { return JSON.parse(match[1].trim()); } catch (e) { return null; }
-  }
-  return null;
+  return null; // Logic moved to chart_config mapping directly
 };
 
 const processChartOption = (raw) => raw; // Hook for chart optimization if needed

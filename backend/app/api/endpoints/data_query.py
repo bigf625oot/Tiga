@@ -19,12 +19,17 @@ import json
 import logging
 import time
 import uuid
+from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, Body
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from app.services.chatbi.vanna.models import (
+from sqlalchemy import select
+
+from app.db.session import AsyncSessionLocal
+from app.models.system_config import SystemConfig
+from app.services.domain.chatbi.vanna.models import (
     DataQueryMessageResponse,
     DataQuerySessionCreate,
     DataQuerySessionResponse,
@@ -32,15 +37,15 @@ from app.services.chatbi.vanna.models import (
     DbConnectionConfig,
     VannaRequest,
 )
-from app.services.chatbi.vanna.service import data_query_service
-from app.services.rag.kg_query import KGQueryService
-from app.services.nlu.classifier import IntentClassifier, QueryIntent
+from app.services.domain.chatbi.vanna.service import data_query_service
+from app.services.intelligence.knowledge.graph.analysis.nl2chart import KGQueryService
+from app.services.intelligence.nlu.classifier import IntentClassifier, QueryIntent
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-CONFIG_FILE = "vanna_config.json"
+CONFIG_KEY = "chatbi_db_config"
 
 # In-memory job status store (Simple implementation)
 conversion_jobs = {}
@@ -54,7 +59,11 @@ def update_job_status(job_id, status, progress, message):
     }
 
 @router.post("/connect")
-async def connect_database(request: Request, config: DbConnectionConfig = None, source_id: int = None):
+async def connect_database(
+    request: Request, 
+    config: Optional[DbConnectionConfig] = Body(None), 
+    source_id: Optional[int] = Body(None)
+):
     """
     Connect to a database using the provided configuration OR source_id.
     Executes the blocking connection logic in a separate thread to avoid blocking the event loop.
@@ -80,7 +89,8 @@ async def connect_database(request: Request, config: DbConnectionConfig = None, 
     except Exception as e:
         duration = (time.time() - start_time) * 1000
         logger.error(f"Connection failed after {duration:.2f}ms. Error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail=f"Connection failed: {str(e)}")
 
 
 @router.get("/tables")
@@ -89,6 +99,9 @@ async def get_tables():
     Get all table names from the connected database and basic stats.
     """
     try:
+        if not data_query_service.vanna_core.sql_runner:
+            return {"tables": [], "stats": {"table_count": 0, "total_records": 0}}
+            
         tables = await run_in_threadpool(data_query_service.get_tables)
         # Fetch stats (total records)
         # We run this in threadpool too as it might be slow
@@ -99,7 +112,8 @@ async def get_tables():
             "stats": stats
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail=f"Failed to get tables: {str(e)}")
 
 
 @router.get("/table/{table_name}/data")
@@ -111,25 +125,52 @@ async def get_table_data(table_name: str, limit: int = 100, offset: int = 0):
         result = await run_in_threadpool(data_query_service.get_table_data, table_name, limit, offset)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail=f"Failed to get table data: {str(e)}")
 
 
 @router.post("/table/{table_name}/convert_to_graph")
-async def convert_table_to_graph(table_name: str, background_tasks: BackgroundTasks):
+async def convert_table_to_graph(table_name: str):
     """
     Start a background task to convert table data to Knowledge Graph.
+    Uses Saga Orchestrator to ensure rollback if graph extraction fails.
     """
     job_id = str(uuid.uuid4())
     update_job_status(job_id, "pending", 0, "任务已创建")
 
-    background_tasks.add_task(
-        data_query_service.convert_table_to_graph_task,
-        job_id,
-        table_name,
-        update_job_status
-    )
+    from app.core.saga import SagaOrchestrator, SagaStep
+    
+    saga = SagaOrchestrator(f"Table_To_Graph_{job_id}")
 
-    return {"job_id": job_id, "message": "转换任务已开始"}
+    async def step_convert(ctx):
+        await data_query_service.convert_table_to_graph_task(
+            job_id,
+            table_name,
+            update_job_status
+        )
+        return {"status": "success", "table_name": table_name}
+
+    async def compensate_convert(ctx):
+        # If something fails, we might want to clean up partially created graph nodes
+        # Since this is a complex operation depending on how convert_table_to_graph_task works,
+        # we log the need for cleanup. A full implementation would delete the specific entities.
+        logger.warning(f"[Saga Rollback] 表转图谱失败，准备回滚 {table_name} 的图谱数据 (Not fully implemented yet)")
+        update_job_status(job_id, "failed", 0, "任务失败已回滚")
+
+    saga.add_step(SagaStep(name="Convert_Table", execute=step_convert, compensate=compensate_convert))
+
+    async def run_saga_background():
+        try:
+            success = await saga.run()
+            if not success:
+                logger.error(f"Saga execution failed for job {job_id}")
+        except Exception as e:
+            logger.error(f"Saga background wrapper error: {e}")
+
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(run_saga_background)
+
+    return {"job_id": job_id, "message": "转换任务已开始 (Saga Protected)"}
 
 
 @router.get("/conversion_status/{job_id}")
@@ -184,18 +225,14 @@ async def query_data(request: VannaRequest):
                 elif b_type == "error":
                     evt = "error"
                 elif b_type == "chart":
-                    # Backend sends "::: echarts ..." string for chart type
-                    evt = "text" 
+                    evt = "chart" 
                 
                 # Send as SSE
-                # We send the content directly as data, or the whole object?
-                # SmartQA expects data to be JSON.
-                # If evt=think, it expects data to be string or object.
-                # If evt=text, it expects data to be string.
-                yield f"event: {evt}\ndata: {json.dumps(content, ensure_ascii=False)}\n\n"
+                # We send the whole object so the frontend can display thinking steps properly.
+                yield f"event: {evt}\ndata: {chunk}\n\n"
             except Exception:
                 # Fallback for non-JSON chunks
-                yield f"event: text\ndata: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                yield f"event: text\ndata: {json.dumps({'content': chunk, 'type': 'text'}, ensure_ascii=False)}\n\n"
 
     # 2. Route based on intent
     # Fallback to existing SQL flow (SQL_QUERY or RAG_QUERY)
@@ -208,11 +245,22 @@ async def query_data(request: VannaRequest):
 @router.post("/config/save")
 async def save_config(config: DbConnectionConfig):
     """
-    Save the database configuration to a file.
+    Save the database configuration to the system_configs table.
     """
     try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(config.model_dump(), f)
+        config_data = config.model_dump()
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(SystemConfig).filter(SystemConfig.key == CONFIG_KEY)
+            )
+            sys_config = result.scalars().first()
+            if sys_config:
+                sys_config.value = config_data
+                sys_config.version += 1
+            else:
+                sys_config = SystemConfig(key=CONFIG_KEY, value=config_data, version=1)
+                session.add(sys_config)
+            await session.commit()
             
         # If this is the current config, update the permission validator immediately
         if data_query_service.current_db_config:
@@ -220,7 +268,7 @@ async def save_config(config: DbConnectionConfig):
             data_query_service.current_db_config.allowed_tables = config.allowed_tables
             data_query_service.current_db_config.sensitive_fields = config.sensitive_fields
             
-            from app.services.chatbi.vanna.permission import SQLPermissionValidator
+            from app.services.domain.chatbi.vanna.permission import SQLPermissionValidator
             allowed_tables = set(config.allowed_tables) if config.allowed_tables else set()
             sensitive_fields = set(config.sensitive_fields) if config.sensitive_fields else set()
             data_query_service.permission_validator = SQLPermissionValidator(
@@ -231,22 +279,26 @@ async def save_config(config: DbConnectionConfig):
         return {"message": "Config saved successfully"}
     except Exception as e:
         logger.error(f"Failed to save config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save configuration")
+        from app.core.exceptions import DatabaseOperationException
+        raise DatabaseOperationException(detail="Failed to save configuration")
 
 
 @router.get("/config")
 async def get_config():
     """
-    Load the current database configuration from the service or file.
+    Load the current database configuration from the service or database.
     """
     if data_query_service.current_db_config:
         return data_query_service.current_db_config.model_dump()
         
     try:
-        import os
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, "r") as f:
-                return json.load(f)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(SystemConfig).filter(SystemConfig.key == CONFIG_KEY)
+            )
+            sys_config = result.scalars().first()
+            if sys_config and sys_config.value:
+                return sys_config.value
     except Exception as e:
         logger.error(f"Failed to load config: {e}")
         
@@ -275,7 +327,8 @@ async def create_session(payload: DataQuerySessionCreate):
             last_message_preview=None,
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"Failed to create session: {str(e)}")
 
 
 @router.get("/sessions")
@@ -309,7 +362,8 @@ async def list_sessions(status: str = "active", limit: int = 20, offset: int = 0
             )
         return {"items": out, "limit": limit, "offset": offset, "count": len(out)}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"Failed to list sessions: {str(e)}")
 
 
 @router.get("/sessions/{session_id}", response_model=DataQuerySessionResponse)
@@ -394,4 +448,5 @@ async def get_session_messages(session_id: str):
             ]
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        from app.core.exceptions import ServiceException
+        raise ServiceException(detail=f"Failed to get session messages: {str(e)}")

@@ -4,6 +4,7 @@ from app.strategies.database import DatabaseSource
 from app.strategies.sftp import SftpSource
 from app.strategies.crawler import CrawlerSource
 from app.strategies.api import ApiSource
+from app.strategies.neo4j import Neo4jSource
 
 STRATEGY_MAP: Dict[str, Type[BaseSource]] = {
     "database": DatabaseSource,
@@ -12,7 +13,8 @@ STRATEGY_MAP: Dict[str, Type[BaseSource]] = {
     "api": ApiSource,
     "mysql": DatabaseSource,
     "postgresql": DatabaseSource,
-    "postgres": DatabaseSource
+    "postgres": DatabaseSource,
+    "neo4j": Neo4jSource
 }
 
 def get_strategy(source_type: str, config: Dict[str, Any]) -> BaseSource:

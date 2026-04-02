@@ -20,7 +20,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_indicator import crud_indicator
+from app.crud.indicator import crud_indicator
 from app.db.session import get_db
 from app.schemas.indicator import IndicatorCreate, IndicatorResponse, IndicatorUpdate
 

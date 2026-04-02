@@ -14,6 +14,21 @@ class EntityNotFoundException(HTTPException):
         super().__init__(status_code=404, detail=f"{entity} not found: {identifier}")
 
 
+class InvalidEntityException(HTTPException):
+    def __init__(self, *, detail: str):
+        super().__init__(status_code=400, detail=detail)
+
+
+class ResourceExhaustedException(HTTPException):
+    def __init__(self, *, detail: str = "Resource Exhausted"):
+        super().__init__(status_code=429, detail=detail)
+
+
+class DatabaseOperationException(HTTPException):
+    def __init__(self, *, detail: str = "Database Operation Failed"):
+        super().__init__(status_code=500, detail=detail)
+
+
 class AgentBuildError(Exception):
     pass
 
@@ -26,7 +41,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"message": "Internal Server Error", "detail": str(exc)},
+        content={"message": "Internal Server Error", "detail": str(exc)},       
     )
 
 

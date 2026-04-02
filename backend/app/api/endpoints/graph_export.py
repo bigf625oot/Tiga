@@ -20,13 +20,13 @@ import os
 import tempfile
 from typing import Any, List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.core.security import decrypt_password
-from app.crud.crud_data_source import data_source as crud_data_source
-from app.crud.crud_graph_export import graph_export_config
+from app.crud.data_source import data_source as crud_data_source
+from app.crud.graph_export import graph_export_config
 from app.db.session import get_db
 from app.schemas.graph_export import (
     AIGenerateRequest,
@@ -34,7 +34,7 @@ from app.schemas.graph_export import (
     GraphExportConfigCreate,
     GraphExportConfigUpdate,
 )
-from app.services.rag.retrieval.engines.lightrag import lightrag_engine
+from app.services.intelligence.knowledge.rag.retrieval.engines.lightrag import lightrag_engine
 
 
 def get_database_schema(url: str) -> str:
@@ -309,7 +309,7 @@ def run_export_task(config_data: dict):
 
 
 @router.post("/{id}/run")
-async def run_graph_export(*, db: AsyncSession = Depends(get_db), id: int, background_tasks: BackgroundTasks) -> Any:
+async def run_graph_export(*, db: AsyncSession = Depends(get_db), id: int) -> Any:
     """
     Run graph export process in background.
     """
@@ -371,6 +371,7 @@ async def run_graph_export(*, db: AsyncSession = Depends(get_db), id: int, backg
                 print(f"Warning: Data source {ds_id} not found")
 
     # We pass the config json to the background task
-    background_tasks.add_task(run_in_threadpool, run_export_task, export_config)
+    from app.core.worker_pool import task_pool
+    await task_pool.submit_task(run_in_threadpool, run_export_task, export_config)
 
     return {"message": "Export task started in background"}

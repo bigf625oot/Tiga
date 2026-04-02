@@ -25,10 +25,11 @@ Agent Endpoints
 - 删除智能体
 - 克隆智能体
 """
-from typing import List
+from typing import List, Optional
 import shutil
 from pathlib import Path
 import uuid
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,15 +53,17 @@ async def upload_agent_icon(file: UploadFile = File(...)):
     # For now, let's hardcode relative to current file or project root if possible.
     # But environment says working directory is d:\Tiga.
     
-    upload_dir = Path("d:/Tiga/backend/data/storage/icons")
+    upload_dir = Path("data/storage/icons")
     upload_dir.mkdir(parents=True, exist_ok=True)
     
     file_ext = file.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{file_ext}"
     file_path = upload_dir / filename
     
-    with file_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    import aiofiles
+    async with aiofiles.open(file_path, "wb") as buffer:
+        while chunk := await file.read(8192):
+            await buffer.write(chunk)
         
     return {"url": f"/uploads/icons/{filename}"}
 
@@ -77,7 +80,7 @@ async def read_agents(
     """
     Retrieve agents.
     """
-    from app.services.eah_agent.core.agent_service import agent_service
+    from app.services.agent.orchestration.service import agent_service
     agents = await agent_service.get_agents(db, skip=skip, limit=limit, query=q, is_template=is_template, is_active=is_active)
     return agents
 
@@ -87,7 +90,7 @@ async def create_agent(*, db: AsyncSession = Depends(get_db), agent_in: AgentCre
     """
     Create new agent.
     """
-    from app.services.eah_agent.core.agent_service import agent_service
+    from app.services.agent.orchestration.service import agent_service
     agent = await agent_service.create_agent(db, agent_in)
     return agent
 
@@ -97,7 +100,7 @@ async def read_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     """
     Get agent by ID.
     """
-    from app.services.eah_agent.core.agent_service import agent_service
+    from app.services.agent.orchestration.service import agent_service
     return await agent_service.get_agent_or_fail(db, agent_id)
 
 
@@ -106,7 +109,7 @@ async def update_agent(*, db: AsyncSession = Depends(get_db), agent_id: str, age
     """
     Update an agent.
     """
-    from app.services.eah_agent.core.agent_service import agent_service
+    from app.services.agent.orchestration.service import agent_service
     agent = await agent_service.update_agent(db, agent_id, agent_in)
     if not agent:
         raise HTTPException(status_code=404, detail=_("Agent not found"))
@@ -118,7 +121,7 @@ async def clone_agent(*, db: AsyncSession = Depends(get_db), agent_id: str, clon
     """
     Clone an agent.
     """
-    from app.services.eah_agent.core.agent_service import agent_service
+    from app.services.agent.orchestration.service import agent_service
     agent = await agent_service.clone_agent(db, agent_id, clone_in)
     return agent
 
@@ -128,7 +131,7 @@ async def delete_agents_batch(*, db: AsyncSession = Depends(get_db), agent_ids: 
     """
     Batch delete agents.
     """
-    from app.services.eah_agent.core.agent_service import agent_service
+    from app.services.agent.orchestration.service import agent_service
     deleted_ids = await agent_service.delete_agents(db, agent_ids)
     return {"deleted": deleted_ids}
 
@@ -138,8 +141,62 @@ async def delete_agent(*, db: AsyncSession = Depends(get_db), agent_id: str):
     """
     Delete an agent.
     """
-    from app.services.eah_agent.core.agent_service import agent_service
-    from app.crud.crud_agent import agent as crud_agent
+    from app.services.agent.orchestration.service import agent_service
+    from app.crud.agent import agent as crud_agent
     agent = await agent_service.get_agent_or_fail(db, agent_id)
     await crud_agent.delete(db, id=agent_id)
     return agent
+
+
+class PromptOptimizeRequest(BaseModel):
+    system_prompt: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+@router.post("/actions/optimize_prompt", summary=_("Optimize agent system prompt"))
+async def optimize_prompt(request: PromptOptimizeRequest):
+    """
+    Optimize the system prompt of an agent using an LLM.
+    """
+    from app.services.platform.llm.factory import ModelFactory
+    from app.core.config import settings
+    from agno.agent import Agent
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        llm_model = ModelFactory.resolve_default_llm_model(settings)
+        model = ModelFactory.create_model(llm_model)
+        
+        system_message = (
+            "You are an expert prompt engineer. Your task is to optimize the provided system prompt "
+            "to make it more effective, clear, and professional for an AI agent. "
+            "If a name or description is provided, use them to better understand the context. "
+            "Return ONLY the optimized prompt text without any explanations, markdown blocks, or quotes around it."
+        )
+        
+        agent = Agent(
+            model=model,
+            system_prompt=system_message,
+        )
+        
+        user_message = f"Please optimize this prompt:\n\n{request.system_prompt}"
+        if request.name:
+            user_message += f"\n\nAgent Name: {request.name}"
+        if request.description:
+            user_message += f"\n\nAgent Description: {request.description}"
+            
+        response = agent.run(user_message)
+        optimized_prompt = response.content.strip()
+        
+        if optimized_prompt.startswith('```') and optimized_prompt.endswith('```'):
+            lines = optimized_prompt.split('\n')
+            if len(lines) > 2:
+                optimized_prompt = '\n'.join(lines[1:-1]).strip()
+                if optimized_prompt.startswith('markdown'):
+                    optimized_prompt = optimized_prompt[8:].strip()
+                    
+        return {"optimized_prompt": optimized_prompt}
+    except Exception as e:
+        logger.error(f"Failed to optimize prompt: {e}")
+        raise HTTPException(status_code=500, detail="Failed to optimize prompt")

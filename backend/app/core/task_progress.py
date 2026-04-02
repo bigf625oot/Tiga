@@ -33,19 +33,19 @@ class TaskProgress:
         step: str = "",
         extend: Optional[Dict[str, Any]] = None
     ) -> None:
-        redis = await self._get_redis()
-        key = self._key(task_id)
-
-        data = {
-            "percent": str(percent),
-            "status": status,
-            "msg": msg,
-            "step": step,
-            "ts": datetime.now().isoformat(),
-            "extend": json.dumps(extend or {})
-        }
-
         try:
+            redis = await self._get_redis()
+            key = self._key(task_id)
+
+            data = {
+                "percent": str(percent),
+                "status": status,
+                "msg": msg,
+                "step": step,
+                "ts": datetime.now().isoformat(),
+                "extend": json.dumps(extend or {})
+            }
+
             await redis.hset(key, mapping=data)
             if status in ("SUCCESS", "FAILED", "CANCELLED"):
                 await redis.expire(key, PROGRESS_FINAL_TTL)
@@ -55,10 +55,9 @@ class TaskProgress:
             logger.error(f"Failed to set progress for {task_id}: {e}")
 
     async def get_progress(self, task_id: str) -> Optional[Dict[str, Any]]:
-        redis = await self._get_redis()
-        key = self._key(task_id)
-
         try:
+            redis = await self._get_redis()
+            key = self._key(task_id)
             data = await redis.hgetall(key)
             if not data:
                 return None
@@ -77,26 +76,47 @@ class TaskProgress:
             return None
 
     async def delete_progress(self, task_id: str) -> None:
-        redis = await self._get_redis()
-        key = self._key(task_id)
-
         try:
+            redis = await self._get_redis()
+            key = self._key(task_id)
             await redis.unlink(key)
         except Exception as e:
             logger.error(f"Failed to delete progress for {task_id}: {e}")
 
     async def publish_update(self, task_id: str, user_id: str) -> None:
-        redis = await self._get_redis()
-        channel = f"task:updates:{user_id}"
-
         try:
             progress = await self.get_progress(task_id)
+            if not progress:
+                # If Redis is down, we can fetch from DB instead
+                from app.db.session import AsyncSessionLocal
+                from app.crud.async_task import async_task
+                async with AsyncSessionLocal() as db:
+                    task = await async_task.get(db, task_id)
+                    if task:
+                        progress = {
+                            "percent": task.progress,
+                            "status": task.status,
+                            "msg": task.msg,
+                            "step": task.step,
+                            "extend": {}
+                        }
+            
             if progress:
-                message = json.dumps({
-                    "taskId": task_id,
-                    **progress
-                })
-                await redis.publish(channel, message)
+                message = {
+                    "task_id": task_id,
+                    "type": "progress",
+                    "data": progress
+                }
+                
+                # Send via WebSocket Manager directly (works without Redis in single-instance mode)
+                from app.core.websocket_manager import ws_manager
+                await ws_manager.send_to_user(user_id, message)
+                
+                # Also publish to Redis for multi-instance support (ignore if Redis is down)
+                redis = await self._get_redis()
+                channel = f"task:updates:{user_id}"
+                import json
+                await redis.publish(channel, json.dumps(message))
         except Exception as e:
             logger.error(f"Failed to publish update for {task_id}: {e}")
 

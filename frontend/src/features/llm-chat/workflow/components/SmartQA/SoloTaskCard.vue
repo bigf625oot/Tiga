@@ -1,0 +1,467 @@
+<template>
+  <div class="w-full flex flex-col gap-2.5 min-w-0 text-[13px]">
+
+    <!-- ── 1. Task status header (PRD §3.1 Task Header) ────────────── -->
+    <div class="flex items-center gap-2.5">
+      <!-- Status pill -->
+      <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border"
+        :class="statusPillClass">
+        <span v-if="isRunning" class="relative flex h-1.5 w-1.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-current"></span>
+          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-current"></span>
+        </span>
+        <CheckCircle2 v-else-if="!hasError" class="w-3 h-3" />
+        <XCircle v-else class="w-3 h-3" />
+        <span>{{ statusLabel }}</span>
+      </div>
+
+      <!-- Step count -->
+      <span v-if="execSteps.length > 0" class="text-[11px] text-muted-foreground/40">
+        {{ completedStepCount }}/{{ execSteps.length }} 步骤
+      </span>
+
+      <!-- Progress bar (只在有步骤时显示) -->
+      <div v-if="execSteps.length > 1" class="flex-1 h-1 rounded-full bg-muted/50 overflow-hidden max-w-[80px]">
+        <div class="h-full rounded-full transition-[width] duration-500"
+          :class="hasError ? 'bg-destructive/60' : 'bg-primary'" :style="{ width: stepProgress + '%' }" />
+      </div>
+
+      <!-- Duration -->
+      <span v-if="message.meta_data?.duration && !isRunning" class="text-[11px] text-muted-foreground/40 ml-auto">
+        {{ formatDuration(message.meta_data.duration) }}
+      </span>
+    </div>
+
+    <!-- ── 2. Thinking (PRD §2.1 Thought Chain) ─────────────────────── -->
+    <ThoughtAccordion v-if="thinkingContent"
+      :block="{ type: 'thought', content: thinkingContent.raw, state: thinkingContent.isPartial ? 'thinking' : 'collapsed' }" />
+
+    <!-- ── 3. Mini Execution Logs (PRD §2.2) ────────────────────────── -->
+    <!-- status 事件推送的阶段说明，单行紧凑摘要，可点击定位到右侧 -->
+    <div v-if="miniLogs.length > 0" class="flex flex-col gap-1 pl-0.5 min-w-0">
+      <div v-for="log in miniLogs" :key="log.id"
+        class="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 cursor-default group min-w-0">
+        <span
+          class="w-1 h-1 rounded-full bg-muted-foreground/30 flex-shrink-0 group-last:bg-primary/50 group-last:animate-pulse"></span>
+        <span class="truncate leading-relaxed font-mono min-w-0 flex-1">{{ log.text }}</span>
+      </div>
+    </div>
+
+    <!-- ── 4. Execution step timeline (PRD §2.2 + §3.2) ─────────────── -->
+    <div v-if="execSteps.length > 0" class="steps-timeline relative flex flex-col mt-0.5 min-w-0">
+      <div v-for="(step, idx) in execSteps" :key="step.id" class="step-row relative flex gap-3 min-w-0">
+
+        <!-- Vertical connector -->
+        <div v-if="idx < execSteps.length - 1" class="absolute left-[8px] top-[18px] bottom-0 w-px z-0"
+          :class="step.status === 'error' ? 'bg-destructive/25' : 'bg-border/40'"></div>
+
+        <!-- Status indicator -->
+        <div class="flex-shrink-0 w-[18px] h-[18px] z-10 flex items-center justify-center">
+          <template v-if="step.status === 'running'">
+            <span
+              class="w-[16px] h-[16px] rounded-full border-2 border-primary border-t-transparent animate-spin inline-block"></span>
+          </template>
+          <CheckCircle2 v-else-if="step.status === 'done'" class="w-[16px] h-[16px] text-emerald-500" />
+          <XCircle v-else-if="step.status === 'error'" class="w-[16px] h-[16px] text-destructive" />
+          <div v-else class="w-[14px] h-[14px] rounded-full border-2 border-border/50 bg-background"></div>
+        </div>
+
+        <!-- Step body -->
+        <div class="flex-1 min-w-0 pb-3.5">
+          <!-- Step title + elapsed -->
+          <div class="flex items-start justify-between gap-2 mb-1.5 min-w-0">
+            <div class="text-[13px] font-medium leading-snug truncate flex-1" :class="{
+              'text-foreground/90': step.status === 'running',
+              'text-muted-foreground/55': step.status === 'done',
+              'text-destructive/80': step.status === 'error',
+              'text-muted-foreground/35': step.status === 'pending',
+            }" :title="typeof step.title === 'string' ? step.title : JSON.stringify(step.title)">
+              {{ typeof step.title === 'string' ? step.title : JSON.stringify(step.title) }}
+            </div>
+            <span v-if="step.elapsed" class="text-[10px] text-muted-foreground/35 font-mono flex-shrink-0">
+              {{ step.elapsed }}
+            </span>
+          </div>
+
+          <!-- Tool calls (PRD §2.3 Tool Invocation) -->
+          <div v-if="step.toolCalls.length > 0" class="flex flex-col gap-1.5 mt-2">
+            <ToolStatusCard v-for="tc in step.toolCalls" :key="tc.id"
+              :tool-call="{ type: 'tool_call', call_id: tc.id, tool_name: tc.name, arguments: tc.args || {}, state: tc.status === 'error' ? 'error' : (tc.status === 'running' ? 'running' : 'success') }"
+              :tool-result="tc.result ? { type: 'tool_result', call_id: tc.id, content: typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result), is_error: tc.status === 'error' } : undefined" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 5. Orphan tool calls (no plan steps) ──────────────────────── -->
+    <div v-if="orphanToolCalls.length > 0" class="flex flex-col gap-1.5 pl-[26px] min-w-0">
+      <ToolStatusCard v-for="tc in orphanToolCalls" :key="tc.id"
+        :tool-call="{ type: 'tool_call', call_id: tc.id, tool_name: tc.name, arguments: tc.args || {}, state: tc.status === 'error' ? 'error' : (tc.status === 'running' ? 'running' : 'success') }"
+        :tool-result="tc.result ? { type: 'tool_result', call_id: tc.id, content: typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result), is_error: tc.status === 'error' } : undefined" />
+    </div>
+
+    <!-- ── 6. Global waiting placeholder ─────────────────────────────── -->
+    <div
+      v-if="isRunning && execSteps.length === 0 && orphanToolCalls.length === 0 && miniLogs.length === 0 && artifactLinks.length === 0"
+      class="flex items-center gap-2 pl-0.5 py-1">
+      <span class="relative flex h-2 w-2">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-primary/80"></span>
+      </span>
+      <span class="text-xs text-muted-foreground/50 animate-pulse">正在规划任务...</span>
+    </div>
+
+    <!-- ── 7. Deliverables / Artifacts (Claude Style) ─────────────────────── -->
+    <div v-if="artifactLinks.length > 0 || inlineCodeBlocks.length > 0 || isRunning">
+
+      <!-- Divider (only when execution context exists above) -->
+      <div v-if="execSteps.length > 0 || orphanToolCalls.length > 0" class="flex items-center gap-2 mb-3">
+        <div class="flex-1 h-px bg-border/30"></div>
+        <span class="text-[10px] text-muted-foreground/35 font-semibold uppercase tracking-widest">交付物</span>
+        <div class="flex-1 h-px bg-border/30"></div>
+      </div>
+
+      <!-- Claude Style Artifact Cards Grid -->
+      <div class="grid grid-cols-1 gap-2 min-w-0">
+        <!-- 文件型 Artifacts（统一走点击预览逻辑，不再用 <a> 包裹） -->
+        <ClaudeArtifactCard v-for="(art, i) in artifactLinks" :key="'art-' + i" :title="art.name"
+          :type="art.type || inferFileType(art.name)" :url="art.url" content=""
+          :metadata="art.size ? formatFileSize(art.size) : undefined" />
+
+        <!-- Inline Code Blocks as Artifacts (Claude Style) -->
+        <ClaudeArtifactCard v-for="(code, i) in inlineCodeBlocks" :key="'code-' + i"
+          :title="`${code.language.toUpperCase()} 代码片段`" :type="'code'" :content="code.content"
+          :metadata="`${code.lines} lines · 点击预览`" :language="code.language" />
+
+        <!-- Streaming placeholder (no artifacts produced yet) -->
+        <div v-if="artifactLinks.length === 0 && inlineCodeBlocks.length === 0 && isRunning"
+          class="flex items-center gap-2 pl-0.5 py-1">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-primary/80"></span>
+          </span>
+          <span class="text-xs text-muted-foreground/50 animate-pulse">正在生成交付物...</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── 8. Chart ────────────────────────────────────────────────── -->
+    <div v-if="chartOption"
+      class="w-full bg-card rounded-lg border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow mt-1">
+      <div class="h-64 w-full relative bg-card">
+        <ChartFrame :option="chartOption" />
+      </div>
+    </div>
+
+    <!-- ── 9. Knowledge references ────────────────────────────────── -->
+    <div v-if="message.sources && message.sources.length > 0" class="mt-1 pt-2 border-t border-border/20">
+      <div class="flex items-center gap-1.5 mb-2">
+        <Link2 class="w-3 h-3 text-muted-foreground/40" />
+        <span class="text-[10px] text-muted-foreground/50 font-semibold uppercase tracking-widest">信息来源</span>
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <div v-for="(ref, idx) in message.sources" :key="idx"
+          class="flex items-center gap-1 px-2 py-0.5 bg-muted/20 border border-border/30 rounded text-[11px] text-muted-foreground/70 cursor-pointer hover:bg-muted/50 hover:text-foreground transition-all max-w-[200px] truncate"
+          :title="ref.title" @click="$emit('locate-node', ref)">
+          <span class="font-mono text-muted-foreground/40 text-[10px]">{{ idx + 1 }}</span>
+          <span class="truncate">{{ ref.title }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 10. Error callout ──────────────────────────────────────── -->
+    <ErrorCallout v-if="message.error" :message="message.error" :can-retry="true"
+      @retry="$emit('resend-message', message)" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+import { CheckCircle2, XCircle, Link2 } from 'lucide-vue-next';
+import type { Message, StreamEventItem } from '@/features/llm-chat/shared/types';
+import ThoughtAccordion from '@/features/llm-chat/shared/components/blocks/ThoughtAccordion.vue';
+import ToolStatusCard from '@/features/llm-chat/shared/components/blocks/ToolStatusCard.vue';
+import ErrorCallout from '@/features/llm-chat/shared/components/common/ErrorCallout.vue';
+import ChartFrame from '@/features/analytics/components/ChartFrame.vue';
+import { useChartOptions } from '@/features/llm-chat/shared/composables/useChart';
+import { formatDuration, formatFileSize } from '@/features/llm-chat/shared/utils/qa/dateUtils';
+import { useArtifact } from '@/features/llm-chat/shared/context/ArtifactContext';
+import ClaudeArtifactCard from '@/features/llm-chat/shared/components/common/ClaudeArtifactCard.vue';
+import { useMessageParser } from '@/features/llm-chat/shared/composables/useMessageParser';
+
+// ── Props & emits ───────────────────────────────────────────────────
+const props = defineProps<{
+  message: Message;
+  isLast: boolean;
+  isStreaming: boolean;
+}>();
+
+const emit = defineEmits(['locate-node', 'resend-message']);
+
+const { processOption } = useChartOptions();
+const artifactContext = useArtifact();
+
+// ── Code block parser ────────────────────────────────────────────────
+// Extract code blocks from markdown message content to show as artifacts
+const inlineCodeBlocks = computed(() => {
+  if (!props.message.content) return [];
+  const content = props.message.content;
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  const blocks: { language: string; content: string; lines: number }[] = [];
+
+  let match;
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    const lang = match[1] || 'text';
+    const code = match[2].trim();
+    const lines = code.split('\n').length;
+    if (lines >= 5 && ['vue', 'html', 'javascript', 'typescript', 'python', 'json', 'sql'].includes(lang.toLowerCase())) {
+      blocks.push({
+        language: lang,
+        content: code,
+        lines
+      });
+    }
+  }
+  return blocks;
+});
+
+// ── File type inference ──────────────────────────────────────────────
+const inferFileType = (filename: string): string => {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  const typeMap: Record<string, string> = {
+    pdf: 'pdf',
+    png: 'image', jpg: 'image', jpeg: 'image', gif: 'image', webp: 'image', svg: 'image',
+    json: 'json',
+    md: 'markdown', markdown: 'markdown',
+    py: 'code', ts: 'code', js: 'code', vue: 'code', html: 'code', css: 'code',
+    sh: 'shell', bash: 'shell',
+  };
+  return typeMap[ext] || 'code';
+};
+
+// ── Derived flags ───────────────────────────────────────────────────
+const isRunning = computed(() => props.isStreaming && props.isLast);
+
+// ── Chart ────────────────────────────────────────────────────────────
+const chartOption = computed(() => processOption(props.message.chart_config));
+
+// ── Artifact deliverables ────────────────────────────────────────────
+interface ArtifactLink { name: string; url: string; type: string; size?: number; }
+
+const artifactLinks = computed<ArtifactLink[]>(() => {
+  const result: ArtifactLink[] = [];
+
+  // 1. Direct field written by chat store / workflow store onto the message
+  if (props.message.artifacts && Array.isArray(props.message.artifacts)) {
+    for (const a of props.message.artifacts as any[]) {
+      if (a?.url) {
+        result.push({
+          name: a.file_name || a.name || '交付文件',
+          url: a.url,
+          type: a.type || 'file',
+          size: a.file_size ?? a.size,
+        });
+      }
+    }
+  }
+
+  // 2. Parsed from SSE stream_events — artifact events carry JSON payload in content
+  const events = props.message.stream_events ?? [];
+  for (const ev of events) {
+    if (ev.event === 'artifact') {
+      try {
+        // content may arrive as a JSON string or already an object (via ev.raw)
+        const card: any = ev.raw ?? (typeof ev.content === 'string' ? JSON.parse(ev.content) : ev.content);
+        if (card?.url) {
+          result.push({
+            name: card.file_name || card.name || '交付文件',
+            url: card.url,
+            type: card.type || 'file',
+            size: card.file_size ?? card.size,
+          });
+        }
+      } catch {
+        // Malformed event — skip silently
+      }
+    }
+  }
+
+  return result;
+});
+
+// ── Thinking content ─────────────────────────────────────────────────
+const messageContentRef = computed(() => props.message.content || '');
+const { parsed: parsedMessage } = useMessageParser(messageContentRef);
+
+const thinkingContent = computed(() => {
+  if (props.message.reasoning) {
+    return { raw: props.message.reasoning, isPartial: isRunning.value };
+  }
+  if (props.message.meta_data?.reasoning) {
+    return { raw: props.message.meta_data.reasoning, isPartial: false };
+  }
+  if (parsedMessage.value.think) {
+    return { raw: parsedMessage.value.think.raw, isPartial: parsedMessage.value.think.isPartial };
+  }
+  return null;
+});
+
+// ── Mini Execution Logs (PRD §2.2) ───────────────────────────────────
+// stream_events 中 type==='status' 的条目转为简洁的单行摘要
+const miniLogs = computed(() => {
+  const events = props.message.stream_events ?? [];
+  const result: { id: string; text: string }[] = [];
+  for (const ev of events) {
+    if (ev.event === 'status' && ev.content) {
+      // 兼容旧数据：如果是对象且有 content 字段，则提取 content
+      let text = '';
+      if (typeof ev.content === 'string') {
+        try {
+          const parsed = JSON.parse(ev.content);
+          text = parsed.content || ev.content;
+        } catch {
+          text = ev.content;
+        }
+      } else if (typeof ev.content === 'object' && ev.content !== null) {
+        text = (ev.content as any).content || JSON.stringify(ev.content);
+      } else {
+        text = String(ev.content);
+      }
+      result.push({ id: ev.id, text });
+    }
+  }
+  // 运行中只显示最新 3 条，避免挤占空间；结束后全量展示
+  return isRunning.value ? result.slice(-3) : result;
+});
+
+// ── Tool call types ──────────────────────────────────────────────────
+interface ResolvedToolCall {
+  id: string;
+  name: string;
+  args?: Record<string, any>;
+  result?: string;
+  status: 'running' | 'success' | 'error';
+}
+
+interface ExecStep {
+  id: string;
+  title: string;
+  status: 'pending' | 'running' | 'done' | 'error';
+  toolCalls: ResolvedToolCall[];
+  elapsed?: string; // 步骤耗时
+}
+
+// ── Core execution state ─────────────────────────────────────────────
+const { execSteps, orphanToolCalls } = computeExecution();
+
+function computeExecution() {
+  const execSteps = computed<ExecStep[]>(() => {
+    const steps = props.message.steps ?? [];
+    const rawTools = props.message.tools ?? [];
+
+    if (steps.length === 0) return [];
+
+    const tools: ResolvedToolCall[] = buildResolvedTools(rawTools);
+
+    return steps.map((s: any, idx: number) => {
+      // P10 修复：基于显式的 ID 映射而不是脆弱的均分切片算法
+      const stepId = String(s.step ?? s.id ?? idx);
+      
+      // 首先尝试通过显式的 task_id 关联
+      let stepTools = tools.filter((t: any) => t.task_id && String(t.task_id) === stepId);
+      
+      // 兼容性降级：如果都没有 task_id 且是旧数据，保留均分逻辑的底线
+      if (stepTools.length === 0 && !tools.some((t: any) => t.task_id)) {
+          const chunkSize = Math.ceil(tools.length / steps.length) || 1;
+          stepTools = tools.filter((_: any, ti: number) =>
+            ti >= idx * chunkSize && ti < (idx + 1) * chunkSize,
+          );
+      }
+
+      let title = s.content || s.description || s.title || `步骤 ${idx + 1}`;
+      if (typeof title !== 'string') {
+        title = JSON.stringify(title);
+      }
+
+      // 直接使用来自 workflowMode 中注入的确切状态
+      let exactStatus = s.status || 'pending';
+      
+      const hasErrorTool = stepTools.some((t: any) => t.status === 'error');
+      const hasRunningTool = stepTools.some((t: any) => t.status === 'running');
+      
+      // 如果工具报错了，强制为 error
+      if (hasErrorTool) {
+          exactStatus = 'error';
+      } else if (hasRunningTool && exactStatus !== 'done') {
+          // 如果工具在运行且未被标记为 done，则为 running
+          exactStatus = 'running';
+      } else if (!isRunning.value && exactStatus !== 'done' && exactStatus !== 'error') {
+          // 流已经结束，所有没出错的 pending/running 必须强制收敛到 done
+          exactStatus = 'done';
+      }
+
+      return {
+        id: stepId,
+        title,
+        status: exactStatus,
+        toolCalls: stepTools,
+        elapsed: undefined // 后端未下发耗时时留空
+      };
+    });
+  });
+
+  const orphanToolCalls = computed<ResolvedToolCall[]>(() => {
+    const steps = props.message.steps ?? [];
+    const rawTools = props.message.tools ?? [];
+    if (steps.length > 0) return [];
+    return buildResolvedTools(rawTools);
+  });
+
+  return { execSteps, orphanToolCalls };
+}
+
+function buildResolvedTools(rawTools: any[]): ResolvedToolCall[] {
+  if (!rawTools || rawTools.length === 0) return [];
+  return rawTools.map((t: any, idx: number) => ({
+    id: t.id || String(idx),
+    name: t.name || '未知工具',
+    args: t.args ?? t.arguments,
+    result: t.result,
+    status: t.status || 'running',
+    task_id: t.task_id
+  }));
+}
+
+// ── Progress stats ───────────────────────────────────────────────────
+const completedStepCount = computed(() =>
+  execSteps.value.filter(s => s.status === 'done').length
+);
+
+const stepProgress = computed(() => {
+  const total = execSteps.value.length;
+  if (total === 0) return 0;
+  return Math.round((completedStepCount.value / total) * 100);
+});
+
+// ── Error detection ──────────────────────────────────────────────────
+const hasError = computed(() =>
+  execSteps.value.some(s => s.status === 'error') ||
+  orphanToolCalls.value.some(t => t.status === 'error') ||
+  !!props.message.error
+);
+
+// ── Status pill ──────────────────────────────────────────────────────
+const statusLabel = computed(() => {
+  if (isRunning.value) return '执行中';
+  if (hasError.value) return '部分失败';
+  return '已完成';
+});
+
+const statusPillClass = computed(() => {
+  if (isRunning.value) return 'text-primary border-primary/30 bg-primary/8';
+  if (hasError.value) return 'text-destructive border-destructive/30 bg-destructive/8';
+  return 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/8';
+});
+
+</script>

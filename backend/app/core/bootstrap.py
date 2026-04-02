@@ -14,6 +14,34 @@ def apply_patches():
     """
     _patch_duckduckgo()
     _setup_asyncio()
+    _patch_agno_json()
+
+
+def _patch_agno_json():
+    """
+    修复 agno 在解析带有 <think> 标签的 JSON 时报错的问题
+    """
+    try:
+        import re
+        import agno.utils.string as agno_string
+
+        if getattr(agno_string, "_is_patched_for_think_tags", False):
+            return
+
+        original_clean_json = agno_string._clean_json_content
+
+        def _patched_clean_json_content(content: str) -> str:
+            # 剥离 <think>...</think> 标签，支持 DeepSeek 等推理模型的输出
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+            # 兼容某些模型可能输出的 <thought> / <thinking> 标签
+            content = re.sub(r'<thought>.*?</thought>', '', content, flags=re.DOTALL).strip()
+            content = re.sub(r'<thinking>.*?</thinking>', '', content, flags=re.DOTALL).strip()
+            return original_clean_json(content)
+
+        agno_string._clean_json_content = _patched_clean_json_content
+        agno_string._is_patched_for_think_tags = True
+    except ImportError:
+        pass
 
 
 def _patch_duckduckgo():
